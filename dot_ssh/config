@@ -1,0 +1,106 @@
+# Configuration
+AddKeysToAgent yes
+HashKnownHosts yes
+
+Host *
+    IdentitiesOnly yes
+
+# Hosts
+Host neodingus
+    HostName neodingus
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+
+Host prodingus
+    HostName prodingus
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+
+Host samsung-sm-a526u1
+    HostName samsung-sm-a526u1.tail11540.ts.net
+    Port 8022
+    User u0_a322
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+
+Host wahlenet
+    HostName wahlenet.home.arpa
+    User root
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+
+Host macserver
+Host mullvad
+Host winserver
+Host lancache
+Host prominer
+Host neominer
+Host proencode
+Host neoencode
+Host procuda
+Host wireless
+Host timemachine
+Host tinker
+Host penumbra
+Host winlite
+Host freeipa
+Host dingus-server
+Host pelican
+
+# Oracle (Legacy)
+Host git.regulad.xyz
+    User opc
+
+Host doppelgangerhq.com
+    User ubuntu
+
+# Oracle (wahlecloud)
+Host tailscalerouter
+
+Match Host tailsaclerouter User opc
+    IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key
+    IdentitiesOnly yes
+
+Host livekit
+
+Match Host livekit User opc
+    IdentityFile ~/.ssh/ssh-key-2025-12-19_livekit.key
+    IdentitiesOnly yes
+
+Host mail
+
+Match Host mail User opc
+    IdentityFile ~/.ssh/ssh-key-2025-12-08_mail.key
+    IdentitiesOnly yes
+
+# Personal
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+
+# ncsu
+Host github.ncsu.edu
+    HostName github.ncsu.edu
+    User git
+    IdentityFile ~/.ssh/id_ed25519_ncstate
+    IdentitiesOnly yes
+
+Host eos
+    HostName remote.eos.ncsu.edu
+    User pewahle
+    PubkeyAuthentication no
+    PreferredAuthentications password
+
+# Globals
+Match User regulad
+    IdentityFile ~/.ssh/id_rsa
+    IdentitiesOnly yes
+
+Match User pewahle  # ncsu
+    IdentityFile ~/.ssh/id_ed25519_ncstate
+    IdentitiesOnly yes
+

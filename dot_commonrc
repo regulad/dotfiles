@@ -1,0 +1,65 @@
+if [ "$(uname -s)" = "Darwin" ]; then
+    if [ -n "$ZSH_VERSION" ]; then
+        autoload -Uz colors && colors
+        setopt promptsubst
+    fi
+
+    if [ "$(arch)" = "arm64" ]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+
+        export PNPM_HOME="/Users/regulad/Library/pnpm"
+        export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+
+        export NVM_DIR="$HOME/.nvm"
+        [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"  # This loads nvm
+        [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
+    else
+        eval "$(/usr/local/bin/brew shellenv)"
+    fi
+
+    export ANDROID_HOME="/Users/regulad/Library/Android/sdk"
+
+    # The following lines have been added by Docker Desktop to enable Docker CLI completions.
+    fpath=(/Users/regulad/.docker/completions $fpath)
+    if [ -n "$ZSH_VERSION" ]; then
+        autoload -Uz compinit && compinit
+    fi
+    # End of Docker CLI completions
+elif [ "$(uname -s)" = "Linux" ]; then
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    export PNPM_HOME="/home/regulad/.local/share/pnpm"
+fi
+
+if [[ -f /etc/os-release ]]; then
+  . /etc/os-release
+  if [[ "$ID" == "ubuntu" ]]; then
+    # Add snap bin directories to PATH if they exist
+    [[ -d /snap/bin ]] && export PATH="/snap/bin:$PATH"
+    [[ -d /var/lib/snapd/snap/bin ]] && export PATH="/var/lib/snapd/snap/bin:$PATH"
+  fi
+fi
+
+# pnpm
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
+
+# Created by `pipx` on 2025-08-15 00:48:24
+export PATH="$PATH:/home/regulad/.local/bin"
+
+# gpg/ssh daemons
+export GPG_TTY=$(tty)
+eval $(keychain --eval --quiet --noask)
+
+# completions
+if [ -n "$ZSH_VERSION" ]; then
+    eval "$(chezmoi completion zsh)"
+else
+    eval "$(chezmoi completion bash)"
+fi
+
+# Preferences
+export DO_NOT_TRACK=1
+export VISUAL="$(command -v nvim || command -v vim || command -v vi)"

@@ -1,0 +1,95 @@
+set nocompatible              " be iMproved, required
+filetype off                  " required
+
+if !has("nvim")
+    " set the runtime path to include Vundle and initialize
+    set rtp+=~/.vim/bundle/Vundle.vim
+    call vundle#begin()
+    " alternatively, pass a path where Vundle should install plugins
+    "call vundle#begin('~/some/path/here')
+    
+    " let Vundle manage Vundle, required
+    Plugin 'VundleVim/Vundle.vim'
+    
+    " The following are examples of different formats supported.
+    " Keep Plugin commands between vundle#begin/end.
+    " plugin on GitHub repo
+    Plugin 'tpope/vim-fugitive'
+    " The sparkup vim script is in a subdirectory of this repo called vim.
+    " Pass the path to set the runtimepath properly.
+    Plugin 'rstacruz/sparkup', {'rtp': 'vim/'}
+    " Install L9 and avoid a Naming conflict if you've already installed a
+    " different version somewhere else.
+    Plugin 'ascenator/L9', {'name': 'newL9'}
+    " Start custom plugins
+    Plugin 'wakatime/vim-wakatime'
+    Plugin 'doums/darcula'
+    Plugin 'andrejlevkovitch/vim-lua-format'
+    Plugin 'rust-lang/rust.vim'
+    Plugin 'neoclide/coc.nvim', {'branch': 'release', 'do': 'npm ci'}
+    " All of your Plugins must be added before the following line
+    call vundle#end()            " required
+    filetype plugin indent on    " required
+    " To ignore plugin indent changes, instead use:
+    "filetype plugin on
+    "
+    " Brief help
+    " :PluginList       - lists configured plugins
+    " :PluginInstall    - installs plugins; append `!` to update or just :PluginUpdate
+    " :PluginSearch foo - searches for foo; append `!` to refresh local cache
+    " :PluginClean      - confirms removal of unused plugins; append `!` to auto-approve removal
+    "
+    " see :h vundle for more details or wiki for FAQ
+    " Put your non-Plugin stuff after this line
+else
+    " REMEMBER TO UPDATE .config/nvim/lua/plugins.lua
+    " WITH ANY ADDED PLUGINS!
+end
+
+" Start my custom things
+    
+" Overwrite some vi-backwards compat
+filetype plugin indent on
+set showcmd            " Show (partial) command in status line.
+set showmatch          " Show matching brackets.
+set ignorecase         " Do case insensitive matching
+set smartcase          " Do smart case matching
+set incsearch          " Incremental search
+set autowrite          " Automatically save before commands like :next and :make
+set hidden             " Hide buffers when they are abandoned
+set mouse=a            " Enable mouse usage (all modes)
+
+" Stuff to run once:
+" :call coc#util#install()
+
+" rust.vim
+let g:rustfmt_autosave = 1
+
+" vim-lua-format
+autocmd FileType lua nnoremap <buffer> <c-k> :call LuaFormat()<cr>
+autocmd BufWrite *.lua call LuaFormat()
+
+" Color
+colorscheme darcula
+set termguicolors
+if !has("nvim")
+    autocmd VimEnter * call echoraw("\x1b]11;#1e1f22\x07")
+    autocmd VimLeave * call echoraw("\x1b]111;\x07")
+else
+    autocmd VimEnter * lua io.stdout:write("\x1b]11;#1e1f22\x07")
+    autocmd VimLeave * lua io.stdout:write("\x1b]111;\x07")
+end
+highlight Normal guibg=#1e1f22 ctermbg=NONE
+
+" non-color stuff
+syntax on
+set number
+set clipboard=unnamedplus
+set nofixeol
+if has('win32') || has('win64')
+    set fileformats=dos,unix
+    set fileformat=dos
+else
+    set fileformats=unix,dos
+    set fileformat=unix
+endif
