@@ -7,11 +7,12 @@
 [user]
 	name = Parker Wahle
 	email = regulad@regulad.xyz
-	signingkey = 081BE541EA23ACF3
+	signingkey = ~/.ssh/id_rsa.pub
 [commit]
 	gpgsign = true
-{{- if and (eq .chezmoi.os "windows") (stat (joinPath .chezmoi.homeDir "scoop")) }}
 [gpg]
+	format = ssh
+{{- if and (eq .chezmoi.os "windows") (stat (joinPath .chezmoi.homeDir "scoop")) }}
 	program = "C:\\Program Files (x86)\\GnuPG\\bin\\gpg.exe"
 {{- end }}
 [gpg "ssh"]
