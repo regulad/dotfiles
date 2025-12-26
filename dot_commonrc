@@ -65,6 +65,7 @@ case "$(uname -o)" in
   Android)
     # https://github.com/termux/termux-packages/blob/master/packages/openssh/sv/ssh-agent.run.in#L3-L7
     export SSH_AUTH_SOCK="$PREFIX"/var/run/ssh-agent.socket
+    ;;
   Darwin)
     for _bw_sock in \
       "$HOME/.bitwarden-ssh-agent.sock" \
