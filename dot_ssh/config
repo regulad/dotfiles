@@ -2,9 +2,6 @@
 AddKeysToAgent yes
 HashKnownHosts yes
 
-Host *
-    IdentitiesOnly yes
-
 # Hosts
 Host neodingus
     HostName neodingus
@@ -96,6 +93,10 @@ Host eos
     PreferredAuthentications password
 
 # Globals
+Host * 
+    PreferredAuthentications publickey   
+    IdentitiesOnly yes
+
 Match User regulad
     IdentityFile ~/.ssh/id_rsa.pub
     IdentitiesOnly yes
