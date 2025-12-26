@@ -107,3 +107,12 @@ if [ -n "${ZSH_VERSION-}" ]; then
     *vim)  compdef vi=vim  ;;
   esac
 fi
+
+# ssh-privpub alias
+ssh-privpub() {
+    for key in "$@"; do
+        [[ "$key" == *.pub ]] && continue
+        [ -f "$key" ] && ssh-keygen -y -f "$key" > "${key}.pub" 2>/dev/null && echo "${key}.pub"
+    done
+}
+[ -n "$ZSH_VERSION" ] && compdef _files ssh-privpub
