@@ -3,8 +3,8 @@
   "darcula": { "branch": "master", "commit": "faf8dbab27bee0f27e4f1c3ca7e9695af9b1242b" },
   "friendly-snippets": { "branch": "main", "commit": "572f5660cf05f8cd8834e096d7b4c921ba18e175" },
   "lazy.nvim": { "branch": "main", "commit": "306a05526ada86a7b30af95c5cc81ffba93fef97" },
-  "nvim-lspconfig": { "branch": "master", "commit": "c4f67bf85b01a57e3c130352c0a0e453ab8cd5b9" },
-  "nvim-treesitter": { "branch": "main", "commit": "4fc09bee78e91bf4ba471cdab4bf9dfa37fde51c" },
+  "nvim-lspconfig": { "branch": "master", "commit": "d696e36d5792daf828f8c8e8d4b9aa90c1a10c2a" },
+  "nvim-treesitter": { "branch": "main", "commit": "6e42d823ce0a5a76180c473c119c7677738a09d1" },
   "rust.vim": { "branch": "master", "commit": "889b9a7515db477f4cb6808bef1769e53493c578" },
   "vim-lua-format": { "branch": "master", "commit": "9996af0cf63b349f14268beac585d89c903a541e" },
   "vim-wakatime": { "branch": "master", "commit": "d7973b157a632d1edeff01818f18d67e584eeaff" }
