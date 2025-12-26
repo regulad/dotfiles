@@ -2,24 +2,45 @@
 AddKeysToAgent yes
 HashKnownHosts yes
 
-# Hosts
+# "Special" hosts
 Host neodingus
     HostName neodingus
     User root
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentitiesOnly yes
 
 Host prodingus
     HostName prodingus
     User root
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentitiesOnly yes
 
 Host samsung-sm-a526u1
     HostName samsung-sm-a526u1.tail11540.ts.net
     Port 8022
     User u0_a322
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentitiesOnly yes
+
+Host teledeck8
+    HostName teledeck8.tail11540.ts.net
+    Port 8022
+    User u0_a341
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentitiesOnly yes
 
 Host wahlenet
     HostName wahlenet.home.arpa
     User root
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentitiesOnly yes
 
+# Hosts
 Host macserver
 Host mullvad
 Host winserver
