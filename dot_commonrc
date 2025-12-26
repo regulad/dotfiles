@@ -1,4 +1,3 @@
-# this file is sourced by both zsh and bash; should use common syntax
 if [ "$(uname -s)" = "Darwin" ]; then
     if [ -n "$ZSH_VERSION" ]; then
         autoload -Uz colors && colors
@@ -14,6 +13,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
         export NVM_DIR="$HOME/.nvm"
         [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"  # This loads nvm
         [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
+        . "$HOME/.cargo/env"
     else
         eval "$(/usr/local/bin/brew shellenv)"
     fi
@@ -50,43 +50,9 @@ esac
 # Created by `pipx` on 2025-08-15 00:48:24
 export PATH="$PATH:/home/regulad/.local/bin"
 
-# cargo
-. "$HOME/.cargo/env"
-
-# gpg daemon
+# gpg/ssh daemons
 export GPG_TTY=$(tty)
-
-# ssh daemon
-unset _bw_sock
-case "$(uname -s)" in
-  Darwin)
-    for _bw_sock in \
-      "$HOME/.bitwarden-ssh-agent.sock" \
-      "$HOME/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock"
-    do
-      [ -S "$_bw_sock" ] && export SSH_AUTH_SOCK="$_bw_sock" && break
-    done
-    ;;
-  Linux)
-    for _bw_sock in \
-      "$HOME/.bitwarden-ssh-agent.sock" \
-      "$HOME/snap/bitwarden/current/.bitwarden-ssh-agent.sock" \
-      "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock"
-    do
-      [ -S "$_bw_sock" ] && export SSH_AUTH_SOCK="$_bw_sock" && break
-    done
-    ;;
-esac
-
-if [ -z "${SSH_AUTH_SOCK:-}" ] || [ ! -S "${SSH_AUTH_SOCK:-}" ]; then
-  if command -v keychain >/dev/null 2>&1; then
-    eval "$(keychain --eval --quiet --noask)"
-  else
-    echo "warning: no Bitwarden SSH agent socket found, and keychain is not installed; SSH_AUTH_SOCK not set" >&2
-  fi
-fi
-
-unset _bw_sock
+eval $(keychain --eval --quiet --noask)
 
 # completions
 if [ -n "$ZSH_VERSION" ]; then
@@ -97,13 +63,4 @@ fi
 
 # Preferences
 export DO_NOT_TRACK=1
-export VISUAL="$(command -v nvim || command -v vim)"
-
-# vi alias
-vi() { command "$VISUAL" "$@"; }
-if [ -n "${ZSH_VERSION-}" ]; then
-  case "$VISUAL" in
-    *nvim) compdef vi=nvim ;;
-    *vim)  compdef vi=vim  ;;
-  esac
-fi
+export VISUAL="$(command -v nvim || command -v vim || command -v vi)"
