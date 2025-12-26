@@ -39,7 +39,9 @@ Host dingus-server
 Host pelican
 
 # Oracle (Legacy VCN)
-Match Host git.regulad.xyz User regulad
+Host git.regulad.xyz
+
+Match Host git.regulad.xyz User opc
     User opc
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
