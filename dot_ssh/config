@@ -126,7 +126,9 @@ Host eos
     PreferredAuthentications password
 
 # Globals
-Host * 
+Host *
+    # Try to use the user regulad on all systems
+    User regulad
     PreferredAuthentications publickey   
 
 # General idea of the fallback:
