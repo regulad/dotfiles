@@ -22,3 +22,7 @@ PROMPT=$(cat << 'EOF'
 EOF
 )
 
+# override with short prompt on Android
+if [ "$(uname -o)" = "Android" ]; then
+    PROMPT="%# "
+fi

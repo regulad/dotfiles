@@ -1,5 +1,5 @@
 # this file is sourced by both zsh and bash; should use common syntax
-if [ "$(uname -s)" = "Darwin" ]; then
+if [ "$(uname -o)" = "Darwin" ]; then
     if [ -n "$ZSH_VERSION" ]; then
         autoload -Uz colors && colors
         setopt promptsubst
@@ -26,9 +26,12 @@ if [ "$(uname -s)" = "Darwin" ]; then
         autoload -Uz compinit && compinit
     fi
     # End of Docker CLI completions
-elif [ "$(uname -s)" = "Linux" ]; then
+elif [ "$(uname -o)" = "GNU/Linux" ]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-    export PNPM_HOME="/home/regulad/.local/share/pnpm"
+fi
+
+if [ "$(uname -s)" = "Linux" ]; then
+    export PNPM_HOME="$HOME/.local/share/pnpm"
 fi
 
 if [[ -f /etc/os-release ]]; then
@@ -58,7 +61,7 @@ export GPG_TTY=$(tty)
 
 # ssh daemon
 unset _bw_sock
-case "$(uname -s)" in
+case "$(uname -o)" in
   Darwin)
     for _bw_sock in \
       "$HOME/.bitwarden-ssh-agent.sock" \
@@ -67,7 +70,7 @@ case "$(uname -s)" in
       [ -S "$_bw_sock" ] && export SSH_AUTH_SOCK="$_bw_sock" && break
     done
     ;;
-  Linux)
+  GNU/Linux)
     for _bw_sock in \
       "$HOME/.bitwarden-ssh-agent.sock" \
       "$HOME/snap/bitwarden/current/.bitwarden-ssh-agent.sock" \
