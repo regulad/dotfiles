@@ -6,27 +6,19 @@ HashKnownHosts yes
 Host neodingus
     HostName neodingus
     User root
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentitiesOnly yes
 
 Host prodingus
     HostName prodingus
     User root
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentitiesOnly yes
 
 Host samsung-sm-a526u1
     HostName samsung-sm-a526u1.tail11540.ts.net
     Port 8022
     User u0_a322
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentitiesOnly yes
 
 Host wahlenet
     HostName wahlenet.home.arpa
     User root
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentitiesOnly yes
 
 Host macserver
 Host mullvad
@@ -95,10 +87,10 @@ Host eos
 # Globals
 Host * 
     PreferredAuthentications publickey   
-    IdentitiesOnly yes
 
 Match User regulad
     IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
     IdentitiesOnly yes
 
 Match User pewahle  # ncsu
