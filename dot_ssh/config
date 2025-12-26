@@ -38,30 +38,39 @@ Host freeipa
 Host dingus-server
 Host pelican
 
-# Oracle (Legacy)
+# Oracle (Legacy VCN)
 Host git.regulad.xyz
     User opc
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentitiesOnly yes
 
 Host doppelgangerhq.com
     User ubuntu
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentitiesOnly yes
 
 # Oracle (wahlecloud)
 Host tailscalerouter
 
 Match Host tailsaclerouter User opc
     IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key.pub
+    IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key  # fallback
     IdentitiesOnly yes
 
 Host livekit
 
 Match Host livekit User opc
     IdentityFile ~/.ssh/ssh-key-2025-12-19_livekit.key.pub
+    IdentityFile ~/.ssh/ssh-key-2025-12-19_livekit.key  # fallback
     IdentitiesOnly yes
 
 Host mail
 
 Match Host mail User opc
     IdentityFile ~/.ssh/ssh-key-2025-12-08_mail.key.pub
+    IdentityFile ~/.ssh/ssh-key-2025-12-08_mail.key  # fallback
     IdentitiesOnly yes
 
 # Personal
@@ -69,6 +78,7 @@ Host github.com
     HostName github.com
     User git
     IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
     IdentitiesOnly yes
 
 # ncsu
@@ -76,6 +86,7 @@ Host github.ncsu.edu
     HostName github.ncsu.edu
     User git
     IdentityFile ~/.ssh/id_ed25519_ncstate.pub
+    IdentityFile ~/.ssh/id_ed25519_ncstate  # fallback
     IdentitiesOnly yes
 
 Host eos
@@ -88,6 +99,9 @@ Host eos
 Host * 
     PreferredAuthentications publickey   
 
+# General idea of the fallback:
+#    1. Try to get the agent's private key by the public key
+#    2. If the private key isn't in the agent, and it exists on disk, load it. Else, crash.
 Match User regulad
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
@@ -95,5 +109,6 @@ Match User regulad
 
 Match User pewahle  # ncsu
     IdentityFile ~/.ssh/id_ed25519_ncstate.pub
+    IdentityFile ~/.ssh/id_ed25519_ncstate  # fallback
     IdentitiesOnly yes
 
