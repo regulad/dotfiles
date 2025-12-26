@@ -51,10 +51,12 @@ esac
 # pnpm end
 
 # Created by `pipx` on 2025-08-15 00:48:24
-export PATH="$PATH:/home/regulad/.local/bin"
+export PATH="$PATH:$HOME/.local/bin"
 
-# cargo
-. "$HOME/.cargo/env"
+# cargo on rustup systems
+if [ -n "$(command -v rustup-init)" ]; then
+    . "$HOME/.cargo/env"
+fi
 
 # gpg daemon
 export GPG_TTY=$(tty)
