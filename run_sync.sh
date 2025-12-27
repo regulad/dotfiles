@@ -217,6 +217,7 @@ if [ "$HAS_BREW" = "true" ]; then
 else
     npm i -g pnpm@latest
 fi
+pnpm setup
 
 PNPM_CLI_PACKAGES=(
     "ezff@latest"
