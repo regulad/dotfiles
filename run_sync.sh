@@ -71,7 +71,8 @@ PRIMARY_BINARY_DEPENDENCIES=(
     "mdrt:git-lfs"
     "mdt:gnupg"  # gpg
     "r:gnupg2"
-    "mdrt:openssh"  # ssh-agent & ssh 
+    "d:openssh-client"
+    "mrt:openssh"  # ssh-agent & ssh 
     "mdrt:keychain"
     "mdrt:gh"  # GitHub
     "mdrt:restic"
