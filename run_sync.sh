@@ -124,8 +124,8 @@ PRIMARY_BINARY_DEPENDENCIES=(
 
 if command -v pkg &> /dev/null && [[ "$PREFIX" == *"com.termux"* ]]; then
     MANAGER="pkg"
-elif command -v dnf5 &> /dev/null && [[ -f /etc/redhat-release ]]; then
-    MANAGER="dnf5"
+elif command -v dnf &> /dev/null && [[ -f /etc/redhat-release ]]; then
+    MANAGER="dnf"
 elif command -v apt &> /dev/null && [[ -f /etc/debian_version ]]; then
     MANAGER="apt"
 elif command -v brew &> /dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
@@ -135,7 +135,7 @@ else
 fi
 
 # Check sudo requirement for dnf5 and apt
-if [[ "$MANAGER" == "dnf5" || "$MANAGER" == "apt" ]] && [[ "$CAN_SUDO" -ne 1 ]]; then
+if [[ "$MANAGER" == "dnf" || "$MANAGER" == "apt" ]] && [[ "$CAN_SUDO" -ne 1 ]]; then
     echo "warning: package manager needs sudo but it isn't available" >&2
     MANAGER=""
 fi
@@ -158,7 +158,7 @@ if [[ -n "$MANAGER" ]]; then
             pkg)
                 [[ -z "$prefix" || "$prefix" == *"t"* ]] && TO_INSTALL+=("$package")
                 ;;
-            dnf5)
+            dnf)
                 [[ -z "$prefix" || "$prefix" == *"r"* ]] && TO_INSTALL+=("$package")
                 ;;
             apt)
@@ -176,8 +176,8 @@ if [[ -n "$MANAGER" ]]; then
             pkg)
                 pkg install -y "${TO_INSTALL[@]}"
                 ;;
-            dnf5)
-                sudo dnf5 install -y "${TO_INSTALL[@]}"
+            dnf)
+                sudo dnf install -y "${TO_INSTALL[@]}"
                 ;;
             apt)
                 sudo apt update -qq
@@ -236,6 +236,7 @@ else
 fi
 
 if [ -z "$PNPM_HOME" ]; then
+    touch ~/.bashrc
     mv ~/.bashrc ~/.bashrc.pre-pnpm
     SHELL=bash pnpm setup  &> /dev/null || true
     source "$HOME/.bashrc"
@@ -291,6 +292,7 @@ done
 
 # oh my zsh
 if ! [ -d ~/.oh-my-zsh ]; then
+    touch ~/.zshrc
     mv ~/.zshrc ~/.zshrc.pre-oh-my-zsh
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
     rm ~/.zshrc
