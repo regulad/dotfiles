@@ -329,9 +329,20 @@ fi
 pnpm update --global --silent
 uv tool upgrade --quiet --all
 
-CERT_PATHS=(
-    "$HOME/.x509/ipa-ca.crt"
-)
+# Certificate installation
+declare -a CERT_PATHS=()
+
+# this script will run before first apply, so the file won't exist
+if [[ -f "$HOME/.chezmoi-did-apply" ]]; then
+    CERT_PATHS+=(
+        "$HOME/.x509/ipa-ca.crt"
+    )
+else
+    echo "note: running before first apply, using working tree files" >&2
+    CERT_PATHS+=(
+        "$HOME/.local/share/chezmoi/dot_x509/ipa-ca.crt"
+    )
+fi
 
 # Detect OS and install certificates
 if [[ "$(uname -o)" == "Android" ]]; then
