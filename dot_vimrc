@@ -93,3 +93,6 @@ else
     set fileformats=unix,dos
     set fileformat=unix
 endif
+if has("nvim")
+    setlocal spell spelllang=en_us
+end

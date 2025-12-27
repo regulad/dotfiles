@@ -55,5 +55,5 @@ return {
         },
         opts_extend = {"sources.default"}
     }, {'wakatime/vim-wakatime'}, {'doums/darcula'},
-    {'andrejlevkovitch/vim-lua-format'}, {'rust-lang/rust.vim'}
+    {'andrejlevkovitch/vim-lua-format'}, {'rust-lang/rust.vim'}, {'mfussenegger/nvim-jdtls'}
 }

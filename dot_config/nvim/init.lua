@@ -31,13 +31,10 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 
 -- LSP
 -- https://github.com/neovim/nvim-lspconfig/blob/master/doc/configs.md
--- pnpm i -g pyright
+vim.lsp.enable('jdtls')
 vim.lsp.enable('pyright')
--- brew install JetBrains/utils/kotlin-lsp
 vim.lsp.enable('kotlin_lsp')
--- pnpm install -g typescript typescript-language-server
 vim.lsp.enable('ts_ls')
--- rustup component add rust-src
 vim.lsp.enable('rust_analyzer')
 
 -- Legacy
