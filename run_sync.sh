@@ -6,6 +6,7 @@
 # yes, i realize how dumb that this is when I could just use nix. lol.
 
 echo "note: entering hookscript" >&2
+export DEBIAN_FRONTEND=noninteractive
 
 # Panic if running as root or on non-Unix platform
 if [[ "$EUID" -eq 0 ]] || [[ "$UID" -eq 0 ]]; then
@@ -165,8 +166,8 @@ if [[ -n "$MANAGER" ]]; then
                 sudo dnf5 install -y "${TO_INSTALL[@]}"
                 ;;
             apt)
-                sudo apt update
-                sudo apt install -y "${TO_INSTALL[@]}"
+                sudo apt update -qq
+                sudo apt install -qq -y "${TO_INSTALL[@]}"
                 ;;
             brew)
                 brew install -q "${TO_INSTALL[@]}"
