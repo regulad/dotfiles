@@ -27,14 +27,7 @@ else
     CAN_SUDO=1
 fi
 
-# brew is a nother binary dependency but ONLY on linux for addl. userspace packages
-# don't think any of the addl. userpsace packages need to be installed by this script
-if ! command -v brew &> /dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)" == "GNU/Linux" ]]; then
-    echo "note: installing brew" >&2
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-fi
-
-# After Homebrew installation, detect and load it
+# Try to load homebrew if it is installed
 if [ -d "/opt/homebrew" ]; then
     # Apple Silicon Mac
     eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -45,6 +38,26 @@ elif [ -d "/home/linuxbrew/.linuxbrew" ]; then
     # Linux
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
+
+# brew is a nother binary dependency but ONLY on linux for addl. userspace packages
+# don't think any of the addl. userpsace packages need to be installed by this script
+if ! command -v brew &> /dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)" == "GNU/Linux" ]]; then
+    echo "note: installing brew" >&2
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+    # After Homebrew installation, detect and load it
+    if [ -d "/opt/homebrew" ]; then
+        # Apple Silicon Mac
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    elif [ -d "/usr/local/Homebrew" ] || [ -d "/usr/local/bin/brew" ]; then
+        # Intel Mac
+        eval "$(/usr/local/bin/brew shellenv)"
+    elif [ -d "/home/linuxbrew/.linuxbrew" ]; then
+        # Linux
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    fi
+fi
+
 
 export PATH="$PATH:$HOME/.local/bin"
 
@@ -223,7 +236,7 @@ fi
 
 if [ -z "$PNPM_HOME" ]; then
     mv ~/.zshrc ~/.zshrc.pre-pnpm
-    SHELL=zsh pnpm setup
+    SHELL=zsh pnpm setup || true
     rm ~/.zshrc
     mv ~/.zshrc.pre-pnpm ~/.zshrc
 fi
