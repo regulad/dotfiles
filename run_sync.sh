@@ -7,6 +7,7 @@
 
 echo "note: entering hookscript" >&2
 export DEBIAN_FRONTEND=noninteractive
+trap 'echo "Error on line $LINENO: Command was: $BASH_COMMAND" >&2' ERR
 
 # Panic if running as root or on non-Unix platform
 if [[ "$EUID" -eq 0 ]] || [[ "$UID" -eq 0 ]]; then
@@ -235,10 +236,11 @@ else
 fi
 
 if [ -z "$PNPM_HOME" ]; then
-    mv ~/.zshrc ~/.zshrc.pre-pnpm
-    SHELL=zsh pnpm setup || true
-    rm ~/.zshrc
-    mv ~/.zshrc.pre-pnpm ~/.zshrc
+    mv ~/.bashrc ~/.bashrc.pre-pnpm
+    SHELL=bash pnpm setup  &> /dev/null || true
+    source "$HOME/.bashrc"
+    rm ~/.bashrc
+    mv ~/.bashrc.pre-pnpm ~/.bashrc
 fi
 
 PNPM_CLI_PACKAGES=(
