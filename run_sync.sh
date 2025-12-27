@@ -3,6 +3,7 @@
 # Installs neccesary tools to enable everything from the dotfiles
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
 # NOTE!! this is ONLY for true nix. no MINGW64; will handle that separately.
+# yes, i realize how dumb that this is when I could just use nix. lol.
 
 echo "note: entering hookscript" >&2
 
@@ -109,5 +110,8 @@ SECONDARY_BINARY_DEPENDENCIES=(
 if ! [ -d ~/.oh-my-zsh ]; then
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
+
+# TODO: load custom ca into keychain from ~/.x509/ipa-ca.crt
+# TODO: chsh to zsh if not already the shell
 
 echo "note: exiting hookscript. don't buy it if something after this point asks for sudo!" >&2
