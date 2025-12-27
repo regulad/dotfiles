@@ -61,6 +61,8 @@ PRIMARY_BINARY_DEPENDENCIES=(
     "drt:build-essential"
     #"mdrt:bash"
     "mdrt:zsh"
+    "t:file"
+    "t:man"
     
     # =+= EDITOR
     "mdrt:neovim"  # nvim
@@ -167,7 +169,7 @@ if [[ -n "$MANAGER" ]]; then
                 sudo apt install -y "${TO_INSTALL[@]}"
                 ;;
             brew)
-                brew install "${TO_INSTALL[@]}"
+                brew install -q "${TO_INSTALL[@]}"
                 ;;
         esac
     fi
@@ -206,30 +208,36 @@ SECONDARY_BINARY_DEPENDENCIES=(
 command -v brew &> /dev/null && HAS_BREW=true || HAS_BREW=false
 
 if [ "$HAS_BREW" = "true" ]; then
-    brew install "${SECONDARY_BINARY_DEPENDENCIES[@]}"
+    brew install -q "${SECONDARY_BINARY_DEPENDENCIES[@]}"
 else
     echo "warning: no brew for misc. binary deps" >&2
 fi
 
 # js/ts
 if [ "$HAS_BREW" = "true" ]; then
-    brew install pnpm
+    brew install -q pnpm
 else
-    npm i -g pnpm@latest
+    npm i -g -q pnpm@latest
 fi
-pnpm setup
+
+if [ -z "$PNPM_HOME" ]; then
+    mv ~/.zshrc ~/.zshrc.pre-pnpm
+    SHELL=zsh pnpm setup
+    rm ~/.zshrc
+    mv ~/.zshrc.pre-pnpm ~/.zshrc
+fi
 
 PNPM_CLI_PACKAGES=(
     "ezff@latest"
 )
 
 if [ "$HAS_BREW" = "true" ]; then
-    brew install bitwarden-cli pyright typescript typescript-language-server
+    brew install -q bitwarden-cli pyright typescript typescript-language-server
 else
     PNPM_CLI_PACKAGES+=("@bitwarden/cli@latest" "pyright@latest" "typescript@latest" "typescript-language-server@latest")
 fi
 
-pnpm i -g "${PNPM_CLI_PACKAGES[@]}"
+pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
 
 # Poetry
 # NOTE: redhat repositories provide poetry-core but not the CLI
@@ -237,16 +245,16 @@ pnpm i -g "${PNPM_CLI_PACKAGES[@]}"
 if [ "$MANAGER" = "apt" ]; then
     sudo apt install -y python3-poetry
 elif [ "$HAS_BREW" = "true" ]; then
-    brew install poetry
+    brew install -q poetry
 else
-    pip install --user poetry
+    pip install --user -q poetry
 fi
 
 # UV
 if [ "$HAS_BREW" = "true" ]; then
-    brew install uv
+    brew install -q uv
 else
-    pip install --user uv
+    pip install --user -q uv
 fi
 
 # NOTE: poetry is for legacy workflows. 
@@ -258,7 +266,7 @@ PYPI_CLI_PACKAGES=(
 )
 
 for cli in "${PYPI_CLI_PACKAGES[@]}"; do
-    uv tool install ${cli}
+    uv tool install -q ${cli}
 done
 
 # vim package management
@@ -267,49 +275,58 @@ done
 
 # oh my zsh
 if ! [ -d ~/.oh-my-zsh ]; then
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    mv ~/.zshrc ~/.zshrc.pre-oh-my-zsh
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    rm ~/.zshrc
+    mv ~/.zshrc.pre-oh-my-zsh ~/.zshrc
 fi
 
 # load zsh as primary shell
 ZSH_PATH=$(command -v zsh)
 
-# Check if detected zsh is in /etc/shells
-if [ -n "$ZSH_PATH" ] && ! grep -q "^$ZSH_PATH$" /etc/shells; then
-    echo "warning: $ZSH_PATH not in /etc/shells, using zsh in /etc/shells if exists" >&2
-    ZSH_PATH=$(grep -m1 '/zsh$' /etc/shells)
-fi
-
-# If no zsh in /etc/shells, fall back to bash
-if [ -z "$ZSH_PATH" ]; then
-    BASH_PATH=$(command -v bash)
+if ! [ "$(uname -o)" = "Android" ]; then 
+    # Check if detected zsh is in /etc/shells
+    if [ -n "$ZSH_PATH" ] && ! grep -q "^$ZSH_PATH$" /etc/shells; then
+        echo "warning: $ZSH_PATH not in /etc/shells, using zsh in /etc/shells if exists" >&2
+        ZSH_PATH=$(grep -m1 '/zsh$' /etc/shells)
+     fi
     
-    if [ -n "$BASH_PATH" ] && ! grep -q "^$BASH_PATH$" /etc/shells; then
-        echo "warning: $BASH_PATH not in /etc/shells, using bash in /etc/shells if exists" >&2
-        BASH_PATH=$(grep -m1 '/bash$' /etc/shells)
+    # If no zsh in /etc/shells, fall back to bash
+    if [ -z "$ZSH_PATH" ]; then
+        echo "warning: falling back to bash since zsh isn't available in /etc/shells" >&2
+    
+        BASH_PATH=$(command -v bash)
+        
+        if [ -n "$BASH_PATH" ] && ! grep -q "^$BASH_PATH$" /etc/shells; then
+            echo "warning: $BASH_PATH not in /etc/shells, using bash in /etc/shells if exists" >&2
+            BASH_PATH=$(grep -m1 '/bash$' /etc/shells)
+        fi
+    
+        if [ -z "$BASH_PATH" ]; then
+            echo "error: no valid shell found in /etc/shells" >&2
+            exit 1
+        fi
+        
+        SHELL_PATH="$BASH_PATH"
+    else
+        SHELL_PATH="$ZSH_PATH"
     fi
     
-    if [ -z "$BASH_PATH" ]; then
-        echo "error: no valid shell found in /etc/shells" >&2
-        exit 1
+    # Change shell if not already set
+    if [ "$SHELL" != "$SHELL_PATH" ]; then
+        chsh -s "$SHELL_PATH"
+        echo "note: shell was changed" >&2
     fi
-    
-    SHELL_PATH="$BASH_PATH"
 else
-    SHELL_PATH="$ZSH_PATH"
-fi
-
-# Change shell if not already set
-if [ "$SHELL" != "$SHELL_PATH" ]; then
-    chsh -s "$SHELL_PATH"
-    echo "note: shell was changed" >&2
+    chsh -s zsh
 fi
 
 # final step: upgrade dependencies but ONLY for user-level pms
 if [ "$HAS_BREW" = "true" ]; then
-   brew upgrade 
+   brew upgrade -q
 fi
-pnpm update --global
-uv tool upgrade --all
+pnpm update --global --silent
+uv tool upgrade --quiet --all
 
 CERT_PATHS=(
     "$HOME/.x509/ipa-ca.crt"
