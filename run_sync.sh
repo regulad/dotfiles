@@ -218,12 +218,14 @@ else
 fi
 
 PNPM_CLI_PACKAGES=(
-    "@bitwarden/cli@latest"
-    "pyright@latest"
-    "typescript@latest"
-    "typescript-language-server@latest" 
     "ezff@latest"
 )
+
+if [ "$HAS_BREW" = "true" ]; then
+    brew install bitwarden-cli pyright typescript typescript-language-server
+else
+    PNPM_CLI_PACKAGES+=("@bitwarden/cli@latest" "pyright@latest" "typescript@latest" "typescript-language-server@latest")
+fi
 
 pnpm i -g "${PNPM_CLI_PACKAGES[@]}"
 
