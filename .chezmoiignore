@@ -3,7 +3,6 @@ autorun.cmd
 AppData
 {{- end }}
 {{- if eq .chezmoi.os "windows" }}
-run_sync.sh
 .config
 {{- end }}
 {{- if ne .chezmoi.os "darwin" }}

@@ -104,6 +104,7 @@ else
 fi
 
 # Preferences
+alias pipx="uv tool"
 export DO_NOT_TRACK=1
 export VISUAL="$(command -v nvim || command -v vim)"
 

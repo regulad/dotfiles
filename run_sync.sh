@@ -45,6 +45,8 @@ elif [ -d "/home/linuxbrew/.linuxbrew" ]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 fi
 
+export PATH="$PATH:$HOME/.local/bin"
+
 # system-level binary dependencies
 #     - these are typically very stable applications that MUST be provided by a package manager
 #     - they are not particularly version-sensitive; pinning is unnecesary
@@ -183,31 +185,77 @@ elif command -v rustup &> /dev/null; then
     fi
 fi
 
+if [ "$MANAGER" = "brew" ] && [[ "$CAN_SUDO" -ne 1 ]]; then
+    sudo ln -sfn $HOMEBREW_PREFIX/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
+fi
+
 # user-level binary dependencies
 # these dependencies aren't provided by the system package manager, for whatever reason
 # these packages do NOT require compilation and are distributed as binaries. 
 # they may be closed-source/non-libre (although I don't think any are).
-# brew distributes a lot of these as formulae.
+# brew distributes these on GNU/Linux and Darwin. no attempt is made on other platforms
 # most of them are needed for specific workflows (i.e. kotlin, python, java)
 SECONDARY_BINARY_DEPENDENCIES=(
-    # =+= Bare
-    "wakatime-cli"  # TODO: brew provides; termux can provide; fallback bare binary from https://github.com/wakatime/wakatime-cli
-    "kotlin-lsp"  # TODO: brew provides `brew install kotlin-language-server`; else bare binary from https://github.com/Kotlin/kotlin-lsp
-    "kotlin"  # TODO: brew provides `brew install kotlin`, debian provides with `kotlin`, termux provides with `kotlin`, else bare https://kotlinlang.org/docs/command-line.html
-    "jdtls"  # TODO: brew provides `jldts`, else bare binary from https://download.eclipse.org/jdtls/milestones/1.54.0/repository/
-
-    # =+= PyPi
-    "poetry"  # TODO: debian can provide this `apt install -y python3-poetry`, as can brew; fallback pip global
-
-    # =+= npm
-    "pnpm"  # TODO: do `npm i -g pnpm` on non-brew
-    "bitwarden-cli"  # TODO: do `pnpm install -g @bitwarden/cli` on non-brew
-    "pyright"  # TODO: brew provides; else `pnpm i -g pyright`
-    "typescript"  # TODO: brew provides; else `pnpm i -g typescript`
-    "typescript-language-server"  # TODO: brew provides; else `pnpm i -g typescript-language-server`
+    "wakatime-cli"
+    "kotlin"
+    "kotlin-language-server"
+    "fernflower"
+    "jdtls"
 )
 command -v brew &> /dev/null && HAS_BREW=true || HAS_BREW=false
-# TODO: kotlinc and fernflower
+
+if [ "$HAS_BREW" = "true" ]; then
+    brew install "${SECONDARY_BINARY_DEPENDENCIES[@]}"
+else
+    echo "warning: no brew for misc. binary deps" >&2
+fi
+
+# js/ts
+if [ "$HAS_BREW" = "true" ]; then
+    brew install pnpm
+else
+    npm i -g pnpm@latest
+fi
+
+PNPM_CLI_PACKAGES=(
+    "@bitwarden/cli@latest"
+    "pyright@latest"
+    "typescript@latest"
+    "typescript-language-server@latest" 
+    "ezff@latest"
+)
+
+pnpm i -g "${PNPM_CLI_PACKAGES[@]}"
+
+# Poetry
+# NOTE: redhat repositories provide poetry-core but not the CLI
+# NOTE: on brew platforms, the --user pip environment is externally handled
+if [ "$MANAGER" = "apt" ]; then
+    sudo apt install -y python3-poetry
+elif [ "$HAS_BREW" = "true" ]; then
+    brew install poetry
+else
+    pip install --user poetry
+fi
+
+# UV
+if [ "$HAS_BREW" = "true" ]; then
+    brew install uv
+else
+    pip install --user uv
+fi
+
+# NOTE: poetry is for legacy workflows. 
+# NOTE: `uv tool install` replaces pipx
+# can install with `pipx i <package>`
+# or `uv tool install <package>`
+PYPI_CLI_PACKAGES=(
+    "yt-dlp"  # NOTE: although this is in the Ubuntu repositories; would be better to update dynamically
+)
+
+for cli in "${PYPI_CLI_PACKAGES[@]}"; do
+    uv tool install ${cli}
+done
 
 # vim package management
 # NOTE: because I use neovim in lieu of vim, I'm not going to install Vundle
@@ -218,7 +266,103 @@ if ! [ -d ~/.oh-my-zsh ]; then
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
-# TODO: load custom ca into keychain from ~/.x509/ipa-ca.crt
-# TODO: chsh to zsh if not already the shell
+# load zsh as primary shell
+ZSH_PATH=$(command -v zsh)
+
+# Check if detected zsh is in /etc/shells
+if [ -n "$ZSH_PATH" ] && ! grep -q "^$ZSH_PATH$" /etc/shells; then
+    echo "warning: $ZSH_PATH not in /etc/shells, using zsh in /etc/shells if exists" >&2
+    ZSH_PATH=$(grep -m1 '/zsh$' /etc/shells)
+fi
+
+# If no zsh in /etc/shells, fall back to bash
+if [ -z "$ZSH_PATH" ]; then
+    BASH_PATH=$(command -v bash)
+    
+    if [ -n "$BASH_PATH" ] && ! grep -q "^$BASH_PATH$" /etc/shells; then
+        echo "warning: $BASH_PATH not in /etc/shells, using bash in /etc/shells if exists" >&2
+        BASH_PATH=$(grep -m1 '/bash$' /etc/shells)
+    fi
+    
+    if [ -z "$BASH_PATH" ]; then
+        echo "error: no valid shell found in /etc/shells" >&2
+        exit 1
+    fi
+    
+    SHELL_PATH="$BASH_PATH"
+else
+    SHELL_PATH="$ZSH_PATH"
+fi
+
+# Change shell if not already set
+if [ "$SHELL" != "$SHELL_PATH" ]; then
+    chsh -s "$SHELL_PATH"
+    echo "note: shell was changed" >&2
+fi
+
+# final step: upgrade dependencies but ONLY for user-level pms
+if [ "$HAS_BREW" = "true" ]; then
+   brew upgrade 
+fi
+pnpm update --global
+uv tool upgrade --all
+
+CERT_PATHS=(
+    "$HOME/.x509/ipa-ca.crt"
+)
+
+# Detect OS and install certificates
+if [[ "$(uname -o)" == "Android" ]]; then
+    # Termux/Android
+    echo "note: on Android/Termux, certificates must be added manually to the system trust store" >&2
+    
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS
+    for CERT_PATH in "${CERT_PATHS[@]}"; do
+        # Check if certificate is already trusted
+        if ! security verify-cert -c "$CERT_PATH" &>/dev/null; then
+            if [ "$CAN_SUDO" -eq 1 ]; then
+                sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$CERT_PATH"
+            else
+                security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db "$CERT_PATH"
+                echo "warning: added certificate to user keychain only (no sudo available)" >&2
+            fi
+        fi
+    done
+    
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # Linux
+    if [ "$CAN_SUDO" -eq 1 ]; then
+        NEEDS_UPDATE=0
+        
+        for CERT_PATH in "${CERT_PATHS[@]}"; do
+            # Check if certificate is already in system trust store
+            if ! openssl verify -CApath /etc/ssl/certs "$CERT_PATH" &>/dev/null; then
+                CERT_NAME=$(basename "$CERT_PATH")
+                
+                if [ -d /etc/pki/ca-trust/source/anchors ]; then
+                    # RHEL/CentOS/Fedora
+                    sudo cp "$CERT_PATH" "/etc/pki/ca-trust/source/anchors/$CERT_NAME"
+                    NEEDS_UPDATE=1
+                elif [ -d /usr/local/share/ca-certificates ]; then
+                    # Debian/Ubuntu
+                    sudo cp "$CERT_PATH" "/usr/local/share/ca-certificates/$CERT_NAME"
+                    NEEDS_UPDATE=1
+                fi
+            fi
+        done
+        
+        # Update trust store only if new certs were added
+        if [ "$NEEDS_UPDATE" -eq 1 ]; then
+            if [ -d /etc/pki/ca-trust/source/anchors ]; then
+                sudo update-ca-trust
+            elif [ -d /usr/local/share/ca-certificates ]; then
+                sudo update-ca-certificates
+            fi
+        fi
+    else
+        echo "warning: sudo required to install system certificate on Linux, skipping" >&2
+    fi
+fi
 
 echo "note: exiting hookscript. don't buy it if something after this point asks for sudo!" >&2
