@@ -10,13 +10,19 @@ Supported environments:
     - Including under WSL with Windows integration
 - (Windows) NT `cmd` (via `autorun.cmd`)
 
+Supported shells:
+
+- `zsh`
+- `bash` (fallback only)
+- `cmd` (NT)
+
 ## Hookscripts
 
 *nix-like platforms (termux, macOS, GNU/Linux) will automatically install required dependencies thanks to the `./run_sync.sh` hookscript.
 
 TODO: NT hookscript
 
-## Install
+## *nix Install
 
 ```bash
 # Preferred: install with native package manager
@@ -28,12 +34,12 @@ export PATH="$PATH:$HOME/.local/bin"
 # Initalize & run first-time dependency install
 chezmoi init regulad
 ~/.local/share/chezmoi/run_sync.sh
+source ~/.local/share/chezmoi/dot_commonrc
 
 # Configure bw for templating
-bw config <...>
-bw login <...>
+bw config server https://vw.regulad.xyz  # this is my server, obviously. replace w/ yours
+bw login --apikey  # stdio needed
 
 # Final apply
 chezmoi apply
-# Profit!
 ```
