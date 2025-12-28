@@ -73,7 +73,7 @@ export PATH="$PATH:$HOME/.local/bin"
 #     - pkg (termux) [t:]
 PRIMARY_BINARY_DEPENDENCIES=(
     # =+= CORE
-    "drt:build-essential"
+    "dt:build-essential"
     #"mdrt:bash"
     "mdrt:zsh"
     "t:file"
@@ -93,7 +93,8 @@ PRIMARY_BINARY_DEPENDENCIES=(
     "mdrt:keychain"
     "mdrt:gh"  # GitHub
     "mdrt:restic"
-    "mdrt:ffmpeg"
+    "mdt:ffmpeg"
+    "r:ffmpeg-free"
 
     # =+= JS/TS
     "m:node"
@@ -177,7 +178,8 @@ if [[ -n "$MANAGER" ]]; then
                 pkg install -y "${TO_INSTALL[@]}"
                 ;;
             dnf)
-                sudo dnf install -y "${TO_INSTALL[@]}"
+		sudo dnf groupinstall -q -y "Development Tools"
+                sudo dnf install -q -y "${TO_INSTALL[@]}"
                 ;;
             apt)
                 sudo apt update -qq
