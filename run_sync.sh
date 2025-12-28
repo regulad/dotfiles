@@ -38,9 +38,9 @@ enable_rpmfusion() {
       return 2
     fi
 
-    _is_installed rpmfusion-free-release || sudo dnf -y install \
+    _is_installed rpmfusion-free-release || sudo dnf -y -q install \
       "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${fedora_ver}.noarch.rpm"   # [web:1]
-    _is_installed rpmfusion-nonfree-release || sudo dnf -y install \
+    _is_installed rpmfusion-nonfree-release || sudo dnf -y -q install \
       "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${fedora_ver}.noarch.rpm" # [web:1]
     return 0
   fi
@@ -52,9 +52,9 @@ enable_rpmfusion() {
     fi
 
     # Assumes EPEL already enabled (RPM Fusion requires it on EL).
-    _is_installed rpmfusion-free-release || sudo dnf -y install --nogpgcheck \
+    _is_installed rpmfusion-free-release || sudo dnf -y -q install --nogpgcheck \
       "https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-${rhel_ver}.noarch.rpm"        # [web:1]
-    _is_installed rpmfusion-nonfree-release || sudo dnf -y install --nogpgcheck \
+    _is_installed rpmfusion-nonfree-release || sudo dnf -y -q install --nogpgcheck \
       "https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-${rhel_ver}.noarch.rpm" # [web:1]
     return 0
   fi
@@ -68,11 +68,6 @@ enable_rpmfusion() {
 # Purpose: On EL (RHEL/clones), enable the builder repo needed by some RPM Fusion deps.
 rpmfusion_enable_el_builder_repo() {
   set -euo pipefail
-
-  # Silent no-op if not EL
-  local rhel_ver
-  rhel_ver="$(rpm -E '%{?rhel}' 2>/dev/null || true)"
-  [[ -n "${rhel_ver}" && "${rhel_ver}" != "%{?rhel}" ]] || return 0
 
   # RHEL: CodeReady Builder
   if command -v subscription-manager >/dev/null 2>&1; then
