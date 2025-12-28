@@ -15,8 +15,6 @@ trap 'echo "Error on line $LINENO: Command was: $BASH_COMMAND" >&2' ERR
 # Source: RPM Fusion "Configuration" page (https://rpmfusion.org/Configuration)
 # Purpose: Enable RPM Fusion free+nonfree on supported Fedora (>=41) and EL (>=8) using dnf.
 enable_rpmfusion() {
-  set -euo pipefail
-
   _warn() { printf 'warn: %s\n' "$*" >&2; }
   _err()  { printf 'error: %s\n' "$*" >&2; }
 
@@ -67,8 +65,6 @@ enable_rpmfusion() {
 # Source: RPM Fusion "Configuration" page (https://rpmfusion.org/Configuration)
 # Purpose: On EL (RHEL/clones), enable the builder repo needed by some RPM Fusion deps.
 rpmfusion_enable_el_builder_repo() {
-  set -euo pipefail
-
   # RHEL: CodeReady Builder
   if command -v subscription-manager >/dev/null 2>&1; then
     sudo subscription-manager repos --enable \
