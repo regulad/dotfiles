@@ -316,7 +316,8 @@ if [ -z "$PNPM_HOME" ]; then
     touch ~/.bashrc
     mv ~/.bashrc ~/.bashrc.pre-pnpm
     SHELL=bash pnpm setup  &> /dev/null || true
-    source "$HOME/.bashrc"
+    touch ~/.bashrc
+    source ~/.bashrc
     rm ~/.bashrc
     mv ~/.bashrc.pre-pnpm ~/.bashrc
 fi
@@ -372,6 +373,7 @@ if ! [ -d ~/.oh-my-zsh ]; then
     touch ~/.zshrc
     mv ~/.zshrc ~/.zshrc.pre-oh-my-zsh
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    touch ~/.zshrc
     rm ~/.zshrc
     mv ~/.zshrc.pre-oh-my-zsh ~/.zshrc
 fi
