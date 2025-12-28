@@ -416,6 +416,8 @@ if command -v chsh &> /dev/null && ! [ "$(uname -o)" = "Android" ]; then
     fi
 elif command -v chsh &> /dev/null; then
     chsh -s zsh
+else
+    echo "warning: could not autoset shell" >&2
 fi
 
 # final step: upgrade dependencies but ONLY for user-level pms
