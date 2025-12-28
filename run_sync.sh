@@ -309,14 +309,13 @@ fi
 if [ "$HAS_BREW" = "true" ]; then
     brew install -q pnpm
 else
-    npm i -g -q pnpm@latest
+    sudo npm i -g -q pnpm@latest
 fi
 
 if [ -z "$PNPM_HOME" ]; then
     touch ~/.bashrc
     mv ~/.bashrc ~/.bashrc.pre-pnpm
-    SHELL=bash pnpm setup  &> /dev/null || true
-    touch ~/.bashrc
+    SHELL=bash pnpm setup  &> /dev/null
     source ~/.bashrc
     rm ~/.bashrc
     mv ~/.bashrc.pre-pnpm ~/.bashrc
@@ -373,7 +372,6 @@ if ! [ -d ~/.oh-my-zsh ]; then
     touch ~/.zshrc
     mv ~/.zshrc ~/.zshrc.pre-oh-my-zsh
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-    touch ~/.zshrc
     rm ~/.zshrc
     mv ~/.zshrc.pre-oh-my-zsh ~/.zshrc
 fi
