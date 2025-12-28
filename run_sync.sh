@@ -152,7 +152,6 @@ PRIMARY_BINARY_DEPENDENCIES=(
     "mdrt:zsh"
     "t:file"
     "t:man"
-    "r:util-linux-user"
     
     # =+= EDITOR
     "mdrt:neovim"  # nvim
@@ -382,7 +381,7 @@ fi
 # load zsh as primary shell
 ZSH_PATH=$(command -v zsh)
 
-if ! [ "$(uname -o)" = "Android" ]; then 
+if command -v chsh &> /dev/null && ! [ "$(uname -o)" = "Android" ]; then 
     # Check if detected zsh is in /etc/shells
     if [ -n "$ZSH_PATH" ] && ! grep -q "^$ZSH_PATH$" /etc/shells; then
         echo "warning: $ZSH_PATH not in /etc/shells, using zsh in /etc/shells if exists" >&2
@@ -415,7 +414,7 @@ if ! [ "$(uname -o)" = "Android" ]; then
         chsh -s "$SHELL_PATH"
         echo "note: shell was changed" >&2
     fi
-else
+elif command -v chsh &> /dev/null; then
     chsh -s zsh
 fi
 
