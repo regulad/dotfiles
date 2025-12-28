@@ -152,6 +152,7 @@ PRIMARY_BINARY_DEPENDENCIES=(
     "mdrt:zsh"
     "t:file"
     "t:man"
+    "r:util-linux-user"
     
     # =+= EDITOR
     "mdrt:neovim"  # nvim
@@ -308,8 +309,10 @@ fi
 # js/ts
 if [ "$HAS_BREW" = "true" ]; then
     brew install -q pnpm
-else
+elif [ "$CAN_SUDO" -eq 1 ]; then
     sudo npm i -g -q pnpm@latest
+else
+    npm install -g --prefix ~/.local -q pnpm@latest
 fi
 
 if [ -z "$PNPM_HOME" ]; then
@@ -371,7 +374,7 @@ done
 if ! [ -d ~/.oh-my-zsh ]; then
     touch ~/.zshrc
     mv ~/.zshrc ~/.zshrc.pre-oh-my-zsh
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended &> /dev/null
     rm ~/.zshrc
     mv ~/.zshrc.pre-oh-my-zsh ~/.zshrc
 fi
