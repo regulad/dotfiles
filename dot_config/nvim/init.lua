@@ -36,6 +36,7 @@ vim.lsp.enable('pyright')
 vim.lsp.enable('kotlin_lsp')
 vim.lsp.enable('ts_ls')
 vim.lsp.enable('rust_analyzer')
+require('lspconfig').harper_ls.setup {}
 
 -- Legacy
 vim.cmd('source ' .. vim.fn.stdpath('config') .. '/legacy.vim')

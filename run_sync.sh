@@ -152,6 +152,9 @@ PRIMARY_BINARY_DEPENDENCIES=(
     "mdrt:zsh"
     "t:file"
     "t:man"
+    "t:tokei"
+    "t:xxd"
+    "t:which"
     
     # =+= EDITOR
     "mdrt:neovim"  # nvim
@@ -296,6 +299,9 @@ SECONDARY_BINARY_DEPENDENCIES=(
     "kotlin-language-server"
     "fernflower"
     "jdtls"
+    "harper"
+    "lima"
+    "lima-additional-guestagents"
 )
 command -v brew &> /dev/null && HAS_BREW=true || HAS_BREW=false
 
