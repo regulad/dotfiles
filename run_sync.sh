@@ -153,8 +153,13 @@ PRIMARY_BINARY_DEPENDENCIES=(
     "t:file"
     "t:man"
     "t:tokei"
-    "t:xxd"
+    "dt:xxd"
     "t:which"
+    "d:binwalk"
+    "dr:ncdu"
+    "d:htop"
+    "d:cmake"
+    "md:nmap"
     
     # =+= EDITOR
     "mdrt:neovim"  # nvim
@@ -260,8 +265,8 @@ if [[ -n "$MANAGER" ]]; then
                 sudo dnf install -q -y "${TO_INSTALL[@]}"
                 ;;
             apt)
-                sudo apt update -qq
-                sudo apt install -qq -y "${TO_INSTALL[@]}"
+                sudo apt update -qq -o=Dpkg::Use-Pty=0
+                sudo apt install -qq -o=Dpkg::Use-Pty=0 -y "${TO_INSTALL[@]}"
                 ;;
             brew)
                 brew install -q "${TO_INSTALL[@]}"
@@ -345,7 +350,7 @@ pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
 # NOTE: redhat repositories provide poetry-core but not the CLI
 # NOTE: on brew platforms, the --user pip environment is externally handled
 if [ "$MANAGER" = "apt" ]; then
-    sudo apt install -y python3-poetry
+    sudo apt install -qq -o=Dpkg::Use-Pty=0 -y python3-poetry
 elif [ "$HAS_BREW" = "true" ]; then
     brew install -q poetry
 else
