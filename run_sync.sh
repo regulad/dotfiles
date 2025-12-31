@@ -120,8 +120,16 @@ if ! command -v brew &> /dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o
     echo "note: installing brew" >&2
     if [[ "$CAN_SUDO" -ne 1 ]]; then
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        if [ "$(uname -o)" = "Darwin" ] && [ "$(arch)" = "arm64" ]; then
+            sudo launchctl config user path /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+	    sudo launchctl config system path /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+        elif [ "$(uname -o)" = "Darwin" ] && [ "$(arch)" = "x86_64" ]; then
+            sudo launchctl config user path /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+            sudo launchctl config system path /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+	fi
     else
         echo "warning: can't do default brew install w/o sudo" >&2
+        # launchctl launchd domains CANNOT be set w/o sudo. this prevents things like gpgme-json from ever working
     fi
 
     # After Homebrew installation, detect and load it

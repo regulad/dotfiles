@@ -61,6 +61,7 @@ In summary: install chezmoi, bw, and git through scoop, init w/ chezmoi, login t
 - [ ] Addl. language server configurations in nvim
 - [ ] Emit warnings in vim and bash
 - [ ] Brew on permissionless systems w/ gentoo-style custom prefixes
+- [ ] Brew casks on macOS only (stuff like Bitwarden depends on state)
 - [ ] Annotate `rc`s with philosophy (no network requests, fast boot, etc.
 - [ ] Adopt `corepack` for installing `pnpm`
 - [ ] Finalize & memorize nvim keybinds (lock it in, dude!)
