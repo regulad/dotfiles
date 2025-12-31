@@ -156,10 +156,10 @@ PRIMARY_BINARY_DEPENDENCIES=(
     "dt:xxd"
     "t:which"
     "d:binwalk"
-    "dr:ncdu"
-    "d:htop"
-    "d:cmake"
-    "md:nmap"
+    "drt:ncdu"
+    "dt:htop"
+    "dt:cmake"
+    "mdt:nmap"
     
     # =+= EDITOR
     "mdrt:neovim"  # nvim
@@ -256,6 +256,7 @@ if [[ -n "$MANAGER" ]]; then
     if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
         case "$MANAGER" in
             pkg)
+		# No quietting techniques work for pkg
                 pkg install -y "${TO_INSTALL[@]}"
                 ;;
             dnf)
