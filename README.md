@@ -66,3 +66,4 @@ In summary: install chezmoi, bw, and git through scoop, init w/ chezmoi, login t
 - [ ] Finalize & memorize nvim keybinds (lock it in, dude!)
 - [ ] Fix nvim newline behaviour
 - [ ] Get `uv` building on termux
+- [ ] Bitwarden cask/appstore install on macOS for the BW ssh keychain manager
