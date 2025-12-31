@@ -65,3 +65,4 @@ In summary: install chezmoi, bw, and git through scoop, init w/ chezmoi, login t
 - [ ] Adopt `corepack` for installing `pnpm`
 - [ ] Finalize & memorize nvim keybinds (lock it in, dude!)
 - [ ] Fix nvim newline behaviour
+- [ ] Get `uv` building on termux
