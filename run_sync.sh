@@ -155,10 +155,10 @@ PRIMARY_BINARY_DEPENDENCIES=(
     "t:tokei"
     "dt:xxd"
     "t:which"
-    "d:binwalk"
-    "drt:ncdu"
-    "dt:htop"
-    "dt:cmake"
+    "md:binwalk"
+    "mdrt:ncdu"
+    "mdt:htop"
+    "mdt:cmake"
     "mdt:nmap"
     
     # =+= EDITOR
