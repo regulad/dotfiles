@@ -5,7 +5,7 @@
 Supported environments:
 
 - Termux
-    - NOTE: `termux-exec` doesn't seem to hook `execve()` the hookscript when chezmoi calls it, so the hookscript needs to be run manually after each apply.
+    - NOTE: `termux-exec` doesn't seem to hook the `execve()` syscall from the hookscript's shebang when chezmoi calls it, so the hookscript needs to be run manually after each apply.
 - macOS
 - Debian or Red Hat-based GNU/Linux
     - Including under WSL with Windows integration
