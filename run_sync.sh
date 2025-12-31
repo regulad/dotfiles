@@ -118,7 +118,11 @@ fi
 # don't think any of the addl. userpsace packages need to be installed by this script
 if ! command -v brew &> /dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)" == "GNU/Linux" ]]; then
     echo "note: installing brew" >&2
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    if [[ "$CAN_SUDO" -ne 1 ]]; then
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    else
+        echo "warning: can't do default brew install w/o sudo" >&2
+    fi
 
     # After Homebrew installation, detect and load it
     if [ -d "/opt/homebrew" ]; then
@@ -170,6 +174,7 @@ PRIMARY_BINARY_DEPENDENCIES=(
     "mdrt:git-lfs"
     "mdt:gnupg"  # gpg
     "r:gnupg2"
+    "m:gpgme"
     "d:openssh-client"
     "mrt:openssh"  # ssh-agent & ssh 
     "mdrt:keychain"
