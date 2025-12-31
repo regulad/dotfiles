@@ -108,7 +108,7 @@ alias pipx="uv tool"
 export DO_NOT_TRACK=1
 export VISUAL="$(command -v nvim || command -v vim)"
 
-# vi alias
+# === ALIASES
 vi() { command "$VISUAL" "$@"; }
 if [ -n "${ZSH_VERSION-}" ]; then
   case "$VISUAL" in
@@ -117,7 +117,6 @@ if [ -n "${ZSH_VERSION-}" ]; then
   esac
 fi
 
-# ssh-privpub alias
 ssh-privpub() {
     for key in "$@"; do
         [[ "$key" == *.pub ]] && continue
@@ -125,3 +124,7 @@ ssh-privpub() {
     done
 }
 [ -n "$ZSH_VERSION" ] && compdef _files ssh-privpub
+
+chezmoi-cd() {
+    cd $(chezmoi source-path)
+}
