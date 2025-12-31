@@ -4,12 +4,17 @@
 
 Supported environments:
 
-- Termux
+- Termux latest
     - NOTE: `termux-exec` doesn't seem to hook the `execve()` syscall from the hookscript's shebang when chezmoi calls it, so the hookscript needs to be run manually after each apply.
-- macOS
-- Debian or Red Hat-based GNU/Linux
+- macOS latest (w/ `brew`)
+- Debian GNU/Linux (tested against Ubuntu 24.04)
     - Including under WSL with Windows integration
-- (Windows) NT `cmd` (via `autorun.cmd`)
+    - Installs brew
+- Red Hat-based GNU/Linux (tested against Fedora >= 42 and RHEL >= 10)
+    - Including under WSL with Windows integration
+    - Installs brew
+- (Windows 11) NT >= 19045 `cmd` (via `autorun.cmd`)
+    - Installs choco
 
 Supported shells:
 
@@ -19,7 +24,7 @@ Supported shells:
 
 ## Hookscripts
 
-*nix-like platforms (termux, macOS, GNU/Linux) will automatically install required dependencies thanks to the `./run_sync.sh` hookscript.
+*nix-like platforms (Termux, macOS, GNU/Linux) will automatically install required dependencies thanks to the `./run_sync.sh` hookscript.
 
 TODO: NT hookscript
 
@@ -45,6 +50,12 @@ bw login --apikey  # stdio needed
 chezmoi apply
 ```
 
+## NT Install
+
+TODO
+
+In summary: install chezmoi, bw, and git through scoop, init w/ chezmoi, login to bw, chezmoi apply and pray
+
 ## TODOs
 
 - [ ] Addl. language server configurations in nvim
@@ -53,4 +64,4 @@ chezmoi apply
 - [ ] Annotate `rc`s with philosophy (no network requests, fast boot, etc.
 - [ ] Adopt `corepack` for installing `pnpm`
 - [ ] Finalize & memorize nvim keybinds (lock it in, dude!)
-
+- [ ] Fix nvim newline behaviour
