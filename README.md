@@ -68,3 +68,4 @@ In summary: install chezmoi, bw, and git through scoop, init w/ chezmoi, login t
 - [ ] Fix nvim newline behaviour
 - [ ] Get `uv` building on termux
 - [ ] Bitwarden cask/appstore install on macOS for the BW ssh keychain manager
+- [ ] Global crates like https://github.com/ExPixel/cargo-disasm
