@@ -43,9 +43,8 @@ Host wahlenet
 Host pihole
     HostName pihole.home.arpa
     User root
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
-    IdentitiesOnly yes
+    PubkeyAuthentication no
+    PreferredAuthentications password
 
 # Hosts
 Host macserver
