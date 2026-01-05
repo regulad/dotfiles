@@ -40,6 +40,13 @@ Host wahlenet
     IdentityFile ~/.ssh/id_rsa  # fallback
     IdentitiesOnly yes
 
+Host pihole
+    HostName pihole.home.arpa
+    User root
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentitiesOnly yes
+
 # Hosts
 Host macserver
 Host mullvad
