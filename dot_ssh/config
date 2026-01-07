@@ -83,7 +83,7 @@ Host doppelgangerhq.com
 # Oracle (wahlecloud)
 Host tailscalerouter
 
-Match Host tailsaclerouter User opc
+Match Host tailscalerouter User opc
     IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key.pub
     IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key  # fallback
     IdentitiesOnly yes
