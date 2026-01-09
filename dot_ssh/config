@@ -4,14 +4,14 @@ HashKnownHosts yes
 
 # "Special" hosts
 Host neodingus
-    HostName neodingus
+    HostName neodingus.tail11540.ts.net
     User root
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
     IdentitiesOnly yes
 
 Host prodingus
-    HostName prodingus
+    HostName prodingus.tail11540.ts.net
     User root
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
@@ -33,37 +33,49 @@ Host teledeck8
     IdentityFile ~/.ssh/id_rsa  # fallback
     IdentitiesOnly yes
 
-Host wahlenet
-    HostName wahlenet.home.arpa
-    User root
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
-    IdentitiesOnly yes
-
 Host pihole
     HostName pihole.home.arpa
     User root
     PubkeyAuthentication no
     PreferredAuthentications password
 
-# Hosts
+# Static hosts
 Host macserver
-Host mullvad
+    HostName macserver.tail11540.ts.net
+
 Host winserver
-Host lancache
-Host prominer
-Host neominer
-Host proencode
-Host neoencode
-Host procuda
-Host wireless
-Host timemachine
-Host tinker
-Host penumbra
-Host winlite
-Host freeipa
+    HostName winserver.tail11540.ts.net
+
 Host dingus-server
+    HostName dingus-server.tail11540.ts.net
+
 Host pelican
+    HostName pelican.tail11540.ts.net
+
+Host lancache
+    HostName lancache.home.arpa
+
+Host proencode
+    HostName proencode.home.arpa
+
+Host procuda
+    HostName procuda.home.arpa
+
+Host freeipa
+    HostName freeipa.home.arpa
+
+Host timemachine
+    HostName timemachine.home.arpa
+
+Host tinker
+    HostName tinker.home.arpa
+
+# Mobile hosts
+Host penumbra
+    HostName penumbra.tail11540.ts.net
+
+Host winlite
+    HostName macserver.tail11540.ts.net
 
 # Oracle (Legacy VCN)
 Host git.regulad.xyz
