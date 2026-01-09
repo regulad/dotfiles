@@ -52,6 +52,9 @@ Host dingus-server
 Host pelican
     HostName pelican.tail11540.ts.net
 
+Host matrix
+    HostName matrix.tail11540.ts.net
+
 Host lancache
     HostName lancache.home.arpa
 
