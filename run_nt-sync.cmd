@@ -48,7 +48,7 @@ call refreshenv >nul 2>&1
 
 echo debug: installing scoop packages
 call scoop update >nul 2>&1
-set packages=bitwarden-cli chezmoi clink gh git nodejs nmap rust telnet unzip vim neovim uv file dos2unix grep
+set packages=bitwarden-cli chezmoi clink gh git nodejs nmap rust telnet unzip vim neovim uv file dos2unix grep gradle
 for %%p in (%packages%) do (
     call scoop list %%p >nul 2>&1
     if !errorLevel! neq 0 (
@@ -64,7 +64,7 @@ call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
 
 echo debug: done with scoop
 REM Install/update winget packages
-set winget_packages=Microsoft.WindowsTerminal Element.Element JetBrains.Toolbox Zoom.Zoom.EXE PrismLauncher.PrismLauncher OpenWhisperSystems.Signal Bitwarden.Bitwarden Jellyfin.JellyfinMediaPlayer Anthropic.Claude WinSCP.WinSCP GnuPG.GnuPG MHNexus.HxD VideoLAN.VLC PuTTY.PuTTY EclipseAdoptium.Temurin.25.JDK OpenJS.NodeJS.LTS DenoLand.Deno
+set winget_packages=Microsoft.WindowsTerminal Element.Element JetBrains.Toolbox Zoom.Zoom.EXE PrismLauncher.PrismLauncher OpenWhisperSystems.Signal Bitwarden.Bitwarden Jellyfin.JellyfinMediaPlayer Anthropic.Claude WinSCP.WinSCP GnuPG.GnuPG MHNexus.HxD VideoLAN.VLC PuTTY.PuTTY EclipseAdoptium.Temurin.25.JDK EclipseAdoptium.Temurin.21.JDK OpenJS.NodeJS.LTS DenoLand.Deno
 
 for %%p in (%winget_packages%) do (
     echo Checking %%p...
