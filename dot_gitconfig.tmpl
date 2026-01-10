@@ -17,6 +17,9 @@
 	gpgSign = if-asked
 [core]
 	autocrlf = false
+{{- if and (eq .chezmoi.os "windows") (stat (joinPath .chezmoi.homeDir "scoop")) }}
+	sshCommand = "C:\\Windows\\System32\\OpenSSH\\ssh.exe"
+{{- end }}
 [filter "lfs"]
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process

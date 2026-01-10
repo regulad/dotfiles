@@ -39,27 +39,44 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
+echo debug: installing scoop
 where scoop >nul 2>&1
 if %errorLevel% neq 0 (
     powershell -Command "Start-Process powershell -Verb RunAs -ArgumentList '-Command', 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force; irm get.scoop.sh | iex' -Wait"
 )
-
 call refreshenv >nul 2>&1
 
-scoop update
-
-set packages=bitwarden-cli chezmoi clink gh git nodejs nmap rust telnet unzip vim neovim uv
-
+echo debug: installing scoop packages
+call scoop update >nul 2>&1
+set packages=bitwarden-cli chezmoi clink gh git nodejs nmap rust telnet unzip vim neovim uv file dos2unix grep
 for %%p in (%packages%) do (
-    scoop list %%p >nul 2>&1
-    if !errorLevel! == 0 (
-        scoop update %%p --quiet
-    ) else (
-        scoop install %%p
+    call scoop list %%p >nul 2>&1
+    if !errorLevel! neq 0 (
+        call scoop install %%p >nul 2>&1
     )
 )
 
-clink autorun set %USERPROFILE%\autorun.cmd
+echo debug: updating existing scoop packages
+call scoop update --all >nul 2>&1
+
+echo debug: setting autorun
+call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
+
+echo debug: done with scoop
+REM Install/update winget packages
+set winget_packages=Microsoft.WindowsTerminal Element.Element JetBrains.Toolbox Zoom.Zoom.EXE PrismLauncher.PrismLauncher OpenWhisperSystems.Signal Bitwarden.Bitwarden Jellyfin.JellyfinMediaPlayer Anthropic.Claude WinSCP.WinSCP GnuPG.GnuPG MHNexus.HxD VideoLAN.VLC PuTTY.PuTTY EclipseAdoptium.Temurin.25.JDK OpenJS.NodeJS.LTS DenoLand.Deno
+
+for %%p in (%winget_packages%) do (
+    echo Checking %%p...
+    call winget list --id %%p --exact >nul 2>&1
+    if !errorLevel! == 0 (
+        echo Updating %%p...
+        call winget upgrade --id %%p --silent --accept-source-agreements --accept-package-agreements
+    ) else (
+        echo Installing %%p...
+        call winget install --id %%p --silent --accept-source-agreements --accept-package-agreements
+    )
+)
 
 call refreshenv >nul 2>&1
 
