@@ -49,6 +49,11 @@ case ":$PATH:" in
 esac
 # pnpm end
 
+# deno
+export DENO_INSTALL="$HOME/.deno"
+export PATH="$DENO_INSTALL/bin:$PATH"
+# deno end
+
 # Created by `pipx` on 2025-08-15 00:48:24
 export PATH="$PATH:$HOME/.local/bin"
 
@@ -99,8 +104,10 @@ unset _bw_sock
 # completions
 if [ -n "$ZSH_VERSION" ]; then
     eval "$(chezmoi completion zsh)"
+    eval "$(fabric completions zsh)"
 else
     eval "$(chezmoi completion bash)"
+    eval "$(fabric completions bash)"
 fi
 
 # Preferences

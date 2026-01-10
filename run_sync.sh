@@ -362,7 +362,14 @@ fi
 pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
 
 # deno
-# TODO
+export DENO_INSTALL="$HOME/.deno"
+export PATH="$DENO_INSTALL/bin:$PATH"
+
+if command -v fabric &> /dev/null; then
+    deno install -A -g -n fabric https://fabricmc.net/cli
+else
+    fabric upgrade
+fi
 
 # Poetry
 # NOTE: redhat repositories provide poetry-core but not the CLI
