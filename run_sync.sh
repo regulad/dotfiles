@@ -321,6 +321,7 @@ SECONDARY_BINARY_DEPENDENCIES=(
     "harper"
     "lima"
     "lima-additional-guestagents"
+    "deno"
 )
 command -v brew &> /dev/null && HAS_BREW=true || HAS_BREW=false
 
@@ -330,7 +331,7 @@ else
     echo "warning: no brew for misc. binary deps" >&2
 fi
 
-# js/ts
+# pnpm
 if [ "$HAS_BREW" = "true" ]; then
     brew install -q pnpm
 elif [ "$CAN_SUDO" -eq 1 ]; then
@@ -359,6 +360,9 @@ else
 fi
 
 pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
+
+# deno
+# TODO
 
 # Poetry
 # NOTE: redhat repositories provide poetry-core but not the CLI
