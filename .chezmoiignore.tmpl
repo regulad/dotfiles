@@ -3,6 +3,7 @@
 {{- if ne .chezmoi.os "windows" }}
 nt-sync.cmd
 autorun.cmd
+.doskey.mac
 AppData
 {{- else }}
 posix-sync.sh
