@@ -24,9 +24,9 @@ Supported shells:
 
 ## Hookscripts
 
-*nix-like platforms (Termux, macOS, GNU/Linux) will automatically install required dependencies thanks to the `./run_sync.sh` hookscript.
+*nix-like platforms (Termux, macOS, GNU/Linux) will automatically install required dependencies thanks to the `./run_posix-sync.sh` hookscript.
 
-TODO: NT hookscript
+NT platforms use `run_nt-sync.cmd` for dependency installation.
 
 ## *nix Install
 
@@ -52,9 +52,22 @@ chezmoi apply
 
 ## NT Install
 
-TODO
+```cmd
+# Install dependencies via scoop
+scoop install chezmoi bitwarden-cli git
 
-In summary: install chezmoi, bw, and git through scoop, init w/ chezmoi, login to bw, chezmoi apply and pray
+# Initialize chezmoi
+chezmoi init regulad
+
+# Configure bw for templating
+bw config server https://vw.regulad.xyz  # replace with your server
+bw login --apikey
+
+# Apply dotfiles
+chezmoi apply
+```
+
+The `autorun.cmd` will automatically set up Clink and doskey macros (`pipx`, `vi`, `chezmoi-cd`, `ssh-privpub`) on each shell startup.
 
 ## TODOs
 
