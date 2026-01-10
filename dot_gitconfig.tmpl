@@ -29,6 +29,9 @@
 {{- end }}
 [gpg "ssh"]
 	allowedSignersFile = ~/.ssh/allowed_signers
+{{- if and (eq .chezmoi.os "windows") (stat (joinPath .chezmoi.homeDir "scoop")) }}
+	program = "C:\\Windows\\System32\\OpenSSH\\ssh-keygen.exe"
+{{- end }}
 [credential "https://gist.github.com"]
 	helper = !gh auth git-credential
 [credential "https://github.com"]
