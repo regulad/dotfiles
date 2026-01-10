@@ -1,13 +1,13 @@
 .config/nvim/lazy-lock.json
+
 {{- if ne .chezmoi.os "windows" }}
 nt-sync.cmd
 autorun.cmd
 AppData
-{{- end }}
-{{- if eq .chezmoi.os "windows" }}
+{{- else }}
 posix-sync.sh
-.config
 {{- end }}
+
 {{- if ne .chezmoi.os "darwin" }}
 Library
 {{- end }}
