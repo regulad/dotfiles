@@ -48,7 +48,7 @@ call refreshenv >nul 2>&1
 
 echo debug: installing scoop packages
 call scoop update >nul 2>&1
-set packages=bitwarden-cli chezmoi clink gh git nodejs nmap rust telnet unzip vim neovim uv file dos2unix grep gradle
+set packages=bitwarden-cli chezmoi clink gh git nodejs nmap rust telnet unzip vim neovim uv file dos2unix grep gradle coreutils
 for %%p in (%packages%) do (
     call scoop list %%p >nul 2>&1
     if !errorLevel! neq 0 (
@@ -75,6 +75,22 @@ for %%p in (%winget_packages%) do (
     ) else (
         echo Installing %%p...
         call winget install --id %%p --silent --accept-source-agreements --accept-package-agreements
+    )
+)
+
+REM Setup symlinks from windows-specific AppData into the XDG .config directory
+set local_links=nvim
+
+for %%L in (%local_links%) do (
+    if exist "%USERPROFILE%\AppData\Local\%%L" (
+        for %%i in ("%USERPROFILE%\AppData\Local\%%L") do set "attribs=%%~ai"
+        setlocal enabledelayedexpansion
+        if not "!attribs:~8,1!"=="l" (
+            echo warning: existing %%L directory exists
+        )
+        endlocal
+    ) else (
+        mklink /J "%USERPROFILE%\AppData\Local\%%L" "%USERPROFILE%\.config\%%L"
     )
 )
 
