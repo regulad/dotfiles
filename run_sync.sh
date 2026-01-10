@@ -365,7 +365,7 @@ pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
 export DENO_INSTALL="$HOME/.deno"
 export PATH="$DENO_INSTALL/bin:$PATH"
 
-if command -v fabric &> /dev/null; then
+if ! command -v fabric &> /dev/null; then
     deno install -A -g -n fabric https://fabricmc.net/cli
 else
     fabric upgrade
