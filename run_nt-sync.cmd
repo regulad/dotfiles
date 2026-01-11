@@ -64,7 +64,7 @@ call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
 
 echo debug: done with scoop
 REM Install/update winget packages
-set winget_packages=Microsoft.WindowsTerminal Element.Element JetBrains.Toolbox Zoom.Zoom.EXE PrismLauncher.PrismLauncher OpenWhisperSystems.Signal Bitwarden.Bitwarden Jellyfin.JellyfinMediaPlayer Anthropic.Claude WinSCP.WinSCP GnuPG.GnuPG MHNexus.HxD VideoLAN.VLC PuTTY.PuTTY EclipseAdoptium.Temurin.25.JDK EclipseAdoptium.Temurin.21.JDK OpenJS.NodeJS.LTS DenoLand.Deno
+set winget_packages=Microsoft.WindowsTerminal Element.Element JetBrains.Toolbox Zoom.Zoom.EXE PrismLauncher.PrismLauncher OpenWhisperSystems.Signal Bitwarden.Bitwarden Jellyfin.JellyfinMediaPlayer Anthropic.Claude WinSCP.WinSCP GnuPG.GnuPG MHNexus.HxD VideoLAN.VLC PuTTY.PuTTY EclipseAdoptium.Temurin.25.JDK EclipseAdoptium.Temurin.21.JDK OpenJS.NodeJS.LTS DenoLand.Deno Microsoft.VisualStudioCode
 
 for %%p in (%winget_packages%) do (
     echo Checking %%p...
