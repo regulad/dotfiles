@@ -1,0 +1,90 @@
+{
+	"editor.formatOnSave": true,
+	"explorer.confirmDelete": false,
+	"maven.executable.path": "C:\\Users\\parke\\AppData\\Local\\apache-maven-3.8.1\\bin\\mvn",
+	"editor.suggestSelection": "first",
+	"vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
+	"java.configuration.checkProjectSettingsExclusions": false,
+	"python.languageServer": "Pylance",
+	"git.enableSmartCommit": true,
+	"git.autofetch": true,
+	"git.confirmSync": false,
+	"telemetry.enableCrashReporter": false,
+	"telemetry.enableTelemetry": false,
+	"editor.cursorBlinking": "smooth",
+	"files.autoSave": "afterDelay",
+	"editor.wordWrap": "on",
+	"diffEditor.codeLens": true,
+	"spellright.documentTypes": ["markdown", "latex", "plaintext"],
+	"spellright.notificationClass": "warning",
+	"xml.codeLens.enabled": true,
+	"lime.browser": "firefox",
+	"markdownlint.config": {},
+	"liquid.format": true,
+	"window.closeWhenEmpty": true,
+	"terminal.integrated.shell.windows": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+	"files.eol": "\n",
+	"redhat.telemetry.enabled": false,
+	"java.project.importOnFirstTimeStartup": "automatic",
+	"workbench.editorAssociations": {
+		"*.ipynb": "jupyter.notebook.ipynb"
+	},
+	"python.showStartPage": false,
+	"terminal.integrated.tabs.enabled": true,
+	"remote.extensionKind": {
+		"asvetliakov.vscode-neovim": ["workspace"]
+	},
+	"python.pythonPath": "C:\\Users\\parke\\AppData\\Local\\Programs\\Python\\Python39\\python.exe",
+	"settingsSync.ignoredSettings": [
+		//
+		"-git.defaultCloneDirectory"
+	],
+	"explorer.confirmDragAndDrop": false,
+	"[dart]": {
+		"editor.formatOnSave": true,
+		"editor.formatOnType": true,
+		"editor.rulers": [80],
+		"editor.selectionHighlight": false,
+		"editor.suggest.snippetsPreventQuickSuggestions": false,
+		"editor.suggestSelection": "first",
+		"editor.tabCompletion": "onlySnippets",
+		"editor.wordBasedSuggestions": "off"
+	},
+	"github.copilot.enable": {
+		"*": false,
+		"plaintext": false,
+		"markdown": false,
+		"scminput": false,
+		"yaml": false
+	},
+	"[markdown]": {
+		"editor.defaultFormatter": "yzhang.markdown-all-in-one"
+	},
+	"githubPullRequests.createOnPublishBranch": "never",
+	"terminal.integrated.defaultProfile.windows": "PowerShell",
+	"window.autoDetectColorScheme": true,
+	"cmake.configureOnOpen": true,
+	"workbench.colorTheme": "Visual Studio Light",
+	"liveServer.settings.donotShowInfoMsg": true,
+	"prettier.useTabs": true,
+	"update.showReleaseNotes": false,
+	"dev.containers.dockerPath": "podman",
+	"dev.containers.dockerSocketPath": "/run/user/1000/podman/podman.sock",
+	"javascript.updateImportsOnFileMove.enabled": "always",
+	"typescript.updateImportsOnFileMove.enabled": "always",
+	"debug.javascript.debugByLinkOptions": "on",
+	"cSpell.userWords": [
+		"animatronic",
+		"animatronics",
+		"Chica",
+		"followees",
+		"Webzone",
+		"xkcd"
+	],
+	"mypy-type-checker.importStrategy": "fromEnvironment",
+	"mypy-type-checker.preferDaemon": true,
+	"mypy-type-checker.reportingScope": "workspace",
+	"extensions.experimental.affinity": {
+		"asvetliakov.vscode-neovim": 1
+	}
+}
