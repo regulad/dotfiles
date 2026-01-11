@@ -1,4 +1,5 @@
 pipx=uv tool $*
 vi=nvim $*
+clear=cls
 chezmoi-cd=cd /d "%USERPROFILE%\.local\share\chezmoi"
 ssh-privpub=for %%f in ($*) do @(echo %%f | findstr /i ".pub$" >nul || (if exist "%%f" ssh-keygen -y -f "%%f" > "%%f.pub" 2>nul && echo %%f.pub))
