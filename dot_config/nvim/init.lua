@@ -31,10 +31,11 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 
 if vim.g.vscode then
     -- Neovim in VSCode extension
-else
-    -- ordinary Neovim
+
     local vscode = require('vscode')
     vim.notify = vscode.notify
+else
+    -- ordinary Neovim
 
     -- LSP
     -- https://github.com/neovim/nvim-lspconfig/blob/master/doc/configs.md

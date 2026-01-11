@@ -98,7 +98,7 @@ set roaming_links=Code
 
 for %%L in (%roaming_links%) do (
     if exist "%USERPROFILE%\AppData\Roaming\%%L" (
-        for %%i in ("%USERPROFILE%\AppData\Romaing\%%L") do set "attribs=%%~ai"
+        for %%i in ("%USERPROFILE%\AppData\Roaming\%%L") do set "attribs=%%~ai"
         setlocal enabledelayedexpansion
         if not "!attribs:~8,1!"=="l" (
             echo warning: existing %%L directory exists
