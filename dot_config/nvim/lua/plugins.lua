@@ -3,7 +3,8 @@ return {
         'nvim-treesitter/nvim-treesitter',
         lazy = false,
         branch = 'main',
-        build = ':TSUpdate'
+        build = ':TSUpdate',
+        cond = vim.g.vscode
     }, {'neovim/nvim-lspconfig', lazy = false, branch = 'master'}, {
         'saghen/blink.cmp',
         -- optional: provides snippets for the snippet source
@@ -52,8 +53,12 @@ return {
             --
             -- See the fuzzy documentation for more information
             fuzzy = {implementation = "prefer_rust_with_warning"}
+
         },
+        cond = vim.g.vscode,
         opts_extend = {"sources.default"}
-    }, {'wakatime/vim-wakatime'}, {'doums/darcula'},
-    {'andrejlevkovitch/vim-lua-format'}, {'rust-lang/rust.vim'}, {'mfussenegger/nvim-jdtls'}
+    }, {'wakatime/vim-wakatime', cond = vim.g.vscode},
+    {'doums/darcula', cond = vim.g.vscode}, {'andrejlevkovitch/vim-lua-format'},
+    {'rust-lang/rust.vim', cond = vim.g.vscode},
+    {'mfussenegger/nvim-jdtls', cond = vim.g.vscode}
 }
