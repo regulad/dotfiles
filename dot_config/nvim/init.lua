@@ -29,14 +29,22 @@ vim.api.nvim_create_autocmd("ColorScheme", {
     end
 })
 
--- LSP
--- https://github.com/neovim/nvim-lspconfig/blob/master/doc/configs.md
-vim.lsp.enable('jdtls')
-vim.lsp.enable('pyright')
-vim.lsp.enable('kotlin_lsp')
-vim.lsp.enable('ts_ls')
-vim.lsp.enable('rust_analyzer')
-require('lspconfig').harper_ls.setup {}
+if vim.g.vscode then
+    -- Neovim in VSCode extension
+else
+    -- ordinary Neovim
+    local vscode = require('vscode')
+    vim.notify = vscode.notify
+
+    -- LSP
+    -- https://github.com/neovim/nvim-lspconfig/blob/master/doc/configs.md
+    vim.lsp.enable('jdtls')
+    vim.lsp.enable('pyright')
+    vim.lsp.enable('kotlin_lsp')
+    vim.lsp.enable('ts_ls')
+    vim.lsp.enable('rust_analyzer')
+    require('lspconfig').harper_ls.setup {}
+end
 
 -- Legacy
 vim.cmd('source ' .. vim.fn.stdpath('config') .. '/legacy.vim')
