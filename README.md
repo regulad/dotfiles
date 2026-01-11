@@ -39,7 +39,7 @@ export PATH="$PATH:$HOME/.local/bin"
 
 # Initalize & run first-time dependency install
 chezmoi init regulad
-~/.local/share/chezmoi/run_sync.sh
+~/.local/share/chezmoi/run_posix-sync.sh
 source ~/.local/share/chezmoi/dot_commonrc
 
 # Configure bw for templating
@@ -68,6 +68,16 @@ chezmoi apply
 ```
 
 The `autorun.cmd` will automatically set up Clink and doskey macros (`pipx`, `vi`, `chezmoi-cd`, `ssh-privpub`) on each shell startup.
+
+## Notes
+
+### VSCode
+
+Make sure you add any extensions you'd like to download to `vscode-extensions.txt`. The newest version of every extension listed in the file is installed on each apply.
+
+### Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever
+
+Remember to define the package in the correct hookscript (i.e. `run_posix-sync.sh` or `run_nt-sync.sh`)
 
 ## TODOs
 
