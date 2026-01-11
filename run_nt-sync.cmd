@@ -94,6 +94,21 @@ for %%L in (%local_links%) do (
     )
 )
 
+set roaming_links=Code
+
+for %%L in (%roaming_links%) do (
+    if exist "%USERPROFILE%\AppData\Roaming\%%L" (
+        for %%i in ("%USERPROFILE%\AppData\Romaing\%%L") do set "attribs=%%~ai"
+        setlocal enabledelayedexpansion
+        if not "!attribs:~8,1!"=="l" (
+            echo warning: existing %%L directory exists
+        )
+        endlocal
+    ) else (
+        mklink /J "%USERPROFILE%\AppData\Roaming\%%L" "%USERPROFILE%\.config\%%L"
+    )
+)
+
 call refreshenv >nul 2>&1
 
 echo note: leaving hookscript
