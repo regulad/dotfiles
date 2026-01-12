@@ -161,6 +161,7 @@ PRIMARY_BINARY_DEPENDENCIES=(
     # =+= CORE
     "dt:build-essential"
     #"mdrt:bash"
+    "md:retry"
     "mdrt:zsh"
     "t:file"
     "t:man"

@@ -1,14 +1,15 @@
 .config/nvim/lazy-lock.json
 
 {{- if ne .chezmoi.os "windows" }}
-nt-sync.cmd
-install-vscode-ext.cmd
+0-nt-sync.cmd
+1-install-vscode-ext.cmd
+
 autorun.cmd
 .doskey.mac
 AppData
 {{- else }}
-install-vscode-ext.sh
-posix-sync.sh
+0-posix-sync.sh
+1-install-vscode-ext.sh
 {{- end }}
 
 {{- if ne .chezmoi.os "darwin" }}
