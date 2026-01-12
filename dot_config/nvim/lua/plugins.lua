@@ -4,7 +4,7 @@ return {
         lazy = false,
         branch = 'main',
         build = ':TSUpdate',
-        cond = vim.g.vscode
+        cond = not vim.g.vscode
     }, {'neovim/nvim-lspconfig', lazy = false, branch = 'master'}, {
         'saghen/blink.cmp',
         -- optional: provides snippets for the snippet source
@@ -55,12 +55,12 @@ return {
             fuzzy = {implementation = "prefer_rust_with_warning"}
 
         },
-        cond = vim.g.vscode,
+        cond = not vim.g.vscode,
         opts_extend = {"sources.default"}
-    }, {'wakatime/vim-wakatime', cond = vim.g.vscode},
-    {'doums/darcula', cond = vim.g.vscode}, {'andrejlevkovitch/vim-lua-format'},
-    {'rust-lang/rust.vim', cond = vim.g.vscode},
-    {'mfussenegger/nvim-jdtls', cond = vim.g.vscode}, {
+    }, {'wakatime/vim-wakatime', cond = not vim.g.vscode},
+    {'doums/darcula', cond = not vim.g.vscode}, {'andrejlevkovitch/vim-lua-format'},
+    {'rust-lang/rust.vim', cond = not vim.g.vscode},
+    {'mfussenegger/nvim-jdtls', cond = not vim.g.vscode}, {
         "luukvbaal/statuscol.nvim",
         config = function()
             -- Custom function to show both absolute and relative line numbers
@@ -82,6 +82,7 @@ return {
                     }
                 }
             })
-        end
-    }, {'lewis6991/gitsigns.nvim'}
+        end,
+	cond = not vim.g.vscode
+    }, {'lewis6991/gitsigns.nvim', cond = not vim.g.vscode}
 }
