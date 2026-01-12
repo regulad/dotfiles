@@ -47,5 +47,11 @@ else
     require('lspconfig').harper_ls.setup {}
 end
 
+-- statuscol bug; will not update statuscol on each cursor move
+vim.api.nvim_create_autocmd({"CursorMoved", "CursorMovedI"}, {
+    -- double underscore on the redraw method because it is "experimental" (even after being included in 2 major releases without regressions)
+    callback = function() vim.api.nvim__redraw({statuscolumn = true}) end
+})
+
 -- Legacy
 vim.cmd('source ' .. vim.fn.stdpath('config') .. '/legacy.vim')

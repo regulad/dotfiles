@@ -407,11 +407,20 @@ done
 
 # oh my zsh
 if ! [ -d ~/.oh-my-zsh ]; then
+    # oh my zsh install process mutates the user's ~/.zshrc and there is no way to disable this behaviour
     touch ~/.zshrc
     mv ~/.zshrc ~/.zshrc.pre-oh-my-zsh
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended &> /dev/null
     rm ~/.zshrc
     mv ~/.zshrc.pre-oh-my-zsh ~/.zshrc
+else
+    ~/.oh-my-zsh/tools/upgrade.sh
+fi
+
+if [ -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
+  git -C ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions pull
+else
+  git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions
 fi
 
 # load zsh as primary shell

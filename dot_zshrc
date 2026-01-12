@@ -8,6 +8,7 @@ plugins=(
     npm
     gradle
     gh
+    zsh-autosuggestions
 )
 
 source $ZSH/oh-my-zsh.sh

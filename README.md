@@ -13,8 +13,8 @@ Supported environments:
 - Red Hat-based GNU/Linux (tested against Fedora >= 42 and RHEL >= 10)
     - Including under WSL with Windows integration
     - Installs brew
-- (Windows 11) NT >= 19045 `cmd` (via `autorun.cmd`)
-    - Installs choco
+- Windows 10 ESU/11 `cmd` (via `autorun.cmd`)
+    - Installs scoop
 
 Supported shells:
 
@@ -26,7 +26,7 @@ Supported shells:
 
 *nix-like platforms (Termux, macOS, GNU/Linux) will automatically install required dependencies thanks to the `./run_posix-sync.sh` hookscript.
 
-NT platforms use `run_nt-sync.cmd` for dependency installation.
+Similarly NT platforms use `run_nt-sync.cmd` for dependency installation.
 
 ## *nix Install
 
@@ -81,7 +81,7 @@ Remember to define the package in the correct hookscript (i.e. `run_posix-sync.s
 
 ## TODOs
 
-- [ ] Addl. language server configurations in nvim
+- [x] Addl. language server configurations in nvim
 - [ ] Emit warnings in vim and bash
 - [ ] Brew on permissionless systems w/ gentoo-style custom prefixes
 - [ ] Brew casks on macOS only (stuff like Bitwarden depends on state)
@@ -92,3 +92,6 @@ Remember to define the package in the correct hookscript (i.e. `run_posix-sync.s
 - [ ] Get `uv` building on termux
 - [ ] Bitwarden cask/appstore install on macOS for the BW ssh keychain manager
 - [ ] Global crates like https://github.com/ExPixel/cargo-disasm
+- [ ] Finalize & memorize zsh backsearch keybinds
+- [ ] Write NT self-bootstrapping script
+- [ ] Relative + absolute line numbers in nvim
