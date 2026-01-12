@@ -81,17 +81,15 @@ Remember to define the package in the correct hookscript (i.e. `run_posix-sync.s
 
 ## TODOs
 
-- [x] Addl. language server configurations in nvim
-- [ ] Emit warnings in vim and bash
-- [ ] Brew on permissionless systems w/ gentoo-style custom prefixes
-- [ ] Brew casks on macOS only (stuff like Bitwarden depends on state)
-- [ ] Annotate `rc`s with philosophy (no network requests, fast boot, etc.
-- [ ] Adopt `corepack` for installing `pnpm`
-- [ ] Finalize & memorize nvim keybinds (lock it in, dude!)
-- [ ] Fix nvim newline behaviour
-- [ ] Get `uv` building on termux
-- [ ] Bitwarden cask/appstore install on macOS for the BW ssh keychain manager
-- [ ] Global crates like https://github.com/ExPixel/cargo-disasm
-- [ ] Finalize & memorize zsh backsearch keybinds
-- [ ] Write NT self-bootstrapping script
-- [ ] Relative + absolute line numbers in nvim
+- [ ] Doc: Emit warnings in vim and bash
+- [ ] Doc: Annotate `rc`s with philosophy (no network requests, fast boot, etc.
+- [ ] Brew: Brew on permissionless systems w/ gentoo-style custom prefixes
+- [ ] Brew: Brew casks on macOS (stuff like Bitwarden depends on state)
+- [ ] Nvim: Finalize & memorize nvim keybinds (lock it in, dude!)
+- [ ] Nvim: Fix nvim newline behaviour
+- [x] Nvim: Relative + absolute line numbers in nvim
+- [x] Nvim: Addl. language server configurations in nvim
+- [ ] Tmux: Get `uv` building on termux
+- [ ] Rust: Global crates like https://github.com/ExPixel/cargo-disasm
+- [ ] Zsh: Finalize & memorize zsh backsearch keybinds
+- [ ] Nt: Write NT self-bootstrapping script
