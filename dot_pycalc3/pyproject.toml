@@ -1,0 +1,9 @@
+[project]
+name = "pycalc3"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "ipython>=9.9.0",
+    "numpy>=1.26.4,<2",
+]
