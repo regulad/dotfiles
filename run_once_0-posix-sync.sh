@@ -352,6 +352,7 @@ fi
 ## addl. brew things packaged as casks
 BREW_CASKS_MACOS=(
 	"adobe-digital-editions" # proprietary!
+	"handbrake-app"
 	"grandperspective"
 	"claude-code"       # proprietary!
 	"jetbrains-toolbox" # proprietary!
