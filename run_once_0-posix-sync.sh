@@ -329,6 +329,7 @@ fi
 # most of them are needed for specific workflows (i.e. kotlin, python, java)
 SECONDARY_BINARY_DEPENDENCIES=(
 	"wakatime-cli"
+	"tokei"
 	"kotlin"
 	"kotlin-language-server"
 	"fernflower"
