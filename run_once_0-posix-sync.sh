@@ -327,12 +327,54 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"deno"
 	"shfmt"
 )
+
 command -v brew &>/dev/null && HAS_BREW=true || HAS_BREW=false
 
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q "${SECONDARY_BINARY_DEPENDENCIES[@]}"
 else
 	echo "warning: no brew for misc. binary deps" >&2
+fi
+
+## addl. brew things packaged as casks
+BREW_CASKS_MACOS=(
+	"adobe-digital-editions" # proprietary!
+	"grandperspective"
+	"claude-code"       # proprietary!
+	"jetbrains-toolbox" # proprietary!
+	"raycast"
+	"gimp"
+	"signal"
+	"tailscale-app" # proprietary! ... kinda
+	"appcleaner"    # no idea
+	"google-chrome" # proprietary! (you can't make me use anything other than chrome)
+	"nextcloud-vfs"
+	"docker-desktop"
+	"obs"
+	"utm"
+	"bartender" # proprietary! i have a license
+	"grandperspective"
+	"onedrive"
+	"stats"
+	"vlc"
+	"calibre"
+	"hex-fiend"
+	"google-drive"
+)
+### excluded: exclusively GUI tools like discord, steam, signal, & spotify that don't enable any workflows
+
+if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "darwin"* ]]; then
+	echo "warning: brew is about to install casks. this will take over any existing non-brew managed installs" >&2
+	brew install --cask -q "${BREW_CASKS_MACOS[@]}"
+fi
+
+## cask library on linux is SUBSTANTIALLY different than the cask library on macos
+BREW_CASKS_LINUX=(
+	"claude-code" # proprietary!
+)
+
+if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "linux-gnu"* ]]; then
+	brew install --cask -q "${BREW_CASKS_LINUX[@]}"
 fi
 
 # pnpm
@@ -408,7 +450,7 @@ for cli in "${PYPI_CLI_PACKAGES[@]}"; do
 done
 
 # rust
-# TODO: global crate
+# TODO: global crates
 
 # go
 # TODO: global modules
@@ -481,6 +523,8 @@ fi
 # final step: upgrade dependencies but ONLY for user-level pms
 if [ "$HAS_BREW" = "true" ]; then
 	brew upgrade -q
+	brew upgrade -q --cask
+	brew cleanup -q
 fi
 pnpm update --global --silent
 uv tool upgrade --quiet --all

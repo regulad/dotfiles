@@ -78,7 +78,7 @@ Host penumbra
     HostName penumbra.tail11540.ts.net
 
 Host winlite
-    HostName macserver.tail11540.ts.net
+    HostName winlite.tail11540.ts.net
 
 # Oracle (Legacy VCN)
 Host git.regulad.xyz

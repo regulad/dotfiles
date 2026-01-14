@@ -83,11 +83,11 @@ Remember to define the package in the correct hookscript (i.e. `run_posix-sync.s
 
 - [ ] Zsh: Finalize & memorize zsh backsearch keybinds
 - [ ] Nt: Write NT self-bootstrapping script
-- [ ] Doc: Emit warnings in vim and bash
+- [x] Doc: Emit warnings in vim and bash
 - [ ] Doc: Annotate `rc`s with philosophy (no network requests, fast boot, etc.
 - [ ] Brew: Brew on permissionless systems w/ gentoo-style custom prefixes
-- [ ] Brew: Brew casks on macOS (stuff like Bitwarden depends on state)
 - [ ] Nvim: Finalize & memorize nvim keybinds (lock it in, dude!)
 - [x] Nvim: Fix nvim newline behaviour
 - [x] Nvim: Relative + absolute line numbers in nvim
 - [x] Nvim: Addl. language server configurations in nvim
+- [ ] Nvim: ensure that treesitter and vim-polyglot aren't clobbering each other
