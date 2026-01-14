@@ -96,10 +96,10 @@ fi
 
 if ! sudo -l &>/dev/null; then
     echo "warning: Can't sudo. Will not attempt to install things that need sudo." >&2
-    CAN_SUDO=0
+    CAN_SUDO=false
 else
     echo "note: Successfully captured sudo. Will use it." >&2
-    CAN_SUDO=1
+    CAN_SUDO=true
 fi
 
 # Try to load homebrew if it is installed
@@ -118,7 +118,7 @@ fi
 # don't think any of the addl. userpsace packages need to be installed by this script
 if ! command -v brew &> /dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)" == "GNU/Linux" ]]; then
     echo "note: installing brew" >&2
-    if [[ "$CAN_SUDO" -ne 1 ]]; then
+    if ! [ "$CAN_SUDO" = "true" ]; then
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         if [ "$(uname -o)" = "Darwin" ] && [ "$(arch)" = "arm64" ]; then
             sudo launchctl config user path /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -231,7 +231,7 @@ else
 fi
 
 # Check sudo requirement for dnf5 and apt
-if [[ "$MANAGER" == "dnf" || "$MANAGER" == "apt" ]] && [[ "$CAN_SUDO" -ne 1 ]]; then
+if [[ "$MANAGER" == "dnf" || "$MANAGER" == "apt" ]] && ! [ "$CAN_SUDO" = "true" ]]; then
     echo "warning: package manager needs sudo but it isn't available" >&2
     MANAGER=""
 fi
@@ -303,7 +303,8 @@ elif command -v rustup &> /dev/null; then
     fi
 fi
 
-if [ "$MANAGER" = "brew" ] && [[ "$CAN_SUDO" -ne 1 ]]; then
+if [ "$MANAGER" = "brew" ] && [ "$CAN_SUDO" = "true" ]; then
+    # special case needed to link the openjdk into the system java wrapper
     sudo ln -sfn $HOMEBREW_PREFIX/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
 fi
 
@@ -335,7 +336,7 @@ fi
 # pnpm
 if [ "$HAS_BREW" = "true" ]; then
     brew install -q pnpm
-elif [ "$CAN_SUDO" -eq 1 ]; then
+elif [ "$CAN_SUDO" = "true" ]; then
     sudo npm i -g -q pnpm@latest
 else
     npm install -g --prefix ~/.local -q pnpm@latest
@@ -498,7 +499,7 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     for CERT_PATH in "${CERT_PATHS[@]}"; do
         # Check if certificate is already trusted
         if ! security verify-cert -c "$CERT_PATH" &>/dev/null; then
-            if [ "$CAN_SUDO" -eq 1 ]; then
+            if [ "$CAN_SUDO" = "true" ]; then
                 sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$CERT_PATH"
             else
                 security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db "$CERT_PATH"
@@ -509,7 +510,7 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then
     
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     # Linux
-    if [ "$CAN_SUDO" -eq 1 ]; then
+    if [ "$CAN_SUDO" = "true" ]; then
         NEEDS_UPDATE=0
         
         for CERT_PATH in "${CERT_PATHS[@]}"; do
