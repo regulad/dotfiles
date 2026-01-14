@@ -84,5 +84,6 @@ return {
             })
         end,
 	cond = not vim.g.vscode
-    }, {'lewis6991/gitsigns.nvim', cond = not vim.g.vscode}
+    }, {'lewis6991/gitsigns.nvim', cond = not vim.g.vscode},
+    {'sheerun/vim-polyglot'}
 }
