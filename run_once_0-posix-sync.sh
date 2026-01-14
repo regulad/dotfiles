@@ -232,7 +232,7 @@ else
 fi
 
 # Check sudo requirement for dnf5 and apt
-if [[ "$MANAGER" == "dnf" || "$MANAGER" == "apt" ]] && ! [ "$CAN_SUDO" = "true" ]]; then
+if [[ "$MANAGER" == "dnf" || "$MANAGER" == "apt" ]] && ! [ "$CAN_SUDO" = "true" ]; then
 	echo "warning: package manager needs sudo but it isn't available" >&2
 	MANAGER=""
 fi
