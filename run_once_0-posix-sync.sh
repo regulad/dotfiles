@@ -161,7 +161,7 @@ PRIMARY_BINARY_DEPENDENCIES=(
     # =+= CORE
     "dt:build-essential"
     #"mdrt:bash"
-    "md:retry"
+    "mdr:retry"  # TODO: confirm compat on termux
     "mdrt:zsh"
     "t:file"
     "t:man"
@@ -177,6 +177,8 @@ PRIMARY_BINARY_DEPENDENCIES=(
     # =+= EDITOR
     "mdrt:neovim"  # nvim
     #"mdrt:vim"
+    "md:shellcheck"
+    "r:ShellCheck"  # TODO: confirm compat on termux
     
     # =+= UTILS
     "mdrt:git"
@@ -324,6 +326,7 @@ SECONDARY_BINARY_DEPENDENCIES=(
     "lima"
     "lima-additional-guestagents"
     "deno"
+    "shfmt"
 )
 command -v brew &> /dev/null && HAS_BREW=true || HAS_BREW=false
 
@@ -355,10 +358,11 @@ PNPM_CLI_PACKAGES=(
     "ezff@latest"
 )
 
+## packages available on brew
 if [ "$HAS_BREW" = "true" ]; then
-    brew install -q bitwarden-cli pyright typescript typescript-language-server
+    brew install -q bitwarden-cli pyright typescript typescript-language-server bash-language-server
 else
-    PNPM_CLI_PACKAGES+=("@bitwarden/cli@latest" "pyright@latest" "typescript@latest" "typescript-language-server@latest")
+    PNPM_CLI_PACKAGES+=("@bitwarden/cli@latest" "pyright@latest" "typescript@latest" "typescript-language-server@latest" "bash-language-server")
 fi
 
 pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
@@ -367,6 +371,7 @@ pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
 export DENO_INSTALL="$HOME/.deno"
 export PATH="$DENO_INSTALL/bin:$PATH"
 
+## minecraft fabric
 if ! command -v fabric &> /dev/null; then
     deno install -A -g -n fabric https://fabricmc.net/cli
 else
@@ -402,6 +407,13 @@ PYPI_CLI_PACKAGES=(
 for cli in "${PYPI_CLI_PACKAGES[@]}"; do
     uv tool install -q ${cli}
 done
+
+# rust
+# TODO: global crate
+
+# go
+# TODO: global modules
+#   - https://github.com/mvdan/sh#shfmt
 
 # vim package management
 # NOTE: because I use neovim in lieu of vim, I'm not going to install Vundle
