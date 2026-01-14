@@ -238,6 +238,7 @@ elif command -v apt &>/dev/null && [[ -f /etc/debian_version ]]; then
 	MANAGER="apt"
 elif command -v brew &>/dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
 	MANAGER="brew"
+	brew tap regulad/homebrew-tap
 else
 	MANAGER=""
 fi
