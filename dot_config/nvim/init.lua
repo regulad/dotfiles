@@ -44,6 +44,7 @@ else
     vim.lsp.enable('kotlin_lsp')
     vim.lsp.enable('ts_ls')
     vim.lsp.enable('rust_analyzer')
+    vim.lsp.enable('bashls')
     require('lspconfig').harper_ls.setup {}
     
 
