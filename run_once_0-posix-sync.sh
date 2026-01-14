@@ -103,15 +103,19 @@ else
 fi
 
 # Try to load homebrew if it is installed
-if [ -d "/opt/homebrew" ]; then
-	# Apple Silicon Mac
+if [[ -d "/opt/homebrew" && "$CAN_SUDO" = "true" ]]; then
+	# Apple Silicon Mac (rootful)
 	eval "$(/opt/homebrew/bin/brew shellenv)"
-elif [ -d "/usr/local/Homebrew" ] || [ -d "/usr/local/bin/brew" ]; then
-	# Intel Mac
+elif [[ (-d "/usr/local/Homebrew" || -d "/usr/local/bin/brew") && "$CAN_SUDO" = "true" ]]; then
+	# Intel Mac (rootful)
 	eval "$(/usr/local/bin/brew shellenv)"
-elif [ -d "/home/linuxbrew/.linuxbrew" ]; then
+elif [[ -d "/home/linuxbrew/.linuxbrew" && "$CAN_SUDO" = "true" ]]; then
 	# Linux
 	eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+elif [[ -d "$HOME/homebrew" ]]; then
+	# Rootless homebrew (macOS & Linux)
+	echo "warning: loading rootless brew. this often works but is unsupported." >&2
+	eval "$("$HOME/homebrew/bin/brew" shellenv)"
 fi
 
 # brew is a nother binary dependency but ONLY on linux for addl. userspace packages
@@ -119,7 +123,7 @@ fi
 if ! command -v brew &>/dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)" == "GNU/Linux" ]]; then
 	echo "note: installing brew" >&2
 	if ! [ "$CAN_SUDO" = "true" ]; then
-		/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+		NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 		if [ "$(uname -o)" = "Darwin" ] && [ "$(arch)" = "arm64" ]; then
 			sudo launchctl config user path /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 			sudo launchctl config system path /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -128,20 +132,27 @@ if ! command -v brew &>/dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)
 			sudo launchctl config system path /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 		fi
 	else
-		echo "warning: can't do default brew install w/o sudo" >&2
-		# launchctl launchd domains CANNOT be set w/o sudo. this prevents things like gpgme-json from ever working
+		echo "warning: can't do default brew install w/o sudo; installing rootlessly" >&2
+		mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/main | tar xz --strip-components 1 -C homebrew
+
+		eval "$(homebrew/bin/brew shellenv)"
+		brew update --force --quiet
+		chmod -R go-w "$(brew --prefix)/share/zsh"
 	fi
 
 	# After Homebrew installation, detect and load it
-	if [ -d "/opt/homebrew" ]; then
-		# Apple Silicon Mac
+	if [[ -d "/opt/homebrew" && "$CAN_SUDO" = "true" ]]; then
+		# Apple Silicon Mac (rootful)
 		eval "$(/opt/homebrew/bin/brew shellenv)"
-	elif [ -d "/usr/local/Homebrew" ] || [ -d "/usr/local/bin/brew" ]; then
-		# Intel Mac
+	elif [[ (-d "/usr/local/Homebrew" || -d "/usr/local/bin/brew") && "$CAN_SUDO" = "true" ]]; then
+		# Intel Mac (rootful)
 		eval "$(/usr/local/bin/brew shellenv)"
-	elif [ -d "/home/linuxbrew/.linuxbrew" ]; then
+	elif [[ -d "/home/linuxbrew/.linuxbrew" && "$CAN_SUDO" = "true" ]]; then
 		# Linux
 		eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+	elif [[ -d "$HOME/homebrew" ]]; then
+		# Rootless homebrew (macOS & Linux)
+		eval "$(homebrew/bin/brew shellenv)"
 	fi
 fi
 
