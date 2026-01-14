@@ -53,6 +53,13 @@ else
         -- double underscore on the redraw method because it is "experimental" (even after being included in 2 major releases without regressions)
         callback = function() vim.api.nvim__redraw({statuscolumn = true}) end
     })
+
+    vim.api.nvim_create_autocmd("BufWritePre", {
+        pattern = "*",
+        callback = function()
+             vim.lsp.buf.format({ async = false })
+        end,
+    })
 end
 
 
