@@ -170,7 +170,7 @@ export PATH="$PATH:$HOME/.local/bin"
 PRIMARY_BINARY_DEPENDENCIES=(
 	# =+= CORE
 	"dt:build-essential"
-	#"mdrt:bash"
+	"mdrt:bash"
 	"mdr:retry" # TODO: confirm compat on termux
 	"mdrt:zsh"
 	"t:file"
@@ -181,12 +181,15 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"md:binwalk"
 	"mdrt:ncdu"
 	"mdt:htop"
-	"mdt:cmake"
 	"mdt:nmap"
+
+	# =+= BUILD TOOLS
+	"d:ninja-build" # TODO: confirm compat on non-deb
+	"mdt:cmake"
 
 	# =+= EDITOR
 	"mdrt:neovim" # nvim
-	#"mdrt:vim"
+	"mdrt:vim"
 	"md:shellcheck"
 	"r:ShellCheck" # TODO: confirm compat on termux
 
