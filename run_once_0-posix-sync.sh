@@ -337,6 +337,7 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"kotlin-language-server"
 	"fernflower"
 	"jdtls"
+	"emscripten"
 	"harper"
 	"lima"
 	"lima-additional-guestagents"
