@@ -1,4 +1,7 @@
 name: Local Config
 version: 1.0.0
 schema: v1
-models: []
+models:
+  - title: "Ollama"
+    provider: "ollama"
+    model: "gpt-oss:20b"
