@@ -14,6 +14,8 @@ update_dep_hash() {
     /^# DEP_HASH:/ { print "# DEP_HASH:" dep; next }
     { print }
   ' "$file" >"$file.tmp" && mv -- "$file.tmp" "$file"
+
+  chmod +x "$file"
 }
 
 # Hand-written.
