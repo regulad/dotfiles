@@ -416,6 +416,7 @@ if [ -z "$PNPM_HOME" ]; then
 fi
 
 PNPM_CLI_PACKAGES=(
+	"@continuedev/cli@latest"
 	"ezff@latest"
 )
 
