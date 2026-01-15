@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+# DEP_HASH:0cc1fce607812c885c5a9d499dc51a7920539619590e85fe696ba2da93c8803c
+
 # Installs neccesary tools to enable everything from the dotfiles
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
 # NOTE!! this is ONLY for true nix. no MINGW64; will handle that separately.
