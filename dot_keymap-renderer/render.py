@@ -2,6 +2,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from copy import deepcopy
 from json import load
+from json5 import loads as loads5
 from typing import Annotated
 
 import typer
@@ -30,11 +31,12 @@ def main(
     
         with open(kle_file, mode="r") as kle_fp:
             # the kle format is actually a js object, not json.
-            kle_deserialized = Keyboard(kle_fp.read())
+            rows = [loads5(row.rstrip(",\n")) for row in kle_fp]
+            kle_deserialized = Keyboard(rows)
     
         for layer in [True]:
-            this_layer_keyboard = kle_deserialized
-            
+            this_layer_keyboard = deepcopy(kle_deserialized)
+
             layer_name = "layer"
 
             # I'm too used to rust. I keep seeing copying...

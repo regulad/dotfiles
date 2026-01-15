@@ -1,6 +1,8 @@
 # Keymap Renderer
 
-This project takes two files, a [`keyboard-layout-editor`](https://www.keyboard-layout-editor.com/#/) format keyboard description JSON file, and a `.kdl.json` ("keybind description language") file. (JSON schema for a `.kdl.json` file is contained in this project.)
+This project takes two files, a [`keyboard-layout-editor`](https://www.keyboard-layout-editor.com/#/) format keyboard description JSON file, and a `.kdl.json` ("keybind description language") file. 
+
+It will load the `kle` "JSON" (actually js, be sure to rename the file).
 
 It will then render a keyboard annotated with the bind present in each key in the KDL and produce a Markdown file containing each keybind layer and a table containing additional information.
 
