@@ -42,6 +42,11 @@ if [[ -f /etc/os-release ]]; then
   fi
 fi
 
+# Set browser to wslview if in WSL
+if grep -qi wsl /proc/version 2>/dev/null; then
+    export BROWSER=wslview
+fi
+
 # pnpm
 case ":$PATH:" in
   *":$PNPM_HOME:"*) ;;

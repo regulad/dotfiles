@@ -12,6 +12,10 @@ AppData
 .chezmoiscripts/posix/0*
 {{- end }}
 
+{{ if not (contains "WSL2" (output "uname" "-r")) -}}
+.chezmoiscripts/wsl2/*
+{{ end -}}
+
 {{- if ne .chezmoi.os "darwin" }}
 Library
 .chezmoiscripts/posix/darwin/*
