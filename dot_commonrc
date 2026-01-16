@@ -117,6 +117,8 @@ export VISUAL="$(command -v nvim || command -v vim)"
 
 # === ALIASES
 alias pycalc3="uv run --directory=$HOME/.pycalc3 ipython --no-banner -i -c \"import math; from math import *; import numpy as np; import statistics as stats; import struct; import warnings; warnings.filterwarnings(\\\"ignore\\\")\""
+alias kmr="uv run --directory=$HOME/.keymap-renderer"
+
 vi() { command "$VISUAL" "$@"; }
 if [ -n "${ZSH_VERSION-}" ]; then
   case "$VISUAL" in
