@@ -173,6 +173,7 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	# =+= CORE
 	"dt:build-essential"
 	"mdrt:bash"
+	"mdrt:tmux"
 	"mdr:retry" # TODO: confirm compat on termux
 	"mdrt:zsh"
 	"t:file"
