@@ -1,0 +1,14 @@
+[Unit]
+Description=Terminal Multiplexer (listen on: %i)
+Documentation=man:tmux(1)
+Requires=tmux@%i.socket
+
+[Service]
+Environment=TMUX_SERVER_ARGS=
+ExecStart=tmux -D $TMUX_SERVER_ARGS
+ExecStartPost=tmux -L%i start
+Slice=app-tmux-%i.slice
+
+[Install]
+WantedBy=default.target
+Also=tmux@%i.socket
