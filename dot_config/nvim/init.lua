@@ -40,13 +40,13 @@ else
     -- LSP
     -- https://github.com/neovim/nvim-lspconfig/blob/master/doc/configs.md
     vim.lsp.enable('jdtls')
-    vim.lsp.enable('pyright')
     vim.lsp.enable('kotlin_lsp')
     vim.lsp.enable('ts_ls')
+    vim.lsp.enable('ty')
+    vim.lsp.enable('ruff')
     vim.lsp.enable('rust_analyzer')
     vim.lsp.enable('bashls')
-    require('lspconfig').harper_ls.setup {}
-    
+    vim.lsp.enable('harper_ls') 
 
     -- statuscol bug; will not update statuscol on each cursor move
     vim.api.nvim_create_autocmd({"CursorMoved", "CursorMovedI"}, {

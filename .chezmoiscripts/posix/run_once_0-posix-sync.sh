@@ -175,7 +175,8 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"mdrt:bash"
 	"mdrt:tmux"
 	"m:reattach-to-user-namespace"
-	"mdr:retry" # TODO: confirm compat on termux
+	"mdr:retry"
+	# TODO: confirm compat on termux
 	"mdrt:zsh"
 	"t:file"
 	"t:man"
@@ -188,14 +189,17 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"mdt:nmap"
 
 	# =+= BUILD TOOLS
-	"d:ninja-build" # TODO: confirm compat on non-deb
+	"d:ninja-build"
+	"m:ninja"
+	# TODO: confirm compat on others
 	"mdt:cmake"
 
 	# =+= EDITOR
 	"mdrt:neovim" # nvim
 	"mdrt:vim"
 	"md:shellcheck"
-	"r:ShellCheck" # TODO: confirm compat on termux
+	"r:ShellCheck"
+	# TODO: confirm compat on termux
 
 	# =+= UTILS
 	"mdrt:git"
@@ -209,6 +213,8 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"mdrt:gh" # GitHub
 	"mdrt:restic"
 	"mdrt:ffmpeg"
+	"md:yt-dlp" # previously managed by uv
+	# TODO: confirm compat on others
 
 	# =+= JS/TS
 	"m:node"
@@ -235,6 +241,11 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"dr:python3-pip"
 	"d:python3-venv"
 	"t:python"
+
+	# =+= MISC. TOOLCHAINS
+	"m:go"
+	"d:golang"
+	# TODO: confirm compat for other langs
 )
 
 if command -v pkg &>/dev/null && [[ "$PREFIX" == *"com.termux"* ]]; then
@@ -467,21 +478,30 @@ fi
 # NOTE: `uv tool install` replaces pipx
 # can install with `pipx i <package>`
 # or `uv tool install <package>`
-PYPI_CLI_PACKAGES=(
-	"yt-dlp" # NOTE: although this is in the Ubuntu repositories; would be better to update dynamically
-	"git+https://github.com/regulad/keymap-renderer.git@master"
-)
-
-for cli in "${PYPI_CLI_PACKAGES[@]}"; do
-	uv tool install -q ${cli}
-done
+# NOTE: uv deliberately ignores upper bounds on requires-python,
+#       which boosts speed since pip likes to "backstep" and take
+#       the highest package version which supports the python version.
+#
+#       This leads to issues with code that requires stable ABI presence.
+#
+#       I have chosen to only download tools with uv against known-good python versions.
+#
+#       For durability, I have offloaded the management of some packages like `yt-dlp`
+#       to native package managers that test against specific python versions.
+#
+#       This can be changed if the python-requires spec at https://packaging.python.org/en/latest/specifications/core-metadata/#core-metadata-requires-python
+#       is ever updated to better accomidate the Python ecosystem with its alternative implementations and ABIs.
+#
+#       Until then, for cli apps, I will be using the lowest version of Cpython that has is checked.
+uv tool install -q ruff # astral-backed
+uv tool install -q ty   # astral-backed
+uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
 
 # rust
-# TODO: global crates
+cargo install cargo-disasm
 
 # go
-# TODO: global modules
-#   - https://github.com/mvdan/sh#shfmt
+go install mvdan.cc/sh/v3/cmd/shfmt@latest
 
 # vim package management
 # NOTE: because I use neovim in lieu of vim, I'm not going to install Vundle
