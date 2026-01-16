@@ -116,7 +116,8 @@ export DO_NOT_TRACK=1
 export VISUAL="$(command -v nvim || command -v vim)"
 
 # === ALIASES
-alias pycalc3="uv run --directory=$HOME/.pycalc3 ipython --no-banner -i -c \"import math; from math import *; import numpy as np; import statistics as stats; import struct; import warnings; warnings.filterwarnings(\\\"ignore\\\")\""
+alias pycalc3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=default"
+alias c3="pycalc3"
 
 vi() { command "$VISUAL" "$@"; }
 if [ -n "${ZSH_VERSION-}" ]; then
