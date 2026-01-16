@@ -345,6 +345,7 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"lima-additional-guestagents"
 	"deno"
 	"shfmt"
+	"ghidra"
 )
 
 command -v brew &>/dev/null && HAS_BREW=true || HAS_BREW=false
@@ -379,13 +380,14 @@ BREW_CASKS_MACOS=(
 	"vlc"
 	"calibre"
 	"hex-fiend"
-	"google-drive"
+	"google-drive" # proprietary!
+	"visual-studio-code"
 )
 ### excluded: exclusively GUI tools like discord, steam, signal, & spotify that don't enable any workflows
 
 if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "darwin"* ]]; then
 	echo "warning: brew is about to install casks. this will take over any existing non-brew managed installs" >&2
-	brew install --cask -q "${BREW_CASKS_MACOS[@]}"
+	brew install --cask -q "${BREW_CASKS_MACOS[@]}" -f
 fi
 
 ## cask library on linux is SUBSTANTIALLY different than the cask library on macos
@@ -394,7 +396,8 @@ BREW_CASKS_LINUX=(
 )
 
 if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "linux-gnu"* ]]; then
-	brew install --cask -q "${BREW_CASKS_LINUX[@]}"
+	echo "warning: brew is about to install casks. this will take over any existing non-brew managed installs" >&2
+	brew install --cask -q "${BREW_CASKS_LINUX[@]}" -f
 fi
 
 # pnpm
@@ -420,7 +423,7 @@ PNPM_CLI_PACKAGES=(
 	"ezff@latest"
 )
 
-## packages available on brew
+## packages available on brew are preferred over their pnpm packages (may have binary bottles pre-built)
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q bitwarden-cli pyright typescript typescript-language-server bash-language-server
 else
