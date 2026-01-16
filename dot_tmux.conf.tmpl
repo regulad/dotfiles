@@ -2,3 +2,6 @@ set -g focus-events on
 set-option -a terminal-features 'xterm-256color:RGB'
 set -sg escape-time 10
 set -g mouse on
+{{- if eq .chezmoi.os "darwin" }}
+set-option -g default-command "reattach-to-user-namespace -l zsh"
+{{- end }}

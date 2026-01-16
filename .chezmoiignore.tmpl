@@ -3,17 +3,19 @@
 .config/nvim/lazy-lock.json
 
 {{- if ne .chezmoi.os "windows" }}
-0-nt-sync.cmd
-1-install-vscode-ext.cmd
+.chezmoiscripts/nt/*
 
 autorun.cmd
 .doskey.mac
 AppData
 {{- else }}
-0-posix-sync.sh
-1-install-vscode-ext.sh
+.chezmoiscripts/posix/0*
 {{- end }}
 
 {{- if ne .chezmoi.os "darwin" }}
 Library
+.chezmoiscripts/posix/darwin/*
+{{- else }}
+# systemd doesn't exist on mac
+.config/systemd/
 {{- end }}

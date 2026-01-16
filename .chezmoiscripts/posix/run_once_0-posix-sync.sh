@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# DEP_HASH:46374dcd34d130e9b6b4fe99ef2011c9a9d66e7637fd981723e7b183043895f1
+# DEP_HASH:d7614d70d17c99cbe88ef8bd190835a13e4843d8ff346467920a7f6ba557e835
 
 # Installs neccesary tools to enable everything from the dotfiles
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
@@ -174,6 +174,7 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"dt:build-essential"
 	"mdrt:bash"
 	"mdrt:tmux"
+	"m:reattach-to-user-namespace"
 	"mdr:retry" # TODO: confirm compat on termux
 	"mdrt:zsh"
 	"t:file"
@@ -620,6 +621,15 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
 		fi
 	else
 		echo "warning: sudo required to install system certificate on Linux, skipping" >&2
+	fi
+fi
+
+# install user services
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+	if systemctl --user is-system-running &>/dev/null || systemctl --user status &>/dev/null; then
+		systemctl --user enable tmux@default.socket
+	else
+		echo "warning: user session broken (couldn't run systemd --user)" >&2
 	fi
 fi
 

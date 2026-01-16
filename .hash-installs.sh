@@ -25,11 +25,10 @@ aggregate_hash_folder() {
 }
 
 # - ./run_once_0-posix-sync.sh
-# TODO: Move to nix or something. I didn't even bother to has the output of apt list/brew list/dnf list because it is externally managed.
-update_dep_hash "$(head -c 1k /dev/random | sha256sum | head -c 64)" "./run_once_0-posix-sync.sh"
+update_dep_hash "$(head -c 1000 /dev/random | sha256sum | head -c 64)" "./.chezmoiscripts/posix/run_once_0-posix-sync.sh"
 
 # - ./run_once_1-install-vscode-ext.sh
-update_dep_hash "$(sha256sum dot_vscode-extensions.txt | head -c 64)" "./run_once_1-install-vscode-ext.sh"
+update_dep_hash "$(sha256sum dot_vscode-extensions.txt | head -c 64)" "./.chezmoiscripts/posix/run_once_1-install-vscode-ext.sh"
 
 # - ./run_once_99-run-krr.sh
-update_dep_hash "$(aggregate_hash_folder dot_config/nvim dot_config/kmr)" "./run_once_99-run-krr.sh"
+# update_dep_hash "$(aggregate_hash_folder dot_config/nvim dot_config/kmr)" "./.chezmoiscripts/posix/run_once_99-run-krr.sh"

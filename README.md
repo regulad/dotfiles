@@ -104,6 +104,8 @@ Remember to define the package in the correct hookscript (i.e. `run_posix-sync.s
 - [x] Doc: Emit warnings in vim and bash
 - [ ] Doc: Annotate `rc`s with philosophy (no network requests, fast boot, etc.
 - [ ] Brew: Brew on permissionless systems w/ gentoo-style custom prefixes
+- [ ] Kmr: Export nvim map
+- [ ] Kmr: Export tmux map
 - [ ] Nvim: Finalize & memorize nvim keybinds (lock it in, dude!)
 - [x] Nvim: Fix nvim newline behaviour
 - [x] Nvim: Relative + absolute line numbers in nvim
