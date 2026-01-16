@@ -469,6 +469,7 @@ fi
 # or `uv tool install <package>`
 PYPI_CLI_PACKAGES=(
 	"yt-dlp" # NOTE: although this is in the Ubuntu repositories; would be better to update dynamically
+	"git+https://github.com/regulad/keymap-renderer.git@master"
 )
 
 for cli in "${PYPI_CLI_PACKAGES[@]}"; do
