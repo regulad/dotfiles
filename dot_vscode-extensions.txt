@@ -1,5 +1,6 @@
 asvetliakov.vscode-neovim
 bradlc.vscode-tailwindcss
+ms-python.black-formatter
 continue.continue
 dbaeumer.vscode-eslint
 esbenp.prettier-vscode

@@ -1,0 +1,58 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Keymap",
+    "description": "A keymap for a single application, composed of a root and layers",
+    "$ref": "#/$defs/layer",
+    "$defs": {
+        "layer": {
+            "type": "object",
+            "required": [
+                "title",
+                "binds",
+                "sublayers"
+            ],
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "description": "The title of the keymap."
+                },
+                "binds": {
+                    "type": "object",
+                    "description": "Key bindings (both single and modified keys)",
+                    "patternProperties": {
+                        "^(?:[a-z0-9`\\-=\\[\\]\\\\;',./]|<(?:F1[0-2]|F[1-9]|Space|Enter|Tab|Escape|Backspace|Delete|Home|End|PageUp|PageDown|Insert|Up|Down|Left|Right|Num(?:Lock|Div|Mul|Sub|Add|Enter|Dot|[0-9]))>)$": {
+                            "$ref": "#/$defs/bind"
+                        }
+                    }
+                },
+                "sublayers": {
+                    "type": "object",
+                    "description": "Sublayers accessed by modifier keys",
+                    "patternProperties": {
+                        "^<[CMAS](?:-[CMAS])*>$": {
+                            "$ref": "#/$defs/layer"
+                        }
+                    }
+                }
+            }
+        },
+        "bind": {
+            "type": "object",
+            "description": "An individual hotkey. Must be bound to a glyph.",
+            "required": [
+                "short",
+                "long"
+            ],
+            "properties": {
+                "short": {
+                    "type": "string",
+                    "description": "A short string to be shown on the keycap. Max ~6 chars."
+                },
+                "long": {
+                    "type": "string",
+                    "description": "Long string, will not be rendered on the keycap."
+                }
+            }
+        }
+    }
+}

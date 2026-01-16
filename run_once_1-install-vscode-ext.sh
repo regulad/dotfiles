@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# DEP_HASH:e2c37f76e2ac4de4d54d9d2a1e3244fc16f09d9f777f17509efe02665f3ff949
+# DEP_HASH:cf4bdd972d00eb38eb47769364e056922209f00f2eae0add38a412bb570e4190
 
 if command -v code &>/dev/null; then
     # for some reason, on my machine vscode's --install-extension cli is privvy to fail intermittently

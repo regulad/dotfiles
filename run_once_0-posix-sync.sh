@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# DEP_HASH:98e2a7876d598e857a53d623bf20d671634f039bea5b94141e1daaedf14f0cc1
+# DEP_HASH:46374dcd34d130e9b6b4fe99ef2011c9a9d66e7637fd981723e7b183043895f1
 
 # Installs neccesary tools to enable everything from the dotfiles
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/

@@ -2,7 +2,7 @@
 
 This project takes two files, a [`keyboard-layout-editor`](https://www.keyboard-layout-editor.com/#/) format keyboard description JSON file, and a `.kdl.json` ("keybind description language") file. 
 
-It will load the `kle` "JSON" (actually js, be sure to rename the file).
+If you copy the `Raw Data`, be sure to save it as `.js`! If it's downloaded through `Download JSON`, make sure to save it as `.json`.
 
 It will then render a keyboard annotated with the bind present in each key in the KDL and produce a Markdown file containing each keybind layer and a table containing additional information.
 
@@ -18,4 +18,4 @@ Substantial parts of the rendering code for this project are taken from [`kle_re
 ## TODO
 
 - Additional KDL creators
-
+- Code is a little jank, but is readable.

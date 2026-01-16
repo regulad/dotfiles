@@ -1,2 +1,0 @@
-#!/bin/bash -e
-# DEP_HASH:70254acd042400230674979fff010ab7bf47ca05d31a444b0673a1369d7dbdb7
