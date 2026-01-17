@@ -434,6 +434,7 @@ fi
 PNPM_CLI_PACKAGES=(
 	"@continuedev/cli@latest"
 	"ezff@latest"
+	"opencode-ai@latest"
 )
 
 ## packages available on brew are preferred over their pnpm packages (may have binary bottles pre-built)
