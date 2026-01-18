@@ -22,8 +22,6 @@ This project is made for me, and while I have published it with the intent that 
 
 Supported environments:
 
-- Termux latest
-    - NOTE: `termux-exec` doesn't seem to hook the `execve()` syscall from the hookscript's shebang when chezmoi calls it, so the hookscript needs to be run manually after each apply.
 - macOS latest (w/ `brew`)
 - Debian GNU/Linux (tested against Ubuntu 24.04)
     - Including under WSL with Windows integration
@@ -34,6 +32,8 @@ Supported environments:
 - Windows 10 ESU/11 `cmd` (via `autorun.cmd`)
     - Installs scoop
 
+> *NOTE:* Termux is no longer supported in a first-class fashion. I don't have an Android phone.
+
 Supported shells:
 
 - `zsh`
@@ -42,7 +42,7 @@ Supported shells:
 
 ### Hookscripts
 
-*nix-like platforms (Termux, macOS, GNU/Linux) will automatically install required dependencies thanks to the `./run_posix-sync.sh` hookscript.
+POSIX-like platforms will automatically install required dependencies thanks to the `./run_posix-sync.sh` hookscript.
 
 Similarly NT platforms use `run_nt-sync.cmd` for dependency installation.
 

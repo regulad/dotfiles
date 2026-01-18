@@ -18,7 +18,7 @@ AppData
 
 {{- if ne .chezmoi.os "darwin" }}
 Library
-.chezmoiscripts/posix/darwin/*
+.chezmoiscripts/darwin/*
 {{- else }}
 # systemd doesn't exist on mac
 .config/systemd/

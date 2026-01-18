@@ -1,4 +1,6 @@
-#!/bin/bash -e
+#!{{ .bash }}
+# android bash doesn't support setting flags in invocation
+set -e
 
 # DEP_HASH:d7614d70d17c99cbe88ef8bd190835a13e4843d8ff346467920a7f6ba557e835
 
@@ -10,6 +12,11 @@
 echo "note: entering hookscript" >&2
 export DEBIAN_FRONTEND=noninteractive
 trap 'echo "Error on line $LINENO: Command was: $BASH_COMMAND" >&2' ERR
+
+# needed for Android native builds
+if [ "$(uname -o)" = "Android" ]; then
+  export ANDROID_API_LEVEL="$(getprop ro.build.version.sdk 2>/dev/null || true)"
+fi
 
 # function definition
 
@@ -175,8 +182,7 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"mdrt:bash"
 	"mdrt:tmux"
 	"m:reattach-to-user-namespace"
-	"mdr:retry"
-	# TODO: confirm compat on termux
+	"mdr:retry" # no compat on termux
 	"mdrt:zsh"
 	"t:file"
 	"t:man"
@@ -190,16 +196,15 @@ PRIMARY_BINARY_DEPENDENCIES=(
 
 	# =+= BUILD TOOLS
 	"d:ninja-build"
-	"m:ninja"
+	"mt:ninja"
 	# TODO: confirm compat on others
 	"mdt:cmake"
 
 	# =+= EDITOR
 	"mdrt:neovim" # nvim
 	"mdrt:vim"
-	"md:shellcheck"
+	"mdt:shellcheck"
 	"r:ShellCheck"
-	# TODO: confirm compat on termux
 
 	# =+= UTILS
 	"mdrt:git"
@@ -214,13 +219,15 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"mdrt:restic"
 	"mdrt:ffmpeg"
 	"md:yt-dlp" # previously managed by uv
-	# TODO: confirm compat on others
+	"t:python-yt-dlp"
+	# TODO: confirm compat on redhat
 
 	# =+= JS/TS
 	"m:node"
 	"dr:nodejs"
 	"t:nodejs-lts"
 	"mdr:npm" # just to install pnpm; part of nodejs-lts on termux
+	"t:deno"
 
 	# =+= JVM
 	"m:openjdk"
@@ -237,15 +244,15 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"rt:rust-analyzer"
 
 	# =+= PYTHON (>= 3.12)
-	"mdr:python3" # NOTE: only >= 3.12 on RHEL >= 10 (fedora ???)
+	"mdr:python3" # NOTE: only >= 3.12 on RHEL >= 10 (fedora 42?)
 	"dr:python3-pip"
 	"d:python3-venv"
 	"t:python"
 
 	# =+= MISC. TOOLCHAINS
 	"m:go"
-	"d:golang"
-	# TODO: confirm compat for other langs
+	"dt:golang"
+	# TODO: confirm compat for redhat
 )
 
 if command -v pkg &>/dev/null && [[ "$PREFIX" == *"com.termux"* ]]; then
@@ -471,6 +478,8 @@ fi
 # UV
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q uv
+elif [ "$MANAGER" = "pkg" ]; then
+	pkg install -y uv
 else
 	pip install --user -q uv
 fi

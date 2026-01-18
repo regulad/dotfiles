@@ -3,3 +3,9 @@
     autoPush = true
 [bitwarden]
     unlock = "auto"
+[data]
+{{ if eq .chezmoi.os "android" }}
+    bash = "/data/data/com.termux/files/usr/bin/bash"
+{{ else }}
+    bash = "/bin/bash
+{{ end }}
