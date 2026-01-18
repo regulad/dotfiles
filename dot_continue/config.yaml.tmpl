@@ -3,5 +3,6 @@ version: 1.0.0
 schema: v1
 models:
   - title: "Ollama"
+    apiBase: "{{ .ollamaBase }}"
     provider: "ollama"
     model: "gpt-oss:20b"

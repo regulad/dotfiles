@@ -255,6 +255,10 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	# TODO: confirm compat for redhat
 )
 
+# choose manager
+command -v brew &>/dev/null && HAS_BREW=true || HAS_BREW=false
+export HOMEBREW_NO_ENV_HINTS=1
+
 if command -v pkg &>/dev/null && [[ "$PREFIX" == *"com.termux"* ]]; then
 	MANAGER="pkg"
 elif command -v dnf &>/dev/null && [[ -f /etc/redhat-release ]]; then
@@ -354,6 +358,7 @@ fi
 # most of them are needed for specific workflows (i.e. kotlin, python, java)
 SECONDARY_BINARY_DEPENDENCIES=(
 	"wakatime-cli"
+	"ollama"
 	"tokei"
 	"kotlin"
 	"kotlin-language-server"
@@ -367,8 +372,6 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"shfmt"
 	"ghidra"
 )
-
-command -v brew &>/dev/null && HAS_BREW=true || HAS_BREW=false
 
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q "${SECONDARY_BINARY_DEPENDENCIES[@]}"

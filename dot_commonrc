@@ -123,6 +123,7 @@ fi
 # Preferences
 alias pipx="uv tool"
 export DO_NOT_TRACK=1
+export HOMEBREW_NO_ENV_HINTS=1
 export VISUAL="$(command -v nvim || command -v vim)"
 
 # === ALIASES

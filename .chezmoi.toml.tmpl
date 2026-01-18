@@ -4,8 +4,14 @@
 [bitwarden]
     unlock = "auto"
 [data]
-{{ if eq .chezmoi.os "android" }}
+{{- if eq .chezmoi.hostname "winlite" }}
+    ollamaBase = "http://localhost:11434"
+{{- else }}
+    ollamaBase = "https://winlite.tail11540.ts.net:11443" # 32 GiB VRAM
+#    ollamaBase = "https://procuda.tail11540.ts.net:11443" # 4 GiB VRAM
+{{- end }}
+{{- if eq .chezmoi.os "android" }}
     bash = "/data/data/com.termux/files/usr/bin/bash"
-{{ else }}
-    bash = "/bin/bash
-{{ end }}
+{{- else }}
+    bash = "/bin/bash"
+{{- end }}

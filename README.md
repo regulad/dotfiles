@@ -111,6 +111,7 @@ Remember to define the package in the correct hookscript (i.e. `run_posix-sync.s
 - [x] Nvim: Relative + absolute line numbers in nvim
 - [x] Nvim: Addl. language server configurations in nvim
 - [ ] Nvim: ensure that treesitter and vim-polyglot aren't clobbering each other
+- [ ] Hook: Break java LTS and minimum fedora version into separate vars
 
 ## Contribution
 
