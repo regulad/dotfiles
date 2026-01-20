@@ -2,8 +2,6 @@
 # android bash doesn't support setting flags in invocation
 set -e
 
-# DEP_HASH:ed9247704eb96960b1b2066a596b0d8c6ba999ff1ae5d87960aadbf8e3a218e8
-
 # Installs neccesary tools to enable everything from the dotfiles
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
 # NOTE!! this is ONLY for true nix. no MINGW64; will handle that separately.
@@ -607,19 +605,10 @@ pnpm update --global --silent
 uv tool upgrade --quiet --all
 
 # Certificate installation
-declare -a CERT_PATHS=()
-
-# this script will run before first apply, so the file won't exist
-if [[ -f "$HOME/.chezmoi-did-apply" ]]; then
-	CERT_PATHS+=(
-		"$HOME/.x509/ipa-ca.crt"
-	)
-else
-	echo "note: running before first apply, using working tree files" >&2
-	CERT_PATHS+=(
-		"$HOME/.local/share/chezmoi/dot_x509/ipa-ca.crt"
-	)
-fi
+# NOTE: chezmoi source-path can't be used if this is in an apply
+CERT_PATHS=(
+	"$HOME/.local/share/chezmoi/dot_x509/ipa-ca.crt"
+)
 
 # Detect OS and install certificates
 if [[ "$(uname -o)" == "Android" ]]; then

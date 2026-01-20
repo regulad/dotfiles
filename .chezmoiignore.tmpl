@@ -1,25 +1,34 @@
+# general ignores
 .pycalc3/.venv/
-.keymap-renderer/.venv/
 .config/nvim/lazy-lock.json
 
+# Windows
 {{- if ne .chezmoi.os "windows" }}
-.chezmoiscripts/nt/*
-
+.chezmoiscripts/00-nt/*
 autorun.cmd
 .doskey.mac
 AppData
 {{- else }}
-.chezmoiscripts/posix/0*
+.chezmoiscripts/00-posix/*
 {{- end }}
 
-{{ if not (contains "WSL2" (output "uname" "-r")) -}}
-.chezmoiscripts/wsl2/*
-{{ end -}}
+# Linux
+{{- if ne .chezmoi.os "linux" }}
+.chezmoiscripts/01-linux/*
+.chezmoiscripts/02-wsl2/*
+.config/systemd/
+{{- else }}
+{{-     if not (contains "WSL2" (output "uname" "-r")) }}
+.chezmoiscripts/02-wsl2/*
+{{-     else }}
+# special case: tailscale is handled from the windows side for WSL2 hosts
+.chezmoiscripts/01-linux/00-tailscale.sh
+{{-     end }}
+{{- end }}
 
+# macOS
 {{- if ne .chezmoi.os "darwin" }}
 Library
-.chezmoiscripts/darwin/*
+.chezmoiscripts/01-darwin/*
 {{- else }}
-# systemd doesn't exist on mac
-.config/systemd/
 {{- end }}
