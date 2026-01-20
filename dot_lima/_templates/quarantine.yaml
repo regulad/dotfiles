@@ -15,7 +15,7 @@ mounts:
   - location: "~/.secrets"
     mountPoint: "/tmp/.secrets"
     writable: false
-  - location: "/tmp/.supersecrets"
+  - location: "~/.supersecrets"
     mountPoint: "/tmp/.supersecrets"
     writable: false
 provision:
