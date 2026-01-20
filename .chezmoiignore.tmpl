@@ -22,13 +22,21 @@ AppData
 .chezmoiscripts/02-wsl2/*
 {{-     else }}
 # special case: tailscale is handled from the windows side for WSL2 hosts
-.chezmoiscripts/01-linux/00-tailscale.sh
+.chezmoiscripts/00-posix/80-tailscale.sh
 {{-     end }}
 {{- end }}
 
-# macOS
+## Android
+{{- if eq .chezmoi.os "android" }}
+# special case: tailscale is handled from the Android side for Android hosts (no /dev/net/tun)
+.chezmoiscripts/00-posix/80-tailscale.sh
+{{- end }}
+
+# darwin (macOS, primarily)
 {{- if ne .chezmoi.os "darwin" }}
 Library
 .chezmoiscripts/01-darwin/*
 {{- else }}
+# special case: tailscale needs to be manually installed on macOS
+.chezmoiscripts/00-posix/80-tailscale.sh
 {{- end }}
