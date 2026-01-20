@@ -6,6 +6,7 @@ Welcome to my configuromicon. This monolithic repository contains the configurat
 
 It's currently backed by `chezmoi`. 
 Running `chezmoi apply` after a proper setup will enable deterministic restoration of my environment.
+After running `chezmoi apply` and restarting your shell, you can also use `quarantine` to launch an ephemeral environment with the same configuration. Useful for testing harmful software or for vibe-coding. `~/repositories` is mapped through to the VM.
 
 Additionally, it includes a couple custom tools that I use; for example, a `pycalc3` command is provided that brings up an ephemeral IPython environment for quick CPE & physics calculations.
 

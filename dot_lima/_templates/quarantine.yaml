@@ -7,12 +7,13 @@ user:
   name: "regulad"
   uid: 1000
   home: "/home/regulad"
+mountInotify: true
 mounts:
   - location: "~/repositories"
     mountPoint: "/home/regulad/repositories"
     writable: true
-  - location: "~/.bwrc"
-    mountPoint: "/tmp/.bwrc"
+  - location: "~/.secrets"
+    mountPoint: "/tmp/.secrets"
     writable: false
 provision:
   - mode: user
@@ -39,14 +40,11 @@ provision:
         chezmoi \
         bitwarden-cli
 
-      . /tmp/.bwrc
+      . /tmp/.secrets/.bwrc
+      . /tmp/.secrets/.bwsession
 
       bw config server https://vw.regulad.xyz
       bw login --apikey
 
       chezmoi init $GITHUB_USERNAME
-      chezmoi apply -x templates
-
-      # TODO: how should we unlock the vault without passing a valuable secret into the environment?
-      # export BW_SESSION=$(bw unlock --raw)
-      # chezmoi apply
+      chezmoi apply
