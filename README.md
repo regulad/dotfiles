@@ -9,12 +9,7 @@ Running `chezmoi apply` after a proper setup will enable deterministic restorati
 
 Additionally, it includes a couple custom tools that I use; for example, a `pycalc3` command is provided that brings up an ephemeral IPython environment for quick CPE & physics calculations.
 
-The feature I am most proud of is `keymap-renderer`. After each `chezmoi apply`, a custom program will read the keymaps of supported applications (see list below) and build annotated PDFs of live keymaps based on a [`keyboard-layout-editor`](https://github.com/ijprest/keyboard-layout-editor) layout.
-The finished PDFs will be placed in `~/.kmr-out`. You may then print them. An OpenSSL 
-
-The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/products/keychron-q6-max-qmk-via-wireless-custom-mechanical-keyboard?variant=40799762972761). 
-You should be able to replace the `base.json` with your keyboard's layout, but no guarantees are made. 
-This project is made for me, and while I have published it with the intent that others may find it useful, it will certainly require some finagling.
+The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/products/keychron-q6-max-qmk-via-wireless-custom-mechanical-keyboard?variant=40799762972761). You should be able to replace the `base.json` with your keyboard's layout, but no guarantees are made. 
 
 *This project is AGPL-3.0 licensed. Small request: if you choose to contribute, please do so on the GitHub fork network. This is only a request, AGPL-3.0 does not obligate you to share private modifications unless they are used through a network (i.e. shell account).*
 
