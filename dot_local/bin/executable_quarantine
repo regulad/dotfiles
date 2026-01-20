@@ -12,13 +12,15 @@ fixed_home="/home/regulad"
 pwd_fixed=${PWD/#"$HOME"/"$fixed_home"}
 log_level="info"
 
+# need to unlock the vault for the quarantine to read temporarily
 mkdir "/tmp/.supersecret"
-chmod "600" "/tmp/.supersecret"
+chmod "700" "/tmp/.supersecret"
+printf 'export BW_SESSION="%s"\n' "${BW_SESSION:-$(bw unlock --raw)}" >/tmp/.supersecret/.bwsession
+chmod "400" /tmp/.supersecret/.bwsession
 
 cleanup() {
 	limactl --log-level=$log_level delete -f "$name" >/dev/null 2>&1 || true
-	# can't figure out a better alternative than just creating a directory like this
-
+	rm -rf "/tmp/.supersecret"
 }
 trap cleanup EXIT
 
