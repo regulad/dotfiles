@@ -1,3 +1,5 @@
+# THIS FILE IS MANAGED BY CHEZMOI!
+
 # needed for Android native builds
 if [ "$(uname -o)" = "Android" ]; then
   export ANDROID_API_LEVEL="$(getprop ro.build.version.sdk 2>/dev/null || true)"
@@ -121,6 +123,7 @@ else
 fi
 
 # Preferences
+export OLLAMA_HOST="{{- .ollamaBase -}}"
 alias pipx="uv tool"
 export DO_NOT_TRACK=1
 export HOMEBREW_NO_ENV_HINTS=1
