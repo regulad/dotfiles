@@ -15,9 +15,8 @@ provision:
   - mode: user
     script: |
       #!/usr/bin/env bash
+      exec >>/tmp/.provision.log 2>&1
       set -eu
-
-      touch /tmp/.did-provision
 
       export DEBIANFRONTEND=noninteractive
       export NONINTERACTIVE=1
@@ -37,4 +36,4 @@ provision:
         chezmoi \
         bitwarden-cli
 
-      chezmoi init $GITHUB_USERNAME
+      chezmoi init --apply $GITHUB_USERNAME
