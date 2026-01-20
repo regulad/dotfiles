@@ -46,7 +46,8 @@ else
     vim.lsp.enable('ruff')
     vim.lsp.enable('rust_analyzer')
     vim.lsp.enable('bashls')
-    vim.lsp.enable('harper_ls') 
+    vim.lsp.enable('harper_ls')
+    vim.lsp.enable('yamlls')
 
     -- statuscol bug; will not update statuscol on each cursor move
     vim.api.nvim_create_autocmd({"CursorMoved", "CursorMovedI"}, {
@@ -56,12 +57,9 @@ else
 
     vim.api.nvim_create_autocmd("BufWritePre", {
         pattern = "*",
-        callback = function()
-             vim.lsp.buf.format({ async = false })
-        end,
+        callback = function() vim.lsp.buf.format({async = false}) end
     })
 end
-
 
 -- Legacy
 vim.cmd('source ' .. vim.fn.stdpath('config') .. '/legacy.vim')
