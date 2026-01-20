@@ -48,12 +48,15 @@ provision:
 
       # umount as soon as we are done
       . /tmp/.secrets/.bwrc
-      sudo umount /tmp/.secrets
       . /tmp/.supersecrets/.bwsession
-      sudo umount /tmp/.supersecrets
 
       bw config server https://vw.regulad.xyz
       bw login --apikey
+      export BW_SESSION=$(bw unlock --raw --passwordfile /tmp/.supersecrets/.bwpasswd)
 
+      sudo umount /tmp/.secrets
+      sudo umount /tmp/.supersecrets
+
+      # time to let er' rip
       chezmoi init $GITHUB_USERNAME
       chezmoi apply
