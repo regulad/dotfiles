@@ -15,9 +15,12 @@ mounts:
   - location: "~/.secrets"
     mountPoint: "/tmp/.secrets"
     writable: false
-  - location: "~/.supersecrets"
+  - location: "/tmp/.supersecrets"
     mountPoint: "/tmp/.supersecrets"
     writable: false
+  - location: "~/.cache"
+    mountPoint: "/home/regulad/.cache"
+    writable: true
 provision:
   - mode: user
     script: |
