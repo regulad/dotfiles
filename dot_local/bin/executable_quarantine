@@ -12,7 +12,14 @@ fixed_home="/home/regulad"
 pwd_fixed=${PWD/#"$HOME"/"$fixed_home"}
 log_level="info"
 
-cleanup() { limactl --log-level=$log_level delete -f "$name" >/dev/null 2>&1 || true; }
+mkdir "/tmp/.supersecret"
+chmod "600" "/tmp/.supersecret"
+
+cleanup() {
+	limactl --log-level=$log_level delete -f "$name" >/dev/null 2>&1 || true
+	# can't figure out a better alternative than just creating a directory like this
+
+}
 trap cleanup EXIT
 
 limactl --log-level=$log_level create --tty=false --name "$name" "$yaml"
