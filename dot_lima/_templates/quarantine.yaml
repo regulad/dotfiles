@@ -16,4 +16,17 @@ provision:
     script: |
       #!/bin/sh
       set -eu
-      echo "quarantine VM ready"
+
+      export DEBIANFRONTEND=noninteractive
+      export NONINTERACTIVE=1
+
+      GITHUB_USERNAME=regulad
+
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+      # bootstrap
+      brew install \
+        chezmoi \
+        bitwarden-cli
+
+      chezmoi init regulad
