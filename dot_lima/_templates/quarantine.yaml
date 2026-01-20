@@ -12,10 +12,12 @@ mounts:
     mountPoint: "/home/regulad/repositories"
     writable: true
 provision:
-  - mode: system
+  - mode: user
     script: |
-      #!/bin/sh
+      #!/usr/bin/env bash
       set -eu
+
+      touch /tmp/.did-provision
 
       export DEBIANFRONTEND=noninteractive
       export NONINTERACTIVE=1
@@ -29,4 +31,4 @@ provision:
         chezmoi \
         bitwarden-cli
 
-      chezmoi init regulad
+      chezmoi init  $GITHUB_USERNAME
