@@ -13,10 +13,12 @@ pwd_fixed=${PWD/#"$HOME"/"$fixed_home"}
 log_level="info"
 
 # need to unlock the vault for the quarantine to read temporarily
-mkdir "/tmp/.supersecrets"
-chmod "700" "/tmp/.supersecrets"
-printf 'export BW_SESSION="%s"\n' "${BW_SESSION:-$(bw unlock --raw)}" >/tmp/.supersecrets/.bwsession
-chmod "400" /tmp/.supersecrets/.bwsession
+# can't mount a pipe into the container so this is the best we can do security-wise
+read -rsp 'Master password for VM: ' BW_PASS
+echo
+printf '%s' "$BW_PASS" >"/tmp/.supersecrets/.bwpasswd" # printf avoids adding a newline like echo would [web:16]
+chmod "400" "/tmp/.supersecrets/.bwpasswd"
+unset BW_PASS
 
 cleanup() {
 	limactl --log-level=$log_level delete -f "$name" >/dev/null 2>&1 || true
