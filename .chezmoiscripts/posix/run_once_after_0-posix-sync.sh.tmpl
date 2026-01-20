@@ -2,7 +2,7 @@
 # android bash doesn't support setting flags in invocation
 set -e
 
-# DEP_HASH:d7614d70d17c99cbe88ef8bd190835a13e4843d8ff346467920a7f6ba557e835
+# DEP_HASH:ed9247704eb96960b1b2066a596b0d8c6ba999ff1ae5d87960aadbf8e3a218e8
 
 # Installs neccesary tools to enable everything from the dotfiles
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
@@ -511,6 +511,7 @@ fi
 uv tool install -q ruff # astral-backed
 uv tool install -q ty   # astral-backed
 uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
+uv tool install -q "rendercv[full]"
 
 # rust
 cargo install cargo-disasm

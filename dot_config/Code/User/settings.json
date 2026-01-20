@@ -1,7 +1,6 @@
 {
 	"editor.formatOnSave": true,
 	"explorer.confirmDelete": false,
-	"maven.executable.path": "C:\\Users\\parke\\AppData\\Local\\apache-maven-3.8.1\\bin\\mvn",
 	"editor.suggestSelection": "first",
 	"vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
 	"java.configuration.checkProjectSettingsExclusions": false,
@@ -13,6 +12,7 @@
 	"telemetry.enableTelemetry": false,
 	"editor.cursorBlinking": "smooth",
 	"files.autoSave": "afterDelay",
+	"files.autoSaveDelay": 10,
 	"editor.wordWrap": "on",
 	"diffEditor.codeLens": true,
 	"spellright.documentTypes": ["markdown", "latex", "plaintext"],
@@ -22,7 +22,6 @@
 	"markdownlint.config": {},
 	"liquid.format": true,
 	"window.closeWhenEmpty": true,
-	"terminal.integrated.shell.windows": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
 	"files.eol": "\n",
 	"redhat.telemetry.enabled": false,
 	"java.project.importOnFirstTimeStartup": "automatic",
@@ -34,11 +33,6 @@
 	"remote.extensionKind": {
 		"asvetliakov.vscode-neovim": ["workspace"]
 	},
-	"python.pythonPath": "C:\\Users\\parke\\AppData\\Local\\Programs\\Python\\Python39\\python.exe",
-	"settingsSync.ignoredSettings": [
-		//
-		"-git.defaultCloneDirectory"
-	],
 	"explorer.confirmDragAndDrop": false,
 	"[dart]": {
 		"editor.formatOnSave": true,
@@ -52,10 +46,6 @@
 	},
 	"github.copilot.enable": {
 		"*": false,
-		"plaintext": false,
-		"markdown": false,
-		"scminput": false,
-		"yaml": false
 	},
 	"[markdown]": {
 		"editor.defaultFormatter": "yzhang.markdown-all-in-one"
@@ -68,8 +58,6 @@
 	"liveServer.settings.donotShowInfoMsg": true,
 	"prettier.useTabs": true,
 	"update.showReleaseNotes": false,
-	"dev.containers.dockerPath": "podman",
-	"dev.containers.dockerSocketPath": "/run/user/1000/podman/podman.sock",
 	"javascript.updateImportsOnFileMove.enabled": "always",
 	"typescript.updateImportsOnFileMove.enabled": "always",
 	"debug.javascript.debugByLinkOptions": "on",

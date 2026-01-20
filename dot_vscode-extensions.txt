@@ -26,3 +26,5 @@ streetsidesoftware.code-spell-checker
 unifiedjs.vscode-mdx
 vscjava.vscode-gradle
 wakatime.vscode-wakatime
+redhat.vscode-yaml
+wytheglobal.pdfmore
