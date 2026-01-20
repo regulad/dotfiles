@@ -133,6 +133,17 @@ export VISUAL="$(command -v nvim || command -v vim)"
 alias pycalc3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=default"
 alias c3="pycalc3"
 
+quarantine() {
+  local yaml="${HOME}/.lima/_templates/quarantine.yaml"
+  local name="quarantine-$(date +%Y%m%d-%H%M%S)-$$"
+
+  cleanup() { limactl delete -f "$name" >/dev/null 2>&1 || true; }
+  trap cleanup RETURN INT TERM
+
+  limactl start "$yaml" --name "$name" --tty=false
+  limactl shell "$name" --workdir "$PWD" -- bash -l
+}
+
 vi() { command "$VISUAL" "$@"; }
 if [ -n "${ZSH_VERSION-}" ]; then
   case "$VISUAL" in
