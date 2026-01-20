@@ -15,6 +15,9 @@ mounts:
   - location: "~/.secrets"
     mountPoint: "/tmp/.secrets"
     writable: false
+  - location: "/tmp/.supersecrets"
+    mountPoint: "/tmp/.supersecrets"
+    writable: false
 provision:
   - mode: user
     script: |
@@ -40,8 +43,11 @@ provision:
         chezmoi \
         bitwarden-cli
 
+      # umount as soon as we are done
       . /tmp/.secrets/.bwrc
-      . /tmp/.secrets/.bwsession
+      sudo umount /tmp/.secrets
+      . /tmp/.supersecrets/.bwsession
+      sudo umount /tmp/.supersecrets
 
       bw config server https://vw.regulad.xyz
       bw login --apikey
