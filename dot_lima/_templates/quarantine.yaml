@@ -48,7 +48,6 @@ provision:
 
       # umount as soon as we are done
       . /tmp/.secrets/.bwrc
-      . /tmp/.supersecrets/.bwsession
 
       bw config server https://vw.regulad.xyz
       bw login --apikey
