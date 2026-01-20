@@ -4,8 +4,9 @@ cpus: 2
 memory: "4GiB"
 disk: "20GiB"
 mounts:
-  - location: "~"
-    writable: false
+  - location: "~/repositories"
+    mountPoint: "~/repositories"
+    writable: true
 provision:
   - mode: system
     script: |
