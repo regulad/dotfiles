@@ -14,6 +14,8 @@ log_level="info"
 
 # need to unlock the vault for the quarantine to read temporarily
 # can't mount a pipe into the container so this is the best we can do security-wise
+mkdir "/tmp/.supersecrets"
+chmod "700" "/tmp/.supersecrets"
 read -rsp 'Master password for VM: ' BW_PASS
 echo
 printf '%s' "$BW_PASS" >"/tmp/.supersecrets/.bwpasswd" # printf avoids adding a newline like echo would [web:16]
