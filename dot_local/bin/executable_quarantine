@@ -12,6 +12,12 @@ fixed_home="/home/regulad"
 pwd_fixed=${PWD/#"$HOME"/"$fixed_home"}
 log_level="info"
 
+cleanup() {
+	limactl --log-level=$log_level delete -f "$name" >/dev/null 2>&1 || true
+	rm -rf "/tmp/.supersecrets"
+}
+trap cleanup EXIT
+
 # need to unlock the vault for the quarantine to read temporarily
 # can't mount a pipe into the container so this is the best we can do security-wise
 mkdir "/tmp/.supersecrets"
@@ -21,12 +27,6 @@ echo
 printf '%s' "$BW_PASS" >"/tmp/.supersecrets/.bwpasswd" # printf avoids adding a newline like echo would [web:16]
 chmod "400" "/tmp/.supersecrets/.bwpasswd"
 unset BW_PASS
-
-cleanup() {
-	limactl --log-level=$log_level delete -f "$name" >/dev/null 2>&1 || true
-	rm -rf "/tmp/.supersecrets"
-}
-trap cleanup EXIT
 
 limactl --log-level=$log_level create --tty=false --name "$name" "$yaml"
 limactl --log-level=$log_level shell --start --shell=/bin/zsh --workdir "$pwd_fixed" "$name"
