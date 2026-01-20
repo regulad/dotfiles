@@ -3,9 +3,13 @@ base:
 cpus: 2
 memory: "4GiB"
 disk: "20GiB"
+user:
+  name: "regulad"
+  uid: 1000
+  home: "/home/regulad"
 mounts:
   - location: "~/repositories"
-    mountPoint: "~/repositories"
+    mountPoint: "/home/regulad/repositories"
     writable: true
 provision:
   - mode: system
