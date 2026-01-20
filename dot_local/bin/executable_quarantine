@@ -16,4 +16,4 @@ cleanup() { limactl --log-level=$log_level delete -f "$name" >/dev/null 2>&1 || 
 trap cleanup EXIT
 
 limactl --log-level=$log_level create --tty=false --name "$name" "$yaml"
-limactl --log-level=$log_level shell --start --shell=/bin/zsh --workdir "$pwd_fixed" "$name"
+limactl --log-level=$log_level shell --start --shell=/bin/zsh "$name"
