@@ -25,10 +25,11 @@ provision:
       GITHUB_USERNAME=regulad
 
       /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
       # bootstrap
       brew install \
         chezmoi \
         bitwarden-cli
 
-      chezmoi init  $GITHUB_USERNAME
+      chezmoi init $GITHUB_USERNAME
