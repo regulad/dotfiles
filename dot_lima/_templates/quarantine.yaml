@@ -6,11 +6,11 @@ disk: "20GiB"
 user:
   name: "regulad"
   uid: 1000
-  home: "/home/regulad"
+  home: "/home/regulad.linux"
 mountInotify: true
 mounts:
   - location: "~/repositories"
-    mountPoint: "/home/regulad/repositories"
+    mountPoint: "/home/regulad.linux/repositories"
     writable: true
   - location: "~/.secrets"
     mountPoint: "/tmp/.secrets"
@@ -19,7 +19,7 @@ mounts:
     mountPoint: "/tmp/.supersecrets"
     writable: false
   - location: "~/.cache"
-    mountPoint: "/home/regulad/.cache"
+    mountPoint: "/home/regulad.linux/.cache"
     writable: true
 provision:
   - mode: user
