@@ -181,7 +181,6 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"dt:build-essential"
 	"mdrt:bash"
 	"mdrt:tmux"
-	"m:reattach-to-user-namespace"
 	"mdr:retry" # no compat on termux
 	"mdrt:zsh"
 	"t:file"
@@ -193,6 +192,10 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"mdrt:ncdu"
 	"mdt:htop"
 	"mdt:nmap"
+
+	# =+= macOS-SPECIFIC
+	"m:reattach-to-user-namespace"
+	"m:mas"
 
 	# =+= BUILD TOOLS
 	"d:ninja-build"
