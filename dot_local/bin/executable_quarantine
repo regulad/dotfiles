@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+yaml="$HOME/.lima/_templates/quarantine.yaml"
+[[ -f "$yaml" ]] || {
+	echo "missing: $yaml" >&2
+	exit 1
+}
+
+name="quarantine-$(date +%Y%m%d-%H%M%S)-$$"
+cleanup() { limactl --log-level=error delete -f "$name" >/dev/null 2>&1 || true; }
+trap cleanup EXIT
+
+limactl --log-level=error create --tty=false --name "$name" "$yaml"
+limactl --log-level=error shell --start --workdir "$PWD" "$name"

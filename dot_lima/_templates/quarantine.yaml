@@ -1,0 +1,14 @@
+base:
+  - template:ubuntu-lts
+cpus: 2
+memory: "4GiB"
+disk: "20GiB"
+mounts:
+  - location: "~"
+    writable: false
+provision:
+  - mode: system
+    script: |
+      #!/bin/sh
+      set -eu
+      echo "quarantine VM ready"
