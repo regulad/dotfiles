@@ -451,9 +451,20 @@ PNPM_CLI_PACKAGES=(
 
 ## packages available on brew are preferred over their pnpm packages (may have binary bottles pre-built)
 if [ "$HAS_BREW" = "true" ]; then
-	brew install -q bitwarden-cli pyright typescript typescript-language-server bash-language-server
+	brew install -q \
+		bitwarden-cli \
+		typescript \
+		typescript-language-server \
+		bash-language-server \
+		yaml-language-server
 else
-	PNPM_CLI_PACKAGES+=("@bitwarden/cli@latest" "pyright@latest" "typescript@latest" "typescript-language-server@latest" "bash-language-server")
+	PNPM_CLI_PACKAGES+=(
+		"@bitwarden/cli@latest" 
+		"typescript@latest" 
+		"typescript-language-server@latest" 
+		"bash-language-server@latest"
+		"yaml-language-server@latest"
+	)
 fi
 
 pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
