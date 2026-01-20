@@ -11,6 +11,9 @@ mounts:
   - location: "~/repositories"
     mountPoint: "/home/regulad/repositories"
     writable: true
+  - location: "~/.bwrc"
+    mountPoint: "/home/regulad/.bwrc"
+    writable: true
 provision:
   - mode: user
     script: |
@@ -35,5 +38,7 @@ provision:
       brew install \
         chezmoi \
         bitwarden-cli
+
+      bw config server https://vw.regulad.xyz
 
       chezmoi init --apply $GITHUB_USERNAME
