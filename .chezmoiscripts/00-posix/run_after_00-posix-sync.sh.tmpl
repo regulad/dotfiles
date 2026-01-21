@@ -554,7 +554,6 @@ else
 fi
 
 
-{{- if not (hasPrefix .chezmoi.hostname "quarantine-") }}
 # these commands only run on non-cattle hosts (persistent)
 # load zsh as primary shell
 ZSH_PATH=$(command -v zsh)
@@ -589,7 +588,11 @@ if command -v chsh &>/dev/null && ! [ "$(uname -o)" = "Android" ]; then
 
 	# Change shell if not already set
 	if [ "$SHELL" != "$SHELL_PATH" ]; then
-		chsh -s "$SHELL_PATH"
+		if [ "$CAN_SUDO" = "true" ]; then
+			sudo chsh -s "$SHELL_PATH"
+		else
+			chsh -s "$SHELL_PATH"
+		fi
 		echo "note: shell was changed" >&2
 	fi
 elif command -v chsh &>/dev/null; then
@@ -597,7 +600,6 @@ elif command -v chsh &>/dev/null; then
 else
 	echo "warning: could not autoset shell" >&2
 fi
-{{- end }}
 
 # final step: upgrade dependencies but ONLY for user-level pms
 if [ "$HAS_BREW" = "true" ]; then
