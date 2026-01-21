@@ -8,25 +8,14 @@ yaml="$HOME/.lima/_templates/quarantine.yaml"
 }
 
 name="quarantine-$(date +%Y%m%d-%H%M%S)-$$"
-fixed_home="/home/regulad"
+fixed_home="/home/regulad.linux"
 pwd_fixed=${PWD/#"$HOME"/"$fixed_home"}
 log_level="info"
 
 cleanup() {
 	limactl --log-level=$log_level delete -f "$name" >/dev/null 2>&1 || true
-	rm -rf "/tmp/.supersecrets"
 }
 trap cleanup EXIT
 
-# need to unlock the vault for the quarantine to read temporarily
-# can't mount a pipe into the container so this is the best we can do security-wise
-mkdir "/tmp/.supersecrets"
-chmod "700" "/tmp/.supersecrets"
-read -rsp 'Master password for VM: ' BW_PASS
-echo
-printf '%s' "$BW_PASS" >"/tmp/.supersecrets/.bwpasswd" # printf avoids adding a newline like echo would [web:16]
-chmod "400" "/tmp/.supersecrets/.bwpasswd"
-unset BW_PASS
-
 limactl --log-level=$log_level create --tty=false --name "$name" "$yaml"
-limactl --log-level=$log_level shell --start --shell=/bin/zsh --workdir "$pwd_fixed" "$name"
+limactl --log-level=$log_level shell --start --shell=/home/regulad.linux/entrypoint --workdir "$pwd_fixed" "$name"
