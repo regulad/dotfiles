@@ -339,13 +339,11 @@ if command -v rustup-init &>/dev/null && [[ ! -d "$HOME/.cargo" ]]; then
 	rustup-init -y --default-toolchain stable --profile default
 	source "$HOME/.cargo/env"
 	rustup component add rust-analyzer
-elif command -v rustup &>/dev/null; then
-	if ! rustup toolchain list 2>/dev/null | grep -q .; then
-		rustup default stable
-		rustup set profile default
-		rustup toolchain install stable
-		rustup component add rust-analyzer
-	fi
+elif command -v rustup &>/dev/null && rustup toolchain list 2>&1 | grep -qE "(no installed toolchains|^$)"; then
+	rustup default stable
+	rustup set profile default
+	rustup toolchain install stable
+	rustup component add rust-analyzer
 fi
 
 if [ "$MANAGER" = "brew" ] && [ "$CAN_SUDO" = "true" ]; then
