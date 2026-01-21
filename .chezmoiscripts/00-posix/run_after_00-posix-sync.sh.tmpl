@@ -553,6 +553,9 @@ else
 	git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions
 fi
 
+
+{{- if not (hasPrefix .chezmoi.hostname "quarantine-") }}
+# these commands only run on non-cattle hosts (persistent)
 # load zsh as primary shell
 ZSH_PATH=$(command -v zsh)
 
@@ -594,6 +597,7 @@ elif command -v chsh &>/dev/null; then
 else
 	echo "warning: could not autoset shell" >&2
 fi
+{{- end }}
 
 # final step: upgrade dependencies but ONLY for user-level pms
 if [ "$HAS_BREW" = "true" ]; then
