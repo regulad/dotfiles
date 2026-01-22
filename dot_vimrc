@@ -72,16 +72,18 @@ autocmd FileType lua nnoremap <buffer> <c-k> :call LuaFormat()<cr>
 autocmd BufWrite *.lua call LuaFormat()
 
 " Color
-colorscheme darcula
-set termguicolors
-if !has("nvim")
-    autocmd VimEnter * call echoraw("\x1b]11;#1e1f22\x07")
-    autocmd VimLeave * call echoraw("\x1b]111;\x07")
-else
-    autocmd VimEnter * lua io.stdout:write("\x1b]11;#1e1f22\x07")
-    autocmd VimLeave * lua io.stdout:write("\x1b]111;\x07")
+if !exists('g:vscode')
+    colorscheme darcula
+    set termguicolors
+    if !has("nvim")
+        autocmd VimEnter * call echoraw("\x1b]11;#1e1f22\x07")
+        autocmd VimLeave * call echoraw("\x1b]111;\x07")
+    else
+        autocmd VimEnter * lua io.stdout:write("\x1b]11;#1e1f22\x07")
+        autocmd VimLeave * lua io.stdout:write("\x1b]111;\x07")
+    end
+    highlight Normal guibg=#1e1f22 ctermbg=NONE
 end
-highlight Normal guibg=#1e1f22 ctermbg=NONE
 
 " non-color stuff
 syntax on
