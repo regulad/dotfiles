@@ -48,7 +48,7 @@ call refreshenv >nul 2>&1
 
 echo debug: installing scoop packages
 call scoop update >nul 2>&1
-set packages=bitwarden-cli chezmoi clink gh git nodejs nmap rust telnet unzip vim neovim uv file dos2unix grep gradle coreutils
+set packages=bitwarden-cli chezmoi clink gh git nodejs nmap rust telnet unzip vim neovim uv file dos2unix grep gradle coreutils openssl
 for %%p in (%packages%) do (
     call scoop list %%p >nul 2>&1
     if !errorLevel! neq 0 (
