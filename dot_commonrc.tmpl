@@ -132,6 +132,7 @@ export VISUAL="$(command -v nvim || command -v vim)"
 # === ALIASES
 alias pycalc3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=default"
 alias c3="pycalc3"
+alias wakaru="pnpm dlx @wakaru/cli"
 
 vi() { command "$VISUAL" "$@"; }
 if [ -n "${ZSH_VERSION-}" ]; then
