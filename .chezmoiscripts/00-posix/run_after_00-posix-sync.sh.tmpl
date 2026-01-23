@@ -448,6 +448,10 @@ fi
 PNPM_CLI_PACKAGES=(
 	"@continuedev/cli@latest"
 	"ezff@latest"
+)
+
+# these need to be installed with base NPM
+NPM_CLI_PACKAGES=(
 	"opencode-ai@latest"
 	"opencode-swarm-plugin@latest"
 )
@@ -471,6 +475,7 @@ else
 fi
 
 pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
+npm install -g "${NPM_CLI_PACKAGES[@]}"
 
 # deno
 export DENO_INSTALL="$HOME/.deno"
