@@ -145,11 +145,21 @@ fi
 ssh-privpub() {
     for key in "$@"; do
         [[ "$key" == *.pub ]] && continue
-        [ -f "$key" ] && ssh-keygen -y -f "$key" > "${key}.pub" 2>/dev/null && echo "${key}.pub"
-    done
+        [ -f "$key" ] && ssh-keygen -y -f "$key" > "${key}.pub" 2>/dev/null && echo "${key}.pub"    done
 }
 [ -n "$ZSH_VERSION" ] && compdef _files ssh-privpub
 
 chezmoi-cd() {
     cd $(chezmoi source-path)
 }
+
+# === ANNOUNCEMENTS/psuedoMOTD
+LAST_SYNC="{{ now | date "2006-01-02" }}"
+CURRENT_DATE=$(date +%Y-%m-%d)
+DAYS_OLD=$(( ( $(date +%s) - $(date -d "$LAST_SYNC" +%s) ) / 86400 ))
+
+if [ "$DAYS_OLD" -gt 7 ]; then
+    echo "warning: last chezmoi sync was $LAST_SYNC, resync soon" >&2
+fi
+
+fastfetch
