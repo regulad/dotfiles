@@ -351,6 +351,13 @@ if [ "$MANAGER" = "brew" ] && [ "$CAN_SUDO" = "true" ]; then
 	sudo ln -sfn $HOMEBREW_PREFIX/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
 fi
 
+# Install zerobrew if on a platform that supports it. Zerobrew is an experimental rust rewrite of brew
+if [[ $(uname -m) == "arm64" && $(uname -s) == "Darwin" && "$SHELL" == *"zsh"* ]]; then
+	# This install script is idempotent. 
+	source ~/.zshenv
+	curl -sSL https://raw.githubusercontent.com/lucasgelfond/zerobrew/main/install.sh | bash
+fi
+
 # user-level binary dependencies
 # these dependencies aren't provided by the system package manager, for whatever reason
 # these packages do NOT require compilation and are distributed as binaries.
@@ -359,6 +366,7 @@ fi
 # most of them are needed for specific workflows (i.e. kotlin, python, java)
 SECONDARY_BINARY_DEPENDENCIES=(
 	"wakatime-cli"
+	"neovim"  # newer version than available on main toolchains
 	"ollama"
 	"tokei"
 	"minio-mc"
@@ -375,7 +383,7 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"shfmt"
 	"ghidra"
 	"oven-sh/bun/bun"  # addl. javascript runtime
-	"dicklesworthstone/tap/cass"
+#	"dicklesworthstone/tap/cass"  # completely broken
 )
 
 if [ "$HAS_BREW" = "true" ]; then
