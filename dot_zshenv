@@ -1,5 +1,3 @@
-. "$HOME/.cargo/env"
-
 # zerobrew
 export PATH="/Users/regulad/.local/bin:$PATH"
 
