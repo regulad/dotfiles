@@ -86,7 +86,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms:
+            linux/amd64 #,linux/arm64
+            # `sudo` does not appear to work correctly under arm64 emulation.
+            # I'm chalking it up to an issue with the filesystem that it presents to the guest, since it complains about being unable to set the setuid bit.
+            # Currently all nodes are `amd64`, so just commenting it out is an easy fix.
+            # If at any time I have adopted a "mixed" setup where some nodes are arm64 and some are amd64,
+            # I will need to break the build process into two separate jobs whose created images are recombined with a multi-plat manifest.
 
       # Sign the resulting Docker image digest except on PRs.
       # This will only write to the public Rekor transparency log when the Docker
