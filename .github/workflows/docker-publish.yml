@@ -10,10 +10,6 @@ on:
     - cron: "28 4 * * 2,6"
   push:
     branches: ["master"]
-    # Publish semver tags as releases.
-    tags: ["v*.*.*"]
-  pull_request:
-    branches: ["master"]
 
 env:
   # Use docker.io for Docker Hub if empty
@@ -23,7 +19,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     permissions:
       contents: read
       packages: write
