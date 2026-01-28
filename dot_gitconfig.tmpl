@@ -2,19 +2,25 @@
 [user]
 	name = Parker Wahle
 	email = regulad@regulad.xyz
+{{- if not .useDummySecrets }}
 	signingKey = ~/.ssh/id_rsa.pub
+{{ end -}}
 [init]
 	defaultBranch = master
+{{- if not .useDummySecrets }}
 [commit]
 	gpgSign = true
 [tag]
 	gpgSign = true
+{{ end -}}
 # --atomic and --tags should be used on almost every push but there is no way to enable these by default
 [push]
 	autoSetupRemote = true
 	default = current
 	# not supported on GitHub but is supported by others
+{{- if not .useDummySecrets }}
 	gpgSign = if-asked
+{{ end -}}
 [core]
 	autocrlf = false
 {{- if and (eq .chezmoi.os "windows") (stat (joinPath .chezmoi.homeDir "scoop")) }}
@@ -35,7 +41,9 @@
 {{- if and (eq .chezmoi.os "windows") (stat (joinPath .chezmoi.homeDir "scoop")) }}
 	program = "C:\\Windows\\System32\\OpenSSH\\ssh-keygen.exe"
 {{- end }}
+{{- if not .useDummySecrets }}
 [credential "https://gist.github.com"]
 	helper = !gh auth git-credential
 [credential "https://github.com"]
 	helper = !gh auth git-credential
+{{ end -}}
