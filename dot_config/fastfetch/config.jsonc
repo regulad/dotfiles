@@ -4,7 +4,9 @@
     "type": "small",
     "padding": {
       "top": 1,
-      "left": 1
+      "left": 1,
+      "right": 1,
+      "bottom": 1
     }
   },
   "modules": [
