@@ -8,8 +8,8 @@ OPENJDK_LTS_VERSION=25
 PYTHON_VERSION=3.12
 
 # minimum versions of host operating systems
-RHEL_MINIMUM_VERSION=10
-FEDORA_MINIMUM_VERSION=42  # 40/41 are EOL although would probably work, 42 was tested
+RHEL_MINIMUM_VERSION=9.7  # latest version of lowest-supported at publishing time
+FEDORA_MINIMUM_VERSION=42  # 40/41 are EOL although would probably work, 42 oldest w/ support
 MACOS_MINIMUM_VERSION=14  # tested on 14 and 26
 DEBIAN_MINIMUM_VERSION=13
 UBUNTU_MINIMUM_VERSION=24.04
@@ -128,36 +128,36 @@ else
 fi
 case "$OS" in
     rhel|centos|rocky|alma)
-        REQUIRED=10
+        REQUIRED="$RHEL_MINIMUM_VERSION"
         CURRENT=$(echo "$VERSION_ID" | cut -d. -f1)
-        if [ "$CURRENT" -lt "$REQUIRED" ]; then
+        if [ "$(echo -e "$VERSION_ID\n$REQUIRED" | sort -V | head -n1)" != "$REQUIRED" ]; then
             echo "Error: RHEL/CentOS/Rocky/Alma $REQUIRED or higher required (found $VERSION_ID)"
             exit 1
         fi
         ;;
     fedora)
-        REQUIRED=42
+        REQUIRED="$FEDORA_MINIMUM_VERSION"
         if [ "$VERSION_ID" -lt "$REQUIRED" ]; then
             echo "Error: Fedora $REQUIRED or higher required (found $VERSION_ID)"
             exit 1
         fi
         ;;
     macos)
-        REQUIRED=14
+        REQUIRED="$MACOS_MINIMUM_VERSION"
         if [ "$VERSION_ID" -lt "$REQUIRED" ]; then
             echo "Error: macOS $REQUIRED or higher required (found $VERSION_ID)"
             exit 1
         fi
         ;;
     debian)
-        REQUIRED=13
+        REQUIRED="$DEBIAN_MINIMUM_VERSION"
         if [ "$VERSION_ID" -lt "$REQUIRED" ]; then
             echo "Error: Debian $REQUIRED or higher required (found $VERSION_ID)"
             exit 1
         fi
         ;;
     ubuntu)
-        REQUIRED="24.04"
+        REQUIRED="$UBUNTU_MINIMUM_VERSION"
         if [ "$(echo -e "$VERSION_ID\n$REQUIRED" | sort -V | head -n1)" != "$REQUIRED" ]; then
             echo "Error: Ubuntu $REQUIRED or higher required (found $VERSION_ID)"
             exit 1
@@ -165,7 +165,7 @@ case "$OS" in
         if [ "$CAN_SUDO" = "true" ]; then
             sudo add-apt-repository -y ppa:zhangsongcui3371/fastfetch
         else
-            echo "Error: sudo access required to add fastfetch PPA on Ubuntu"
+            echo "Error: sudo access required to add PPA(s) on Ubuntu"
             exit 1
         fi
         ;;
