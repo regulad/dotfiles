@@ -116,11 +116,13 @@ file-system-maven-settings
     </server>
     -->
 
+    {{ if not .useDummySecrets -}}
     <server>
       <id>central</id>
       <username>{{- (bitwardenFields "item" "central.sonatype.com").chezmoiUsername.value -}}</username>
       <password>{{- (bitwardenFields "item" "central.sonatype.com").chezmoiPassword.value -}}</password>
     </server>
+    {{- end }}
   </servers>
 
   <!-- mirrors

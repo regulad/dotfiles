@@ -1,4 +1,6 @@
+{{ if not .useDummySecrets -}}
 mavenCentralUsername={{- (bitwardenFields "item" "central.sonatype.com").chezmoiUsername.value }}
 mavenCentralPassword={{- (bitwardenFields "item" "central.sonatype.com").chezmoiPassword.value }}
+{{- end }}
 
 signing.gnupg.keyName=EA23ACF3

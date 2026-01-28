@@ -1,6 +1,21 @@
+README.md
+LICENSE.md
+Dockerfile
 # general ignores
 .pycalc3/.venv/
 .config/nvim/lazy-lock.json
+
+# Credentialfiles
+{{- if .useDummySecrets }}
+.npmrc
+.wakatime.cfg
+.secrets/
+.cargo/credentials.toml
+# will have to insta-gen android secrets if needed
+.android/adbkey
+.android/adbkey.pub
+.android/debug.keystore
+{{- end }}
 
 # Windows
 {{- if ne .chezmoi.os "windows" }}

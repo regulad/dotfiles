@@ -6,9 +6,13 @@ index-servers =
 [pypi]
 repository = https://upload.pypi.org/legacy/
 username = __token__
+{{ if not .useDummySecrets -}}
 password = {{ (bitwardenFields "item" "11d48620-08f5-400c-807e-ff66d6edf467").chezmoi.value }}
+{{- end }}
 
 [testpypi]
 repository = https://test.pypi.org/legacy/
 username = __token__
+{{ if not .useDummySecrets -}}
 password = {{ (bitwardenFields "item" "7ec7de47-a379-4cb5-8344-e5476e847eca").chezmoi.value }}
+{{- end }}

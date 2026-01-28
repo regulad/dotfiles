@@ -19,7 +19,7 @@ The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/
 Supported environments:
 
 - macOS latest (w/ `brew`)
-- Debian GNU/Linux (tested against Ubuntu 24.04)
+- Debian GNU/Linux (tested against Ubuntu 24.04 & Debian 13)
     - Including under WSL with Windows integration
     - Installs brew
 - Red Hat-based GNU/Linux (tested against Fedora >= 42 and RHEL >= 10)
@@ -52,33 +52,35 @@ sh -c "$(curl -fsLS get.chezmoi.io/lb)"
 export PATH="$PATH:$HOME/.local/bin"
 
 # Initalize & run first-time dependency install
-chezmoi init regulad
-~/.local/share/chezmoi/run_posix-sync.sh
-source ~/.local/share/chezmoi/dot_commonrc
+CHEZMOI_USE_DUMMY=1 chezmoi init regulad
+# CHEZMOI_USE_DUMMY instructs chezmoi to not attempt to apply any secrets.
+chezmoi apply  
 
 # Configure bw for templating
 bw config server https://vw.regulad.xyz  # this is my server, obviously. replace w/ yours
 bw login --apikey  # stdio needed
 
-# Final apply
-chezmoi apply
+# Final apply with real secrets
+chezmoi init && chezmoi apply
 ```
 
 ### NT Install
 
 ```cmd
 # Install dependencies via scoop
-scoop install chezmoi bitwarden-cli git
+scoop install chezmoi git
 
-# Initialize chezmoi
-chezmoi init regulad
+# Initalize & run first-time dependency install
+CHEZMOI_USE_DUMMY=1 chezmoi init regulad
+# CHEZMOI_USE_DUMMY instructs chezmoi to not attempt to apply any secrets.
+chezmoi apply  
 
 # Configure bw for templating
-bw config server https://vw.regulad.xyz  # replace with your server
-bw login --apikey
+bw config server https://vw.regulad.xyz  # this is my server, obviously. replace w/ yours
+bw login --apikey  # stdio needed
 
-# Apply dotfiles
-chezmoi apply
+# Final apply with real secrets
+chezmoi init && chezmoi apply
 ```
 
 The `autorun.cmd` will automatically set up Clink and doskey macros (`pipx`, `vi`, `chezmoi-cd`, `ssh-privpub`) on each shell startup.
@@ -95,9 +97,9 @@ Remember to define the package in the correct hookscript (i.e. `run_posix-sync.s
 
 ## TODOs
 
-- [ ] Cattle: Add userspace tailscale in vagrant for opencode/sus software
+- [x] Cattle: Add userspace tailscale in vagrant for opencode/sus software
 - [ ] Zsh: Finalize & memorize zsh backsearch keybinds
-- [ ] Nt: Write NT self-bootstrapping script
+- [x] Nt: Write NT self-bootstrapping script
 - [x] Doc: Emit warnings in vim and bash
 - [ ] Doc: Annotate `rc`s with philosophy (no network requests, fast boot, etc.
 - [x] Brew: Brew on permissionless systems w/ gentoo-style custom prefixes
@@ -107,7 +109,7 @@ Remember to define the package in the correct hookscript (i.e. `run_posix-sync.s
 - [x] Nvim: Relative + absolute line numbers in nvim
 - [x] Nvim: Addl. language server configurations in nvim
 - [ ] Nvim: ensure that treesitter and vim-polyglot aren't clobbering each other
-- [ ] Hook: Break java LTS and minimum fedora version into separate vars
+- [x] Hook: Break java LTS and minimum fedora version into separate vars
 
 ## LLM Usage
 
