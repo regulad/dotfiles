@@ -160,6 +160,14 @@ Host git.regulad.xyz
 {{ end }}
     IdentitiesOnly yes
 
+Host invent.kde.org
+    HostName invent.kde.org
+{{ if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+{{ end }}
+    IdentitiesOnly yes
+
 # ncsu
 Host github.ncsu.edu
     HostName github.ncsu.edu
