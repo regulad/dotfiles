@@ -1,0 +1,27 @@
+[no ci]
+{{ with .chezmoi.status }}
+
+{{- range .Ordinary -}}
+{{ if and (eq .X 'A') (eq .Y '.') -}}Add {{ .Path | targetRelPath }}
+{{ else if and (eq .X 'D') (eq .Y '.') -}}Remove {{ .Path | targetRelPath }}
+{{ else if and (eq .X 'M') (eq .Y '.') -}}Update {{ .Path | targetRelPath }}
+{{ else }}{{ warnf "unsupported XY: %c%c" .X .Y }}
+{{ end }}
+{{- end -}}
+
+{{- range .RenamedOrCopied -}}
+{{ if and (eq .X 'R') (eq .Y '.') }}Change attributes of {{ .Path | targetRelPath }}
+{{ else if and (eq .X 'C') (eq .Y '.') -}}Copy {{ .OrigPath | targetRelPath }} to {{ .Path | targetRelPath }}
+{{ else }}{{ warnf "unsupported XY: %c%c" .X .Y }}
+{{ end }}
+{{- end -}}
+
+{{- range .Unmerged -}}
+{{ warnf "unmerged files" }}
+{{- end -}}
+
+{{- range .Untracked -}}
+{{ warnf "untracked files" }}
+{{- end -}}
+
+{{- end -}}
