@@ -338,8 +338,8 @@ elif command -v apt &>/dev/null && [[ -f /etc/debian_version ]]; then
 	MANAGER="apt"
 elif command -v brew &>/dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
 	MANAGER="brew"
-	# Brew-specific tap setups
-	brew tap regulad/homebrew-tap  # auto-uses GitHub if unspecified
+	# macOS brew-specific tap setups
+	# used to tap my own tap here with `brew tap regulad/homebrew-tap` but since it doesn't require any special "caveats" like kde-mac I can just declare it inside of the formula
 	brew tap kde-mac/kde https://invent.kde.org/packaging/homebrew-kde.git && "$(brew --repo kde-mac/kde)/tools/do-caveats.sh"
 else
 	MANAGER=""
