@@ -339,9 +339,16 @@ elif command -v apt &>/dev/null && [[ -f /etc/debian_version ]]; then
 	MANAGER="apt"
 elif command -v brew &>/dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
 	MANAGER="brew"
-	# macOS brew-specific tap setups
+
+	# macOS brew-specific tap / dep setups
 	# used to tap my own tap here with `brew tap regulad/homebrew-tap` but since it doesn't require any special "caveats" like kde-mac I can just declare it inside of the formula
 	brew tap kde-mac/kde https://invent.kde.org/packaging/homebrew-kde.git && "$(brew --repo kde-mac/kde)/tools/do-caveats.sh"
+
+	# software updates
+	if [ "$(arch)" = "arm64" ]; then
+		softwareupdate --install-rosetta --agree-to-license
+	fi
+	xcode-select --install || true  # returns exit code 1 when tools are already installed
 else
 	MANAGER=""
 fi
