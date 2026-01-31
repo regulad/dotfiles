@@ -196,7 +196,7 @@ fi
 # don't think any of the addl. userpsace packages need to be installed by this script
 if ! command -v brew &>/dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)" == "GNU/Linux" ]]; then
 	echo "note: installing brew" >&2
-	if ! [ "$CAN_SUDO" = "true" ]; then
+	if [ "$CAN_SUDO" = "true" ]; then
 		NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 		if [ "$(uname -o)" = "Darwin" ] && [ "$(arch)" = "arm64" ]; then
 			sudo launchctl config user path /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
