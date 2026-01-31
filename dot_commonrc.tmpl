@@ -24,7 +24,8 @@ if [ "$(uname -o)" = "Darwin" ]; then
         eval "$(/usr/local/bin/brew shellenv)"
     fi
 
-    export ANDROID_HOME="/Users/regulad/Library/Android/sdk"
+    export ANDROID_HOME="$HOME/Library/Android/sdk"
+    export ANDROID_SDK_ROOT="$HOME/Library/Android/sdk"
 
     # The following lines have been added by Docker Desktop to enable Docker CLI completions.
     fpath=(/Users/regulad/.docker/completions $fpath)
@@ -34,7 +35,13 @@ if [ "$(uname -o)" = "Darwin" ]; then
     # End of Docker CLI completions
 elif [ "$(uname -o)" = "GNU/Linux" ]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    export ANDROID_HOME="$HOME/Android/sdk"
+    export ANDROID_SDK_ROOT="$HOME/Android/sdk"
 fi
+
+# sdkmanager-managed sdkmanager overrides brew-managed sdkmanager
+export PATH=$ANDROID_HOME/platform-tools:$PATH
+export PATH=$ANDROID_HOME/tools:$PATH
 
 if [ "$(uname -s)" = "Linux" ]; then
     export PNPM_HOME="$HOME/.local/share/pnpm"

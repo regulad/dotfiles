@@ -510,6 +510,8 @@ BREW_CASKS_MACOS=(
 	"safe-exam-browser"  # partially proprietary
 #	"kde-mac/kde/kdeconnect"  # broken 1/29/26  # kdeconnect for mac also just seems to be borked; in general
 	"soduto"  # kdeconnect replacement. no longer maintained but works as is under rosetta. psuedo-official continuation exists at https://github.com/sannidhyaroy/Soduto, but is not notorized
+	"android-platform-tools"
+	"android-commandlinetools"
 )
 ### excluded: exclusively GUI tools like discord, steam, signal, & spotify that don't enable any workflows
 
@@ -521,11 +523,47 @@ fi
 ## cask library on linux is SUBSTANTIALLY different than the cask library on macos
 BREW_CASKS_LINUX=(
 	"claude-code" # proprietary!
+	"android-platform-tools"
+	"android-commandlinetools"
 )
 
 if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "linux-gnu"* ]]; then
 	echo "warning: brew is about to install casks. this will take over any existing non-brew managed installs" >&2
 	brew install --cask -q "${BREW_CASKS_LINUX[@]}" -f
+fi
+
+# Android
+if [ "$HAS_BREW" = "true" ]; then
+	# sdkmanager is available now; will have been installed in the brew cask
+	if [[ "$OSTYPE" == "darwin"* ]]; then
+		export ANDROID_HOME="$HOME/Library/Android/sdk"
+		export ANDROID_SDK_ROOT="$HOME/Library/Android/sdk"
+	else
+		export ANDROID_HOME="$HOME/Android/sdk"
+		export ANDROID_SDK_ROOT="$HOME/Android/sdk"
+	fi
+	# sdkmanager-managed sdkmanager overrides brew-managed sdkmanager
+	export PATH=$ANDROID_HOME/platform-tools:$PATH
+	export PATH=$ANDROID_HOME/tools:$PATH
+	
+	yes | sdkmanager --licenses > /dev/null
+
+	# change components to install here
+	ANDROID_SDK_COMPONENTS=(
+		"platform-tools"
+		"build-tools;36.0.0"
+		"platforms;android-36"
+		"emulator"
+	)
+	
+	ARCH=$(uname -m)
+	if [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]]; then
+		ANDROID_SDK_COMPONENTS+=("system-images;android-36;google_apis;arm64-v8a")
+	else
+		ANDROID_SDK_COMPONENTS+=("system-images;android-36;google_apis;x86_64")
+	fi
+
+	sdkmanager "${ANDROID_SDK_COMPONENTS[@]}"
 fi
 
 # pnpm
