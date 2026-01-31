@@ -449,6 +449,7 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"ollama"
 	"tokei"
 	"minio-mc"
+	"s3cmd"
 	"wasm-tools"
 	"kotlin"
 	"kotlin-language-server"
@@ -463,14 +464,15 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"ghidra"
 	"oven-sh/bun/bun"  # addl. javascript runtime
 #	"dicklesworthstone/tap/cass"  # completely broken, ai slop took over they packaging pipeline
-	"msmtp"
-	"isync"
+	"msmtp"  # outgoing mail
+	"isync"  # incoming mail
 	"poppler"
 	"tesseract"
 	"ocrmypdf"
 	"neomutt"
-	"s3cmd"
 	"rclone"
+	"git-xet"
+	"huggingface-cli"
 )
 
 if [ "$HAS_BREW" = "true" ]; then
