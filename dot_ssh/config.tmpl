@@ -5,7 +5,12 @@ HashKnownHosts yes
 # "Special" hosts
 Host neodingus
     HostName neodingus.tail11540.ts.net
-    User regulad
+    User root
+{{ if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+{{ end }}
+    IdentitiesOnly yes
 
 Host prodingus
     HostName prodingus.tail11540.ts.net
