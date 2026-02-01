@@ -325,6 +325,10 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"m:go"
 	"dt:golang"
 	# TODO: confirm compat for redhat
+
+	# =+= DEPENDENCIES
+	"d:libdevmapper-dev"  # needed by thin-provisioning-tools
+	# TODO: confirm compat for redhat
 )
 
 # choose manager
@@ -676,6 +680,7 @@ uv tool install -q "rendercv[full]"
 # rust
 cargo install cargo-disasm
 cargo install vtracer
+# TODO: https://github.com/jthornber/thin-provisioning-tools
 
 # go
 go install mvdan.cc/sh/v3/cmd/shfmt@latest
