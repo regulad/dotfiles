@@ -85,7 +85,7 @@ COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 # Initialize and apply chezmoi (expects brew and pnpm to already exist)
 # Clean up apt cache after chezmoi apply since it may install packages via sudo
 # note: su -l drops all env (even with -m!) so we have to redeclare CHEMZOI_USE_DUMMY again just for this line
-RUN su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; CHEZMOI_USE_DUMMY=1 chezmoi init --apply' \
+RUN su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; CHEZMOI_USE_DUMMY=1 chezmoi init; chezmoi apply --exclude encrypted' \
   && rm -rf /home/${USERNAME}/.cache/* \
   && rm -rf /var/lib/apt/lists/* \
   && apt-get clean
