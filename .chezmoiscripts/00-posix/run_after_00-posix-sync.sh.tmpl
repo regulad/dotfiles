@@ -181,20 +181,16 @@ esac
 if [[ -d "/opt/homebrew" && "$CAN_SUDO" = "true" ]]; then
 	# Apple Silicon Mac (rootful)
 	eval "$(/opt/homebrew/bin/brew shellenv)"
-	export PATH="$PATH:$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin"
 elif [[ (-d "/usr/local/Homebrew" || -d "/usr/local/bin/brew") && "$CAN_SUDO" = "true" ]]; then
 	# Intel Mac (rootful)
 	eval "$(/usr/local/bin/brew shellenv)"
-	export PATH="$PATH:$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin"
 elif [[ -d "/home/linuxbrew/.linuxbrew" && "$CAN_SUDO" = "true" ]]; then
 	# Linux
 	eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-	export PATH="$PATH:$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin"
 elif [[ -d "$HOME/homebrew" ]]; then
 	# Rootless homebrew (macOS & Linux)
 	echo "warning: loading rootless brew. this often works but is unsupported." >&2
 	eval "$("$HOME/homebrew/bin/brew" shellenv)"
-	export PATH="$PATH:$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin"
 fi
 
 # brew is a nother binary dependency but ONLY on linux for addl. userspace packages
@@ -215,7 +211,6 @@ if ! command -v brew &>/dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)
 		mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/main | tar xz --strip-components 1 -C homebrew
 
 		eval "$(homebrew/bin/brew shellenv)"
-		export PATH="$PATH:$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin"
 		brew update --force --quiet
 		chmod -R go-w "$(brew --prefix)/share/zsh"
 	fi
@@ -224,23 +219,19 @@ if ! command -v brew &>/dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)
 	if [[ -d "/opt/homebrew" && "$CAN_SUDO" = "true" ]]; then
 		# Apple Silicon Mac (rootful)
 		eval "$(/opt/homebrew/bin/brew shellenv)"
-		export PATH="$PATH:$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin"
 	elif [[ (-d "/usr/local/Homebrew" || -d "/usr/local/bin/brew") && "$CAN_SUDO" = "true" ]]; then
 		# Intel Mac (rootful)
 		eval "$(/usr/local/bin/brew shellenv)"
-		export PATH="$PATH:$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin"
 	elif [[ -d "/home/linuxbrew/.linuxbrew" && "$CAN_SUDO" = "true" ]]; then
 		# Linux
 		eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-		export PATH="$PATH:$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin"
 	elif [[ -d "$HOME/homebrew" ]]; then
 		# Rootless homebrew (macOS & Linux)
 		eval "$(homebrew/bin/brew shellenv)"
-		export PATH="$PATH:$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin"
 	fi
 fi
 
-export PATH="$PATH:$HOME/.local/bin"
+export PATH="$HOME/.local/bin:$PATH"
 
 # system-level binary dependencies
 #     - these are typically very stable applications that MUST be provided by a package manager
@@ -498,6 +489,10 @@ SECONDARY_BINARY_DEPENDENCIES=(
 )
 
 if [ "$HAS_BREW" = "true" ]; then
+	# use brew-managed ruby
+	export PATH="$(brew --prefix ruby)/bin:$PATH"
+	export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"
+
 	brew install -q "${SECONDARY_BINARY_DEPENDENCIES[@]}"
 	# brew-gem global gems
 	# brew gem install ruby-lsp  # broken with brew-gem, needs to be installed manually
