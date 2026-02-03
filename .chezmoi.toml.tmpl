@@ -1,9 +1,12 @@
+encryption = "age"
 [git]
     autoCommit = true
     autoPush = true
     commitMessageTemplateFile = ".commit_message.tmpl"
 [bitwarden]
     unlock = "auto"
+[age]
+    passphrase = true
 [data]
 {{- if eq .chezmoi.hostname "winlite" }}
     ollamaBase = "http://localhost:11434"

@@ -54,7 +54,7 @@ export PATH="$PATH:$HOME/.local/bin"
 # Initalize & run first-time dependency install
 CHEZMOI_USE_DUMMY=1 chezmoi init regulad
 # CHEZMOI_USE_DUMMY instructs chezmoi to not attempt to apply any secrets.
-chezmoi apply  
+chezmoi apply --exclude encrypted
 
 # Configure bw for templating
 bw config server https://vw.regulad.xyz  # this is my server, obviously. replace w/ yours
@@ -73,7 +73,7 @@ scoop install chezmoi git
 # Initalize & run first-time dependency install
 CHEZMOI_USE_DUMMY=1 chezmoi init regulad
 # CHEZMOI_USE_DUMMY instructs chezmoi to not attempt to apply any secrets.
-chezmoi apply  
+chezmoi apply --exclude encrypted
 
 # Configure bw for templating
 bw config server https://vw.regulad.xyz  # this is my server, obviously. replace w/ yours
