@@ -48,6 +48,7 @@ else
     vim.lsp.enable('bashls')
     vim.lsp.enable('harper_ls')
     vim.lsp.enable('yamlls')
+    vim.lsp.enable('ruby_lsp')
 
     -- statuscol bug; will not update statuscol on each cursor move
     vim.api.nvim_create_autocmd({"CursorMoved", "CursorMovedI"}, {
