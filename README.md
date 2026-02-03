@@ -14,6 +14,8 @@ The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/
 
 *This project is AGPL-3.0 licensed. Small request: if you choose to contribute, please do so on the GitHub fork network. This is only a request, AGPL-3.0 does not obligate you to share private modifications unless they are used through a network (i.e. shell account).*
 
+***PLEASE NOTE**: While all files provided in this repository are AGPL-3.0 licensed, the final compiled docker image and workspace contain non-libre assets like the Android SDK.*
+
 ## Shell configurations
 
 Supported environments:
