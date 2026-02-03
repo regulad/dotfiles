@@ -23,8 +23,8 @@ if [ "$(uname -o)" = "Darwin" ]; then
     else
         eval "$(/usr/local/bin/brew shellenv)"
     fi
-    export PATH="$PATH:$(brew --prefix ruby)/bin"
-    export PATH="$PATH:$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin"
+    export PATH="$(brew --prefix ruby)/bin:$PATH"
+    export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"
 
     export ANDROID_HOME="$HOME/Library/Android/sdk"
     export ANDROID_SDK_ROOT="$HOME/Library/Android/sdk"
@@ -37,8 +37,8 @@ if [ "$(uname -o)" = "Darwin" ]; then
     # End of Docker CLI completions
 elif [ "$(uname -o)" = "GNU/Linux" ]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-    export PATH="$PATH:$(brew --prefix ruby)/bin"
-    export PATH="$PATH:$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin"
+    export PATH="$(brew --prefix ruby)/bin:$PATH"
+    export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"
 
     export ANDROID_HOME="$HOME/Android/sdk"
     export ANDROID_SDK_ROOT="$HOME/Android/sdk"
