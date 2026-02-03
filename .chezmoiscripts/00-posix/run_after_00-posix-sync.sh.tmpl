@@ -494,8 +494,8 @@ if [ "$HAS_BREW" = "true" ]; then
 	export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"
 
 	brew install -q "${SECONDARY_BINARY_DEPENDENCIES[@]}"
-	# brew-gem global gems
-	# brew gem install ruby-lsp  # broken with brew-gem, needs to be installed manually
+	# brew-gem global gems (like cargo/go/uv)
+	brew gem install ruby-lsp
 else
 	echo "warning: no brew for misc. binary deps" >&2
 fi
