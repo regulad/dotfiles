@@ -11,6 +11,8 @@ Host neodingus
     IdentityFile ~/.ssh/id_rsa  # fallback
 {{ end }}
     IdentitiesOnly yes
+    RequestTTY yes
+    RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
 Host prodingus
     HostName prodingus.tail11540.ts.net
