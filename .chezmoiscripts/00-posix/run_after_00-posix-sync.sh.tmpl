@@ -337,6 +337,10 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	# TODO: confirm compat for others
 	"d:libdevmapper-dev"  # needed by thin-provisioning-tools
 	# TODO: confirm compat for redhat
+
+	# =+= MISC
+	"d:thin-provisioning-tools"
+	# TODO: confirm compat for others
 )
 
 # choose manager
@@ -698,11 +702,15 @@ uv tool install -q ruff # astral-backed
 uv tool install -q ty   # astral-backed
 uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
 uv tool install -q "rendercv[full]"
+if [ "$HAS_BREW" = "true" ]; then
+	brew install -q hatch
+else
+	uv tool install -q hatch
+fi
 
 # rust
 cargo install cargo-disasm
 cargo install vtracer
-# TODO: https://github.com/jthornber/thin-provisioning-tools
 
 # go
 go install mvdan.cc/sh/v3/cmd/shfmt@latest
