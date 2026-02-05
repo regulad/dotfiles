@@ -21,7 +21,9 @@
     "cpu",
     "gpu",
     "memory",
-    "disk" //,
+{{- if ne .chezmoi.os "windows" }}
+    "disk" //, // takes forever on windows. because of course it does
+{{ end -}}
     // "localip",
     // "battery",
     // "display"

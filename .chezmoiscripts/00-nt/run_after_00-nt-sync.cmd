@@ -49,23 +49,64 @@ call refreshenv >nul 2>&1
 echo debug: installing scoop packages
 call scoop update >nul 2>&1
 call scoop bucket add extras >nul 2>&1
-set packages=bitwarden-cli chezmoi clink gh git nodejs nmap rust telnet unzip vim neovim uv file dos2unix grep gradle coreutils openssl autohotkey
+set packages=^
+bitwarden-cli ^
+chezmoi ^
+clink ^
+gh ^
+git ^
+nodejs ^
+nmap ^
+rust ^
+telnet ^
+unzip ^
+vim ^
+neovim ^
+uv ^
+file ^
+dos2unix ^
+grep ^
+gradle ^
+coreutils ^
+openssl ^
+autohotkey
+
 for %%p in (%packages%) do (
     call scoop list %%p >nul 2>&1
     if !errorLevel! neq 0 (
-        call scoop install %%p >nul 2>&1
+        call scoop install %%p
     )
 )
 
 echo debug: updating existing scoop packages
-call scoop update --all >nul 2>&1
+call scoop update --all >nul
 
 echo debug: setting autorun
 call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
 
 echo debug: done with scoop
 REM Install/update winget packages
-set winget_packages=Microsoft.WindowsTerminal Element.Element JetBrains.Toolbox Zoom.Zoom.EXE PrismLauncher.PrismLauncher OpenWhisperSystems.Signal Bitwarden.Bitwarden Jellyfin.JellyfinMediaPlayer Anthropic.Claude WinSCP.WinSCP GnuPG.GnuPG MHNexus.HxD VideoLAN.VLC PuTTY.PuTTY EclipseAdoptium.Temurin.25.JDK EclipseAdoptium.Temurin.21.JDK OpenJS.NodeJS.LTS DenoLand.Deno Microsoft.VisualStudioCode
+set winget_packages=^
+Microsoft.WindowsTerminal ^
+Element.Element ^
+JetBrains.Toolbox ^
+Zoom.Zoom.EXE ^
+PrismLauncher.PrismLauncher ^
+OpenWhisperSystems.Signal ^
+Bitwarden.Bitwarden ^
+Jellyfin.JellyfinMediaPlayer ^
+Anthropic.Claude ^
+WinSCP.WinSCP ^
+GnuPG.GnuPG ^
+MHNexus.HxD ^
+VideoLAN.VLC ^
+PuTTY.PuTTY ^
+EclipseAdoptium.Temurin.25.JDK ^
+EclipseAdoptium.Temurin.21.JDK ^
+OpenJS.NodeJS.LTS ^
+DenoLand.Deno ^
+Microsoft.VisualStudioCode ^
+Autodesk.DesktopApp
 
 for %%p in (%winget_packages%) do (
     echo Checking %%p...
@@ -80,7 +121,8 @@ for %%p in (%winget_packages%) do (
 )
 
 REM Setup symlinks from windows-specific AppData into the XDG .config directory
-set local_links=nvim
+set local_links=^
+nvim
 
 for %%L in (%local_links%) do (
     if exist "%USERPROFILE%\AppData\Local\%%L" (
@@ -95,7 +137,8 @@ for %%L in (%local_links%) do (
     )
 )
 
-set roaming_links=Code
+set roaming_links=^
+Code
 
 for %%L in (%roaming_links%) do (
     if exist "%USERPROFILE%\AppData\Roaming\%%L" (
