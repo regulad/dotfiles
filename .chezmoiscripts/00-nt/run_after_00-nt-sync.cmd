@@ -69,6 +69,7 @@ grep ^
 gradle ^
 coreutils ^
 openssl ^
+wingetcreate ^
 autohotkey
 
 for %%p in (%packages%) do (
