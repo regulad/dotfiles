@@ -865,6 +865,7 @@ fi
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
 	if systemctl --user is-system-running &>/dev/null || systemctl --user status &>/dev/null; then
 		systemctl --user enable tmux@default.socket
+		systemctl --user enable syncthing.service
 	else
 		echo "warning: user session broken (couldn't run systemd --user)" >&2
 	fi
