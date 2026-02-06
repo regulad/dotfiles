@@ -214,6 +214,7 @@ Host github.ncsu.edu
 ## rotating host keys and password only authentication.
 ## excellent security, mr. bond
 Host eos
+    # lab server
     HostName remote.eos.ncsu.edu
     User pewahle    
     StrictHostKeyChecking no
@@ -222,7 +223,26 @@ Host eos
     PreferredAuthentications password
 
 Host grendel
+    # CPU compute
     HostName grendel.ece.ncsu.edu
+    User pewahle
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    PubkeyAuthentication no
+    PreferredAuthentications password
+
+Host hydra
+    # GPU compute
+    HostName hydra.ece.ncsu.edu
+    User pewahle
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    PubkeyAuthentication no
+    PreferredAuthentications password
+
+Host kraken
+    # GPU compute
+    HostName kraken.ece.ncsu.edu
     User pewahle
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
