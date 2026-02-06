@@ -721,6 +721,9 @@ cargo install vtracer
 
 # go
 go install mvdan.cc/sh/v3/cmd/shfmt@latest
+if [[ "$OSTYPE" == "darwin"* ]]; then
+	go install github.com/roy2220/osc52pty
+fi
 
 # vim package management
 # NOTE: because I use neovim in lieu of vim, I'm not going to install Vundle
