@@ -364,7 +364,8 @@ elif command -v brew &>/dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
 
 	# software updates
 	if [ "$(arch)" = "arm64" ]; then
-		softwareupdate --install-rosetta --agree-to-license
+		# despite being an sbin, this is usable by non-root users. til
+		/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 	fi
 	xcode-select --install || true  # returns exit code 1 when tools are already installed
 else
@@ -722,7 +723,7 @@ cargo install vtracer
 # go
 go install mvdan.cc/sh/v3/cmd/shfmt@latest
 if [[ "$OSTYPE" == "darwin"* ]]; then
-	go install github.com/roy2220/osc52pty
+	go install github.com/roy2220/osc52pty@latest
 fi
 
 # vim package management
