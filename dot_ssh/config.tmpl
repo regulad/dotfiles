@@ -211,15 +211,21 @@ Host github.ncsu.edu
 {{ end }}
     IdentitiesOnly yes
 
+## rotating host keys and password only authentication.
+## excellent security, mr. bond
 Host eos
     HostName remote.eos.ncsu.edu
-    User pewahle
+    User pewahle    
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
     PubkeyAuthentication no
     PreferredAuthentications password
 
 Host grendel
     HostName grendel.ece.ncsu.edu
     User pewahle
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
     PubkeyAuthentication no
     PreferredAuthentications password
 
