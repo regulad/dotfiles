@@ -266,6 +266,7 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"m:reattach-to-user-namespace"
 	"m:mas"
 	"m:smartmontools"
+	"m:pam-reattach"
 
 	# =+= BUILD TOOLS
 	"d:ninja-build"
@@ -512,6 +513,7 @@ fi
 
 ## addl. brew things packaged as casks
 BREW_CASKS_MACOS=(
+	"xquartz"  # for X server forwarding
 	"suspicious-package"  # proprietary freeware
 	"adobe-digital-editions"  # proprietary freeware
 	"handbrake-app"
