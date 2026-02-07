@@ -111,10 +111,10 @@ Host penumbra
     RequestTTY yes
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
+# Windows hosts
 Host winlite
+    User regulad
     HostName winlite.tail11540.ts.net
-    RequestTTY yes
-    RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
 # Oracle (Legacy VCN)
 Host git.regulad.xyz
