@@ -554,8 +554,11 @@ BREW_CASKS_MACOS=(
 ### excluded: exclusively GUI tools like discord, steam, signal, & spotify that don't enable any workflows
 
 if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "darwin"* ]]; then
-	echo "warning: brew is about to install casks. this will take over any existing non-brew managed installs" >&2
-	brew install --cask -q "${BREW_CASKS_MACOS[@]}" -f
+	for cask in "${BREW_CASKS_MACOS[@]}"; do
+		if ! brew list --cask "$cask" &>/dev/null; then
+			brew install --cask -q "$cask" -f
+		fi
+	done
 fi
 
 ## cask library on linux is SUBSTANTIALLY different than the cask library on macos
@@ -565,9 +568,12 @@ BREW_CASKS_LINUX=(
 	"android-commandlinetools"
 )
 
-if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "linux-gnu"* ]]; then
-	echo "warning: brew is about to install casks. this will take over any existing non-brew managed installs" >&2
-	brew install --cask -q "${BREW_CASKS_LINUX[@]}" -f
+if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "darwin"* ]]; then
+	for cask in "${BREW_CASKS_LINUX[@]}"; do
+		if ! brew list --cask "$cask" &>/dev/null; then
+			brew install --cask -q "$cask" -f
+		fi
+	done
 fi
 
 # Android
