@@ -64,9 +64,10 @@ RUN --mount=type=tmpfs,target=/tmp \
   && tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz
 
 # Create user with UID 1000 and add to sudoers
+# sudo doesn't take filenames that have periods in them, so we have to change it to _
 RUN useradd -m -s /bin/bash -u 1000 ${USERNAME} \
-  && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \
-  && chmod 0440 /etc/sudoers.d/${USERNAME}
+  && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_') \
+  && chmod 0440 /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_')
 
 # Install Homebrew as the UID 1000 user
 RUN --mount=type=tmpfs,target=/tmp \
