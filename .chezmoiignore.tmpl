@@ -51,6 +51,7 @@ AppData
 # darwin (macOS, primarily)
 {{- if ne .chezmoi.os "darwin" }}
 Library
+.bootstrap.sh
 .chezmoiscripts/01-darwin/*
 {{- else }}
 # special case: tailscale needs to be manually installed on macOS
