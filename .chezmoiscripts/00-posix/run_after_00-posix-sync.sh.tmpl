@@ -568,7 +568,7 @@ BREW_CASKS_LINUX=(
 	"android-commandlinetools"
 )
 
-if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "darwin"* ]]; then
+if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "linux-gnu"* ]]; then
 	for cask in "${BREW_CASKS_LINUX[@]}"; do
 		if ! brew list --cask "$cask" &>/dev/null; then
 			brew install --cask -q "$cask" -f

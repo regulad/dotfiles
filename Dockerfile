@@ -9,7 +9,9 @@
 FROM debian:trixie
 
 # Build arguments
-ARG USERNAME=regulad
+# dot linux suffix is lima-style (https://github.com/lima-vm/lima/discussions/2622#discussioncomment-108517600)
+# always user 1000 by convention
+ARG USERNAME="regulad.linux"
 ARG S6_OVERLAY_VERSION=3.2.0.3
 
 ENV DEBIAN_FRONTEND=noninteractive
