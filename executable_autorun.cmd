@@ -6,7 +6,8 @@ call "%USERPROFILE%\scoop\apps\clink\current\clink.bat" inject --autorun
 
 REM Check if the clink alias exists (which means Clink is injected)
 where clink >nul 2>&1
-if !errorlevel!==0 (
+doskey /macros | find /i "clink=" >nul 2>&1
+if not errorlevel 1 (
   REM Clink is injected, so this is an interactive session
 	call doskey /macrofile="%USERPROFILE%\.doskey.mac"
 
