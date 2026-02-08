@@ -4,9 +4,9 @@ REM call hooks
 call "%USERPROFILE%\scoop\apps\clink\current\clink.bat" inject --autorun
 
 REM Check if the clink alias exists (which means Clink is injected)
-doskey /macros | find /i "clink=" >nul 2>&1
+where clink >nul 2>&1
 if %errorlevel%==0 (
-    REM Clink is injected, so this is an interactive session
+  REM Clink is injected, so this is an interactive session
 	call doskey /macrofile="%USERPROFILE%\.doskey.mac"
 
 	REM set %VISUAL% for chezmoi & others

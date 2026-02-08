@@ -39,16 +39,16 @@ if %errorLevel% neq 0 (
     exit /b 1
 )
 
-echo debug: installing scoop
 where scoop >nul 2>&1
 if %errorLevel% neq 0 (
+    echo debug: installing scoop
     powershell -Command "Start-Process powershell -Verb RunAs -ArgumentList '-Command', 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force; irm get.scoop.sh | iex' -Wait"
 )
 call refreshenv >nul 2>&1
 
-echo debug: installing scoop packages
+echo debug: updating scoop
 call scoop update
-call scoop bucket add extras >nul 2>&1
+call scoop bucket add extras
 set packages=^
 bitwarden-cli ^
 chezmoi ^
@@ -72,6 +72,7 @@ openssl ^
 wingetcreate ^
 autohotkey
 
+echo debug: installing new scoop packages
 for %%p in (%packages%) do (
     call scoop list %%p >nul 2>&1
     if !errorLevel! neq 0 (
@@ -80,7 +81,7 @@ for %%p in (%packages%) do (
 )
 
 echo debug: updating existing scoop packages
-call scoop update --all >nul
+call scoop update --all
 
 echo debug: setting autorun
 call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
@@ -112,13 +113,12 @@ TeamViewer.TeamViewer ^
 Syncthing.Syncthing
 
 for %%p in (%winget_packages%) do (
-    echo Checking %%p...
     call winget list --id %%p --exact >nul 2>&1
     if !errorLevel! == 0 (
-        echo Updating %%p...
+        echo debug: winget updating %%p...
         call winget upgrade --id %%p --silent --accept-source-agreements --accept-package-agreements
     ) else (
-        echo Installing %%p...
+        echo debug: winget installing %%p...
         call winget install --id %%p --silent --accept-source-agreements --accept-package-agreements
     )
 )
