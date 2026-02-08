@@ -25,7 +25,8 @@ for %%i in (nvim.exe vim.exe) do @if exist "%%~$PATH:i" (set VISUAL=%%~$PATH:i &
 :break
 
 REM other environment variables
-set RCLONE_CONFIG="%USERPROFILE%\.config\rclone\rclone.conf"
+REM DO NOT INCLUDE QUOTES!
+set RCLONE_CONFIG=%USERPROFILE%\.config\rclone\rclone.conf
 
 REM unix-style prompt while still windows-y
 PROMPT %USERNAME%@%COMPUTERNAME% $P$G
