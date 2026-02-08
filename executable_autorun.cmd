@@ -1,18 +1,15 @@
 @echo off
-REM enabling delayed expansion breaks everything. i hate windows scripts so much
-REM per claude sonnet 4.5, this should work
-setlocal EnableDelayedExpansion
-set "_ccl_=!cmdcmdline!"
-echo CMDCMDLINE: !_ccl_!
-echo COMSPEC: !comspec!
-echo Stripped: !_ccl_:~1,-2!
-if "!_ccl_:~1,-2!" == "!comspec!" (
-    echo MATCH - Interactive
-    endlocal & set "INTERACTIVE=1"
+
+REM Get current process ID
+for /f "tokens=2 delims==" %%i in ('wmic process where "ProcessId=%PID%" get ParentProcessId /value 2^>nul') do set PARENT_PID=%%i
+REM get DLLs loaded by process
+tasklist /m /fi "PID eq %PID%" 2>nul | find /i "clink" >nul 2>&1
+if %errorlevel% equ 0 (
+    set CLINK_LOADED=1
 ) else (
-    echo NO MATCH - Non-interactive
-    endlocal & set "INTERACTIVE="
+    set CLINK_LOADED=
 )
+
 
 REM call hooks
 call "%USERPROFILE%\scoop\apps\clink\current\clink.bat" inject --autorun
@@ -23,7 +20,7 @@ for %%i in (nvim.exe vim.exe) do @if exist "%%~$PATH:i" (set VISUAL=%%~$PATH:i &
 :break
 
 REM Check if the clink alias exists (which means Clink is injected)
-if defined INTERACTIVE (
+if defined CLINK_LOADED (
 	REM clink injected, session is interactive.
 	REM unix-style prompt while still windows-y
 	PROMPT %USERNAME%@%COMPUTERNAME% $P$G
