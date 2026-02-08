@@ -70,6 +70,7 @@ gradle ^
 coreutils ^
 openssl ^
 wingetcreate ^
+rclone ^
 autohotkey
 
 echo debug: installing new scoop packages
