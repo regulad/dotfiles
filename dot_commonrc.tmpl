@@ -143,8 +143,8 @@ export VISUAL="$(command -v nvim || command -v vim)"
 export DISPLAY=${DISPLAY:-:0}
 
 # === ALIASES
-alias pycalc3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=default"
-alias c3="pycalc3"
+alias c3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=default"
+alias t3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=sympy"
 alias wakaru="pnpm dlx @wakaru/cli"
 
 vi() { command "$VISUAL" "$@"; }
