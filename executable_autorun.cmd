@@ -11,7 +11,7 @@ PROMPT %USERNAME%@%COMPUTERNAME% $P$G
 
 REM Check if the clink alias exists (which means Clink is injected)
 where clink >nul 2>&1
-clink info 2>nul | find /i "injected" >nul 2>&1
+call clink info 2>nul | find /i "injected" >nul 2>&1
 if %errorlevel%==0 (
 	REM final fastfetch for both terminal-porn and usefulness since i switch between machines
 	echo(
