@@ -24,6 +24,9 @@ REM set %VISUAL% for chezmoi & others
 for %%i in (nvim.exe vim.exe) do @if exist "%%~$PATH:i" (set VISUAL=%%~$PATH:i & goto :break)
 :break
 
+REM other environment variables
+set RCLONE_CONFIG="%USERPROFILE%\.config\rclone\rclone.conf"
+
 REM unix-style prompt while still windows-y
 PROMPT %USERNAME%@%COMPUTERNAME% $P$G
 
