@@ -47,7 +47,7 @@ if %errorLevel% neq 0 (
 call refreshenv >nul 2>&1
 
 echo debug: installing scoop packages
-call scoop update >nul 2>&1
+call scoop update
 call scoop bucket add extras >nul 2>&1
 set packages=^
 bitwarden-cli ^
@@ -85,7 +85,7 @@ call scoop update --all >nul
 echo debug: setting autorun
 call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
 
-echo debug: done with scoop
+echo debug: installing winget packages
 REM Install/update winget packages
 set winget_packages=^
 Microsoft.WindowsTerminal ^
@@ -107,7 +107,9 @@ EclipseAdoptium.Temurin.21.JDK ^
 OpenJS.NodeJS.LTS ^
 DenoLand.Deno ^
 Microsoft.VisualStudioCode ^
-Autodesk.DesktopApp
+Autodesk.DesktopApp ^
+TeamViewer.TeamViewer ^
+Syncthing.Syncthing
 
 for %%p in (%winget_packages%) do (
     echo Checking %%p...
