@@ -1,5 +1,13 @@
 @echo off
 REM enabling delayed expansion breaks everything. i hate windows scripts so much
+REM per claude sonnet 4.5, this should work
+setlocal EnableDelayedExpansion
+set "_ccl_=!cmdcmdline!"
+if "!_ccl_:~1,-2!" == "!comspec!" (
+    endlocal & set "NONINTERACTIVE="
+) else (
+    endlocal & set "NONINTERACTIVE=1"
+)
 
 REM call hooks
 call "%USERPROFILE%\scoop\apps\clink\current\clink.bat" inject --autorun
@@ -10,9 +18,7 @@ for %%i in (nvim.exe vim.exe) do @if exist "%%~$PATH:i" (set VISUAL=%%~$PATH:i &
 :break
 
 REM Check if the clink alias exists (which means Clink is injected)
-where clink >nul 2>&1
-call clink info 2>nul | find /i "injected" >nul 2>&1
-if %errorlevel%==0 (
+if defined INTERACTIVE (
 	REM clink injected, session is interactive.
 	REM unix-style prompt while still windows-y
 	PROMPT %USERNAME%@%COMPUTERNAME% $P$G

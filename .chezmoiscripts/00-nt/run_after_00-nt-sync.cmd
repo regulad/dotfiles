@@ -108,9 +108,9 @@ EclipseAdoptium.Temurin.21.JDK ^
 OpenJS.NodeJS.LTS ^
 DenoLand.Deno ^
 Microsoft.VisualStudioCode ^
-Autodesk.DesktopApp ^
+Autodesk.DesktopApp ^ REM fails on every attempt
 TeamViewer.TeamViewer ^
-Syncthing.Syncthing
+Syncthing.Syncthing REM doesn't install GUI
 
 for %%p in (%winget_packages%) do (
     call winget list --id %%p --exact >nul 2>&1
