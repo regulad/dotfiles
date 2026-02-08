@@ -6,7 +6,7 @@ call "%USERPROFILE%\scoop\apps\clink\current\clink.bat" inject --autorun
 call doskey /macrofile="%USERPROFILE%\.doskey.mac"
 
 REM set visual
-for %i in (nvim.exe vim.exe) do @where %i >nul 2>&1 && for /f "delims=" %p in ('where %i') do set "VISUAL=%p" & goto :break
+for %%i in (nvim.exe vim.exe) do @where %%i >nul 2>&1 && for /f "delims=" %%p in ('where %%i') do set "VISUAL=%%p" & goto :break
 :break
 
 REM Check if the clink alias exists (which means Clink is injected)
