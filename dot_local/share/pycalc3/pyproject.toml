@@ -6,5 +6,6 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "ipython>=9.9.0",
     "numpy>=1.26.4,<2",
+    "sympy>=1.14.0",
     "vpython>=7.6.5",
 ]
