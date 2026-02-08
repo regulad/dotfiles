@@ -4,9 +4,9 @@ REM per claude sonnet 4.5, this should work
 setlocal EnableDelayedExpansion
 set "_ccl_=!cmdcmdline!"
 if "!_ccl_:~1,-2!" == "!comspec!" (
-    endlocal & set "NONINTERACTIVE="
+    endlocal & set "INTERACTIVE=1"
 ) else (
-    endlocal & set "NONINTERACTIVE=1"
+    endlocal & set "INTERACTIVE="
 )
 
 REM call hooks
