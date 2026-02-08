@@ -3,9 +3,14 @@ REM enabling delayed expansion breaks everything. i hate windows scripts so much
 REM per claude sonnet 4.5, this should work
 setlocal EnableDelayedExpansion
 set "_ccl_=!cmdcmdline!"
+echo CMDCMDLINE: !_ccl_!
+echo COMSPEC: !comspec!
+echo Stripped: !_ccl_:~1,-2!
 if "!_ccl_:~1,-2!" == "!comspec!" (
+    echo MATCH - Interactive
     endlocal & set "INTERACTIVE=1"
 ) else (
+    echo NO MATCH - Non-interactive
     endlocal & set "INTERACTIVE="
 )
 
