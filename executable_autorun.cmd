@@ -1,11 +1,12 @@
 @echo off
+setlocal enabledelayedexpansion
 
 REM call hooks
 call "%USERPROFILE%\scoop\apps\clink\current\clink.bat" inject --autorun
 
 REM Check if the clink alias exists (which means Clink is injected)
 where clink >nul 2>&1
-if %errorlevel%==0 (
+if !errorlevel!==0 (
   REM Clink is injected, so this is an interactive session
 	call doskey /macrofile="%USERPROFILE%\.doskey.mac"
 
