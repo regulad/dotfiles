@@ -17,13 +17,6 @@ ARG S6_OVERLAY_VERSION=3.2.0.3
 ENV TZ="America/New_York"
 ENV DEBIAN_FRONTEND="noninteractive"
 
-# Install s6-overlay
-RUN --mount=type=tmpfs,target=/tmp \
-    curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz -o /tmp/s6-overlay-noarch.tar.xz \
-  && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
-  && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz -o /tmp/s6-overlay-x86_64.tar.xz \
-  && tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz
-
 # Create user with UID 1000 and add to sudoers
 # sudo doesn't take filenames that have periods in them, so we have to change it to _
 RUN useradd -m -s /bin/bash -u ${UID} ${USERNAME} \
@@ -34,6 +27,7 @@ RUN useradd -m -s /bin/bash -u ${UID} ${USERNAME} \
 COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 
 # Install all development packages
+# Install s6-overlay
 # Install Homebrew as the UID 1000 user
 # Install pnpm globally
 # Install chezmoi via Homebrew
@@ -69,6 +63,12 @@ RUN --mount=type=tmpfs,target=/tmp \
     sudo \
     xz-utils \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
+  \
+  && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz -o /tmp/s6-overlay-noarch.tar.xz \
+  && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
+  && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz -o /tmp/s6-overlay-x86_64.tar.xz \
+  && tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz \
+  \
   && su -l ${USERNAME} -c 'NONINTERACTIVE=1 CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' \
   && npm install -g pnpm \
   && su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; brew install chezmoi' \
