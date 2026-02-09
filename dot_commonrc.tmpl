@@ -173,11 +173,15 @@ chezmoi-cd() {
 }
 
 # === ANNOUNCEMENTS/psuedoMOTD
-LAST_SYNC="{{ now | date "2006-01-02" }}"
-DAYS_OLD=$(( ( $(date +%s) - $(date -j -f "%Y-%m-%d" "$LAST_SYNC" +%s 2>/dev/null || date -d "$LAST_SYNC" +%s) ) / 86400 ))
+if [[ $- == *i* && -z ${DID_COMMONRC_SPLASH+x} ]]; then
+    LAST_SYNC="{{ now | date "2006-01-02" }}"
+    DAYS_OLD=$(( ( $(date +%s) - $(date -j -f "%Y-%m-%d" "$LAST_SYNC" +%s 2>/dev/null || date -d "$LAST_SYNC" +%s) ) / 86400 ))
 
-if [ "$DAYS_OLD" -gt 7 ]; then
-    echo "warning: last chezmoi sync was $LAST_SYNC, resync soon" >&2
+    if [ "$DAYS_OLD" -gt 7 ]; then
+        echo "warning: last chezmoi sync was $LAST_SYNC, resync soon" >&2
+    fi
+
+    fastfetch
+
+    export DID_COMMONRC_SPLASH=1
 fi
-
-fastfetch
