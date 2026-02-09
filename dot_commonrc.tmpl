@@ -147,6 +147,11 @@ alias c3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i -
 alias t3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=sympy"
 alias wakaru="pnpm dlx @wakaru/cli"
 
+NCSU_HOSTS=(eos grendel hydra kraken)
+for h in "${NCSU_HOSTS[@]}"; do
+  alias "ssh-$h=sshpass -f $HOME/.ssh/id_plaintext_ncstate ssh $h"
+done
+
 vi() { command "$VISUAL" "$@"; }
 if [ -n "${ZSH_VERSION-}" ]; then
   case "$VISUAL" in
