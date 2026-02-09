@@ -256,10 +256,11 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"t:tokei"
 	"dt:xxd"
 	"t:which"
-	"md:binwalk"
+	"mdr:binwalk"
 	"mdrt:ncdu"
-	"mdt:htop"
-	"mdt:nmap"
+	"mdrt:htop"
+	"mdrt:nmap"
+	"mdrt:curl"
 	"m:watch"
 
 	# =+= macOS-SPECIFIC
@@ -269,10 +270,22 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"m:pam-reattach"
 
 	# =+= BUILD TOOLS
-	"d:ninja-build"
+	"dr:ninja-build"
 	"mt:ninja"
-	# TODO: confirm compat on others
-	"mdt:cmake"
+	"mdr:pkgconf"
+	"mdrt:cmake"
+
+	# =+= DEPENDENCIES
+	"m:cairo"
+	# TODO: confirm compat for others
+	"d:libdevmapper-dev"  # needed by thin-provisioning-tools build
+	"r:device-mapper-devel"
+	"dr:pciutils"  # needed by llama.cpp
+	"d:libcurl4-openssl-dev"
+	"r:libcurl-devel"
+
+	# =+= MISC
+	"d:thin-provisioning-tools"  # not natively available redhat
 
 	# =+= EDITOR
 	"mdrt:neovim" # nvim
@@ -293,11 +306,9 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"mdrt:gh" # GitHub
 	"mdrt:restic"
 	"mdrt:ffmpeg"
-	"md:yt-dlp" # previously managed by uv
+	"mdr:yt-dlp" # previously managed by uv
 	"t:python-yt-dlp"
-	# TODO: confirm compat on redhat
-	"md:syncthing"
-	# TODO: confirm compat on redhat
+	"mdr:syncthing"
 
 	# =+= JS/TS
 	"m:node"
@@ -308,8 +319,8 @@ PRIMARY_BINARY_DEPENDENCIES=(
 
 	# =+= JVM
 	"m:openjdk"
-	"r:java-latest-openjdk"
 	"d:default-jdk"
+	"r:java-latest-openjdk"
 	"t:openjdk-$OPENJDK_LTS_VERSION"
 	"mdrt:maven"
 
@@ -328,23 +339,11 @@ PRIMARY_BINARY_DEPENDENCIES=(
 
 	# =+= GO
 	"m:go"
-	"dt:golang"
-	# TODO: confirm compat for redhat
+	"drt:golang"
 
 	# =+= RUBY
 	"m:ruby@4"
 	"drt:ruby"
-
-	# =+= DEPENDENCIES
-	"m:pkgconf"
-	"m:cairo"
-	# TODO: confirm compat for others
-	"d:libdevmapper-dev"  # needed by thin-provisioning-tools
-	# TODO: confirm compat for redhat
-
-	# =+= MISC
-	"d:thin-provisioning-tools"
-	# TODO: confirm compat for others
 )
 
 # choose manager
@@ -416,19 +415,23 @@ if [[ -n "$MANAGER" ]]; then
 		pkg)
 			# No quietting techniques work for pkg
 			pkg install -y "${TO_INSTALL[@]}"
+			pkg upgrade
 			;;
 		dnf)
 			enable_rpmfusion
 			rpmfusion_enable_el_builder_repo
 			sudo dnf groupinstall -q -y "Development Tools"
 			sudo dnf install -q -y "${TO_INSTALL[@]}"
+			sudo dnf upgrade --refresh -y
 			;;
 		apt)
-			sudo apt update -qq -o=Dpkg::Use-Pty=0
-			sudo apt install -qq -o=Dpkg::Use-Pty=0 -y "${TO_INSTALL[@]}"
+			sudo apt update -qq
+			sudo apt install -qq -y "${TO_INSTALL[@]}"
+			sudo apt upgrade -qq -y
 			;;
 		brew)
 			brew install -q "${TO_INSTALL[@]}"
+			brew upgrade -q
 			;;
 		esac
 	fi
@@ -660,6 +663,7 @@ fi
 
 pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
 npm install -g "${NPM_CLI_PACKAGES[@]}"
+pnpm update --global --silent
 
 # deno
 export DENO_INSTALL="$HOME/.deno"
@@ -676,7 +680,7 @@ fi
 # NOTE: redhat repositories provide poetry-core but not the CLI
 # NOTE: on brew platforms, the --user pip environment is externally handled
 if [ "$MANAGER" = "apt" ]; then
-	sudo apt install -qq -o=Dpkg::Use-Pty=0 -y python3-poetry
+	sudo apt install -qq -y python3-poetry
 elif [ "$HAS_BREW" = "true" ]; then
 	brew install -q poetry
 else
@@ -724,6 +728,7 @@ else
 	uv tool install -q hatch
 	uv tool install -q autopep8
 fi
+uv tool upgrade --quiet --all
 
 # rust
 cargo install cargo-disasm
@@ -804,15 +809,6 @@ elif command -v chsh &>/dev/null; then
 else
 	echo "warning: could not autoset shell" >&2
 fi
-
-# final step: upgrade dependencies but ONLY for user-level pms
-if [ "$HAS_BREW" = "true" ]; then
-	brew upgrade -q
-	brew upgrade -q --cask
-	brew cleanup -q
-fi
-pnpm update --global --silent
-uv tool upgrade --quiet --all
 
 # Certificate installation
 # NOTE: chezmoi source-path can't be used if this is in an apply

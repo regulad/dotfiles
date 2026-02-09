@@ -10,8 +10,8 @@ FROM debian:trixie
 
 # Build arguments
 # dot linux suffix is lima-style (https://github.com/lima-vm/lima/discussions/2622#discussioncomment-108517600)
-# always user 1000 by convention
 ARG USERNAME="regulad.linux"
+ARG UID=1000
 ARG S6_OVERLAY_VERSION=3.2.0.3
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -65,7 +65,7 @@ RUN --mount=type=tmpfs,target=/tmp \
 
 # Create user with UID 1000 and add to sudoers
 # sudo doesn't take filenames that have periods in them, so we have to change it to _
-RUN useradd -m -s /bin/bash -u 1000 ${USERNAME} \
+RUN useradd -m -s /bin/bash -u ${UID} ${USERNAME} \
   && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_') \
   && chmod 0440 /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_')
 

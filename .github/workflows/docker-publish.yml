@@ -19,6 +19,16 @@ env:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        include:
+          - username: "regulad.linux"
+            uid: "1000"
+            suffix: ""
+          - username: "pewahle.linux"
+            uid: "461513"
+            suffix: "ncsu"
+
     runs-on: self-hosted
     permissions:
       contents: read
@@ -64,11 +74,11 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           # the below values enable the latest tag only on the default branch
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=schedule
-            type=ref,event=branch
-            type=ref,event=tag
-            type=ref,event=pr
+            type=raw,value=latest,enable={{is_default_branch}}${{ matrix.suffix != '' && format(',suffix={0}', matrix.suffix) || '' }}
+            type=schedule${{ matrix.suffix != '' && format(',suffix={0}', matrix.suffix) || '' }}
+            type=ref,event=branch${{ matrix.suffix != '' && format(',suffix={0}', matrix.suffix) || '' }}
+            type=ref,event=tag${{ matrix.suffix != '' && format(',suffix={0}', matrix.suffix) || '' }}
+            type=ref,event=pr${{ matrix.suffix != '' && format(',suffix={0}', matrix.suffix) || '' }}
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
@@ -82,6 +92,9 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            USERNAME=${{ matrix.username }}
+            UID=${{ matrix.uid }}
           platforms:
             linux/amd64 #,linux/arm64
             # `sudo` does not appear to work correctly under arm64 emulation.
