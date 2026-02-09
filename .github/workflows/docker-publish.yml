@@ -27,7 +27,7 @@ jobs:
             suffix: ""
           - username: "pewahle.linux"
             uid: "461513"
-            suffix: "ncsu"
+            suffix: "-ncsu"
 
     runs-on: self-hosted
     permissions:
