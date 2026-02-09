@@ -737,7 +737,9 @@ cargo install vtracer
 # go
 go install mvdan.cc/sh/v3/cmd/shfmt@latest
 if [[ "$OSTYPE" == "darwin"* ]]; then
-	go install github.com/roy2220/osc52pty@latest
+	# i introduced a change on master that hasn't been pushed to a version
+	# and probably never will be; package is abandoned
+	go install github.com/roy2220/osc52pty@master
 fi
 
 # vim package management
