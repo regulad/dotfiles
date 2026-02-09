@@ -145,7 +145,7 @@ export DISPLAY=${DISPLAY:-:0}
 # === ALIASES
 alias c3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=default"
 alias t3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=sympy"
-alias wakaru="pnpm dlx @wakaru/cli"
+alias "chomp=perl -pi -e 'chomp if eof'"
 
 NCSU_HOSTS=(eos grendel hydra kraken)
 for h in "${NCSU_HOSTS[@]}"; do
