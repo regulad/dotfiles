@@ -462,12 +462,12 @@ if [ "$MANAGER" = "brew" ] && [ "$CAN_SUDO" = "true" ]; then
 	sudo ln -sfn $HOMEBREW_PREFIX/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
 fi
 
-# Install zerobrew if on a platform that supports it. Zerobrew is an experimental rust rewrite of brew
-if [[ $(uname -m) == "arm64" && $(uname -s) == "Darwin" && "$SHELL" == *"zsh"* ]]; then
-	# This install script is idempotent. 
-	source ~/.zshenv
-	curl -sSL https://raw.githubusercontent.com/lucasgelfond/zerobrew/main/install.sh | bash
-fi
+
+#	# Install zerobrew if on a platform that supports it. Zerobrew is an experimental rust rewrite of brew
+# # ...THAT HAPPENS TO BE SLOP! see https://github.com/lucasgelfond/zerobrew/issues/209
+#	# This install script is idempotent. 
+#	source ~/.zshenv
+#	curl -sSL https://raw.githubusercontent.com/lucasgelfond/zerobrew/main/install.sh | bash
 
 # user-level binary dependencies
 # these dependencies aren't provided by the system package manager, for whatever reason
