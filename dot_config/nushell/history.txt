@@ -1,4 +1,0 @@
-echo "/Users/regulad/Library/Application Support/nushell/config.nu<\n>"
-cat "/Users/regulad/Library/Application Support/nushell/config.nu"
-ls
-exit
