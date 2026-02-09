@@ -110,6 +110,7 @@ OpenJS.NodeJS.LTS ^
 DenoLand.Deno ^
 Microsoft.VisualStudioCode ^
 TeamViewer.TeamViewer ^
+WinFsp.WinFsp ^
 BillStewart.SyncthingWindowsSetup
 
 REM following winget packages are not installed even though I would like them:
