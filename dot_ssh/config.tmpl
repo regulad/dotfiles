@@ -221,9 +221,10 @@ Host eos
     UserKnownHostsFile /dev/null
     PubkeyAuthentication no
     PreferredAuthentications password
+    RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
 Host grendel
-    # CPU compute
+    # x86_64
     ForwardX11 yes
     HostName grendel.ece.ncsu.edu
     User pewahle
@@ -231,9 +232,10 @@ Host grendel
     UserKnownHostsFile /dev/null
     PubkeyAuthentication no
     PreferredAuthentications password
+    RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
 Host hydra
-    # GPU compute
+    # GPU
     ForwardX11 yes
     HostName hydra.ece.ncsu.edu
     User pewahle
@@ -241,9 +243,10 @@ Host hydra
     UserKnownHostsFile /dev/null
     PubkeyAuthentication no
     PreferredAuthentications password
+    RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
 Host kraken
-    # GPU compute
+    # arm
     ForwardX11 yes
     HostName kraken.ece.ncsu.edu
     User pewahle
@@ -251,6 +254,7 @@ Host kraken
     UserKnownHostsFile /dev/null
     PubkeyAuthentication no
     PreferredAuthentications password
+    RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
 # Globals
 Host *
