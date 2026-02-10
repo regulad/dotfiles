@@ -96,11 +96,17 @@ Host timemachine
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
 Host gha
+    # does cloud-init
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
     HostName gha.home.arpa
     RequestTTY yes
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
 Host microk8s
+    # does cloud-init
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
     HostName microk8s.home.arpa
     RequestTTY yes
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'

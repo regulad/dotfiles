@@ -17,6 +17,27 @@ ARG S6_OVERLAY_VERSION=3.2.0.3
 ENV TZ="America/New_York"
 ENV DEBIAN_FRONTEND="noninteractive"
 
+# overwrite the existing debian.sources with a version that includes non-free assets,
+# which is important for the propriteary toolchains like nvcc
+RUN echo 'Types: deb\n\
+URIs: https://deb.debian.org/debian\n\
+Suites: trixie trixie-updates\n\
+Components: main contrib non-free non-free-firmware\n\
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\
+\n\
+Types: deb\n\
+URIs: https://deb.debian.org/debian-security\n\
+Suites: trixie-security\n\
+Components: main contrib non-free non-free-firmware\n\
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\
+\n\
+Types: deb\n\
+URIs: https://deb.debian.org/debian\n\
+Suites: trixie-backports\n\
+Components: main contrib non-free non-free-firmware\n\
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg' \
+> /etc/apt/sources.list.d/debian.sourcess
+
 # Create user with UID 1000 and add to sudoers
 # sudo doesn't take filenames that have periods in them, so we have to change it to _
 RUN useradd --no-log-init -m -s /bin/bash -u ${UID} ${USERNAME} \
@@ -27,14 +48,17 @@ RUN useradd --no-log-init -m -s /bin/bash -u ${UID} ${USERNAME} \
 # Copy dotfiles repository to chezmoi source directory
 COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 
+## NOTE: since the docker buildx GHA action doesn't support squashing, all installs have to be done in a single layer.
+##       who cares about caching!
 # Install all development packages
+## NOTE: for now, nvcc (provided by nvidia-cuda-toolkit) is installed in the container definitions rather than in the
+##       bootstrap script. I may change this in the future.
 # Install s6-overlay
 # Install Homebrew as the UID 1000 user
 # Install pnpm globally
 # Install chezmoi via Homebrew
 # Initialize and apply chezmoi (expects brew and pnpm to already exist)
 # Clean up apt cache after chezmoi apply since it may install packages via sudo
-# note: su -l drops all env (even with -m!) so we have to redeclare CHEMZOI_USE_DUMMY again just for this line
 RUN --mount=type=tmpfs,target=/tmp \
     apt-get update \
   && apt-get install -y --no-install-recommends \
@@ -63,6 +87,7 @@ RUN --mount=type=tmpfs,target=/tmp \
     procps \
     sudo \
     xz-utils \
+    nvidia-cuda-toolkit \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
   \
   && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz -o /tmp/s6-overlay-noarch.tar.xz \
