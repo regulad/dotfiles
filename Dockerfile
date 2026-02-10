@@ -19,24 +19,26 @@ ENV DEBIAN_FRONTEND="noninteractive"
 
 # overwrite the existing debian.sources with a version that includes non-free assets,
 # which is important for the propriteary toolchains like nvcc
-RUN echo 'Types: deb\n\
-URIs: https://deb.debian.org/debian\n\
-Suites: trixie trixie-updates\n\
-Components: main contrib non-free non-free-firmware\n\
-Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\
-\n\
-Types: deb\n\
-URIs: https://deb.debian.org/debian-security\n\
-Suites: trixie-security\n\
-Components: main contrib non-free non-free-firmware\n\
-Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg\n\
-\n\
-Types: deb\n\
-URIs: https://deb.debian.org/debian\n\
-Suites: trixie-backports\n\
-Components: main contrib non-free non-free-firmware\n\
-Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg' \
-> /etc/apt/sources.list.d/debian.sourcess
+RUN cat > /etc/apt/sources.list.d/debian.sources <<EOF
+Types: deb
+URIs: https://deb.debian.org/debian
+Suites: trixie trixie-updates
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+Types: deb
+URIs: https://deb.debian.org/debian-security
+Suites: trixie-security
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+Types: deb
+URIs: https://deb.debian.org/debian
+Suites: trixie-backports
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+EOF
+RUN chmod 644 /etc/apt/sources.list.d/debian.sources
 
 # Create user with UID 1000 and add to sudoers
 # sudo doesn't take filenames that have periods in them, so we have to change it to _
