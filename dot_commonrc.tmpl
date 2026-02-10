@@ -1,5 +1,16 @@
 # THIS FILE IS MANAGED BY CHEZMOI!
 
+# === ENVIRONMENT
+export OLLAMA_HOST="{{- .ollamaBase -}}"
+export DO_NOT_TRACK=1
+export HOMEBREW_NO_ENV_HINTS=1
+export VISUAL="$(command -v nvim || command -v vim)"
+
+# === DEFAULTS
+export DISPLAY=${DISPLAY:-:0}
+[ -z "$XDG_RUNTIME_DIR" ] && [ -d "/run/user/$(id -u)" ] && export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+[ -z "$GPG_TTY" ] && export GPG_TTY=$(tty)
+
 # needed for Android native builds
 if [ "$(uname -o)" = "Android" ]; then
   export ANDROID_API_LEVEL="$(getprop ro.build.version.sdk 2>/dev/null || true)"
@@ -78,16 +89,12 @@ export DENO_INSTALL="$HOME/.deno"
 export PATH="$DENO_INSTALL/bin:$PATH"
 # deno end
 
-# Created by `pipx` on 2025-08-15 00:48:24
-export PATH="$PATH:$HOME/.local/bin"
+export PATH="$HOME/.local/bin:$PATH"
 
 # cargo on rustup systems
 if [ -n "$(command -v rustup-init)" ]; then
     . "$HOME/.cargo/env"
 fi
-
-# gpg daemon
-export GPG_TTY=$(tty)
 
 # ssh daemon
 unset _bw_sock
@@ -110,6 +117,14 @@ case "$(uname -o)" in
       "$HOME/snap/bitwarden/current/.bitwarden-ssh-agent.sock" \
       "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock"
     do
+# === ENVIRONMENT
+export OLLAMA_HOST="{{- .ollamaBase -}}"
+export DO_NOT_TRACK=1
+export HOMEBREW_NO_ENV_HINTS=1
+export VISUAL="$(command -v nvim || command -v vim)"
+export DISPLAY=${DISPLAY:-:0}
+[ -z "$XDG_RUNTIME_DIR" ] && [ -d "/run/user/$(id -u)" ] && export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+
       [ -S "$_bw_sock" ] && export SSH_AUTH_SOCK="$_bw_sock" && break
     done
     ;;
@@ -133,14 +148,6 @@ else
     eval "$(chezmoi completion bash)"
     eval "$(fabric completions bash)"
 fi
-
-# Preferences
-export OLLAMA_HOST="{{- .ollamaBase -}}"
-alias pipx="uv tool"
-export DO_NOT_TRACK=1
-export HOMEBREW_NO_ENV_HINTS=1
-export VISUAL="$(command -v nvim || command -v vim)"
-export DISPLAY=${DISPLAY:-:0}
 
 # === ALIASES
 alias c3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=default"
