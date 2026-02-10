@@ -21,19 +21,19 @@ ENV DEBIAN_FRONTEND="noninteractive"
 # which is important for the propriteary toolchains like nvcc
 RUN cat > /etc/apt/sources.list.d/debian.sources <<EOF
 Types: deb
-URIs: https://deb.debian.org/debian
+URIs: http://deb.debian.org/debian
 Suites: trixie trixie-updates
 Components: main contrib non-free non-free-firmware
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
 Types: deb
-URIs: https://deb.debian.org/debian-security
+URIs: http://deb.debian.org/debian-security
 Suites: trixie-security
 Components: main contrib non-free non-free-firmware
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
 Types: deb
-URIs: https://deb.debian.org/debian
+URIs: http://deb.debian.org/debian
 Suites: trixie-backports
 Components: main contrib non-free non-free-firmware
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
