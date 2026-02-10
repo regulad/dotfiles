@@ -24,13 +24,14 @@ Supported environments:
 - Debian GNU/Linux (tested against Ubuntu 24.04 & Debian 13)
     - Including under WSL with Windows integration
     - Installs brew
-- Red Hat-based GNU/Linux (tested against Fedora >= 42 and RHEL >= 10)
+- Fedora >= 42
     - Including under WSL with Windows integration
     - Installs brew
 - Windows 10 ESU/11 `cmd` (via `autorun.cmd`)
     - Installs scoop
 
 > *NOTE:* Termux is no longer supported in a first-class fashion. I don't have an Android phone.
+> Simialrly, RHEL is no longer supported in a first-class fashion. This setup is for desktop use.
 
 Supported shells:
 
