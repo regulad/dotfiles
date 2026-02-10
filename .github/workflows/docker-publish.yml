@@ -49,11 +49,12 @@ jobs:
         with:
           cosign-release: "v2.4.3"
 
-      # Workaround: https://github.com/docker/build-push-action/issues/461
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130
+        with:
+          platforms: arm64
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7
 
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
@@ -96,12 +97,15 @@ jobs:
             USERNAME=${{ matrix.username }}
             UID=${{ matrix.uid }}
           platforms:
-            linux/amd64 #,linux/arm64
-            # `sudo` does not appear to work correctly under arm64 emulation.
-            # I'm chalking it up to an issue with the filesystem that it presents to the guest, since it complains about being unable to set the setuid bit.
-            # Currently all nodes are `amd64`, so just commenting it out is an easy fix.
-            # If at any time I have adopted a "mixed" setup where some nodes are arm64 and some are amd64,
-            # I will need to break the build process into two separate jobs whose created images are recombined with a multi-plat manifest.
+            # i would like to eventually support linux/ppc64el, linux/riscv64, and linux/s390x
+            # pending brew support
+            linux/amd64,linux/arm64
+            # # `sudo` does not appear to work correctly under arm64 emulation.
+            # # I'm chalking it up to an issue with the filesystem that it presents to the guest, since it complains about being unable to set the setuid bit.
+            # # Currently all nodes are `amd64`, so just commenting it out is an easy fix.
+            # # If at any time I have adopted a "mixed" setup where some nodes are arm64 and some are amd64,
+            # # I will need to break the build process into two separate jobs whose created images are recombined with a multi-plat manifest.
+            # issue: https://github.com/docker/buildx/issues/1335
 
       # Sign the resulting Docker image digest except on PRs.
       # This will only write to the public Rekor transparency log when the Docker
