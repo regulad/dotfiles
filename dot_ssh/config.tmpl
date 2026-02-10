@@ -6,10 +6,10 @@ HashKnownHosts yes
 Host neodingus
     HostName neodingus.tail11540.ts.net
     User root
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
     RequestTTY yes
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
@@ -17,10 +17,10 @@ Host neodingus
 Host prodingus
     HostName prodingus.tail11540.ts.net
     User root
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
     RequestTTY yes
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
@@ -29,10 +29,10 @@ Host samsung-sm-a526u1
     HostName samsung-sm-a526u1.tail11540.ts.net
     Port 8022
     User u0_a322
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
     RequestTTY yes
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
@@ -121,20 +121,20 @@ Host git.regulad.xyz
 
 Match Host git.regulad.xyz User opc
     User opc
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
     RequestTTY yes
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
 Host doppelgangerhq.com
     User ubuntu
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
     RequestTTY yes
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
@@ -143,10 +143,10 @@ Host doppelgangerhq.com
 Host tailscalerouter
 
 Match Host tailscalerouter User opc
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key.pub
     IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
     RequestTTY yes
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
@@ -154,10 +154,10 @@ Match Host tailscalerouter User opc
 Host livekit
 
 Match Host livekit User opc
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/ssh-key-2025-12-19_livekit.key.pub
     IdentityFile ~/.ssh/ssh-key-2025-12-19_livekit.key  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
     RequestTTY yes
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
@@ -167,48 +167,48 @@ Host mail
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
 Match Host mail User opc
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/ssh-key-2025-12-08_mail.key.pub
     IdentityFile ~/.ssh/ssh-key-2025-12-08_mail.key  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
 
 # Personal
 Host github.com
     HostName github.com
     User git
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
 
 Host git.regulad.xyz
     HostName git.regulad.xyz
     User git
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
 
 Host invent.kde.org
     HostName invent.kde.org
     User git
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
 
 # ncsu
 Host github.ncsu.edu
     HostName github.ncsu.edu
     User git
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_ed25519_ncstate.pub
     IdentityFile ~/.ssh/id_ed25519_ncstate  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
 
 ## rotating host keys and password only authentication.
@@ -270,16 +270,16 @@ Host *
 #    1. Try to get the agent's private key by the public key
 #    2. If the private key isn't in the agent, and it exists on disk, load it. Else, crash.
 Match User regulad
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
 
 Match User pewahle  # ncsu
-{{ if not .useDummySecrets }}
+{{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_ed25519_ncstate.pub
     IdentityFile ~/.ssh/id_ed25519_ncstate  # fallback
-{{ end }}
+{{- end }}
     IdentitiesOnly yes
 
