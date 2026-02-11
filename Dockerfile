@@ -11,8 +11,11 @@ FROM debian:trixie
 # Build arguments
 # dot linux suffix is lima-style (https://github.com/lima-vm/lima/discussions/2622#discussioncomment-108517600)
 ARG USERNAME="regulad.linux"
-ARG UID=1000
-ARG S6_OVERLAY_VERSION=3.2.0.3
+ARG UID="1000"
+ARG GROUPNAME="regulad.linux"
+ARG GID="1000"
+
+ARG S6_OVERLAY_VERSION=3.2.2.0
 
 ENV TZ="America/New_York"
 ENV DEBIAN_FRONTEND="noninteractive"
@@ -42,7 +45,9 @@ RUN chmod 644 /etc/apt/sources.list.d/debian.sources
 
 # Create user with UID 1000 and add to sudoers
 # sudo doesn't take filenames that have periods in them, so we have to change it to _
-RUN useradd --no-log-init -m -s /bin/bash -u ${UID} ${USERNAME} \
+# -o flags enable non-unique UIDs, should they be needed
+RUN groupadd -g ${GID} -o ${GROUPNAME} \
+  && useradd --no-log-init -m -s /bin/bash -u ${UID} -o -g ${GROUPNAME} ${USERNAME} \
   && mkdir -p /etc/sudoers.d/ \
   && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_') \
   && chmod 0440 /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_')
@@ -94,8 +99,8 @@ RUN --mount=type=tmpfs,target=/tmp \
   \
   && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz -o /tmp/s6-overlay-noarch.tar.xz \
   && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
-  && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-x86_64.tar.xz -o /tmp/s6-overlay-x86_64.tar.xz \
-  && tar -C / -Jxpf /tmp/s6-overlay-x86_64.tar.xz \
+  && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-$(uname -m).tar.xz -o /tmp/s6-overlay-$(uname -m).tar.xz \
+  && tar -C / -Jxpf /tmp/s6-overlay-$(uname -m).tar.xz \
   \
   && su -l ${USERNAME} -c 'NONINTERACTIVE=1 CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' \
   && npm install -g pnpm \
