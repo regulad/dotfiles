@@ -71,6 +71,7 @@ coreutils ^
 openssl ^
 wingetcreate ^
 rclone ^
+less ^
 autohotkey
 
 echo debug: installing new scoop packages
