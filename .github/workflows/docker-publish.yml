@@ -57,10 +57,12 @@ jobs:
         with:
           cosign-release: "v2.4.3"
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130
-        with:
-          platforms: arm64
+      # # see line 127 for why commented out
+      # - name: Set up QEMU
+      #   uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130
+      #   with:
+      #     platforms: arm64
+
       - name: Setup Docker buildx
         uses: docker/setup-buildx-action@79abd3f86f79a9d68a23c75a09a9a85889262adf
 
@@ -110,9 +112,12 @@ jobs:
             GROUPNAME=${{ matrix.groupname }}
             GID=${{ matrix.gid }}
           platforms:
+            linux/amd64 #,linux/arm64
+
+
             # i would like to eventually support linux/ppc64el, linux/riscv64, and linux/s390x
             # pending brew support
-            linux/amd64,linux/arm64
+
             # # `sudo` does not appear to work correctly under arm64 emulation.
             # # I'm chalking it up to an issue with the filesystem that it presents to the guest, since it complains about being unable to set the setuid bit.
             # # Currently all nodes are `amd64`, so just commenting it out is an easy fix.
@@ -120,6 +125,8 @@ jobs:
             # # I will need to break the build process into two separate jobs whose created images are recombined with a multi-plat manifest.
             # issue: https://github.com/docker/buildx/issues/1335
             # fix:   https://github.com/tonistiigi/binfmt/blob/22c018d00098bd80d4f9df3533992b3b7a4f8a38/cmd/binfmt/main.go#L89
+
+            # beyond the setuid/C flag issue, for some reason the arm64 build just also hangs indefinitely for an unknown reason. image will stay amd64.
 
       # Sign the resulting Docker image digest except on PRs.
       # This will only write to the public Rekor transparency log when the Docker

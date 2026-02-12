@@ -1,5 +1,6 @@
 . ~/.zshrc
+
 # auto-attach tmux if in an interactive session
 if command -v tmux &> /dev/null && [ -z "$TMUX" ] && [[ $- == *i* ]]; then
-    tmux new-session -A -s profile_spawn
+    exec tmux new-session -A -s profile_spawn
 fi
