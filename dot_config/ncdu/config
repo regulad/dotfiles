@@ -1,0 +1,8 @@
+-e
+--one-file-system
+--include-caches
+--exclude-kernfs
+--threads 8
+-r
+-r
+--color dark-bg
