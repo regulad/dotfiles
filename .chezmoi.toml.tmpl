@@ -1,12 +1,39 @@
-encryption = "age"
+# THIS FILE IS MANAGED BY CHEZMOI!
+
+# https://www.chezmoi.io/user-guide/machines/general/#determine-whether-the-current-machine-is-a-laptop-or-desktop
+{{- $chassisType := "desktop" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   if contains "MacBook" (output "system_profiler" "SPHardwareDataType") }}
+{{-     $chassisType = "laptop" }}
+{{-   else }}
+{{-     $chassisType = "desktop" }}
+{{-   end }}
+{{- else if eq .chezmoi.os "linux" }}
+{{-   $chassisType = (output "hostnamectl" "--json=short" | mustFromJson).Chassis }}
+{{- else if eq .chezmoi.os "windows" }}
+{{-   $chassisType = (output "pwsh.exe" "-NoProfile" "-NonInteractive" "-Command" "if ((Get-CimInstance -Class Win32_Battery | Measure-Object).Count -gt 0) { Write-Output 'laptop' } else { Write-Output 'desktop' }") | trim }}
+{{- end }}
+
+# https://www.chezmoi.io/user-guide/machines/general/#determine-whether-the-current-machine-is-a-laptop-or-desktop:~:text=Table%20of%20contents-,Determine%20whether%20the%20current%20machine%20is%20a%20laptop%20or%20desktop,-Determine%20how%20many
+{{- $cpuCores := 1 }}
+{{- $cpuThreads := 1 }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $cpuCores = (output "sysctl" "-n" "hw.physicalcpu_max") | trim | atoi }}
+{{-   $cpuThreads = (output "sysctl" "-n" "hw.logicalcpu_max") | trim | atoi }}
+{{- else if eq .chezmoi.os "linux" }}
+{{-   $cpuCores = (output "sh" "-c" "lscpu --online --parse | grep --invert-match '^#' | sort --field-separator=',' --key='2,4' --unique | wc --lines") | trim | atoi }}
+{{-   $cpuThreads = (output "sh" "-c" "lscpu --online --parse | grep --invert-match '^#' | wc --lines") | trim | atoi }}
+{{- else if eq .chezmoi.os "windows" }}
+{{-   $cpuCores = (output "pwsh.exe" "-NoProfile" "-NonInteractive" "-Command" "(Get-CimInstance -ClassName 'Win32_Processor').NumberOfCores") | trim | atoi }}
+{{-   $cpuThreads = (output "pwsh.exe" "-NoProfile" "-NonInteractive" "-Command" "(Get-CimInstance -ClassName 'Win32_Processor').NumberOfLogicalProcessors") | trim | atoi }}
+{{- end }}
+
 [git]
     autoCommit = true
     autoPush = true
     commitMessageTemplateFile = ".commit_message.tmpl"
 [bitwarden]
     unlock = "auto"
-[age]
-    passphrase = true
 [data]
 {{- if eq .chezmoi.hostname "winlite" }}
     ollamaBase = "http://localhost:11434"
@@ -20,3 +47,7 @@ encryption = "age"
     bash = "/bin/bash"
 {{- end }}
     useDummySecrets = {{ env "CHEZMOI_USE_DUMMY" | not | not }}
+[data.chassis]
+    type = "{{ $chassisType }}"
+    cores = {{ $cpuCores }}
+    threads = {{ $cpuThreads }}

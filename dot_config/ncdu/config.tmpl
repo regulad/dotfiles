@@ -1,8 +1,10 @@
 -e
 --one-file-system
 --include-caches
+{{- if eq .chezmoi.os "linux" }}
 --exclude-kernfs
---threads 8
+{{- end }}
+--threads {{ .chassis.threads }}
 -r
 -r
 --color dark-bg
