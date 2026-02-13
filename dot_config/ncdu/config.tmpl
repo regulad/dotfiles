@@ -1,6 +1,7 @@
 -e
 --one-file-system
 --include-caches
+--exclude-from ~/.ncduexcludes
 {{- if eq .chezmoi.os "linux" }}
 --exclude-kernfs
 {{- end }}
