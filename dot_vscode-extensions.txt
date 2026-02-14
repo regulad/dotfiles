@@ -27,4 +27,5 @@ unifiedjs.vscode-mdx
 vscjava.vscode-gradle
 wakatime.vscode-wakatime
 redhat.vscode-yaml
+MS-vsliveshare.vsliveshare
 wytheglobal.pdfmore
