@@ -111,6 +111,7 @@ OpenJS.NodeJS.LTS ^
 DenoLand.Deno ^
 Microsoft.VisualStudioCode ^
 TeamViewer.TeamViewer ^
+Microsoft.PowerShell ^
 WinFsp.WinFsp ^
 BillStewart.SyncthingWindowsSetup
 
