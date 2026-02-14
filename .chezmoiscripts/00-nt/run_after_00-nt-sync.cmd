@@ -72,6 +72,7 @@ openssl ^
 wingetcreate ^
 rclone ^
 less ^
+imagemagick ^
 autohotkey
 
 echo debug: installing new scoop packages
@@ -112,6 +113,7 @@ DenoLand.Deno ^
 Microsoft.VisualStudioCode ^
 TeamViewer.TeamViewer ^
 Microsoft.PowerShell ^
+Mozilla.Firefox ^
 WinFsp.WinFsp ^
 BillStewart.SyncthingWindowsSetup
 
