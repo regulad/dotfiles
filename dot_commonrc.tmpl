@@ -179,6 +179,12 @@ chezmoi-cd() {
     cd $(chezmoi source-path)
 }
 
+# given a PID show all files that PID has open
+filewatch() {
+  local pid=$1
+  watch -n 5 "PIDS=\$(ps --ppid $pid -o pid --no-headers 2>/dev/null | tr -d ' ' | paste -sd,),$pid; lsof -p \"\$PIDS\" -nP -F n 2>/dev/null | grep '^n/' | sed 's|^n||' | grep -Ev '^(/dev|/proc|/sys|/run|/tmp|/cgroup|/\$)' | grep -v '(stat:' | sort -ru"
+}
+
 # === ANNOUNCEMENTS/psuedoMOTD
 if [[ $- == *i* && -z ${DID_COMMONRC_SPLASH+x} ]]; then
     LAST_SYNC="{{ now | date "2006-01-02" }}"
