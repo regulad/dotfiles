@@ -17,6 +17,19 @@ source $ZSH/oh-my-zsh.sh
 # load common
 source ~/.commonrc
 
+# Prepared using Anthropic Claude Sonnet 4.6
+# Adds support for the following OSC sequences:
+# - https://iterm2.com/documentation-escape-codes.html#:~:text=s%20source%20code.-,FTCS_PROMPT,-OSC%20133%20%3B%20A
+# - https://iterm2.com/documentation-escape-codes.html#:~:text=of%20shell%20prompt.-,FTCS_COMMAND_START,-OSC%20133%20%3B%20B
+# - https://iterm2.com/documentation-escape-codes.html#:~:text=user%2Dentered%20command.-,FTCS_COMMAND_EXECUTED,-OSC%20133%20%3B%20C
+# - https://iterm2.com/documentation-escape-codes.html#:~:text=the%20empty%20string.-,FTCS_COMMAND_FINISHED,-OSC%20133%20%3B%20D
+autoload -Uz add-zsh-hook
+__osc133_precmd()  { printf '\e]133;D;%s\a' "$?"; printf '\e]133;A\a'; }
+__osc133_preexec() { printf '\e]133;C\a'; }
+add-zsh-hook precmd  __osc133_precmd
+add-zsh-hook preexec __osc133_preexec
+PROMPT="%{$'\e]133;A\a'%}${PROMPT}%{$'\e]133;B\a'%}"
+
 # prompt
 PROMPT=$(cat << 'EOF'
 %{$fg_bold[green]%}%n@%m%{$reset_color%}:%{$reset_color%}%B%F{blue}%~%{$fg[white]%}%{$(git_info=$(git_prompt_info); echo -n "${git_info:+ $git_info}")%}%f%b%(#.#.$) 
