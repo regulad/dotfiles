@@ -253,6 +253,8 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"r:ShellCheck"
 
 	# =+= UTILS
+  "dr:systemd"  # provides utils even when in docker
+  "mdr:socat"
 	"m:inetutils"
 	"d:inetutils-telnet"
 	"d:inetutils-ping"
