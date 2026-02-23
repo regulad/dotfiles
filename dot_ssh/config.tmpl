@@ -91,6 +91,8 @@ Host penumbra
 Host winlite
     User regulad
     HostName winlite.tail11540.ts.net
+    RequestTTY force
+    RemoteCommand for /f "tokens=3" %i in ('query session ^| findstr "console"') do "C:\Users\parke\AppData\Local\Microsoft\WinGet\Packages\Microsoft.Sysinternals.Suite_Microsoft.Winget.Source_8wekyb3d8bbwe\PsExec.exe" -accepteula -i %i cmd.exe
 
 # Oracle (Legacy VCN)
 Host git.regulad.xyz
