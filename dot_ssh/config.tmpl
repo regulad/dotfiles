@@ -91,7 +91,7 @@ Host penumbra
 Host winlite
     User regulad
     HostName winlite.tail11540.ts.net
-    RemoteCommand C:\Users\parke\AppData\Local\Microsoft\WinGet\Packages\Microsoft.Sysinternals.Suite_Microsoft.Winget.Source_8wekyb3d8bbwe\PsExec.exe -accepteula -i 1 C:\Windows\System32\cmd.exe
+    RemoteCommand winrs -r:localhost cmd.exe
     RequestTTY force
 
 # Oracle (Legacy VCN)
