@@ -95,6 +95,7 @@ RUN --mount=type=tmpfs,target=/tmp \
     sudo \
     xz-utils \
     nvidia-cuda-toolkit \
+    systemd \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
   \
   && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz -o /tmp/s6-overlay-noarch.tar.xz \
