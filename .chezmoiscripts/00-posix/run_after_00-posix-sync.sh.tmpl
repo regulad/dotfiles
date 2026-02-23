@@ -9,7 +9,9 @@ PYTHON_VERSION=3.12
 RUBY_VERSION=3.3  # only macOS is up to 4
 
 # minimum versions of host operating systems
-FEDORA_MINIMUM_VERSION=42  # 40/41 are EOL although would probably work, 42 oldest w/ support
+FEDORA_MINIMUM_VERSION=42  # tested on 43
+# 41 is EOL although would probably work, 42 oldest w/ support
+# need Fedora >= 41 (no RHEL yet) for dnf5 as a default
 MACOS_MINIMUM_VERSION=14  # tested on 14 and 26
 DEBIAN_MINIMUM_VERSION=13
 UBUNTU_MINIMUM_VERSION=24.04
@@ -253,8 +255,9 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"r:ShellCheck"
 
 	# =+= UTILS
-  "dr:systemd"  # provides utils even when in docker
-  "mdr:socat"
+	"dr:systemd"  # provides utils even when in docker
+	"r:gawk"  # not bundled by default
+	"mdr:socat"
 	"m:inetutils"
 	"d:inetutils-telnet"
 	"d:inetutils-ping"
