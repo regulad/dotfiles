@@ -388,8 +388,7 @@ if [[ -n "$MANAGER" ]]; then
 			;;
 		dnf)
 			enable_rpmfusion
-			rpmfusion_enable_el_builder_repo
-			sudo dnf groupinstall -q -y "Development Tools"
+			sudo dnf group install -q -y "development-tools"
 			sudo dnf install -q -y "${TO_INSTALL[@]}"
 			sudo dnf upgrade --refresh -y
 			;;
