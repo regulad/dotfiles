@@ -87,12 +87,8 @@ Host microk8s
 Host penumbra
     HostName penumbra.tail11540.ts.net
 
-# Windows hosts
-Host winlite
-    User regulad
-    HostName winlite.tail11540.ts.net
-    RemoteCommand winrs -r:localhost cmd.exe
-    RequestTTY force
+# Windows hosts are no longer included for ssh key auth.
+# There is a ton of garbage with "key scopes" that prevents the use of junctions while connected.
 
 # Oracle (Legacy VCN)
 Host git.regulad.xyz
@@ -227,7 +223,7 @@ Host *
     PreferredAuthentications publickey   
 
 # Tmux
-Match host="neodingus,prodingus,penumbra,winlite,dingus-server,eos,grendel,hydra,kraken"
+Match host="neodingus,prodingus,penumbra,dingus-server,eos,grendel,hydra,kraken"
     RequestTTY yes
     RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
