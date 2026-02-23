@@ -115,6 +115,7 @@ TeamViewer.TeamViewer ^
 Microsoft.PowerShell ^
 Mozilla.Firefox ^
 WinFsp.WinFsp ^
+Microsoft.Sysinternals.Suite ^
 BillStewart.SyncthingWindowsSetup
 
 REM following winget packages are not installed even though I would like them:
