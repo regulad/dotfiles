@@ -21,7 +21,7 @@ The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/
 Supported environments:
 
 - macOS latest (w/ `brew`)
-- Debian GNU/Linux (tested against Ubuntu 24.04 & Debian 13)
+- Debian GNU/Linux (tested against Ubuntu 25.10 & Debian 13)
     - Including under WSL with Windows integration
     - Installs brew
 - Fedora >= 42
