@@ -116,6 +116,7 @@ Microsoft.PowerShell ^
 Mozilla.Firefox ^
 WinFsp.WinFsp ^
 Microsoft.Sysinternals.Suite ^
+dotPDN.PaintDotNet ^
 BillStewart.SyncthingWindowsSetup
 
 REM following winget packages are not installed even though I would like them:
