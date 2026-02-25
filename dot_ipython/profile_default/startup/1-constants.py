@@ -29,3 +29,11 @@ b = 2.90e-3  # m*K
 sigma = 5.67e-8  # W/(m^2 * K^4)
 # Universal gravitational constant
 G = 6.7e-11  # N * (m^2/kg^2)
+
+# constants from NCSU PY 205
+# Approx. grav field near Earth's surface
+g = 9.8  # N/kg
+# specific heat capacity of water
+C = 4.2  # kJ/kg/degC
+# Room temperature
+T_room = 293.15  # K
