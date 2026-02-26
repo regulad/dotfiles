@@ -96,5 +96,6 @@ else
     set fileformat=unix
 endif
 if has("nvim")
+    set clipboard+=unnamedplus
     setlocal spell spelllang=en_us
 end
