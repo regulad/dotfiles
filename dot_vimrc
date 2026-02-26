@@ -88,8 +88,6 @@ end
 " non-color stuff
 syntax on
 set number
-set clipboard=unnamedplus
-set nofixeol
 if has('win32') || has('win64')
     set fileformats=dos,unix
     set fileformat=dos
