@@ -490,6 +490,7 @@ fi
 
 ## addl. brew things packaged as casks
 BREW_CASKS_MACOS=(
+	"prusaslicer"
 	"wakatime"  # proprietary freeware
 	"zoom"  # proprietary trialware
 	"firefox"  # for extension dev; i hate firefox for regular browsing
@@ -552,6 +553,28 @@ if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "linux-gnu"* ]]; then
 		if ! brew list --cask "$cask" &>/dev/null; then
 			brew install --cask -q "$cask" -f
 		fi
+	done
+fi
+
+## Mac App Store applications
+MAS_APP_IDS=(
+	"937984704"   # Amphetamine
+	"1352778147"  # Bitwarden
+	"462058435"   # Microsoft Excel
+	"462062816"   # Microsoft PowerPoint
+	"462054704"   # Microsoft Word
+	"946399090"   # Telegram Lite
+	"6745342698"  # uBlock Origin Lite
+	"1472432422"  # Wayback Machine
+	"1295203466"  # Windows App
+	"497799835"   # Xcode
+)
+
+if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "darwin"* ]]; then
+	# mas is distributed via brew
+  mas update
+	for mas_id in "${MAS_APP_IDS[@]}"; do
+		mas install $mas_id
 	done
 fi
 
