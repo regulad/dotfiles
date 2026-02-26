@@ -105,6 +105,7 @@ WinSCP.WinSCP ^
 GnuPG.GnuPG ^
 MHNexus.HxD ^
 VideoLAN.VLC ^
+Prusa3D.PrusaSlicer ^
 PuTTY.PuTTY ^
 EclipseAdoptium.Temurin.25.JDK ^
 EclipseAdoptium.Temurin.21.JDK ^
