@@ -27,16 +27,37 @@ jobs:
     strategy:
       matrix:
         include:
+          # GHA caching is configured so there is no cost incurred by specifiying the same arrangement twice
           - username: "regulad.linux"
             uid: "1000"
             groupname: "regulad.linux"
             gid: "1000"
             suffix: ""
-          - username: "pewahle.linux"
-            uid: "461513"
-            groupname: "NCSU"
-            gid: "108"
-            suffix: "-ncsu"
+            file: "Dockerfile.debian"
+          - username: "regulad.linux"
+            uid: "1000"
+            groupname: "regulad.linux"
+            gid: "1000"
+            suffix: "-debian"
+            file: "Dockerfile.debian"
+          - username: "regulad.linux"
+            uid: "1000"
+            groupname: "regulad.linux"
+            gid: "1000"
+            suffix: "-ubuntu"
+            file: "Dockerfile.ubuntu"
+          - username: "regulad.linux"
+            uid: "1000"
+            groupname: "regulad.linux"
+            gid: "1000"
+            suffix: "-fedora"
+            file: "Dockerfile.fedora"
+          #- username: "pewahle.linux"
+          #  uid: "461513"
+          #  groupname: "NCSU"
+          #  gid: "108"
+          #  suffix: "-ncsu"
+          #  file: "Dockerfile.ubuntu"
 
     runs-on: self-hosted
     permissions:
@@ -101,7 +122,8 @@ jobs:
         # emulating arm64 to build the arm64 image takes forever
         timeout-minutes: 1080
         with:
-          context: .
+          context: "."
+          file: "{context}/${{ matrix.file }}"
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

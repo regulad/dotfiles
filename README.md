@@ -21,23 +21,23 @@ The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/
 Supported environments:
 
 - macOS latest (w/ `brew`)
-- Debian GNU/Linux (tested against Ubuntu 25.10 & Debian 13)
-    - Including under WSL with Windows integration
-    - Installs brew
-- Fedora >= 42
-    - Including under WSL with Windows integration
-    - Installs brew
+- Debian GNU/Linux >= 13
+- Ubuntu GNU/Linux >= 25.10
+- Fedora GNU/Linux >= 42
 - Windows 10 ESU/11 `cmd` (via `autorun.cmd`)
-    - Installs scoop
+
+Brew will be installed on Darwin and Linux if it is not already installed. Rootless installs are supported but a warning will be emitted since I can't test every edge case.
 
 > *NOTE:* Termux is no longer supported in a first-class fashion. I don't have an Android phone.
 > Simialrly, RHEL is no longer supported in a first-class fashion. This setup is for desktop use.
 
 Supported shells:
 
-- `zsh`
-- `bash` (fallback only)
-- `cmd` (NT)
+- `zsh` (Preferred)
+- `bash`
+- `cmd` (NT-only)
+
+I have no intent to support PowerShell: I don't want to spend half of the time in my shell wrestling with different eras of features and aliases that do not have the same signature as the builtins they shadow.
 
 ### Hookscripts
 
