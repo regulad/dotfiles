@@ -99,7 +99,7 @@ RUN --mount=type=tmpfs,target=/tmp \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
   \
   && visudo -c && for f in /etc/sudoers.d/*; do visudo -c -f "$f"; done \
-  && sudo -u ${USERNAME} sudo -l | grep -q "NOPASSWD: ALL" \
+  && sudo -l -U ${USERNAME} | grep -q "NOPASSWD: ALL" \
   \
   && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz -o /tmp/s6-overlay-noarch.tar.xz \
   && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
