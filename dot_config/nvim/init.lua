@@ -64,3 +64,91 @@ end
 
 -- Legacy
 vim.cmd('source ' .. vim.fn.stdpath('config') .. '/legacy.vim')
+
+-- osc52 copying & native pasting
+-- written by Sonnet 4.6, checked by PW
+local function get_paste_cmd()
+  if vim.fn.has("mac") == 1 then
+    return { "pbpaste" }
+
+  elseif vim.fn.has("wsl") == 1 then
+    return {
+      "powershell.exe", "-NoLogo", "-NoProfile", "-c",
+      "[Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace(\"`r\", \"\"))",
+    }
+
+  elseif vim.fn.has("win32") == 1 then
+    if vim.fn.executable("win32yank") == 1 then
+      return { "win32yank", "-o", "--lf" }
+    end
+
+  elseif vim.env.TMUX ~= nil then
+    return { "tmux", "save-buffer", "-" }
+
+  elseif vim.env.PREFIX ~= nil and vim.fn.executable("termux-clipboard-get") == 1 then
+    -- PREFIX is set by Termux
+    return { "termux-clipboard-get" }
+
+  elseif vim.env.WAYLAND_DISPLAY ~= nil then
+    if vim.fn.executable("wl-paste") == 1 then
+      return { "wl-paste", "--no-newline" }
+    elseif vim.fn.executable("waypaste") == 1 then
+      return { "waypaste", "-t", "text/plain" }
+    end
+
+  elseif vim.env.DISPLAY ~= nil then
+    if vim.fn.executable("xclip") == 1 then
+      return { "xclip", "-selection", "clipboard", "-o" }
+    elseif vim.fn.executable("xsel") == 1 then
+      return { "xsel", "--clipboard", "--output" }
+    end
+  end
+
+  return nil
+end
+
+local function get_copy_cmd()
+  -- override copy for tmux and termux; everything else uses OSC52
+  if vim.env.TMUX ~= nil then
+    return { "tmux", "load-buffer", "-" }
+  elseif vim.env.PREFIX ~= nil and vim.fn.executable("termux-clipboard-set") == 1 then
+    return { "termux-clipboard-set" }
+  end
+  return nil
+end
+
+local osc52 = require("vim.ui.clipboard.osc52")
+local copy_cmd = get_copy_cmd()
+local paste_cmd = get_paste_cmd()
+
+local function make_copy(reg)
+  if copy_cmd then
+    return copy_cmd
+  end
+  return osc52.copy(reg)
+end
+
+local function native_paste(_)
+  if paste_cmd == nil then
+    return { vim.fn.split(vim.fn.getreg('"'), "\n"), vim.fn.getregtype('"') }
+  end
+  local ok, result = pcall(vim.fn.systemlist, paste_cmd)
+  if ok and vim.v.shell_error == 0 then
+    return { result, "v" }
+  end
+  return { vim.fn.split(vim.fn.getreg('"'), "\n"), vim.fn.getregtype('"') }
+end
+
+vim.g.clipboard = {
+  name = "osc52-copy-native-paste",
+  copy = {
+    ["+"] = make_copy("+"),
+    ["*"] = make_copy("*"),
+  },
+  paste = {
+    ["+"] = native_paste,
+    ["*"] = native_paste,
+  },
+}
+
+vim.o.clipboard = "unnamedplus"
