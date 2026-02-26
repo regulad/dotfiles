@@ -88,7 +88,6 @@ end
 " non-color stuff
 syntax on
 set number
-set clipboard+=unnamedplus
 if has('win32') || has('win64')
     set fileformats=dos,unix
     set fileformat=dos
@@ -97,6 +96,7 @@ else
     set fileformat=unix
 endif
 if has("nvim")
-    let g:clipboard = 'osc52'
     setlocal spell spelllang=en_us
+else
+    set clipboard+=unnamedplus
 end
