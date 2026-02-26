@@ -46,6 +46,7 @@ if !has("nvim")
 else
     " REMEMBER TO UPDATE .config/nvim/lua/plugins.lua
     " WITH ANY ADDED PLUGINS!
+    echom "nvim mode"
 end
 
 " Start my custom things
