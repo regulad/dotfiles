@@ -53,9 +53,6 @@ Host pelican
 Host matrix
     HostName matrix.tail11540.ts.net
 
-Host git
-    HostName git.home.arpa
-
 Host tinker
     HostName tinker.tail11540.ts.net
 
@@ -143,8 +140,8 @@ Host github.com
 {{- end }}
     IdentitiesOnly yes
 
-Host git.regulad.xyz
-    HostName git.regulad.xyz
+Host invent.kde.org
+    HostName invent.kde.org
     User git
 {{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa.pub
@@ -152,9 +149,12 @@ Host git.regulad.xyz
 {{- end }}
     IdentitiesOnly yes
 
-Host invent.kde.org
-    HostName invent.kde.org
-    User git
+# git.regulad.xyz (super special case)
+
+Host git-ssh.regulad.xyz
+    ProxyCommand cloudflared access ssh --hostname %h
+    HostName git-ssh.regulad.xyz
+    User forgejo
 {{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa.pub
     IdentityFile ~/.ssh/id_rsa  # fallback
