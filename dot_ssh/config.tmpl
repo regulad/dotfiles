@@ -54,13 +54,7 @@ Host matrix
     HostName matrix.tail11540.ts.net
 
 Host git
-    HostName git.tail11540.ts.net
-    User opc
-{{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
-{{- end }}
-    IdentitiesOnly yes
+    HostName git.home.arpa
 
 Host tinker
     HostName tinker.tail11540.ts.net
