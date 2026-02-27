@@ -53,6 +53,15 @@ Host pelican
 Host matrix
     HostName matrix.tail11540.ts.net
 
+Host git
+    HostName git.tail11540.ts.net
+    User opc
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+{{- end }}
+    IdentitiesOnly yes
+
 Host tinker
     HostName tinker.tail11540.ts.net
 
@@ -94,16 +103,6 @@ Host penumbra
 # There is a ton of garbage with "key scopes" that prevents the use of junctions while connected.
 
 # Oracle (Legacy VCN)
-Host git.regulad.xyz
-
-Match Host git.regulad.xyz User opc
-    User opc
-{{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
-{{- end }}
-    IdentitiesOnly yes
-
 Host doppelgangerhq.com
     User ubuntu
 {{- if not .useDummySecrets }}
