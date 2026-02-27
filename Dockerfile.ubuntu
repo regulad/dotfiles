@@ -97,6 +97,7 @@ RUN --mount=type=tmpfs,target=/tmp \
     nvidia-cuda-toolkit \
     systemd \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
+  && update-locale LANG=en_US.UTF-8 \
   \
   && visudo -c && for f in /etc/sudoers.d/*; do visudo -c -f "$f"; done \
   && sudo -l -U ${USERNAME} | grep -q "NOPASSWD: ALL" \
