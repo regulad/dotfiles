@@ -74,18 +74,31 @@ rclone ^
 less ^
 imagemagick ^
 autohotkey ^
-languagetool-java
+languagetool-java ^
+nssm
 
+REM Complex command blocks inside for loops break cmd's parser even without pipes.
+REM Subroutine call isolates each package check cleanly. Fix by Claude Sonnet 4.6 (Anthropic).
 echo debug: installing new scoop packages
-for %%p in (%packages%) do (
-    scoop list %%p 2>nul | findstr /i "%%p" >nul 2>&1
-    if !errorLevel! neq 0 (
-        call scoop install %%p
-    )
+for %%p in (%packages%) do call :check_install %%p
+goto :after_check_install
+
+:check_install
+scoop list %1 2>nul | findstr /r /c:"%1  *[0-9]" >nul 2>&1
+if errorlevel 1 (
+    echo debug: %1 not installed, installing...
+    scoop install %1
+) else (
+    echo debug: %1 already installed, skipping
 )
+exit /b
+
+:after_check_install
+call refreshenv >nul 2>&1
 
 echo debug: updating existing scoop packages
 call scoop update --all
+call refreshenv >nul 2>&1
 
 echo debug: setting autorun
 call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
@@ -136,6 +149,7 @@ for %%p in (%winget_packages%) do (
         call winget install --id %%p --silent --accept-source-agreements --accept-package-agreements
     )
 )
+call refreshenv >nul 2>&1
 
 REM Setup symlinks from windows-specific AppData into the XDG .config directory
 set local_links=^
@@ -170,6 +184,19 @@ for %%L in (%roaming_links%) do (
     )
 )
 
-call refreshenv >nul 2>&1
+REM service setup
+sc query LanguageTool >nul 2>&1
+if !errorLevel! neq 0 (
+    echo Registering LanguageTool service...
+    set LT_PATH=%USERPROFILE%\scoop\apps\languagetool-java\current
+    sudo nssm install LanguageTool "%JAVA_HOME%\bin\java.exe"
+    sudo nssm set LanguageTool AppParameters "-cp \"!LT_PATH!\languagetool-server.jar\" org.languagetool.server.HTTPServer --port 8081 --allow-origin \"*\""
+    sudo nssm set LanguageTool AppDirectory "!LT_PATH!"
+    sudo nssm set LanguageTool Start SERVICE_AUTO_START
+    sudo nssm start LanguageTool
+    echo LanguageTool service registered and started.
+) else (
+    echo LanguageTool service already registered, skipping.
+)
 
 echo note: leaving hookscript
