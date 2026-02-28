@@ -109,12 +109,14 @@ local function get_paste_cmd()
 end
 
 local function get_copy_cmd()
-  -- override copy for tmux and termux; everything else uses OSC52
-  if vim.env.TMUX ~= nil then
-    return { "tmux", "load-buffer", "-" }
-  elseif vim.env.PREFIX ~= nil and vim.fn.executable("termux-clipboard-set") == 1 then
+  --if vim.env.TMUX ~= nil then
+  --  return { "tmux", "load-buffer", "-" }
+
+  --else
+  if vim.env.PREFIX ~= nil and vim.fn.executable("termux-clipboard-set") == 1 then
     return { "termux-clipboard-set" }
   end
+
   return nil
 end
 
