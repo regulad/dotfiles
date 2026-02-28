@@ -159,6 +159,9 @@ for h in "${NCSU_HOSTS[@]}"; do
   alias "ssh-$h=sshpass -f $HOME/.ssh/id_plaintext_ncstate ssh $h"
 done
 
+if [ -n "${ZSH_VERSION-}" ]; then
+  unalias vi
+fi
 vi() { 
   command "$VISUAL" "$@"
 }
