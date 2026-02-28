@@ -26,6 +26,14 @@ if [ -d "$HOME/.local/bin" ] ; then
     PATH="$HOME/.local/bin:$PATH"
 fi
 
+ZSH="$(command -v zsh)"
+
+# change into zsh if possible
+if [ "$SHELL" != "$ZSH" ] && [ -x "$ZSH" ]; then
+    export SHELL="$ZSH"
+    exec "$ZSH"
+fi
+
 # auto-attach tmux if in an interactive session if not nested
 if command -v tmux &> /dev/null && [ -z "$TMUX" ] && [[ $- == *i* ]]; then
     exec tmux new-session -A -s profile_spawn
