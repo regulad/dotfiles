@@ -159,7 +159,9 @@ for h in "${NCSU_HOSTS[@]}"; do
   alias "ssh-$h=sshpass -f $HOME/.ssh/id_plaintext_ncstate ssh $h"
 done
 
-vi() { command "$VISUAL" "$@"; }
+vi() { 
+  command "$VISUAL" "$@"
+}
 if [ -n "${ZSH_VERSION-}" ]; then
   case "$VISUAL" in
     *nvim) compdef vi=nvim ;;
@@ -176,7 +178,7 @@ ssh-privpub() {
 [ -n "$ZSH_VERSION" ] && compdef _files ssh-privpub
 
 chezmoi-cd() {
-    cd $(chezmoi source-path)
+    cd "$(chezmoi source-path)"
 }
 bw-unlock() {
     export BW_SESSION="$(bw unlock --raw)"
