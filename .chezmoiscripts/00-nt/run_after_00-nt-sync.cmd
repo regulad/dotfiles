@@ -73,11 +73,12 @@ wingetcreate ^
 rclone ^
 less ^
 imagemagick ^
-autohotkey
+autohotkey ^
+languagetool-java
 
 echo debug: installing new scoop packages
 for %%p in (%packages%) do (
-    call scoop list %%p >nul 2>&1
+    scoop list %%p 2>nul | findstr /i "%%p" >nul 2>&1
     if !errorLevel! neq 0 (
         call scoop install %%p
     )
