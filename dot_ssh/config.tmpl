@@ -11,6 +11,7 @@ Host neodingus
     IdentityFile ~/.ssh/id_rsa  # fallback
 {{- end }}
     IdentitiesOnly yes
+    ForwardAgent yes
 
 Host prodingus
     HostName prodingus.tail11540.ts.net
@@ -20,6 +21,7 @@ Host prodingus
     IdentityFile ~/.ssh/id_rsa  # fallback
 {{- end }}
     IdentitiesOnly yes
+    ForwardAgent yes
 
 Host samsung-sm-a526u1
     HostName samsung-sm-a526u1.tail11540.ts.net
@@ -30,65 +32,76 @@ Host samsung-sm-a526u1
     IdentityFile ~/.ssh/id_rsa  # fallback
 {{- end }}
     IdentitiesOnly yes
+    ForwardAgent yes
 
 Host pihole
     HostName pihole.home.arpa
     User root
     PubkeyAuthentication no
     PreferredAuthentications password
+    ForwardAgent yes
 
 # Static hosts
 Host macserver
     HostName macserver.tail11540.ts.net
+    ForwardAgent yes
 
 Host winserver
     HostName winserver.tail11540.ts.net
+    ForwardAgent yes
 
 Host dingus-server
     HostName dingus-server.tail11540.ts.net
+    ForwardAgent yes
 
 Host pelican
     HostName pelican.tail11540.ts.net
+    ForwardAgent yes
 
 Host matrix
     HostName matrix.tail11540.ts.net
+    ForwardAgent yes
 
 Host tinker
     HostName tinker.tail11540.ts.net
+    ForwardAgent yes
 
 Host lancache
     HostName lancache.home.arpa
+    ForwardAgent yes
 
 Host proencode
     HostName proencode.home.arpa
+    ForwardAgent yes
 
 Host procuda
     HostName procuda.home.arpa
+    ForwardAgent yes
 
 Host freeipa
     HostName freeipa.home.arpa
+    ForwardAgent yes
 
 Host authentik
     HostName authentik.home.arpa
+    ForwardAgent yes
 
 Host timemachine
     HostName timemachine.home.arpa
+    ForwardAgent yes
 
 Host gha
-    # does cloud-init
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null
     HostName gha.home.arpa
+    ForwardAgent yes
 
 Host microk8s
-    # does cloud-init
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null
     HostName microk8s.home.arpa
+    ForwardAgent yes
 
 # Mobile hosts
 Host penumbra
     HostName penumbra.tail11540.ts.net
+    ForwardAgent yes
 
 # Windows hosts are no longer included for ssh key auth.
 # There is a ton of garbage with "key scopes" that prevents the use of junctions while connected.
@@ -101,6 +114,7 @@ Host doppelgangerhq.com
     IdentityFile ~/.ssh/id_rsa  # fallback
 {{- end }}
     IdentitiesOnly yes
+    ForwardAgent yes
 
 # Oracle (wahlecloud)
 Host tailscalerouter
@@ -111,8 +125,12 @@ Match Host tailscalerouter User opc
     IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key  # fallback
 {{- end }}
     IdentitiesOnly yes
+    ForwardAgent yes
 
 Host livekit
+
+Match Host mail User regulad
+    ForwardAgent yes
 
 Match Host livekit User opc
 {{- if not .useDummySecrets }}
@@ -123,6 +141,9 @@ Match Host livekit User opc
 
 Host mail
 
+Match Host mail User regulad
+    ForwardAgent yes
+
 Match Host mail User opc
 {{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/ssh-key-2025-12-08_mail.key.pub
@@ -130,7 +151,7 @@ Match Host mail User opc
 {{- end }}
     IdentitiesOnly yes
 
-# Personal
+# Personal Git
 Host github.com
     HostName github.com
     User git
@@ -150,7 +171,6 @@ Host invent.kde.org
     IdentitiesOnly yes
 
 # git.regulad.xyz (super special case)
-
 Host git-ssh.regulad.xyz
     ProxyCommand cloudflared access ssh --hostname %h
     HostName git-ssh.regulad.xyz
@@ -160,6 +180,9 @@ Host git-ssh.regulad.xyz
     IdentityFile ~/.ssh/id_rsa  # fallback
 {{- end }}
     IdentitiesOnly yes
+
+Match Host mail User regulad
+    ForwardAgent yes
 
 # ncsu
 Host github.ncsu.edu
