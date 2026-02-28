@@ -20,7 +20,7 @@
 {{- if eq .chezmoi.os "darwin" }}
 {{-   $cpuCores = (output "sysctl" "-n" "hw.physicalcpu_max") | trim | atoi }}
 {{-   $cpuThreads = (output "sysctl" "-n" "hw.logicalcpu_max") | trim | atoi }}
-{{- else if and (eq .chezmoi.os "linux") (eq (trimAll "\n" (output "systemd-detect-virt" "--container")) "none") }}
+{{- else if and (eq .chezmoi.os "linux") (eq (trimAll "\n" (output "sh" "-c" "systemd-detect-virt --container; true")) "none") }}
 {{-   $cpuCores = (output "sh" "-c" "lscpu --online --parse | grep --invert-match '^#' | sort --field-separator=',' --key='2,4' --unique | wc --lines") | trim | atoi }}
 {{-   $cpuThreads = (output "sh" "-c" "lscpu --online --parse | grep --invert-match '^#' | wc --lines") | trim | atoi }}
 {{- else if eq .chezmoi.os "windows" }}
