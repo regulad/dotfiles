@@ -38,3 +38,6 @@ fi
 if command -v tmux &> /dev/null && [ -z "$TMUX" ] && [[ $- == *i* ]]; then
     exec tmux new-session -A -s profile_spawn
 fi
+
+# warning
+echo "warning: bashrc is no longer updated, use zsh" >&2
