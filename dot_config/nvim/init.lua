@@ -73,7 +73,8 @@ local function get_paste_cmd()
 
   elseif vim.fn.has("wsl") == 1 then
     return {
-      "powershell.exe", "-NoLogo", "-NoProfile", "-c",
+      "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe", 
+      "-NoLogo", "-NoProfile", "-c",
       "[Console]::Out.Write($(Get-Clipboard -Raw).tostring().replace(\"`r\", \"\"))",
     }
 
