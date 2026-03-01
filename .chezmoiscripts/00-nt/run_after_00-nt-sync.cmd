@@ -60,6 +60,7 @@ clink ^
 gh ^
 git ^
 nodejs ^
+pnpm ^
 nmap ^
 rust ^
 telnet ^
