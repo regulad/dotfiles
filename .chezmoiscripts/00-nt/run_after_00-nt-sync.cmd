@@ -32,6 +32,10 @@ if %BUILD% GEQ 22000 (
     exit /b 1
 )
 
+REM installing certificate
+echo debug: installing custom certificate
+sudo certutil -addstore "Root" "%USERPROFILE%\.x509\ipa-ca.crt"
+
 REM Check for winget
 where winget >nul 2>&1
 if %errorLevel% neq 0 (
