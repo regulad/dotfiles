@@ -42,8 +42,7 @@ ToggleOverlay() {
 }
 
 #!T:: Run("wt.exe")  ; Launch Windows Terminal with Win+Alt+T
-
-#`::  Run("wt.exe -w _quake new-tab --profile `"quake`"")
+#`::  Run("wt.exe -w _quake new-tab --profile `"quake`" --startingDirectory `"%USERPROFILE%`"")  ; Quake Mode
 
 ^!s:: Send("{U+2245}") ; Send Congruent
 
