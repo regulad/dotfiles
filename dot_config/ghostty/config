@@ -47,8 +47,11 @@
 # # which is explained in the docs for that config option.
 # # Just for example:
 # resize-overlay-duration = 4s 200ms
+
+# i literally just use ghostty for the quake shell
 shell-integration = none
 theme = light:Apple System Colors Light,dark:Apple System Colors
-background-opacity = 0.7
+background-opacity = 0.8
 background-blur = true
 keybind = global:cmd+grave_accent=toggle_quick_terminal
+initial-window = false
