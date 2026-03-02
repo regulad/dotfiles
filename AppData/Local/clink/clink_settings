@@ -1,0 +1,10 @@
+# name: Auto-update the Clink program files
+# type: enum
+# options: off,check,prompt,auto
+clink.autoupdate = off
+
+# name: Controls spacing before prompt
+# type: enum
+# options: normal,compact,sparse
+prompt.spacing = compact
+
