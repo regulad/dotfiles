@@ -28,13 +28,16 @@ REM other environment variables
 REM DO NOT INCLUDE QUOTES!
 set RCLONE_CONFIG=%USERPROFILE%\.config\rclone\rclone.conf
 
+REM display fancy stuff if this is an interactive session
+echo %CMDCMDLINE% | findstr /I /C:"/C" >nul && goto :end || goto :interactive
+
+:interactive
+REM padding from clink
+echo(
+
 REM unix-style prompt while still windows-y
 PROMPT %USERNAME%@%COMPUTERNAME% $P$G
 
 REM final fastfetch for both terminal-porn and usefulness since i switch between machines
-echo(
 call fastfetch
-
-REM just a clean line after clink injects
-REM need to do echo( to not just echo "" or ECHO is off.. boy, I love windows!
-echo(
+:end
