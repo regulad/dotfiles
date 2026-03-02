@@ -42,7 +42,13 @@ ToggleOverlay() {
 }
 
 #!T:: Run("wt.exe")  ; Launch Windows Terminal with Win+Alt+T
-#`::  Run("wt.exe -w _quake new-tab --profile `"quake`" --startingDirectory `"%USERPROFILE%`"")  ; Quake Mode
+#`::  ; Quake Mode
+{
+    if WinExist("quake ahk_exe WindowsTerminal.exe")
+        Run("wt.exe -w _quake focus-tab")
+    else
+        Run("wt.exe -w _quake new-tab --profile `"quake`" --startingDirectory `"" A_UserProfile "`"")
+}
 
 ^!s:: Send("{U+2245}") ; Send Congruent
 
