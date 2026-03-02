@@ -334,8 +334,10 @@ elif command -v brew &>/dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
 	MANAGER="brew"
 
 	# macOS brew-specific tap / dep setups
-	# used to tap my own tap here with `brew tap regulad/homebrew-tap` but since it doesn't require any special "caveats" like kde-mac I can just declare it inside of the formula
+	cp -vf /System/Applications/Utilities/Terminal.app/Contents/Resources/Fonts/* ~/Library/Fonts
+
 	brew tap kde-mac/kde https://invent.kde.org/packaging/homebrew-kde.git && "$(brew --repo kde-mac/kde)/tools/do-caveats.sh"
+	brew tap regulad/homebrew-tap
 
 	# software updates
 	if [ "$(arch)" = "arm64" ]; then
