@@ -53,5 +53,5 @@ shell-integration = none
 theme = light:Apple System Colors Light,dark:Apple System Colors
 background-opacity = 0.8
 background-blur = true
-keybind = global:cmd+grave_accent=toggle_quick_terminal
+keybind = global:cmd+backquote=toggle_quick_terminal
 initial-window = false
