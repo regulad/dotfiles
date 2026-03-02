@@ -1,16 +1,7 @@
 {
     "$help": "https://aka.ms/terminal-documentation",
     "$schema": "https://aka.ms/terminal-profiles-schema",
-    "actions": [
-        {
-            "command": {
-                "action": "newWindow",
-                "window": "_quake",
-                "profile": "quake"
-            },
-            "keys": "win+`"
-        }
-    ],
+    "actions": [],
     "autoHideWindow": false,
     "compatibility.allowHeadless": true,
     "copyFormatting": "none",
