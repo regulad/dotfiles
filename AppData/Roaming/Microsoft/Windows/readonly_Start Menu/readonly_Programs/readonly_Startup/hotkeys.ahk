@@ -43,6 +43,8 @@ ToggleOverlay() {
 
 #!T:: Run("wt.exe")  ; Launch Windows Terminal with Win+Alt+T
 
+#`::  Run("wt.exe -w _quake new-tab --profile `"quake`"")
+
 ^!s:: Send("{U+2245}") ; Send Congruent
 
 ^!a:: Send("{U+2220}") ; Send Angle
