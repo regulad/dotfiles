@@ -1,6 +1,7 @@
 pipx=uv tool $*
 vi=nvim $*
 vi-wt=chezmoi edit --apply "%USERPROFILE%\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
+vi-ah=chezmoi edit --apply "%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\hotkeys.ahk"
 clear=cls
 gsudo=sudo $*
 chezmoi-cd=cd /d "%USERPROFILE%\.local\share\chezmoi"
