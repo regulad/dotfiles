@@ -10,6 +10,9 @@
     }
   },
   "modules": [
+{{- if eq .chezmoi.os "windows" }}
+    {"type": "separator", "string": ""},
+{{- end }}
     "title",
     "separator",
     "os",
@@ -22,10 +25,13 @@
     "gpu",
     "memory",
 {{- if ne .chezmoi.os "windows" }}
-    "disk" //, // takes forever on windows. because of course it does
-{{ end -}}
+    "disk", // takes forever on windows. because of course it does
+{{- end }}
     // "localip",
     // "battery",
-    // "display"
+    // "display",
+{{- if eq .chezmoi.os "windows" }}
+    {"type": "separator", "string": ""},
+{{- end }}
   ]
 }
