@@ -43,4 +43,5 @@ call fastfetch
 
 REM padding from fastfetch
 echo(
+echo(
 :end
