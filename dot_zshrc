@@ -10,7 +10,7 @@ plugins=(
     gh
     zsh-autosuggestions
 )
-
+zstyle ':omz:update' mode disabled
 source $ZSH/oh-my-zsh.sh
 # ohmyzsh end
 
