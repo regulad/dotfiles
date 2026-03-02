@@ -18,6 +18,8 @@ fi
 
 # this file is sourced by both zsh and bash; should use common syntax
 if [ "$(uname -o)" = "Darwin" ]; then
+    export PATH="/Applications/Ghostty.app/Contents/MacOS/:$PATH"
+    
     if [ -n "$ZSH_VERSION" ]; then
         autoload -Uz colors && colors
         setopt promptsubst
