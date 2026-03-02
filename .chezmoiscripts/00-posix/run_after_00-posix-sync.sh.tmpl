@@ -677,11 +677,12 @@ export DENO_INSTALL="$HOME/.deno"
 export PATH="$DENO_INSTALL/bin:$PATH"
 
 ## minecraft fabric
-if ! command -v fabric &>/dev/null; then
-	deno install -A -g -n fabric https://fabricmc.net/cli
-else
-	fabric upgrade
-fi
+# if ! command -v fabric &>/dev/null; then
+#  	deno install -A -g -n fabric https://fabricmc.net/cli
+# else
+# 	fabric upgrade
+# fi
+## broken 3/1/26
 
 # Poetry
 # NOTE: redhat repositories provide poetry-core but not the CLI
