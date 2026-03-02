@@ -1,7 +1,16 @@
 {
     "$help": "https://aka.ms/terminal-documentation",
     "$schema": "https://aka.ms/terminal-profiles-schema",
-    "actions": [],
+    "actions": [
+        {
+            "command": {
+                "action": "newWindow",
+                "window": "_quake",
+                "profile": "quake"
+            },
+            "keys": "win+`"
+        }
+    ],
     "autoHideWindow": false,
     "compatibility.allowHeadless": true,
     "copyFormatting": "none",
@@ -67,7 +76,8 @@
                 "commandline": "%SystemRoot%\\System32\\cmd.exe",
                 "guid": "{b0f785f2-702c-4681-9973-7cdba3498bb6}",
                 "hidden": true,
-                "name": "_quake"
+                "name": "quake",
+                "experimental.autoHideWindow": true
             },
             {
                 "guid": "{51855cb2-8cce-5362-8f54-464b92b32386}",
