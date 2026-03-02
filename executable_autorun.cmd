@@ -40,4 +40,5 @@ PROMPT %USERNAME%@%COMPUTERNAME% $P$G
 
 REM final fastfetch for both terminal-porn and usefulness since i switch between machines
 call fastfetch
+REM can't do a padding after it because clink strips the last newline before the prompt
 :end
