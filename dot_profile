@@ -34,6 +34,8 @@ if [ "$SHELL" != "$ZSH" ] && [ -x "$ZSH" ]; then
     exec "$ZSH" "$@"
 fi
 
+. "$HOME/.commonprofile"
+
 # auto-attach tmux if in an interactive session if not nested
 if command -v tmux &> /dev/null && [ -z "$TMUX" ] && [[ $- == *i* ]]; then
     exec tmux new-session -A -s profile_spawn
