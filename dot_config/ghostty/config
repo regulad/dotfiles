@@ -55,4 +55,15 @@ background-opacity = 0.8
 background-blur = true
 keybind = global:cmd+backquote=toggle_quick_terminal
 initial-window = false
+copy-on-select = false
 confirm-close-surface = false
+vt-kam-allowed = true
+macos-titlebar-style = native
+macos-option-as-alt = true
+macos-hidden = true
+macos-secure-input-indication = false
+clipboard-paste-protection = false
+clipboard-read = ask
+clipboard-write = allow
+focus-follows-mouse = true
+minimum-contrast = 1.2
