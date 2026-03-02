@@ -143,10 +143,10 @@ fi
 # completions
 if [ -n "$ZSH_VERSION" ]; then
     eval "$(chezmoi completion zsh)"
-    eval "$(fabric completions zsh)"
+    # eval "$(fabric completions zsh)"  # broken 3/1/26
 else
     eval "$(chezmoi completion bash)"
-    eval "$(fabric completions bash)"
+    # eval "$(fabric completions bash)"  # broken 3/1/26
 fi
 
 # === ALIASES
