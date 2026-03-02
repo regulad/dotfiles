@@ -1,5 +1,4 @@
-. ~/.zshrc
-
+# unlike bash zsh always sources .zshrc in login sessions
 # auto-attach tmux if in an interactive session
 if command -v tmux &> /dev/null && [ -z "$TMUX" ] && [[ $- == *i* ]]; then
     exec tmux new-session -A -s profile_spawn
