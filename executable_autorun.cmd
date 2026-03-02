@@ -40,4 +40,7 @@ PROMPT %USERNAME%@%COMPUTERNAME% $P$G
 
 REM final fastfetch for both terminal-porn and usefulness since i switch between machines
 call fastfetch
+
+REM padding from fastfetch
+echo(
 :end
