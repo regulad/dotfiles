@@ -69,6 +69,7 @@
                 "hidden": true,
                 "name": "quake",
                 "opacity": 80,
+                "useAcrylic": true,
                 "experimental.autoHideWindow": true
             },
             {
