@@ -12,7 +12,7 @@
 	"telemetry.enableTelemetry": false,
 	"editor.cursorBlinking": "smooth",
 	"files.autoSave": "afterDelay",
-	"files.autoSaveDelay": 10,
+	"files.autoSaveDelay": 2000,
 	"editor.wordWrap": "on",
 	"diffEditor.codeLens": true,
 	"spellright.documentTypes": ["markdown", "latex", "plaintext"],
