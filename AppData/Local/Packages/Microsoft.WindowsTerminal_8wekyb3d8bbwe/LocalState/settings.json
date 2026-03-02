@@ -68,6 +68,7 @@
                 "guid": "{b0f785f2-702c-4681-9973-7cdba3498bb6}",
                 "hidden": true,
                 "name": "quake",
+                "opacity": 80,
                 "experimental.autoHideWindow": true
             },
             {
