@@ -3,8 +3,6 @@
 # Author: Parker Wahle (regulad)
 # Assisted by: Claude Sonnet 4.5
 # License: AGPLv3.0 - see LICENSE.md
-#
-# Based on Debian Trixie (Debian 13)
 
 FROM debian:trixie
 

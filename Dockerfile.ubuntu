@@ -3,8 +3,6 @@
 # Author: Parker Wahle (regulad)
 # Assisted by: Claude Sonnet 4.5
 # License: AGPLv3.0 - see LICENSE.md
-#
-# Based on Ubuntu Questing (Ubuntu 25.10)
 
 FROM ubuntu:questing
 
@@ -60,6 +58,7 @@ COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 # Install all development packages
 ## NOTE: for now, nvcc (provided by nvidia-cuda-toolkit) is installed in the container definitions rather than in the
 ##       bootstrap script. I may change this in the future.
+## NOTE: Ubuntu ships sudo-rs in place of sudo-ws, which doesn't behave the same was as sudo.ws in containers
 # Install s6-overlay
 # Install Homebrew as the UID 1000 user
 # Install pnpm globally
@@ -93,9 +92,11 @@ RUN --mount=type=tmpfs,target=/tmp \
     locales \
     procps \
     sudo \
+    sudo-rs \
     xz-utils \
     nvidia-cuda-toolkit \
     systemd \
+  && update-alternatives --set sudo /usr/bin/sudo.ws \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
   && update-locale LANG=en_US.UTF-8 \
   \

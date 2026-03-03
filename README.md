@@ -28,6 +28,19 @@ Supported environments:
 
 Brew will be installed on Darwin and Linux if it is not already installed. Rootless installs are supported but a warning will be emitted since I can't test every edge case.
 
+Linux environments are preferred in the following order:
+
+1. Fedora
+    - Why? DNF5 is fast, deterministic, and RHEL is the industry standard.
+    - I trust Red Hat more to ship reliable and efficient software more than I trust Canonical.
+2. Ubuntu
+    - Why? Homebrew builds against Ubuntu, and not base Debian.
+    - Don't get it twisted, I don't agree with Canonical's decision to replace the coreutils with rust rewrites.
+3. Debian
+    - I like Debian, I would place it above Ubuntu if Homebrew didn't delegate Debian to "Tier 2" support.
+
+All of the above environments are available in Docker pours (see the packages menu on the right).
+
 > *NOTE:* Termux is no longer supported in a first-class fashion. I don't have an Android phone.
 > Simialrly, RHEL is no longer supported in a first-class fashion. This setup is for desktop use.
 
