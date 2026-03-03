@@ -52,10 +52,12 @@ call refreshenv >nul 2>&1
 
 echo debug: updating scoop
 call scoop update
+call scoop bucket add psmux https://github.com/marlocarlo/scoop-psmux
 call scoop bucket add extras
 set packages=^
 bitwarden-cli ^
 chezmoi ^
+psmux ^
 clink ^
 gh ^
 git ^
