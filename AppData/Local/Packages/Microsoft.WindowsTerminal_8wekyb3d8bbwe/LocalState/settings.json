@@ -47,7 +47,9 @@
             ],
             "colorScheme": "CGA",
             "experimental.retroTerminalEffect": false,
-            "showMarksOnScrollbar": true
+            "showMarksOnScrollbar": true,
+            "altGrAliasing": true,
+            "antialiasingMode": "grayscale"
         },
         "list": 
         [
@@ -64,12 +66,14 @@
                 "name": "Command Prompt"
             },
             {
-                "commandline": "%SystemRoot%\\System32\\cmd.exe",
                 "guid": "{b0f785f2-702c-4681-9973-7cdba3498bb6}",
+                "commandline": "%USERPROFILE%\\scoop\\shims\\psmux.exe",
                 "hidden": true,
                 "name": "quake",
-                "opacity": 50,
-                "useAcrylic": true
+                "opacity": 80,
+                "useAcrylic": true,
+                "icon": "\u03df",
+                "startingDirectory": "%USERPROFILE%"
             },
             {
                 "guid": "{b453ae62-4e3d-5e58-b989-0a998ec441b8}",
@@ -90,25 +94,13 @@
                 "source": "Microsoft.WSL"
             },
             {
-                "altGrAliasing": true,
-                "antialiasingMode": "grayscale",
                 "closeOnExit": "automatic",
                 "commandline": "%USERPROFILE%\\scoop\\shims\\psmux.exe",
-                "cursorShape": "bar",
-                "font": 
-                {
-                    "face": "Cascadia Mono",
-                    "size": 12
-                },
                 "guid": "{552a0491-b301-4c1c-b2f4-7f7c15de9c8a}",
                 "hidden": false,
-                "historySize": 9001,
                 "icon": "\ue70a",
                 "name": "psmux",
-                "padding": "8, 8, 8, 8",
-                "snapOnInput": true,
-                "startingDirectory": "%USERPROFILE%",
-                "useAcrylic": false
+                "startingDirectory": "%USERPROFILE%"
             }
         ]
     },
