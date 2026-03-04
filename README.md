@@ -114,14 +114,11 @@ Remember to define the package in the correct hookscript (i.e. `run_posix-sync.s
 ## TODOs
 
 - [x] Cattle: Add userspace tailscale in vagrant for opencode/sus software
-- [ ] Zsh: Finalize & memorize zsh backsearch keybinds
 - [x] Nt: Write NT self-bootstrapping script
 - [x] Doc: Emit warnings in vim and bash
 - [ ] Doc: Annotate `rc`s with philosophy (no network requests, fast boot, etc.
 - [x] Brew: Brew on permissionless systems w/ gentoo-style custom prefixes
 - [ ] Brew: Use zerobrew if available on macOS (way fuckin faster)
-- [ ] Kmr: Export nvim map
-- [ ] Kmr: Export tmux map
 - [x] Nvim: Fix nvim newline behaviour
 - [x] Nvim: Relative + absolute line numbers in nvim
 - [x] Nvim: Addl. language server configurations in nvim
