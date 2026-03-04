@@ -37,3 +37,8 @@ g = 9.8  # N/kg
 C = 4.2  # kJ/kg/degC
 # Room temperature
 T_room = 293.15  # K
+
+
+# Gamma factor
+def gamma(v: float) -> float:
+    return 1 / sqrt(1 - ((abs(v) / c) ** 2))
