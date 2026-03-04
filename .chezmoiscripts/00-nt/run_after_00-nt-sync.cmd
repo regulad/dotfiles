@@ -128,7 +128,7 @@ MHNexus.HxD ^
 VideoLAN.VLC ^
 Prusa3D.PrusaSlicer ^
 PuTTY.PuTTY ^
-VB-Audio.Voicemeeter ^
+VB-Audio.Voicemeeter.Potato ^
 EclipseAdoptium.Temurin.25.JDK ^
 EclipseAdoptium.Temurin.21.JDK ^
 OpenJS.NodeJS.LTS ^
