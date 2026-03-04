@@ -76,7 +76,6 @@ RUN --mount=type=tmpfs,target=/tmp \
   && echo "LANG=en_US.UTF-8" > /etc/locale.conf \
   \
   && sed -i '/^Defaults[[:space:]]*use_pty/d' /etc/sudoers \
-  && sed -i '/pam_loginuid.so/s/^/# /' /etc/pam.d/common-session-noninteractive \
   && visudo -c && for f in /etc/sudoers.d/*; do visudo -c -f "$f"; done \
   && sudo -l -U ${USERNAME} | grep -q "NOPASSWD: ALL" \
   && su -l ${USERNAME} -c '/usr/bin/sudo -n -l mkdir; echo "DEBUG! EXIT_CODE: $?"' \
