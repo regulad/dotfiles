@@ -139,12 +139,13 @@ Mozilla.Firefox ^
 WinFsp.WinFsp ^
 Microsoft.Sysinternals.Suite ^
 dotPDN.PaintDotNet ^
+TigerVNC.TigerVNC ^
+Autodesk.Fusion360 ^
 Wakatime.DesktopWakatime ^
 BillStewart.SyncthingWindowsSetup
 
 REM following winget packages are not installed even though I would like them:
 REM Syncthing.Syncthing - doesn't install GUI; billstewart version is psuedo-official and is used instead
-REM Autodesk.DesktopApp - appears to block winget installs
 
 for %%p in (%winget_packages%) do (
     call winget list --id %%p --exact >nul 2>&1
