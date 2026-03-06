@@ -132,6 +132,7 @@ VB-Audio.Voicemeeter.Potato ^
 EclipseAdoptium.Temurin.25.JDK ^
 EclipseAdoptium.Temurin.21.JDK ^
 OpenJS.NodeJS.LTS ^
+Vencord.Vesktop ^
 DenoLand.Deno ^
 Microsoft.VisualStudioCode ^
 TeamViewer.TeamViewer ^
@@ -159,6 +160,9 @@ for %%p in (%winget_packages%) do (
     )
 )
 call refreshenv >nul 2>&1
+
+echo warning: the following pieces of software need manual installs:
+echo   - AMD Adrenalin Software / Radeon Driver Suite
 
 REM Setup symlinks from windows-specific AppData into the XDG .config directory
 set local_links=^
