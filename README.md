@@ -77,7 +77,9 @@ bw config server https://vw.regulad.xyz  # this is my server, obviously. replace
 bw login --apikey  # stdio needed
 
 # Final apply with real secrets
-chezmoi init && chezmoi apply
+chezmoi init
+chezmoi apply ~/key.txt  # bootstraps age
+chezmoi apply
 ```
 
 ### NT Install
@@ -96,7 +98,9 @@ bw config server https://vw.regulad.xyz  # this is my server, obviously. replace
 bw login --apikey  # stdio needed
 
 # Final apply with real secrets
-chezmoi init && chezmoi apply
+chezmoi init
+chezmoi apply %USERPROFILE%\key.txt  # bootstraps age
+chezmoi apply
 ```
 
 The `autorun.cmd` will automatically set up Clink and doskey macros (`pipx`, `vi`, `chezmoi-cd`, `ssh-privpub`) on each shell startup.
