@@ -34,7 +34,7 @@ EOF
 		if [ "$VERSION_ID" -gt 10 ]; then
 			# The wslutilities/wslu COPR was not maintained past RHEL 10, so on newer
 			# RHEL releases the repo file's $releasever resolves to a non-existent path.
-			# Write the repo file manually with the last working baseurl hardcoded to RHEL 10.
+			# Write the repo file manually with the last working baseurl hardcoded to epel-10.
 			sudo tee /etc/yum.repos.d/wslutilities-wslu.repo >/dev/null <<EOF
 [copr:copr.fedorainfracloud.org:wslutilities:wslu]
 name=Copr repo for wslu owned by wslutilities
