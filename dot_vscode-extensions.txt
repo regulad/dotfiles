@@ -29,3 +29,7 @@ wakatime.vscode-wakatime
 redhat.vscode-yaml
 MS-vsliveshare.vsliveshare
 wytheglobal.pdfmore
+EditorConfig.EditorConfig
+stylelint.vscode-stylelint
+Vendicated.vencord-companion
+GregorBiswanger.json2ts
