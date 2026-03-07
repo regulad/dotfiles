@@ -744,6 +744,7 @@ fi
 #       Until then, for cli apps, I will be using the lowest version of Cpython that has is checked.
 uv tool install -q ruff # astral-backed
 uv tool install -q ty   # astral-backed
+uv tool install -q pre-commit
 uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
 uv tool install -q "rendercv[full]"
 # like in the JS ecosystem, some python tools are available as tools/bottles from brew
