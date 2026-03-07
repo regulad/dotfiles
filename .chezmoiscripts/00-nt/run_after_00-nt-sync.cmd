@@ -61,6 +61,7 @@ psmux ^
 clink ^
 gh ^
 git ^
+ffdec ^
 nodejs ^
 pnpm ^
 nmap ^
