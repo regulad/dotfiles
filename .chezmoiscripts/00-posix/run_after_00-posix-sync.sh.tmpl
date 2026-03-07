@@ -246,6 +246,12 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"dr:pciutils"  # needed by llama.cpp
 	"d:libcurl4-openssl-dev"
 	"r:libcurl-devel"
+	## libolm is depreciated upstream but still needed to build the mautrix tools
+	"m:libolm"
+	"d:libolm3"
+	"d:libolm-dev"
+	"r:libolm"
+	"r:libolm-devel"
 
 	# =+= MISC
 	"d:thin-provisioning-tools"  # not natively available redhat
