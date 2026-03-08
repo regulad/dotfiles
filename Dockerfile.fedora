@@ -90,7 +90,7 @@ RUN --mount=type=tmpfs,target=/tmp \
   && su -l ${USERNAME} -c 'NONINTERACTIVE=1 CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' \
   && npm install -g pnpm \
   && su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; brew install chezmoi' \
-  && su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; CHEZMOI_USE_DUMMY=1 chezmoi init; chezmoi apply --exclude encrypted' \
+  && su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; CHEZMOI_USE_DUMMY=1 CHEZMOI_USE_HEADLESS=1 chezmoi init; chezmoi apply --exclude encrypted' \
   \
   && rm -rf /home/${USERNAME}/.cache/* \
   && dnf clean all

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+CHEZMOI_USE_DUMMY={{ if .useDummySecrets }}1{{ else }}0{{ end }}
+
+VENCORD_DIR="$HOME/.vencord"
+
+if [[ "$CHEZMOI_USE_DUMMY" -eq 1 ]]; then
+    REMOTE_URL="https://github.com/regulad/Vencord.git"
+else
+    REMOTE_URL="git@github.com:regulad/Vencord.git"
+fi
+
+if [[ ! -d "$VENCORD_DIR" ]]; then
+    git clone "$REMOTE_URL" "$VENCORD_DIR"
+else
+    git -C "$VENCORD_DIR" remote set-url origin "$REMOTE_URL"
+    git -C "$VENCORD_DIR" fetch origin
+    git -C "$VENCORD_DIR" checkout main
+    git -C "$VENCORD_DIR" pull origin main
+fi
+
+(cd "$VENCORD_DIR" && pnpm i && pnpm build)

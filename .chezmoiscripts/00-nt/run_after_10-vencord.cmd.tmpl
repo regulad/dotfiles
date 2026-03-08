@@ -1,0 +1,24 @@
+@echo off
+
+{{ if .useDummySecrets }}SET CHEZMOI_USE_DUMMY=1{{ end }}
+
+SET VENCORD_DIR=%USERPROFILE%\.vencord
+
+IF DEFINED CHEZMOI_USE_DUMMY (
+    SET REMOTE_URL=https://github.com/regulad/Vencord.git
+) ELSE (
+    SET REMOTE_URL=git@github.com:regulad/Vencord.git
+)
+
+IF NOT EXIST "%VENCORD_DIR%" (
+    git clone "%REMOTE_URL%" "%VENCORD_DIR%"
+) ELSE (
+    git -C "%VENCORD_DIR%" remote set-url origin "%REMOTE_URL%"
+    git -C "%VENCORD_DIR%" fetch origin
+    git -C "%VENCORD_DIR%" checkout main
+    git -C "%VENCORD_DIR%" pull origin main
+)
+
+PUSHD "%VENCORD_DIR%"
+pnpm i && pnpm build
+POPD

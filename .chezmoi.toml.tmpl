@@ -50,6 +50,7 @@ encryption = "age"
     bash = "/bin/bash"
 {{- end }}
     useDummySecrets = {{ env "CHEZMOI_USE_DUMMY" | not | not }}
+    useHeadless = {{ env "CHEZMOI_USE_HEADLESS" | not | not }}
 [data.chassis]
     type = "{{ $chassisType }}"
     cores = {{ $cpuCores }}

@@ -21,6 +21,12 @@ key.txt
 .android/debug.keystore
 {{- end }}
 
+# Head
+{{- if .useHeadless }}
+.chezmoiscripts/00-posix/10-vencord.sh
+.chezmoiscripts/00-nt/10-vencord.cmd
+{{- end }}
+
 # Windows
 {{- if ne .chezmoi.os "windows" }}
 .chezmoiscripts/00-nt/*
