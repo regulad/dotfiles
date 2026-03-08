@@ -30,11 +30,7 @@
 
 encryption = "age"
 [age]
-{{- if eq .chezmoi.os "windows" }}
-    identity = "{{ env "USERPROFILE" }}\\key.txt"
-{{- else }}
-    identity = "{{ env "HOME" }}/key.txt"
-{{- end }}
+    identity = "{{ .chezmoi.homeDir }}/key.txt"
     recipient = "age14e7wj4lltcvva2jy9vzzul8y7yuj5xk9vtqfxt9erzz58xqwmpjqurdhep"
 [git]
     autoCommit = true
