@@ -1,4 +1,14 @@
 {
+	"terminal.integrated.profiles.windows": {
+  	"Command Prompt": {
+    	"path": [
+      	"${env:windir}\\Sysnative\\cmd.exe",
+      	"${env:windir}\\System32\\cmd.exe"
+    	],
+    	"args": [],
+    	"icon": "terminal-cmd"
+  	}
+	},
 	"terminal.integrated.defaultProfile.windows": "Command Prompt",
 	"editor.formatOnSave": true,
 	"explorer.confirmDelete": false,
