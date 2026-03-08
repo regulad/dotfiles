@@ -746,7 +746,7 @@ uv tool install -q ruff # astral-backed
 uv tool install -q ty   # astral-backed
 uv tool install -q pre-commit
 uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
-uv tool install -q "rendercv[full]"
+uv tool install --python cp314 -q "rendercv[full]@2.3"  # you break semver! fuck you! no AI slop without bumping major!
 # like in the JS ecosystem, some python tools are available as tools/bottles from brew
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q \
