@@ -101,8 +101,7 @@ RUN --mount=type=tmpfs,target=/tmp \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
   && update-locale LANG=en_US.UTF-8 \
   \
-  && sed -i '/^Defaults[[:space:]]*use_pty/d' /etc/sudoers \
-  && sed -i '/pam_loginuid.so/s/^/# /' /etc/pam.d/common-session-noninteractive \
+  && echo 'Defaults !use_pty, !pam_acct_mgmt' >> /etc/sudoers.d/docker-nopasswd \
   && visudo -c && for f in /etc/sudoers.d/*; do visudo -c -f "$f"; done \
   && sudo -l -U ${USERNAME} | grep -q "NOPASSWD: ALL" \
   && su -l ${USERNAME} -c '/usr/bin/sudo -n -l mkdir; echo "DEBUG! EXIT_CODE: $?"' \
