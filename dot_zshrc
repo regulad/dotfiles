@@ -40,3 +40,8 @@ EOF
 if [ "$(uname -o)" = "Android" ]; then
     PROMPT="%# "
 fi
+
+# source other zsh files
+for f in ~/.config/zsh/*.zsh(N); do
+  source "$f"
+done
