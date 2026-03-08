@@ -98,7 +98,9 @@ RUN --mount=type=tmpfs,target=/tmp \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
   && update-locale LANG=en_US.UTF-8 \
   \
-&& echo 'Defaults !use_pty, !pam_acct_mgmt' >> /etc/sudoers.d/docker-nopasswd \  && visudo -c && for f in /etc/sudoers.d/*; do visudo -c -f "$f"; done \
+  && echo 'Defaults !use_pty, !pam_acct_mgmt' >> /etc/sudoers.d/docker-nopasswd \
+  && chmod 0440 /etc/sudoers.d/docker-nopasswd \
+  && visudo -c && for f in /etc/sudoers.d/*; do visudo -c -f "$f"; done \
   && sudo -l -U ${USERNAME} | grep -q "NOPASSWD: ALL" \
   && su -l ${USERNAME} -c '/usr/bin/sudo -n -l mkdir; echo "DEBUG! EXIT_CODE: $?"' \
   && su -l ${USERNAME} -c '/usr/bin/sudo -n -l mkdir 2>&1 | cat; echo "DEBUG! STDERR EXIT: $?"' \
