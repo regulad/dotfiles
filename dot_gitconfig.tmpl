@@ -16,6 +16,7 @@
 	# not supported on GitHub but is supported by others
 [core]
 	autocrlf = false
+	excludesFile = ~/.gitignore_global
 {{- if and (eq .chezmoi.os "windows") (stat (joinPath .chezmoi.homeDir "scoop")) }}
 	sshCommand = "\"C:\\Windows\\System32\\OpenSSH\\ssh.exe\""
 {{- end }}
