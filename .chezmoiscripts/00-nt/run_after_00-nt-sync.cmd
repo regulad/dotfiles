@@ -183,7 +183,8 @@ for %%L in (%local_links%) do (
 )
 
 set roaming_links=^
-Code
+Code ^
+vesktop
 
 for %%L in (%roaming_links%) do (
     if exist "%USERPROFILE%\AppData\Roaming\%%L" (
