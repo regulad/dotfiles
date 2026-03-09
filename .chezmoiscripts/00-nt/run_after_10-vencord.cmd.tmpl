@@ -5,18 +5,33 @@
 SET VENCORD_DIR=%USERPROFILE%\.vencord
 
 IF DEFINED CHEZMOI_USE_DUMMY (
-    SET REMOTE_URL=https://github.com/regulad/Vencord.git
+    SET VENCORD_REMOTE_URL=https://github.com/regulad/Vencord.git
+    SET UP_WAKATIME_REMOTE_URL=https://github.com/wakatime/vencord-wakatime.git
 ) ELSE (
-    SET REMOTE_URL=git@github.com:regulad/Vencord.git
+    SET VENCORD_REMOTE_URL=git@github.com:regulad/Vencord.git
+    SET UP_WAKATIME_REMOTE_URL=git@github.com:wakatime/vencord-wakatime.git
 )
 
 IF NOT EXIST "%VENCORD_DIR%" (
-    git clone "%REMOTE_URL%" "%VENCORD_DIR%"
+    git clone "%VENCORD_REMOTE_URL%" "%VENCORD_DIR%"
 ) ELSE (
-    git -C "%VENCORD_DIR%" remote set-url origin "%REMOTE_URL%"
+    git -C "%VENCORD_DIR%" remote set-url origin "%VENCORD_REMOTE_URL%"
     git -C "%VENCORD_DIR%" fetch origin
     git -C "%VENCORD_DIR%" checkout main
     git -C "%VENCORD_DIR%" pull origin main
+)
+
+IF NOT EXIST "%VENCORD_DIR%\src\userplugins" (
+    mkdir "%VENCORD_DIR\src\userplugins"
+)
+
+IF NOT EXIST "%VENCORD_DIR%\src\userplugins\vencord-wakatime" (
+    git clone "%UP_WAKATIME_REMOTE_URL%" "%VENCORD_DIR%\src\userplugins\vencord-wakatime"
+) ELSE (
+    git -C "%VENCORD_DIR%\src\userplugins\vencord-wakatime" remote set-url origin "%UP_WAKATIME_REMOTE_URL%"
+    git -C "%VENCORD_DIR%\src\userplugins\vencord-wakatime" fetch origin
+    git -C "%VENCORD_DIR%\src\userplugins\vencord-wakatime" checkout main
+    git -C "%VENCORD_DIR%\src\userplugins\vencord-wakatime" pull origin main
 )
 
 PUSHD "%VENCORD_DIR%"

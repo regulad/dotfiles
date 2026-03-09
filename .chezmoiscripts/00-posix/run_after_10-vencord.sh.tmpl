@@ -5,18 +5,33 @@ CHEZMOI_USE_DUMMY={{ if .useDummySecrets }}1{{ else }}0{{ end }}
 VENCORD_DIR="$HOME/.vencord"
 
 if [[ "$CHEZMOI_USE_DUMMY" -eq 1 ]]; then
-    REMOTE_URL="https://github.com/regulad/Vencord.git"
+    VENCORD_REMOTE_URL="https://github.com/regulad/Vencord.git"
+    UP_WAKATIME_REMOTE_URL="https://github.com/wakatime/vencord-wakatime.git"
 else
-    REMOTE_URL="git@github.com:regulad/Vencord.git"
+    VENCORD_REMOTE_URL="git@github.com:regulad/Vencord.git"
+    UP_WAKATIME_REMOTE_URL="git@github.com:wakatime/vencord-wakatime.git"
 fi
 
 if [[ ! -d "$VENCORD_DIR" ]]; then
-    git clone "$REMOTE_URL" "$VENCORD_DIR"
+    git clone "$VENCORD_REMOTE_URL" "$VENCORD_DIR"
 else
-    git -C "$VENCORD_DIR" remote set-url origin "$REMOTE_URL"
+    git -C "$VENCORD_DIR" remote set-url origin "$VENCORD_REMOTE_URL"
     git -C "$VENCORD_DIR" fetch origin
     git -C "$VENCORD_DIR" checkout main
     git -C "$VENCORD_DIR" pull origin main
+fi
+
+if [[ ! -d "$VENCORD_DIR/src/userplugins" ]]; then
+    mkdir "$VENCORD_DIR/src/userplugins"
+fi
+
+if [[ ! -d "$VENCORD_DIR/src/userplugins/vencord-wakatime" ]]; then
+    git clone "$UP_WAKATIME_REMOTE_URL" "$VENCORD_DIR/src/userplugins/vencord-wakatime"
+else
+    git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" remote set-url origin "$UP_WAKATIME_REMOTE_URL"
+    git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" fetch origin
+    git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" checkout main
+    git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" pull origin main
 fi
 
 (cd "$VENCORD_DIR" && pnpm i && pnpm build)

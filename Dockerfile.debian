@@ -77,6 +77,8 @@ RUN --mount=type=tmpfs,target=/tmp \
     wget \
     coreutils \
     grep \
+    nodejs \
+    npm \
     golang-go \
     rustc \
     cargo \
