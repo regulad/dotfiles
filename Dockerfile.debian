@@ -57,8 +57,6 @@ COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 ## NOTE: since the docker buildx GHA action doesn't support squashing, all installs have to be done in a single layer.
 ##       who cares about caching!
 # Install all development packages
-## NOTE: for now, nvcc (provided by nvidia-cuda-toolkit) is installed in the container definitions rather than in the
-##       bootstrap script. I may change this in the future.
 # Install s6-overlay
 # Install Homebrew as the UID 1000 user
 # Install pnpm globally
@@ -79,8 +77,6 @@ RUN --mount=type=tmpfs,target=/tmp \
     wget \
     coreutils \
     grep \
-    nodejs \
-    npm \
     golang-go \
     rustc \
     cargo \
@@ -93,17 +89,11 @@ RUN --mount=type=tmpfs,target=/tmp \
     procps \
     sudo \
     xz-utils \
-    nvidia-cuda-toolkit \
     systemd \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
   && update-locale LANG=en_US.UTF-8 \
   \
-  && echo 'Defaults !use_pty, !pam_acct_mgmt' >> /etc/sudoers.d/docker-nopasswd \
-  && chmod 0440 /etc/sudoers.d/docker-nopasswd \
   && visudo -c && for f in /etc/sudoers.d/*; do visudo -c -f "$f"; done \
-  && sudo -l -U ${USERNAME} | grep -q "NOPASSWD: ALL" \
-  && su -l ${USERNAME} -c '/usr/bin/sudo -n -l mkdir; echo "DEBUG! EXIT_CODE: $?"' \
-  && su -l ${USERNAME} -c '/usr/bin/sudo -n -l mkdir 2>&1 | cat; echo "DEBUG! STDERR EXIT: $?"' \
   \
   && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz -o /tmp/s6-overlay-noarch.tar.xz \
   && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \

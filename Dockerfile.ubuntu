@@ -4,7 +4,10 @@
 # Assisted by: Claude Sonnet 4.5
 # License: AGPLv3.0 - see LICENSE.md
 
-FROM ubuntu:questing
+FROM ubuntu:resolute
+# Ubuntu features a default 1000 user; other docker images don't
+RUN userdel -r ubuntu 2>/dev/null || true \
+ && groupdel ubuntu 2>/dev/null || true
 
 # Build arguments
 # dot linux suffix is lima-style (https://github.com/lima-vm/lima/discussions/2622#discussioncomment-108517600)
@@ -23,19 +26,19 @@ ENV DEBIAN_FRONTEND="noninteractive"
 RUN cat > /etc/apt/sources.list.d/ubuntu.sources <<EOF
 Types: deb
 URIs: http://archive.ubuntu.com/ubuntu
-Suites: questing questing-updates
+Suites: resolute resolute-updates
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 
 Types: deb
 URIs: http://security.ubuntu.com/ubuntu
-Suites: questing-security
+Suites: resolute-security
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 
 Types: deb
 URIs: http://archive.ubuntu.com/ubuntu
-Suites: questing-backports
+Suites: resolute-backports
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 EOF
@@ -57,9 +60,8 @@ COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 ## NOTE: since the docker buildx GHA action doesn't support squashing, all installs have to be done in a single layer.
 ##       who cares about caching!
 # Install all development packages
-## NOTE: for now, nvcc (provided by nvidia-cuda-toolkit) is installed in the container definitions rather than in the
-##       bootstrap script. I may change this in the future.
 ## NOTE: Ubuntu ships sudo-rs in place of sudo-ws, which doesn't behave the same was as sudo.ws in containers
+##       for instance, /etc/sudoers is 0664 by default when it should be 0440 to pass visudo's check
 # Install s6-overlay
 # Install Homebrew as the UID 1000 user
 # Install pnpm globally
@@ -78,7 +80,7 @@ RUN --mount=type=tmpfs,target=/tmp \
     python3 \
     ripgrep \
     wget \
-    coreutils \
+    rust-coreutils \
     grep \
     nodejs \
     npm \
@@ -92,22 +94,14 @@ RUN --mount=type=tmpfs,target=/tmp \
     file \
     locales \
     procps \
-    sudo \
     sudo-rs \
     xz-utils \
-    nvidia-cuda-toolkit \
     systemd \
-  && update-alternatives --set sudo /usr/bin/sudo.ws \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
   && update-locale LANG=en_US.UTF-8 \
   \
-  && echo 'Defaults !use_pty, !pam_acct_mgmt' >> /etc/sudoers.d/docker-nopasswd \
-  && chmod 0440 /etc/sudoers.d/docker-nopasswd \
-  && sed -i '1s/^/auth sufficient pam_permit.so\n/' /etc/pam.d/sudo \
+  && chmod 0440 /etc/sudoers \
   && visudo -c && for f in /etc/sudoers.d/*; do visudo -c -f "$f"; done \
-  && sudo -l -U ${USERNAME} | grep -q "NOPASSWD: ALL" \
-  && su -l ${USERNAME} -c '/usr/bin/sudo -n -l mkdir; echo "DEBUG! EXIT_CODE: $?"' \
-  && su -l ${USERNAME} -c '/usr/bin/sudo -n -l mkdir 2>&1 | cat; echo "DEBUG! STDERR EXIT: $?"' \
   \
   && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz -o /tmp/s6-overlay-noarch.tar.xz \
   && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \

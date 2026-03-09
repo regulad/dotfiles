@@ -14,7 +14,7 @@ FEDORA_MINIMUM_VERSION=42  # tested on 43
 # need Fedora >= 41 (no RHEL yet) for dnf5 as a default
 MACOS_MINIMUM_VERSION=14  # tested on 14 and 26
 DEBIAN_MINIMUM_VERSION=13
-UBUNTU_MINIMUM_VERSION=24.04
+UBUNTU_MINIMUM_VERSION=26.04
 # =+= END CONFIGURATION =+=
 
 # Installs neccesary tools to enable everything from the dotfiles
@@ -74,6 +74,7 @@ if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
 	exit 1
 fi
 
+# TODO: fix the ai slop =true and =false and replace it with a real bash =0 and =1
 if ! sudo -l &>/dev/null; then
 	echo "warning: Can't sudo. Will not attempt to install things that need sudo." >&2
 	CAN_SUDO=false
@@ -210,7 +211,7 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"dt:build-essential"
 	"mdrt:bash"
 	"mdrt:tmux"
-	"mdrt:fastfetch" # not available on debian older than trixie (13)
+	"mdrt:fastfetch" # not available on debian older than trixie (13) nor ubuntu older than questing (25.10)
 	"mdrt:telnet"
 	"mdr:retry" # no compat on termux
 	"mdrt:zsh"

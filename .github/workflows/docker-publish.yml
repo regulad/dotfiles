@@ -33,7 +33,7 @@ jobs:
             groupname: "regulad.linux"
             gid: "1000"
             suffix: ""
-            file: "Dockerfile.debian"
+            file: "Dockerfile.ubuntu"
           - username: "regulad.linux"
             uid: "1000"
             groupname: "regulad.linux"
