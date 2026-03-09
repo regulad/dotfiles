@@ -1,4 +1,10 @@
 {
-	  "vencordDir: "{{- if eq .chezmoi.os "windows" }}{{ .chezmoi.homeDir | replace "/" "\\\\" }}\\.vencord\\dist{{ else }}{{ .chezmoi.homeDir }}/.vencord/dist{{ end -}}",
-    "firstLaunch": false
+    "firstLaunch": false,
+    "windowBounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1281,
+        "height": 721
+    },
+    "vencordDir: "{{- if eq .chezmoi.os "windows" }}{{ .chezmoi.homeDir | replace "/" "\\\\" }}\\.vencord\\dist{{ else }}{{ .chezmoi.homeDir }}/.vencord/dist{{ end -}}"
 }
