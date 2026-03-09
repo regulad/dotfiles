@@ -39,7 +39,7 @@ Linux environments are preferred in the following order:
 3. Debian
     - I like Debian, I would place it above Ubuntu if Homebrew didn't delegate Debian to "Tier 2" support.
 
-All of the above environments are available in Docker pours (see the packages menu on the right).
+All of the above environments are available in Docker pours (see the packages menu on the right). Using `latest` will get you the newest Ubuntu image since fedora-based Docker images are pretty rare.
 
 > *NOTE:* Termux is no longer supported in a first-class fashion. I don't have an Android phone.
 > Simialrly, RHEL is no longer supported in a first-class fashion. This setup is for desktop use.
