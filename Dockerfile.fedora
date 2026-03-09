@@ -22,11 +22,13 @@ ENV TZ="America/New_York"
 # Create user with UID 1000 and add to sudoers
 # sudo doesn't take filenames that have periods in them, so we have to change it to _
 # -o flags enable non-unique UIDs, should they be needed
+## NOTE: the fedora dokcer image ships a borked sudo pam stack that doesn't work in a reduced environment, so !pam_acct_mgmt must be appended
+##       this doesn't apply to debian, and sudo-rs in ubuntu doesn't have the flag at all
 RUN groupadd -g ${GID} -o ${GROUPNAME} \
   && useradd --no-log-init -m -s /bin/bash -u ${UID} -o -g ${GROUPNAME} ${USERNAME} \
   && mkdir -p /etc/sudoers.d/ \
   && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_') \
-  && echo "Defaults !use_pty" >> /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_') \
+  && echo "Defaults !use_pty, !pam_acct_mgmt" >> /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_') \
   && chmod 0440 /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_')
 
 # Copy dotfiles repository to chezmoi source directory
