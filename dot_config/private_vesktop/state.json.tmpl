@@ -1,7 +1,7 @@
 {
 {{- if eq .chezmoi.os "windows" }}
-	  "vencordDir: "{{ .chezmoi.homeDir }}\\.vencord\\dist",
-{{- else }}
+	  "vencordDir: "{{ .chezmoi.homeDir | replace "/" "\\" }}\\.vencord\\dist",
+{{ else }}
     "vencordDir": "{{ .chezmoi.homeDir }}/.vencord/dist",
 {{- end }}
     "firstLaunch": false
