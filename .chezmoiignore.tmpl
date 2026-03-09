@@ -10,6 +10,7 @@ Dockerfile*
 key.txt
 .npmrc
 .claude/settings.json
+.config/vesktop
 .wakatime.cfg
 .ssh/config
 .ssh/id*
@@ -23,6 +24,7 @@ key.txt
 
 # Head
 {{- if .useHeadless }}
+.config/vesktop
 .chezmoiscripts/00-posix/10-vencord.sh
 .chezmoiscripts/00-nt/10-vencord.cmd
 {{- end }}
