@@ -99,6 +99,7 @@ export PATH="$DENO_INSTALL/bin:$PATH"
 
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
 
 # cargo on rustup systems
 if [ -n "$(command -v rustup-init)" ]; then
@@ -108,10 +109,6 @@ fi
 # ssh daemon
 unset _bw_sock
 case "$(uname -o)" in
-  Android)
-    # https://github.com/termux/termux-packages/blob/master/packages/openssh/sv/ssh-agent.run.in#L3-L7
-    export SSH_AUTH_SOCK="$PREFIX"/var/run/ssh-agent.socket
-    ;;
   Darwin)
     for _bw_sock in \
       "$HOME/.bitwarden-ssh-agent.sock" \
@@ -167,9 +164,6 @@ for h in "${NCSU_HOSTS[@]}"; do
   alias "ssh-$h=sshpass -f $HOME/.ssh/id_plaintext_ncstate ssh $h"
 done
 
-if [ -n "${ZSH_VERSION-}" ]; then
-  unalias vi
-fi
 vi() { 
   command "$VISUAL" "$@"
 }
@@ -195,43 +189,6 @@ bw-unlock() {
     export BW_SESSION="$(bw unlock --raw)"
 }
 
-# cp & mv with "Windows-style" merging semantics
-# Prepared by GPT-5.2
-wmv() {
-  if (( $# != 2 )); then echo "Usage: wmv <FolderA> <FolderB>" >&2; return 2; fi
-  local src=${1%/} dst=${2%/} name dest
-  if [[ ! -d "$src" ]]; then echo "wmv: source is not a directory: $src" >&2; return 2; fi
-  if [[ ! -d "$dst" ]]; then echo "wmv: destination is not a directory: $dst" >&2; return 2; fi
-  name=$(basename -- "$src"); dest="$dst/$name"; mkdir -p -- "$dest"
-  rsync -a -v --human-readable --info=NAME,STATS2,PROGRESS2 --remove-source-files -- "$src/." "$dest/"
-  find "$src" -type d -empty -delete 2>/dev/null || true
-  rmdir --ignore-fail-on-non-empty -- "$src" 2>/dev/null || true
-}
-wcp() {
-  if (( $# != 2 )); then echo "Usage: wcp <FolderA> <FolderB>" >&2; return 2; fi
-  local src=${1%/} dst=${2%/} name dest
-  if [[ ! -d "$src" ]]; then echo "wcp: source is not a directory: $src" >&2; return 2; fi
-  if [[ ! -d "$dst" ]]; then echo "wcp: destination is not a directory: $dst" >&2; return 2; fi
-  name=$(basename -- "$src"); dest="$dst/$name"; mkdir -p -- "$dest"
-  rsync -a -v --human-readable --info=NAME,STATS2,PROGRESS2 -- "$src/." "$dest/"
-}
-locksmith() {
-  local dir="$1"
-  if [[ -z "$dir" || ! -d "$dir" ]]; then
-    echo "Usage: locksmith /path/to/dir" >&2
-    return 2
-  fi
-
-  dir="$(cd "$dir" 2>/dev/null && pwd -P)" || return 2
-
-  # lsof +D DIR lists open files under DIR and its subdirectories (recursive). [web:4][web:2]
-  lsof -nP +D "$dir" 2>/dev/null \
-    | awk 'NR==1{next} {print $2 "\t" $1 "\t" $3}' \
-    | sort -n -u \
-    | awk 'BEGIN{print "PID\tCOMMAND\tUSER"} {print}'
-}
-[ -n "$ZSH_VERSION" ] && compdef _files wmv wcp locksmith
-
 if [ "$(uname -o)" = "GNU/Linux" ]; then
   # given a PID show all files that PID has open
   filewatch() {
@@ -250,6 +207,4 @@ if [[ $- == *i* && -z ${DID_COMMONRC_SPLASH+x} ]]; then
     fi
 
     fastfetch
-
-    export DID_COMMONRC_SPLASH=1
 fi
