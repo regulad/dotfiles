@@ -142,7 +142,7 @@ Mozilla.Firefox ^
 WinFsp.WinFsp ^
 Microsoft.Sysinternals.Suite ^
 dotPDN.PaintDotNet ^
-TigerVNC.TigerVNC ^
+GlavSoft.TightVNC ^
 Autodesk.Fusion360 ^
 Wakatime.DesktopWakatime ^
 Logitech.GHUB ^
