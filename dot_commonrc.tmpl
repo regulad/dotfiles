@@ -164,13 +164,13 @@ for h in "${NCSU_HOSTS[@]}"; do
   alias "ssh-$h=sshpass -f $HOME/.ssh/id_plaintext_ncstate ssh $h"
 done
 
-vi() { 
+v() { 
   command "$VISUAL" "$@"
 }
 if [ -n "${ZSH_VERSION-}" ]; then
   case "$VISUAL" in
-    *nvim) compdef vi=nvim ;;
-    *vim)  compdef vi=vim  ;;
+    *nvim) compdef v=nvim ;;
+    *vim)  compdef v=vim  ;;
   esac
 fi
 
