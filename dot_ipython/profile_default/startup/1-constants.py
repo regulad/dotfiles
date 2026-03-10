@@ -46,11 +46,4 @@ def gamma(v: float) -> float:
 
 def inverse_gamma(gamma: float) -> float:
     """Returns the magnitude of v for a given gamma"""
-    # gamma = 1 / sqrt(1 - ((abs(v) / c) ** 2))
-    # gamma * sqrt(1 - ((abs(v) / c) ** 2)) = 1
-    # sqrt(1 - ((abs(v) / c) ** 2)) = 1 / gamma
-    # 1 - ((abs(v) / c) ** 2) = (1 / gamma) ** 2
-    # (abs(v) / c) ** 2 = ((1 / gamma) ** 2) + 1
-    # abs(v) / c = sqrt(((1 / gamma) ** 2) + 1)
-    # abs(v) = sqrt(((1 / gamma) ** 2) + 1) * c
-    return sqrt(((1 / gamma) ** 2) + 1) * c
+    return sqrt(1 - (1 / gamma) ** 2) * c
