@@ -1,5 +1,0 @@
-# zerobrew
-export PATH="/Users/regulad/.local/bin:$PATH"
-
-# zerobrew
-export PATH="/opt/zerobrew/prefix/bin:$PATH"
