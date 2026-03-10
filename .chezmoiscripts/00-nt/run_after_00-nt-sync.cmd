@@ -167,40 +167,6 @@ call refreshenv >nul 2>&1
 echo warning: the following pieces of software need manual installs:
 echo   - AMD Adrenalin Software / Radeon Driver Suite
 
-REM Setup symlinks from windows-specific AppData into the XDG .config directory
-set local_links=^
-nvim
-
-for %%L in (%local_links%) do (
-    if exist "%USERPROFILE%\AppData\Local\%%L" (
-        for %%i in ("%USERPROFILE%\AppData\Local\%%L") do set "attribs=%%~ai"
-        setlocal enabledelayedexpansion
-        if not "!attribs:~8,1!"=="l" (
-            echo warning: existing %%L directory exists
-        )
-        endlocal
-    ) else (
-        mklink /J "%USERPROFILE%\AppData\Local\%%L" "%USERPROFILE%\.config\%%L"
-    )
-)
-
-set roaming_links=^
-Code ^
-vesktop
-
-for %%L in (%roaming_links%) do (
-    if exist "%USERPROFILE%\AppData\Roaming\%%L" (
-        for %%i in ("%USERPROFILE%\AppData\Roaming\%%L") do set "attribs=%%~ai"
-        setlocal enabledelayedexpansion
-        if not "!attribs:~8,1!"=="l" (
-            echo warning: existing %%L directory exists
-        )
-        endlocal
-    ) else (
-        mklink /J "%USERPROFILE%\AppData\Roaming\%%L" "%USERPROFILE%\.config\%%L"
-    )
-)
-
 REM service setup
 sc query LanguageTool >nul 2>&1
 if !errorLevel! neq 0 (
