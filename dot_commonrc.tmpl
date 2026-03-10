@@ -1,23 +1,6 @@
 # THIS FILE IS MANAGED BY CHEZMOI!
 
-# === ENVIRONMENT
-export OLLAMA_HOST="{{- .ollamaBase -}}"
-export DO_NOT_TRACK=1
-export HOMEBREW_NO_ENV_HINTS=1
-export VISUAL="$(command -v nvim || command -v vim)"
-
-# === DEFAULTS
-export DISPLAY=${DISPLAY:-:0}
-[ -z "$XDG_RUNTIME_DIR" ] && [ -d "/run/user/$(id -u)" ] && export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-[ -z "$GPG_TTY" ] && export GPG_TTY=$(tty)
-
-# needed for Android native builds
-if [ "$(uname -o)" = "Android" ]; then
-  export ANDROID_API_LEVEL="$(getprop ro.build.version.sdk 2>/dev/null || true)"
-fi
-
 # this file is sourced by both zsh and bash; should use common syntax
-# Brew mega-conditional
 if [ "$(uname -o)" = "Darwin" ]; then
     export PATH="/Applications/Ghostty.app/Contents/MacOS/:$PATH"
     
@@ -99,11 +82,12 @@ export PATH="$DENO_INSTALL/bin:$PATH"
 
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
 
 # cargo on rustup systems
 if [ -n "$(command -v rustup-init)" ]; then
     . "$HOME/.cargo/env"
+else
+    export PATH="$HOME/.cargo/bin:$PATH"
 fi
 
 # ssh daemon
@@ -134,6 +118,7 @@ export OLLAMA_HOST="{{- .ollamaBase -}}"
 export DO_NOT_TRACK=1
 export HOMEBREW_NO_ENV_HINTS=1
 export VISUAL="$(command -v nvim || command -v vim)"
+
 export DISPLAY=${DISPLAY:-:0}
 [ -z "$XDG_RUNTIME_DIR" ] && [ -d "/run/user/$(id -u)" ] && export XDG_RUNTIME_DIR="/run/user/$(id -u)"
 
@@ -185,6 +170,7 @@ ssh-privpub() {
 chezmoi-cd() {
     cd "$(chezmoi source-path)"
 }
+
 bw-unlock() {
     export BW_SESSION="$(bw unlock --raw)"
 }
@@ -206,5 +192,5 @@ if [[ $- == *i* && -z ${DID_COMMONRC_SPLASH+x} ]]; then
         echo "warning: last chezmoi sync was $LAST_SYNC, resync soon" >&2
     fi
 
-    fastfetch
+    fastfetch >&2
 fi
