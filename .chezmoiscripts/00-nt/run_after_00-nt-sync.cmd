@@ -145,6 +145,7 @@ dotPDN.PaintDotNet ^
 TigerVNC.TigerVNC ^
 Autodesk.Fusion360 ^
 Wakatime.DesktopWakatime ^
+Logitech.GHUB ^
 BillStewart.SyncthingWindowsSetup
 
 REM following winget packages are not installed even though I would like them:
