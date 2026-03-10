@@ -240,8 +240,18 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"mdrt:cmake"
 
 	# =+= DEPENDENCIES
-	"m:cairo"
-	# TODO: confirm compat for others
+	"m:cairo"  # needed by cairo PyPi package
+	"d:libcairo2-dev"
+	"r:cairo-devel"
+	"m:libxml2"
+	"d:libxml2-dev"
+	"r:libxml2-devel"
+	"m:freetype"
+	"d:libfreetype-dev"
+	"r:freetype-devel"
+	"m:jpeg"
+	"d:libjpeg-dev"  # libjpeg62-turbo-dev provides this
+	"r:libjpeg-turbo-devel"
 	"d:libdevmapper-dev"  # needed by thin-provisioning-tools build
 	"r:device-mapper-devel"
 	"dr:pciutils"  # needed by llama.cpp
