@@ -2,10 +2,21 @@
   "env": {
     "ANTHROPIC_BASE_URL": "https://ai.regulad.xyz/api",
     "ANTHROPIC_MODEL": "nvidia.moonshotai/kimi-k2.5",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL":  "nvidia.moonshotai/kimi-k2.5",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL":  "nvidia.moonshotai/kimi-k2.5",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL":  "nvidia.moonshotai/kimi-k2.5",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "nvidia.moonshotai/kimi-k2.5",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "nvidia.moonshotai/kimi-k2.5",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "nvidia.moonshotai/kimi-k2.5",
     "CLAUDE_CODE_SUBAGENT_MODEL": "nvidia.moonshotai/kimi-k2.5",
     "ANTHROPIC_AUTH_TOKEN": "{{- (bitwardenFields "item" "ai.regulad.xyz").apiKey.value -}}"
+  },
+  "extraKnownMarketplaces": {
+    "wakatime": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/wakatime/claude-code-wakatime.git"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "claude-code-wakatime@wakatime": true
   }
 }
