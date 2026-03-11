@@ -1,29 +1,17 @@
-#!{{ .bash }}
-# android bash doesn't support setting flags in invocation
-set -e
+#!{{ .bash }} -e
 
 # =+= START CONFIGURATION =+=
-# version to install
-OPENJDK_LTS_VERSION=25
-PYTHON_VERSION=3.12
-RUBY_VERSION=3.3  # only macOS is up to 4
-
-# minimum versions of host operating systems
-FEDORA_MINIMUM_VERSION=42  # tested on 43
-# 41 is EOL although would probably work, 42 oldest w/ support
-# need Fedora >= 41 (no RHEL yet) for dnf5 as a default
+FEDORA_MINIMUM_VERSION=42
 MACOS_MINIMUM_VERSION=14  # tested on 14 and 26
 UBUNTU_MINIMUM_VERSION=26.04
 # =+= END CONFIGURATION =+=
 
 # Installs neccesary tools to enable everything from the dotfiles
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
-# NOTE!! this is ONLY for true nix. no MINGW64; will handle that separately.
-# yes, i realize how dumb that this is when I could just use nix. lol.
 
 echo "note: entering hookscript" >&2
 export DEBIAN_FRONTEND=noninteractive
-trap 'echo "Error on line $LINENO: Command was: $BASH_COMMAND" >&2' ERR
+trap 'echo "error: line $LINENO: Command was: $BASH_COMMAND" >&2' ERR
 
 # needed for Android native builds
 if [ "$(uname -o)" = "Android" ]; then
@@ -59,8 +47,6 @@ else
 fi
 
 # START CLAUDE (Claude Sonnet 4.5)
-# Purpose: Check that the host OS meets minimum version requirements
-# Written by Claude Sonnet 4.5
 if [ -f /etc/os-release ]; then
     . /etc/os-release
     OS=$ID
@@ -99,7 +85,7 @@ case "$OS" in
         exit 1
         ;;
 esac
-# END CLAUDE (Claude Sonnet 4.5)
+# END CLAUDE 
 
 # Try to load homebrew if it is installed
 if [[ -d "/opt/homebrew" && "$CAN_SUDO" = "true" ]]; then
@@ -165,27 +151,25 @@ export PATH="$HOME/.local/bin:$PATH"
 #     - brew (macos) [m:]
 #     - apt (debian) [d:]
 #     - dnf (redhat) [r:]
-#     - pkg (termux) [t:]
 PRIMARY_BINARY_DEPENDENCIES=(
 	# =+= CORE
-	"dt:build-essential"
-	"mdrt:bash"
-	"mdrt:tmux"
-	"mdrt:fastfetch" # not available on debian older than trixie (13) nor ubuntu older than questing (25.10)
-	"mdrt:telnet"
+	"d:build-essential"
+	"mdr:bash"
+  "m:nushell"
+  "r:nu"
+	"mdr:tmux"
+	"mdr:fastfetch"	
+  "mdr:telnet"
 	"mdr:retry" # no compat on termux
-	"mdrt:zsh"
-	"t:file"
-	"t:man"
-	"t:tokei"
-	"dt:xxd"
-	"t:which"
+	"mdr:zsh"
+	"dr:xxd"
 	"mdr:binwalk"
-	"mdrt:ncdu"
-	"mdrt:htop"
-	"mdrt:nmap"
-	"mdrt:curl"
+	"mdr:ncdu"
+	"mdr:htop"
+	"mdr:nmap"
+	"mdr:curl"
 	"m:watch"
+  "mdr:age"
 
 	# =+= macOS-SPECIFIC
 	"m:reattach-to-user-namespace"
@@ -195,9 +179,9 @@ PRIMARY_BINARY_DEPENDENCIES=(
 
 	# =+= BUILD TOOLS
 	"dr:ninja-build"
-	"mt:ninja"
+	"m:ninja"
 	"mdr:pkgconf"
-	"mdrt:cmake"
+	"mdr:cmake"
 
 	# =+= DEPENDENCIES
 	"m:cairo"  # needed by cairo PyPi package
@@ -226,12 +210,17 @@ PRIMARY_BINARY_DEPENDENCIES=(
 
 	# =+= MISC
 	"d:thin-provisioning-tools"  # not natively available redhat
+  "mdr:nyx"
 
 	# =+= EDITOR
-	"mdrt:neovim" # nvim
-	"mdrt:vim"
-	"mdt:shellcheck"
+	"mdr:neovim"	
+  "mdr:vim"
+	"md:shellcheck"
+  "mdr:tree-sitter-cli"
 	"r:ShellCheck"
+  "mdr:ripgrep"
+  "md:imagemagick"
+  "r:ImageMagick"
 
 	# =+= UTILS
 	"dr:systemd"  # provides utils even when in docker
@@ -244,66 +233,63 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"r:iputils"
 	"mdr:binutils"
 	"dr:net-tools"
-	"mdrt:perl"
-	"mdrt:sshpass"
-	"mdrt:git"
-	"mdrt:git-lfs"
-	"mdt:gnupg" # gpg
+	"mdr:perl"
+	"mdr:sshpass"
+	"mdr:git"
+	"mdr:git-lfs"
+	"md:gnupg" # gpg
 	"r:gnupg2"
 	"m:gpgme"
 	"d:openssh-client"
-	"mrt:openssh" # ssh-agent & ssh
-	"mdrt:keychain"
-	"mdrt:gh" # GitHub
-	"mdrt:restic"
-	"mdrt:ffmpeg"
+	"mr:openssh" # ssh-agent & ssh
+	"mdr:keychain"
+	"mdr:gh" # GitHub
+	"mdr:restic"
+	"mdr:ffmpeg"
 	"mdr:yt-dlp" # previously managed by uv
-	"t:python-yt-dlp"
 	"mdr:syncthing"
 
 	# =+= JS/TS
 	"m:node"
 	"dr:nodejs"
-	"t:nodejs-lts"
 	"mdr:npm" # just to install pnpm; part of nodejs-lts on termux
-	"t:deno"
 
 	# =+= JVM
 	"m:openjdk"
 	"d:default-jdk"
 	"r:java-latest-openjdk"
-	"t:openjdk-$OPENJDK_LTS_VERSION"
-	"mdrt:maven"
+	"mdr:maven"
 
 	# =+= RUST
 	"md:rustup"
 	"r:cargo"   # part of rust on termux
 	"r:rustfmt" # also part of rust on termux
-	"rt:rust"
-	"rt:rust-analyzer"
+	"r:rust"
+	"r:rust-analyzer"
 
 	# =+= PYTHON (>= 3.12)
 	"mdr:python3"
 	"dr:python3-pip"
 	"d:python3-venv"
-	"t:python"
 
 	# =+= GO
 	"m:go"
-	"drt:golang"
+	"dr:golang"
 
 	# =+= RUBY
 	"m:ruby@4"
-	"drt:ruby"
+	"dr:ruby"
+
+  # =+= LUA
+  "mdr:lua"
+  "mdr:luarocks"
 )
 
 # choose manager
 command -v brew &>/dev/null && HAS_BREW=true || HAS_BREW=false
 export HOMEBREW_NO_ENV_HINTS=1
 
-if command -v pkg &>/dev/null && [[ "$PREFIX" == *"com.termux"* ]]; then
-	MANAGER="pkg"
-elif command -v dnf &>/dev/null && [[ -f /etc/redhat-release ]]; then
+if command -v dnf &>/dev/null && [[ -f /etc/redhat-release ]]; then
 	MANAGER="dnf"
 elif command -v apt &>/dev/null && [[ -f /etc/debian_version ]]; then
 	MANAGER="apt"
@@ -311,8 +297,6 @@ elif command -v brew &>/dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
 	MANAGER="brew"
 
 	# macOS brew-specific tap / dep setups
-	cp -vf /System/Applications/Utilities/Terminal.app/Contents/Resources/Fonts/* ~/Library/Fonts
-
 	brew tap kde-mac/kde https://invent.kde.org/packaging/homebrew-kde.git && "$(brew --repo kde-mac/kde)/tools/do-caveats.sh"
 	brew tap regulad/homebrew-tap
 
@@ -329,12 +313,13 @@ fi
 # Check sudo requirement for dnf5 and apt
 if [[ "$MANAGER" == "dnf" || "$MANAGER" == "apt" ]] && ! [ "$CAN_SUDO" = "true" ]; then
 	echo "warning: package manager needs sudo but it isn't available" >&2
-	MANAGER=""
+  exit 1
 fi
 
 # Check if any manager was detected
 if [[ -z "$MANAGER" ]]; then
 	echo "warning: no package manager detected" >&2
+  exit 1
 fi
 
 # Filter dependencies based on package manager
@@ -347,9 +332,6 @@ if [[ -n "$MANAGER" ]]; then
 
 		# Check if this package applies to current manager
 		case "$MANAGER" in
-		pkg)
-			[[ -z "$prefix" || "$prefix" == *"t"* ]] && TO_INSTALL+=("$package")
-			;;
 		dnf)
 			[[ -z "$prefix" || "$prefix" == *"r"* ]] && TO_INSTALL+=("$package")
 			;;
@@ -365,18 +347,14 @@ if [[ -n "$MANAGER" ]]; then
 	# Install packages if any were found
 	if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
 		case "$MANAGER" in
-		pkg)
-			echo "warning: pkg is no longer supported" >&2
-			pkg install -y "${TO_INSTALL[@]}"
-			pkg upgrade
-			;;
 		dnf)
 			echo "warning: ensure RPMFusion or equivalent for your spin is enabled" >&2
 			sudo dnf group install -q -y "development-tools"
 			sudo dnf install -q -y "${TO_INSTALL[@]}"
 			sudo dnf upgrade --refresh -y
 			;;
-		apt)
+		apt)			
+			echo "warning: ensure multiverse is enabled on apt" >&2
 			sudo apt update -qq
 			sudo apt install -qq -y "${TO_INSTALL[@]}"
 			sudo apt upgrade -qq -y
@@ -406,13 +384,6 @@ if [ "$MANAGER" = "brew" ] && [ "$CAN_SUDO" = "true" ]; then
 	sudo ln -sfn $HOMEBREW_PREFIX/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
 fi
 
-
-#	# Install zerobrew if on a platform that supports it. Zerobrew is an experimental rust rewrite of brew
-# # ...THAT HAPPENS TO BE SLOP! see https://github.com/lucasgelfond/zerobrew/issues/209
-#	# This install script is idempotent. 
-#	source ~/.zshenv
-#	curl -sSL https://raw.githubusercontent.com/lucasgelfond/zerobrew/main/install.sh | bash
-
 # user-level binary dependencies
 # these dependencies aren't provided by the system package manager, for whatever reason
 # these packages do NOT require compilation and are distributed as binaries.
@@ -420,18 +391,9 @@ fi
 # brew distributes these on GNU/Linux and Darwin. no attempt is made on other platforms
 # most of them are needed for specific workflows (i.e. kotlin, python, java)
 SECONDARY_BINARY_DEPENDENCIES=(
-	"ripgrep"
-	"tree-sitter-cli"
-	"luarocks"
-	"lua"
-	"nyx"
 	"languagetool"
 	"cloudflared"
-	"imagemagick"
-	"age"
 	"wakatime-cli"
-	"neovim"  # newer version than available on main toolchains
-	"yt-dlp"  # ditto
 	"ollama"
 	"tokei"
 	"minio-mc"
@@ -449,19 +411,15 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"shfmt"
 	"ghidra"
 	"oven-sh/bun/bun"  # addl. javascript runtime
-#	"dicklesworthstone/tap/cass"  # completely broken, ai slop took over they packaging pipeline
-	"msmtp"  # outgoing mail
-	"isync"  # incoming mail
 	"poppler"
 	"tesseract"
 	"ocrmypdf"
-	"neomutt"
 	"rclone"
 	"git-xet"
-	"huggingface-cli"
+	"hf"
 	"brew-gem"
 	"bash-completion@2"
-	"nushell"  # used by some oddball scripts like https://github.com/RGBCube/github2forgejo
+  "nushell"  # not available on ubuntu
 )
 
 if [ "$HAS_BREW" = "true" ]; then
@@ -634,14 +592,7 @@ if [ -z "$PNPM_HOME" ]; then
 fi
 
 PNPM_CLI_PACKAGES=(
-	"@continuedev/cli@latest"
 	"ezff@latest"
-)
-
-# these need to be installed with base NPM
-NPM_CLI_PACKAGES=(
-	"opencode-ai@latest"
-#	"opencode-swarm-plugin@latest"  # this application is an incredible piece of horseshit. doesn't even try
 )
 
 ## packages available on brew are preferred over their pnpm packages (may have binary bottles pre-built)
@@ -663,20 +614,11 @@ else
 fi
 
 pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
-npm install -g "${NPM_CLI_PACKAGES[@]}"
 pnpm update --global --silent
 
 # deno
 export DENO_INSTALL="$HOME/.deno"
 export PATH="$DENO_INSTALL/bin:$PATH"
-
-## minecraft fabric
-# if ! command -v fabric &>/dev/null; then
-#  	deno install -A -g -n fabric https://fabricmc.net/cli
-# else
-# 	fabric upgrade
-# fi
-## broken 3/1/26
 
 # Poetry
 # NOTE: redhat repositories provide poetry-core but not the CLI
@@ -692,8 +634,6 @@ fi
 # UV
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q uv
-elif [ "$MANAGER" = "pkg" ]; then
-	pkg install -y uv
 else
 	pip install --user -q uv
 fi
@@ -710,7 +650,6 @@ fi
 #
 #       I have chosen to only download tools with uv against known-good python versions.
 #
-#       For durability, I have offloaded the management of some packages like `yt-dlp`
 #       to native package managers that test against specific python versions.
 #
 #       This can be changed if the python-requires spec at https://packaging.python.org/en/latest/specifications/core-metadata/#core-metadata-requires-python
@@ -743,14 +682,8 @@ go install golang.org/x/tools/gopls@latest
 go install golang.org/x/tools/cmd/goimports@latest
 go install honnef.co/go/tools/cmd/staticcheck@latest
 if [[ "$OSTYPE" == "darwin"* ]]; then
-	# i introduced a change on master that hasn't been pushed to a version
-	# and probably never will be; package is abandoned
 	go install github.com/roy2220/osc52pty@master
 fi
-
-# vim package management
-# NOTE: because I use neovim in lieu of vim, I'm not going to install Vundle
-# lazy doesn't need to be installed itself but it does need some native dependencies
 
 # oh my zsh
 if ! [ -d ~/.oh-my-zsh ]; then
@@ -769,7 +702,6 @@ if [ -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
 else
 	git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions
 fi
-
 
 # these commands only run on non-cattle hosts (persistent)
 # load zsh as primary shell
@@ -821,15 +753,11 @@ fi
 # Certificate installation
 # NOTE: chezmoi source-path can't be used if this is in an apply
 CERT_PATHS=(
-	"$HOME/.local/share/chezmoi/dot_x509/ipa-ca.crt"
+	"$HOME/.x509/ipa-ca.crt"
 )
 
 # Detect OS and install certificates
-if [[ "$(uname -o)" == "Android" ]]; then
-	# Termux/Android
-	echo "note: on Android/Termux, certificates must be added manually to the system trust store" >&2
-
-elif [[ "$OSTYPE" == "darwin"* ]]; then
+if [[ "$OSTYPE" == "darwin"* ]]; then
 	# macOS
 	for CERT_PATH in "${CERT_PATHS[@]}"; do
 		# Check if certificate is already trusted
@@ -879,7 +807,7 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
 fi
 
 # install user services
-if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+if [[ "$OSTYPE" == "linux-gnu"* ]] && ! [ "$CONTAINERIZED" -eq 1 ]; then
 	if systemctl --user is-system-running &>/dev/null || systemctl --user status &>/dev/null; then
 		systemctl --user enable tmux@default.socket
 		systemctl --user enable syncthing.service
