@@ -21,10 +21,9 @@ The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/
 Supported environments:
 
 - macOS latest (w/ `brew`)
-- Debian GNU/Linux >= 13
 - Ubuntu GNU/Linux >= 25.10
 - Fedora GNU/Linux >= 42
-- Windows 10 ESU/11 `cmd` (via `autorun.cmd`)
+- Windows 11 `cmd`
 
 Brew will be installed on Darwin and Linux if it is not already installed. Rootless installs are supported but a warning will be emitted since I can't test every edge case.
 
@@ -35,13 +34,13 @@ Linux environments are preferred in the following order:
     - I trust Red Hat more to ship reliable and efficient software more than I trust Canonical.
 2. Ubuntu
     - Why? Homebrew builds against Ubuntu, and not base Debian.
-    - Don't get it twisted, I don't agree with Canonical's decision to replace the coreutils with rust rewrites.
-3. Debian
-    - I like Debian, I would place it above Ubuntu if Homebrew didn't delegate Debian to "Tier 2" support.
 
 All of the above environments are available in Docker pours (see the packages menu on the right). Using `latest` will get you the newest Ubuntu image since fedora-based Docker images are pretty rare.
 
 > *NOTE:* Termux is no longer supported in a first-class fashion. I don't have an Android phone.
+
+> The Debian setup has been migrated to Ubuntu to follow software that tests against Ubuntu.
+
 > Simialrly, RHEL is no longer supported in a first-class fashion. This setup is for desktop use.
 
 Supported shells:

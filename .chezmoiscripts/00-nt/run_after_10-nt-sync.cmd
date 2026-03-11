@@ -9,8 +9,7 @@ for /f "tokens=3" %%v in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\Current
 
 set VERSION=%BUILD%.%UBR%
 
-REM Check if Windows 11 (build 22000+) with version >= 10.0.26200.7462
-REM 2026-01-10: Current Windows 10 22H2 ESU patch is build 19045.6691 (KB5071546, December 2025)
+REM Check if Windows 11 (build 22000+) with versios build 19045.6691 (KB5071546, December 2025)
 if %BUILD% GEQ 22000 (
     if %BUILD% LSS 26200 (
         echo ERROR: Windows 11 version must be >= 10.0.26200.7462
@@ -22,13 +21,8 @@ if %BUILD% GEQ 22000 (
             exit /b 1
         )
     )
-) else if %BUILD% EQU 19045 (
-    if %UBR% LSS 6691 (
-        echo ERROR: Windows 10 22H2 must be at least build 19045.6691
-        exit /b 1
-    )
 ) else (
-    echo ERROR: Windows version must be Windows 11 ^>= 10.0.26200.7462 or Windows 10 22H2 build 19045.6691+
+    echo ERROR: Windows version must be Windows 11 ^>= 10.0.26200.7462 
     exit /b 1
 )
 
