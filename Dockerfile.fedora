@@ -31,6 +31,37 @@ RUN groupadd -g ${GID} -o ${GROUPNAME} \
   && echo "Defaults !use_pty, !pam_acct_mgmt" >> /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_') \
   && chmod 0440 /etc/sudoers.d/$(echo ${USERNAME} | tr '.' '_')
 
+# BuildKit enabled caching for normal packages
+ENV UV_CACHE_DIR=/var/cache/buildkit/uv \
+    PIP_CACHE_DIR=/var/cache/buildkit/pip \
+    npm_config_cache=/var/cache/buildkit/npm \
+    PNPM_HOME=/var/cache/buildkit/pnpm \
+    HOMEBREW_CACHE=/var/cache/buildkit/brew
+
+RUN mkdir -p \
+        /var/cache/buildkit/uv \
+        /var/cache/buildkit/pip \
+        /var/cache/buildkit/npm \
+        /var/cache/buildkit/pnpm \
+        /var/cache/buildkit/brew && \
+    chown -R ${UID}:${GID} /var/cache/buildkit && \
+    printf '%s\n' \
+        'UV_CACHE_DIR=/var/cache/buildkit/uv' \
+        'PIP_CACHE_DIR=/var/cache/buildkit/pip' \
+        'npm_config_cache=/var/cache/buildkit/npm' \
+        'PNPM_HOME=/var/cache/buildkit/pnpm' \
+        'HOMEBREW_CACHE=/var/cache/buildkit/brew' \
+        >> /etc/environment
+
+# BuildKit enabled caching for system packages
+RUN echo 'keepcache=True' >> /etc/dnf/dnf.conf
+
+# RPMFusion
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    dnf install -y \
+    "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" \
+    "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm"
+
 # Copy dotfiles repository to chezmoi source directory
 COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 
@@ -43,7 +74,13 @@ COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 # Install chezmoi via Homebrew
 # Initialize and apply chezmoi (expects brew and pnpm to already exist)
 # Clean up dnf cache after chezmoi apply since it may install packages via sudo
-RUN --mount=type=tmpfs,target=/tmp \
+RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+    --mount=type=cache,target=/var/cache/buildkit/uv,uid=${UID},gid=${GID},sharing=locked \
+    --mount=type=cache,target=/var/cache/buildkit/pip,uid=${UID},gid=${GID},sharing=locked \
+    --mount=type=cache,target=/var/cache/buildkit/npm,uid=${UID},gid=${GID},sharing=locked \
+    --mount=type=cache,target=/var/cache/buildkit/pnpm,uid=${UID},gid=${GID},sharing=locked \
+    --mount=type=cache,target=/var/cache/buildkit/brew,uid=${UID},gid=${GID},sharing=locked \
+    --mount=type=tmpfs,target=/tmp \
   dnf -y install \
     bash \
     zsh \
@@ -89,7 +126,6 @@ RUN --mount=type=tmpfs,target=/tmp \
   && su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; CHEZMOI_USE_DUMMY=1 CHEZMOI_USE_HEADLESS=1 chezmoi init; chezmoi apply --exclude encrypted' \
   \
   && rm -rf /home/${USERNAME}/.cache/* \
-  && dnf clean all
 
 # Set s6-overlay as the init system
 ENTRYPOINT ["/init"]
