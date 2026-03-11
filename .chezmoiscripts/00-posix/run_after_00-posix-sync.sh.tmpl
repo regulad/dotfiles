@@ -171,6 +171,11 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"m:watch"
   "mdr:age"
 
+	# =+= CONTAINERIZATION
+	"mdr:podman"
+	"mdr:podman-compose"
+	"dr:podman-docker"
+
 	# =+= macOS-SPECIFIC
 	"m:reattach-to-user-namespace"
 	"m:mas"
@@ -809,8 +814,9 @@ fi
 # install user services
 if [[ "$OSTYPE" == "linux-gnu"* ]] && ! [ "$CONTAINERIZED" -eq 1 ]; then
 	if systemctl --user is-system-running &>/dev/null || systemctl --user status &>/dev/null; then
-		systemctl --user enable tmux@default.socket
-		systemctl --user enable syncthing.service
+		systemctl --user enable --now tmux@default.socket
+		systemctl --user enable --now syncthing.service
+		systemctl --user enable --now podman.socket
 	else
 		echo "warning: user session broken (couldn't run systemd --user)" >&2
 	fi
