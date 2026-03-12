@@ -75,11 +75,11 @@ COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 # Initialize and apply chezmoi (expects brew and pnpm to already exist)
 # Clean up dnf cache after chezmoi apply since it may install packages via sudo
 RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
-    --mount=type=cache,target=/var/cache/buildkit/uv,uid=${UID},gid=${GID},sharing=locked \
-    --mount=type=cache,target=/var/cache/buildkit/pip,uid=${UID},gid=${GID},sharing=locked \
-    --mount=type=cache,target=/var/cache/buildkit/npm,uid=${UID},gid=${GID},sharing=locked \
-    --mount=type=cache,target=/var/cache/buildkit/pnpm,uid=${UID},gid=${GID},sharing=locked \
-    --mount=type=cache,target=/var/cache/buildkit/brew,uid=${UID},gid=${GID},sharing=locked \
+    --mount=type=cache,target=/var/cache/buildkit/uv,uid=${UID},gid=${GID} \
+    --mount=type=cache,target=/var/cache/buildkit/pip,uid=${UID},gid=${GID} \
+    --mount=type=cache,target=/var/cache/buildkit/npm,uid=${UID},gid=${GID} \
+    --mount=type=cache,target=/var/cache/buildkit/pnpm,uid=${UID},gid=${GID} \
+    --mount=type=cache,target=/var/cache/buildkit/brew,uid=${UID},gid=${GID} \
     --mount=type=tmpfs,target=/tmp \
   dnf -y install \
     bash \
