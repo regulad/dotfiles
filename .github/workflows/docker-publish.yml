@@ -124,8 +124,10 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=local,src=/var/cache/buildkit-gha
+          cache-to: type=local,dest=/var/cache/buildkit-gha,mode=max
+          #cache-from: type=gha
+          #cache-to: type=gha,mode=max
           build-args: |
             USERNAME=${{ matrix.username }}
             UID=${{ matrix.uid }}
