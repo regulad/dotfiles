@@ -1,142 +1,15 @@
-# THIS FILE IS MANAGED BY CHEZMOI!
-
 # this file is sourced by both zsh and bash; should use common syntax
-if [ "$(uname -o)" = "Darwin" ]; then
-    export PATH="/Applications/Ghostty.app/Contents/MacOS/:$PATH"
-    
-    if [ -n "$ZSH_VERSION" ]; then
-        autoload -Uz colors && colors
-        setopt promptsubst
-    fi
-
-    if [ "$(arch)" = "arm64" ]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-
-        export PNPM_HOME="$HOME/Library/pnpm"
-
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "/opt/homebrew/opt/nvm/nvm.sh" ] && \. "/opt/homebrew/opt/nvm/nvm.sh"  # This loads nvm
-        [ -s "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/opt/homebrew/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
-    else
-        eval "$(/usr/local/bin/brew shellenv)"
-    fi
-    export PATH="$(brew --prefix ruby)/bin:$PATH"
-    export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"
-
-    export PKG_CONFIG_PATH="$(brew --prefix python3)/lib/pkgconfig:$PKG_CONFIG_PATH"
-
-    export ANDROID_HOME="$HOME/Library/Android/sdk"
-    export ANDROID_SDK_ROOT="$HOME/Library/Android/sdk"
-
-    # The following lines have been added by Docker Desktop to enable Docker CLI completions.
-    fpath=(/Users/regulad/.docker/completions $fpath)
-    if [ -n "$ZSH_VERSION" ]; then
-        autoload -Uz compinit && compinit
-    fi
-    # End of Docker CLI completions
-elif [ "$(uname -o)" = "GNU/Linux" ]; then
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-    export PATH="$(brew --prefix ruby)/bin:$PATH"
-    export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"
-
-    export PKG_CONFIG_PATH="$(brew --prefix python3)/lib/pkgconfig:$PKG_CONFIG_PATH"
-
-    export ANDROID_HOME="$HOME/Android/sdk"
-    export ANDROID_SDK_ROOT="$HOME/Android/sdk"
-fi
-
-# sdkmanager-managed sdkmanager overrides brew-managed sdkmanager
-export PATH=$ANDROID_HOME/platform-tools:$PATH
-export PATH=$ANDROID_HOME/tools:$PATH
-
-if [ "$(uname -s)" = "Linux" ]; then
-    export PNPM_HOME="$HOME/.local/share/pnpm"
-fi
-
-if [[ -f /etc/os-release ]]; then
-  . /etc/os-release
-  if [[ "$ID" == "ubuntu" ]]; then
-    # Add snap bin directories to PATH if they exist
-    [[ -d /snap/bin ]] && export PATH="/snap/bin:$PATH"
-    [[ -d /var/lib/snapd/snap/bin ]] && export PATH="/var/lib/snapd/snap/bin:$PATH"
-  fi
-fi
-
-# Set browser to wslview if in WSL
-if grep -qi wsl /proc/version 2>/dev/null; then
-    export BROWSER=wslview
-fi
-
-# pnpm
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-# pnpm end
-
-# deno
-export DENO_INSTALL="$HOME/.deno"
-export DENO_NO_UPDATE_CHECK=1
-export PATH="$DENO_INSTALL/bin:$PATH"
-# deno end
-
-export PATH="$HOME/.local/bin:$PATH"
-export PATH="$HOME/go/bin:$PATH"
-
-# cargo on rustup systems
-if [ -n "$(command -v rustup-init)" ]; then
-    . "$HOME/.cargo/env"
-else
-    export PATH="$HOME/.cargo/bin:$PATH"
-fi
-
-# ssh daemon
-unset _bw_sock
-case "$(uname -o)" in
-  Darwin)
-    for _bw_sock in \
-      "$HOME/.bitwarden-ssh-agent.sock" \
-      "$HOME/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock"
-    do
-      [ -S "$_bw_sock" ] && export SSH_AUTH_SOCK="$_bw_sock" && break
-    done
-    ;;
-  GNU/Linux)
-    for _bw_sock in \
-      "$HOME/.bitwarden-ssh-agent.sock" \
-      "$HOME/snap/bitwarden/current/.bitwarden-ssh-agent.sock" \
-      "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock"
-    do
-      [ -S "$_bw_sock" ] && export SSH_AUTH_SOCK="$_bw_sock" && break
-    done
-    ;;
-esac
-unset _bw_sock
-
-# === ENVIRONMENT
-export OLLAMA_HOST="{{- .ollamaBase -}}"
-export DO_NOT_TRACK=1
-export HOMEBREW_NO_ENV_HINTS=1
-export VISUAL="$(command -v nvim || command -v vim)"
-
-export DISPLAY=${DISPLAY:-:0}
-[ -z "$XDG_RUNTIME_DIR" ] && [ -d "/run/user/$(id -u)" ] && export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-
-if [ -z "${SSH_AUTH_SOCK:-}" ] || [ ! -S "${SSH_AUTH_SOCK:-}" ]; then
-  if command -v keychain >/dev/null 2>&1; then
-    eval "$(keychain --eval --quiet --noask)"
-  else
-    echo "warning: no Bitwarden SSH agent socket found, and keychain is not installed; SSH_AUTH_SOCK not set" >&2
-  fi
+if [ -n "$ZSH_VERSION" ]; then
+    autoload -Uz colors && colors
+    setopt promptsubst
+    autoload -Uz compinit && compinit
 fi
 
 # completions
 if [ -n "$ZSH_VERSION" ]; then
     eval "$(chezmoi completion zsh)"
-    # eval "$(fabric completions zsh)"  # broken 3/1/26
 else
     eval "$(chezmoi completion bash)"
-    # eval "$(fabric completions bash)"  # broken 3/1/26
 fi
 
 # === ALIASES
