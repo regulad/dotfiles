@@ -40,6 +40,29 @@ ssh-privpub() {
 }
 [ -n "$ZSH_VERSION" ] && compdef _files ssh-privpub
 
+reflink_duplicates() {
+  local dir="${1:-.}"
+
+  local cp_flags
+  case "$(uname -s)" in
+    Darwin) cp_flags="-cf" ;;
+    *)      cp_flags="--reflink=always -f" ;;
+  esac
+
+  find-duplicates --keep-going "$dir" | jq -r '
+    to_entries[] |
+    .value[0] as $canonical |
+    .value[1:][] |
+    [$canonical, .] | @tsv
+  ' | while IFS=$'\t' read -r canonical dup; do
+    echo "reflinking: $dup -> $canonical"
+    cp $cp_flags -- "$canonical" "$dup"
+  done
+}
+if [ -n "$ZSH_VERSION" ]; then
+  compdef '_files -/' reflink_duplicates
+fi
+
 chezmoi-cd() {
     cd "$(chezmoi source-path)"
 }
