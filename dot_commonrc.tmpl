@@ -55,7 +55,7 @@ reflink_duplicates() {
     .value[1:][] |
     [$canonical, .] | @tsv
   ' | while IFS=$'\t' read -r canonical dup; do
-    echo "reflinking: $dup -> $canonical"
+    echo "reflinking: $dup -> $canonical" >&2
     cp $cp_flags -- "$canonical" "$dup"
   done
 }
