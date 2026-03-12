@@ -141,6 +141,39 @@ Autodesk.Fusion360 ^
 Wakatime.DesktopWakatime ^
 Logitech.GHUB ^
 Adobe.Acrobat.Reader.64-bit ^
+7zip.7zip ^
+Audacity.Audacity ^
+CrystalDewWorld.CrystalDiskInfo ^
+CrystalDewWorld.CrystalDiskMark ^
+Docker.DockerDesktop ^
+Mozilla.Thunderbird ^
+Notepad++.Notepad++ ^
+Meta.Oculus ^
+Parsec.Parsec ^
+LizardByte.Sunshine ^
+winaero.tweaker ^
+darktable.darktable ^
+Nextcloud.NextcloudDesktop ^
+calibre.calibre ^
+Google.GoogleDrive ^
+Oracle.VirtualBox ^
+WinDirStat.WinDirStat ^
+IDRIX.VeraCrypt ^
+Tailscale.Tailscale ^
+Inkscape.Inkscape ^
+angryziber.AngryIPScanner ^
+Google.Chrome.EXE ^
+HandBrake.HandBrake ^
+LIGHTNINGUK.ImgBurn ^
+OBSProject.OBSStudio ^
+Libretro.RetroArch ^
+Valve.Steam ^
+eliboa.TegraRcmGUI ^
+KDE.Kdenlive ^
+EpicGames.EpicGamesLauncher ^
+TexasInstruments.TIConnect ^
+MoonlightGameStreamingProject.Moonlight ^
+Ollama.Ollama ^
 BillStewart.SyncthingWindowsSetup
 
 REM following winget packages are not installed even though I would like them:
