@@ -1,8 +1,8 @@
 pipx=uv tool $*
-vi=nvim $*
-vi-wt=chezmoi edit --apply "%USERPROFILE%\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
-vi-ah=chezmoi edit --apply "%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\hotkeys.ahk"
-vi-vs=chezmoi edit --apply "%USERPROFILE%\.config\Code\User\settings.json"
+v=nvim $*
+v-wt=chezmoi edit --apply "%USERPROFILE%\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
+v-ah=chezmoi edit --apply "%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\hotkeys.ahk"
+v-vs=chezmoi edit --apply "%USERPROFILE%\.config\Code\User\settings.json"
 c3=uv run "--directory=%USERPROFILE%\.local\share\pycalc3" ipython --no-banner -i --profile=default
 t3=uv run "--directory=%USERPROFILE%\.local\share\pycalc3" ipython --no-banner -i --profile=sympy
 clear=cls

@@ -58,21 +58,18 @@ RUN groupadd -g ${GID} -o ${GROUPNAME} \
 ENV UV_CACHE_DIR=/var/cache/buildkit/uv \
     PIP_CACHE_DIR=/var/cache/buildkit/pip \
     npm_config_cache=/var/cache/buildkit/npm \
-    PNPM_HOME=/var/cache/buildkit/pnpm \
     HOMEBREW_CACHE=/var/cache/buildkit/brew
 
 RUN mkdir -p \
         /var/cache/buildkit/uv \
         /var/cache/buildkit/pip \
         /var/cache/buildkit/npm \
-        /var/cache/buildkit/pnpm \
         /var/cache/buildkit/brew && \
     chown -R ${UID}:${GID} /var/cache/buildkit && \
     printf '%s\n' \
         'UV_CACHE_DIR=/var/cache/buildkit/uv' \
         'PIP_CACHE_DIR=/var/cache/buildkit/pip' \
         'npm_config_cache=/var/cache/buildkit/npm' \
-        'PNPM_HOME=/var/cache/buildkit/pnpm' \
         'HOMEBREW_CACHE=/var/cache/buildkit/brew' \
         >> /etc/environment
 
@@ -98,7 +95,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/cache/buildkit/uv,uid=${UID},gid=${GID} \
     --mount=type=cache,target=/var/cache/buildkit/pip,uid=${UID},gid=${GID} \
     --mount=type=cache,target=/var/cache/buildkit/npm,uid=${UID},gid=${GID} \
-    --mount=type=cache,target=/var/cache/buildkit/pnpm,uid=${UID},gid=${GID} \
     --mount=type=cache,target=/var/cache/buildkit/brew,uid=${UID},gid=${GID} \
     --mount=type=tmpfs,target=/tmp \
   apt-get update \
