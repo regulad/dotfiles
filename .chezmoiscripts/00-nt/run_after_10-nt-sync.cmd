@@ -173,7 +173,7 @@ KDE.Kdenlive ^
 EpicGames.EpicGamesLauncher ^
 TexasInstruments.TIConnect ^
 MoonlightGameStreamingProject.Moonlight ^
-Ollama.Ollama ^
+AMD.LemonadeServer ^
 BillStewart.SyncthingWindowsSetup
 
 REM following winget packages are not installed even though I would like them:
