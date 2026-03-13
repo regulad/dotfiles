@@ -27,6 +27,16 @@ Host prodingus
     IdentitiesOnly yes
     ForwardAgent yes
 
+Host jondingus
+    HostName jondingus.tail11540.ts.net
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa.pub
+    IdentityFile ~/.ssh/id_rsa  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
+
 Host samsung-sm-a526u1
     HostName samsung-sm-a526u1.tail11540.ts.net
     Port 8022
