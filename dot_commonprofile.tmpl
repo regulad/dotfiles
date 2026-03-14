@@ -101,6 +101,7 @@ case "$(uname -o)" in
 esac
 unset _bw_sock
 
+export VISUAL="$(command -v nvim || command -v vim)"
 export DO_NOT_TRACK=1
 export HOMEBREW_NO_ENV_HINTS=1
 

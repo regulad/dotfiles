@@ -22,7 +22,6 @@ for h in "${NCSU_HOSTS[@]}"; do
   alias "ssh-$h=sshpass -f $HOME/.ssh/id_plaintext_ncstate ssh $h"
 done
 
-export VISUAL="$(command -v nvim || command -v vim)"
 v() { 
   command "$VISUAL" "$@"
 }
