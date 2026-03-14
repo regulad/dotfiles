@@ -57,6 +57,7 @@ gh ^
 git ^
 ffdec ^
 nodejs ^
+bind ^
 pnpm ^
 nmap ^
 rust ^
