@@ -101,14 +101,8 @@ case "$(uname -o)" in
 esac
 unset _bw_sock
 
-export OLLAMA_HOST="{{- .ollamaBase -}}"
-export XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 export DO_NOT_TRACK=1
 export HOMEBREW_NO_ENV_HINTS=1
-export VISUAL="$(command -v nvim || command -v vim)"
-
-export DISPLAY=${DISPLAY:-:0}
-[ -z "$XDG_RUNTIME_DIR" ] && [ -d "/run/user/$(id -u)" ] && export XDG_RUNTIME_DIR="/run/user/$(id -u)"
 
 if [ -z "${SSH_AUTH_SOCK:-}" ] || [ ! -S "${SSH_AUTH_SOCK:-}" ]; then
   if command -v keychain >/dev/null 2>&1; then
