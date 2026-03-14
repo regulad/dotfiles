@@ -108,6 +108,7 @@ call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
 echo debug: installing winget packages
 REM Install/update winget packages
 set winget_packages=^
+WiresharkFoundation.Wireshark ^
 UrBackup.UrBackup.Client ^
 Microsoft.WindowsTerminal ^
 Element.Element ^
