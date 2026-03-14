@@ -88,12 +88,6 @@
                 "source": "Windows.Terminal.PowershellCore"
             },
             {
-                "guid": "{588b6b5f-cfcf-5cb8-8c9e-1a6901b322ef}",
-                "hidden": false,
-                "name": "FedoraLinux-43",
-                "source": "Microsoft.WSL"
-            },
-            {
                 "closeOnExit": "automatic",
                 "commandline": "%USERPROFILE%\\scoop\\shims\\psmux.exe",
                 "guid": "{552a0491-b301-4c1c-b2f4-7f7c15de9c8a}",
