@@ -110,7 +110,6 @@ echo debug: installing winget packages
 REM Install/update winget packages
 set winget_packages=^
 WiresharkFoundation.Wireshark ^
-UrBackup.UrBackup.Client ^
 Microsoft.WindowsTerminal ^
 Element.Element ^
 JetBrains.Toolbox ^
@@ -197,6 +196,10 @@ call refreshenv >nul 2>&1
 
 echo warning: the following pieces of software need manual installs:
 echo   - AMD Adrenalin Software / Radeon Driver Suite
+echo   - SoftEther VPN Client (Ver 4.44, Build 9807, rtm)
+echo   - SoftEther VPN Server and VPN Bridge (Ver 4.44, Build 9807, rtm)
+echo   - Acronis True Image for Sabrent
+echo   - UrBackup from server
 
 REM service setup
 sc query LanguageTool >nul 2>&1
