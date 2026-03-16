@@ -18,7 +18,7 @@ if [ "$SHELL" != "$ZSH" ] && [ -x "$ZSH" ]; then
 fi
 
 # auto-attach tmux if in an interactive session if not nested
-if command -v tmux &> /dev/null && [ -z "$TMUX" ] && [[ $- == *i* ]]; then
+if command -v tmux &> /dev/null && [ -z "$TMUX" ] && [ -z "$DISPLAY" ] && [[ $- == *i* ]]; then
     exec tmux new-session -A -s profile_spawn
 fi
 
