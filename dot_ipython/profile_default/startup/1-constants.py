@@ -47,3 +47,6 @@ def gamma(v: float) -> float:
 def inverse_gamma(gamma: float) -> float:
     """Returns the magnitude of v for a given gamma"""
     return sqrt(1 - (1 / gamma) ** 2) * c
+
+# misc. constants 
+M_sol = 1.9891e30  # kg
