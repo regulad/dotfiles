@@ -127,6 +127,7 @@ Prusa3D.PrusaSlicer ^
 PuTTY.PuTTY ^
 REALiX.HWiNFO ^
 VB-Audio.Voicemeeter.Potato ^
+9PB2MZ1ZMB1S ^
 EclipseAdoptium.Temurin.25.JDK ^
 EclipseAdoptium.Temurin.21.JDK ^
 OpenJS.NodeJS.LTS ^
