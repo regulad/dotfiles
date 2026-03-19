@@ -129,6 +129,7 @@ REALiX.HWiNFO ^
 VB-Audio.Voicemeeter.Potato ^
 9PB2MZ1ZMB1S ^
 9NP83LWLPZ9K ^
+9PC3H3V7Q9CH ^
 EclipseAdoptium.Temurin.25.JDK ^
 EclipseAdoptium.Temurin.21.JDK ^
 OpenJS.NodeJS.LTS ^
