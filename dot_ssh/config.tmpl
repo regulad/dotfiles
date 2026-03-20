@@ -52,6 +52,15 @@ Host turk
     HostName turk.tail11540.ts.net
     ForwardAgent yes
 
+Host honker
+    HostName honker.tail11540.ts.net
+    ForwardAgent yes
+
+# Linux & macOS laptops
+Host penumbra
+    HostName penumbra.tail11540.ts.net
+    ForwardAgent yes
+
 # Special VMs
 Host pihole
     HostName pihole.home.arpa
@@ -60,19 +69,11 @@ Host pihole
     PreferredAuthentications password
     ForwardAgent yes
 
-# Static hosts
 Host macserver
     HostName macserver.tail11540.ts.net
     ForwardAgent yes
 
-Host pelican
-    HostName pelican.home.arpa
-    ForwardAgent yes
-
-Host matrix
-    HostName matrix.home.arpa
-    ForwardAgent yes
-
+# Master VMs
 Host tinker
     HostName tinker.home.arpa
     ForwardAgent yes
@@ -81,54 +82,56 @@ Host gendo
     HostName gendo.home.arpa
     ForwardAgent yes
 
+# llama.cpp hosts
+Host llamarpcmaster
+    HostName llamarpcmaster.home.arpa
+    ForwardAgent yes
+
+Host jon-llamarpcslave
+    HostName jon-llamarpcslave.home.arpa
+    ForwardAgent yes
+
+Host pro-llamarpcslave
+    HostName pro-llamarpcslave.home.arpa
+    ForwardAgent yes
+
+Host neo-llamarpcslave
+    HostName neo-llamarpcslave.home.arpa
+    ForwardAgent yes
+
+# Normal VMs
+Host pelican
+    HostName plican.home.arpa
+
+Host matrix
+    HostName matrix.home.arpa
+
 Host lancache
     HostName lancache.home.arpa
-    ForwardAgent yes
-
-Host proencode
-    HostName proencode.home.arpa
-    ForwardAgent yes
-
-Host procuda
-    HostName procuda.home.arpa
-    ForwardAgent yes
 
 Host freeipa
     HostName freeipa.home.arpa
-    ForwardAgent yes
 
 Host authentik
     HostName authentik.home.arpa
-    ForwardAgent yes
 
 Host timemachine
     HostName timemachine.home.arpa
-    ForwardAgent yes
 
 Host urbackup
     HostName urbackup.home.arpa
-    ForwardAgent yes
 
 Host obico
     HostName obico.home.arpa
-    ForwardAgent yes
 
 Host softether
     HostName softether.home.arpa
-    ForwardAgent yes
 
 Host gha
     HostName gha.home.arpa
-    ForwardAgent yes
 
 Host microk8s
     HostName microk8s.home.arpa
-    ForwardAgent yes
-
-# Mobile hosts
-Host penumbra
-    HostName penumbra.tail11540.ts.net
-    ForwardAgent yes
 
 # Windows hosts are no longer included for ssh key auth.
 # There is a ton of garbage with "key scopes" that prevents the use of junctions while connected.
@@ -156,9 +159,6 @@ Match Host tailscalerouter User opc
 
 Host livekit
 
-Match Host mail User regulad
-    ForwardAgent yes
-
 Match Host livekit User opc
 {{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/ssh-key-2025-12-19_livekit.key.pub
@@ -167,9 +167,6 @@ Match Host livekit User opc
     IdentitiesOnly yes
 
 Host mail
-
-Match Host mail User regulad
-    ForwardAgent yes
 
 Match Host mail User opc
 {{- if not .useDummySecrets }}
