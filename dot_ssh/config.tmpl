@@ -6,7 +6,7 @@ HashKnownHosts yes
 Host *
   EnableEscapeCommandline yes
 
-# "Special" hosts
+# Hardware hosts
 Host neodingus
     HostName neodingus.tail11540.ts.net
     User root
@@ -48,6 +48,11 @@ Host samsung-sm-a526u1
     IdentitiesOnly yes
     ForwardAgent yes
 
+Host turk
+    HostName turk.tail11540.ts.net
+    ForwardAgent yes
+
+# Special VMs
 Host pihole
     HostName pihole.home.arpa
     User root
