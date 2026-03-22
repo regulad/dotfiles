@@ -85,6 +85,7 @@ Host gendo
 Host neohafh
     # this is the ONLY remote host with my keyring on it
     HostName neohafh.home.arpa
+    RemoteCommand tmux new-session -A -s ssh
 
 # llama.cpp hosts
 Host llamarpcmaster
@@ -265,11 +266,6 @@ Host *
     # Try to use the user regulad on all systems
     User regulad
     PreferredAuthentications publickey   
-
-# Tmux
-Match host="neodingus,prodingus,penumbra,dingus-server,eos,grendel,hydra,kraken"
-    RequestTTY yes
-    RemoteCommand bash -c 'if command -v tmux >/dev/null 2>&1; then exec tmux new-session -A -s ssh_tmux; else echo "warning: tmux not available, falling back to login shell" >&2; exec $SHELL -l; fi'
 
 # General idea of the fallback:
 #    1. Try to get the agent's private key by the public key
