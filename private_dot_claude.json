@@ -1,0 +1,34 @@
+{
+  "opusProMigrationComplete": true,
+  "sonnet1m45MigrationComplete": true,
+  "mcpServers": {
+    "desktop_local": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--env",
+        "VNCMCP_HOST",
+        "--env",
+        "VNCMCP_PORT",
+        "--env",
+        "VNCMCP_TIMEOUT",
+        "--env",
+        "VNCMCP_USERNAME",
+        "--env",
+        "VNCMCP_PASSWORD",
+        "-i",
+        "--rm",
+        "--pull=always",
+        "--network=host",
+        "ghcr.io/regulad/vnc-mcp:latest"
+      ],
+      "env": {
+        "VNCMCP_HOST": "127.0.0.1",
+        "VNCMCP_PORT": "5900",
+        "VNCMCP_TIMEOUT": "15.0",
+        "VNCMCP_USERNAME": "",
+        "VNCMCP_PASSWORD": "Claude487"
+      }
+    }
+  }
+}
