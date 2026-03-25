@@ -11,6 +11,7 @@ for %%i in (nvim.exe vim.exe) do @if exist "%%~$PATH:i" (set VISUAL=%%~$PATH:i &
 REM other environment variables
 REM DO NOT INCLUDE QUOTES!
 set RCLONE_CONFIG=%USERPROFILE%\.config\rclone\rclone.conf
+set CLAUDE_CODE_GIT_BASH_PATH=%USERPROFILE%\scoop\apps\git\current\bin\bash.exe
 
 REM display fancy stuff if this is an interactive session
 echo %CMDCMDLINE% | findstr /I /C:"/C" >nul && goto :end || goto :interactive
