@@ -2,6 +2,14 @@
   "opusProMigrationComplete": true,
   "sonnet1m45MigrationComplete": true,
   "mcpServers": {
+    "ddg-search": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "duckduckgo-mcp-server"
+      ],
+      "env": {}
+    },
     "desktop_local": {
       "command": "docker",
       "args": [
