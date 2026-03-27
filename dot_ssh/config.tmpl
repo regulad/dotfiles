@@ -11,8 +11,8 @@ Host neodingus
     HostName neodingus.tail11540.ts.net
     User root
 {{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
 {{- end }}
     IdentitiesOnly yes
     ForwardAgent yes
@@ -21,8 +21,8 @@ Host prodingus
     HostName prodingus.tail11540.ts.net
     User root
 {{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
 {{- end }}
     IdentitiesOnly yes
     ForwardAgent yes
@@ -31,8 +31,8 @@ Host jondingus
     HostName jondingus.tail11540.ts.net
     User root
 {{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
 {{- end }}
     IdentitiesOnly yes
     ForwardAgent yes
@@ -42,8 +42,8 @@ Host samsung-sm-a526u1
     Port 8022
     User u0_a322
 {{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
 {{- end }}
     IdentitiesOnly yes
     ForwardAgent yes
@@ -143,8 +143,8 @@ Host microk8s
 Host doppelgangerhq.com
     User ubuntu
 {{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
 {{- end }}
     IdentitiesOnly yes
     ForwardAgent yes
@@ -183,8 +183,8 @@ Host github.com
     HostName github.com
     User git
 {{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
 {{- end }}
     IdentitiesOnly yes
 
@@ -192,8 +192,8 @@ Host invent.kde.org
     HostName invent.kde.org
     User git
 {{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
 {{- end }}
     IdentitiesOnly yes
 
@@ -203,8 +203,8 @@ Host git-ssh.regulad.xyz
     HostName git-ssh.regulad.xyz
     User forgejo
 {{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
 {{- end }}
     IdentitiesOnly yes
 
@@ -273,8 +273,8 @@ Host *
 #    2. If the private key isn't in the agent, and it exists on disk, load it. Else, crash.
 Match User regulad
 {{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa.pub
-    IdentityFile ~/.ssh/id_rsa  # fallback
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
 {{- end }}
     IdentitiesOnly yes
 
