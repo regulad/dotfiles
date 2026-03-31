@@ -760,9 +760,9 @@ else
 fi
 
 # Certificate installation
-# NOTE: chezmoi source-path can't be used if this is in an apply
 CERT_PATHS=(
 	"$HOME/.x509/ipa-ca.crt"
+	"$HOME/.x509/pve-root-ca.pem"
 )
 
 # Detect OS and install certificates

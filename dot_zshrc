@@ -10,6 +10,7 @@ plugins=(
     gh
     zsh-autosuggestions
 )
+zstyle ':omz:alpha:lib:git' async-prompt no
 zstyle ':omz:update' mode disabled
 source $ZSH/oh-my-zsh.sh
 # ohmyzsh end
