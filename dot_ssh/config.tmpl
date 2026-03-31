@@ -106,9 +106,6 @@ Host neo-llamarpcslave
 Host pelican
     HostName pelican.home.arpa
 
-Host matrix
-    HostName matrix.home.arpa
-
 Host lancache
     HostName lancache.home.arpa
 
@@ -210,6 +207,11 @@ Host git-ssh.regulad.xyz
 
 Match Host mail User regulad
     ForwardAgent yes
+
+# cloudflared protected hosts
+Host matrix
+     ProxyCommand cloudflared access ssh --hostname %h
+     HostName ssh-matrix.regulad.xyz
 
 # ncsu
 Host github.ncsu.edu
