@@ -112,3 +112,7 @@ if [ -z "${SSH_AUTH_SOCK:-}" ] || [ ! -S "${SSH_AUTH_SOCK:-}" ]; then
     echo "warning: no Bitwarden SSH agent socket found, and keychain is not installed; SSH_AUTH_SOCK not set" >&2
   fi
 fi
+
+# AWS
+export AWS_ENDPOINT_URL=https://s3.regulad.xyz
+export AWS_PROFILE=ceph
