@@ -75,6 +75,7 @@ autocmd BufWrite *.lua call LuaFormat()
 if !exists('g:vscode')
     colorscheme darcula
     set termguicolors
+    set tabstop=8
     if !has("nvim")
         autocmd VimEnter * call echoraw("\x1b]11;#1e1f22\x07")
         autocmd VimLeave * call echoraw("\x1b]111;\x07")
