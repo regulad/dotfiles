@@ -54,11 +54,15 @@ font-feature = -liga
 font-feature = -dlig
 
 shell-integration = detect
-shell-integration-features = cursor,sudo,ssh-env,ssh-terminfo,path
+shell-integration-features = sudo,ssh-env
 theme = light:Apple System Colors Light,dark:Apple System Colors
-background-opacity = 0.8
-background-blur = true
+{{- if ne .chezmoi.os "darwin" }}
+background-blur = true 
+{{- else }}
+background-blur = macos-glass-regular
+{{- end }}
 background-opacity-cells = true
+background-opacity = 0.8
 keybind = global:cmd+backquote=toggle_quick_terminal
 initial-window = false
 copy-on-select = false
