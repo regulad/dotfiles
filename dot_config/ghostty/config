@@ -53,8 +53,8 @@ font-feature = -calt
 font-feature = -liga
 font-feature = -dlig
 
-# i literally just use ghostty for the quake shell
-shell-integration = none
+shell-integration = detect
+shell-integration-features = cursor,sudo,ssh-env,ssh-terminfo,path
 theme = light:Apple System Colors Light,dark:Apple System Colors
 background-opacity = 0.8
 background-blur = true
