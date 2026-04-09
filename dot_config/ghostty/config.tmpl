@@ -60,9 +60,10 @@ theme = light:Apple System Colors Light,dark:Apple System Colors
 background-blur = true 
 {{- else }}
 background-blur = true 
+#background-blur = macos-glass-regular  # uses white font on light mode, doesn't work
 {{- end }}
-background-opacity-cells = true
 background-opacity = 0.8
+background-opacity-cells = true
 keybind = global:cmd+backquote=toggle_quick_terminal
 initial-window = false
 copy-on-select = false
