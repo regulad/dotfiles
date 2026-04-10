@@ -34,6 +34,9 @@ elif [ "$(uname -o)" = "GNU/Linux" ]; then
     export PNPM_HOME="$HOME/.local/share/pnpm"
 fi
 
+export NODE_COMPILE_CACHE="$HOME/.cache/node-compile-cache"
+mkdir -p $NODE_COMPILE_CACHE
+
 # legacy
 export ANDROID_HOME="$ANDROID_SDK_ROOT"
 
