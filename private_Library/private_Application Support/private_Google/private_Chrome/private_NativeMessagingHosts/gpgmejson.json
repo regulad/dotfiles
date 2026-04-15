@@ -1,7 +1,7 @@
 {
   "name": "gpgmejson",
   "description": "JavaScript binding for GnuPG",
-  "path": "/usr/bin/gpgme-json",
+  "path": "/opt/homebrew/bin/gpgme-json",
   "type": "stdio",
   "allowed_origins": ["chrome-extension://kajibbejlbohfaggdiogboambcijhkke/"]
 }
