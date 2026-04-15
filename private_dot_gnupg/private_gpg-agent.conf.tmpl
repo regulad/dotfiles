@@ -1,2 +1,7 @@
 default-cache-ttl 600
 max-cache-ttl 7200
+{{ if eq .chezmoi.arch "arm64" -}}
+pinentry-program /opt/homebrew/bin/pinentry-mac
+{{- else -}}
+pinentry-program /usr/local/bin/pinentry-mac
+{{- end }}
