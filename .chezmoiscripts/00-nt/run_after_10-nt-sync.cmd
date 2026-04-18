@@ -49,6 +49,7 @@ call scoop update
 call scoop bucket add psmux https://github.com/marlocarlo/scoop-psmux
 call scoop bucket add extras
 set packages=^
+ninja ^
 bitwarden-cli ^
 chezmoi ^
 psmux ^
