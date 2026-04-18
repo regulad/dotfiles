@@ -28,26 +28,38 @@ if %BUILD% GEQ 22000 (
 
 REM installing certificate
 echo debug: installing custom certificate
-sudo certutil -addstore "Root" "%USERPROFILE%\.x509\ipa-ca.crt"
+call sudo certutil -addstore "Root" "%USERPROFILE%\.x509\ipa-ca.crt"
 
 REM Check for winget
-where winget >nul 2>&1
+call where winget >nul 2>&1
 if %errorLevel% neq 0 (
     echo ERROR: winget is not available
     exit /b 1
 )
 
-where scoop >nul 2>&1
+call where scoop >nul 2>&1
 if %errorLevel% neq 0 (
     echo debug: installing scoop
-    powershell -Command "Start-Process powershell -Verb RunAs -ArgumentList '-Command', 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force; irm get.scoop.sh | iex' -Wait"
+    call powershell -Command "Start-Process powershell -Verb RunAs -ArgumentList '-Command', 'Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force; irm get.scoop.sh | iex' -Wait"
 )
 call refreshenv >nul 2>&1
 
 echo debug: updating scoop
 call scoop update
-call scoop bucket add psmux https://github.com/marlocarlo/scoop-psmux
-call scoop bucket add extras
+call scoop bucket list | findstr /R /C:"^extras " >nul 2>&1
+if errorlevel 1 (
+    echo Adding extras bucket...
+    call scoop bucket add extras
+) else (
+    echo extras bucket already present, skipping.
+)
+call scoop bucket list | findstr /R /C:"^psmux " >nul 2>&1
+if errorlevel 1 (
+    echo Adding psmux bucket...
+    call scoop bucket add psmux https://github.com/marlocarlo/scoop-psmux
+) else (
+    echo psmux bucket already present, skipping.
+)
 set packages=^
 ninja ^
 bitwarden-cli ^
@@ -209,15 +221,15 @@ echo   - Acronis True Image for Sabrent
 echo   - UrBackup from server
 
 REM service setup
-sc query LanguageTool >nul 2>&1
+call sc query LanguageTool >nul 2>&1
 if !errorLevel! neq 0 (
     echo Registering LanguageTool service...
     set LT_PATH=%USERPROFILE%\scoop\apps\languagetool-java\current
-    sudo nssm install LanguageTool "%JAVA_HOME%\bin\java.exe"
-    sudo nssm set LanguageTool AppParameters "-cp \"!LT_PATH!\languagetool-server.jar\" org.languagetool.server.HTTPServer --port 8081 --allow-origin \"*\""
-    sudo nssm set LanguageTool AppDirectory "!LT_PATH!"
-    sudo nssm set LanguageTool Start SERVICE_AUTO_START
-    sudo nssm start LanguageTool
+    call sudo nssm install LanguageTool "%JAVA_HOME%\bin\java.exe"
+    call sudo nssm set LanguageTool AppParameters "-cp \"!LT_PATH!\languagetool-server.jar\" org.languagetool.server.HTTPServer --port 8081 --allow-origin \"*\""
+    call sudo nssm set LanguageTool AppDirectory "!LT_PATH!"
+    call sudo nssm set LanguageTool Start SERVICE_AUTO_START
+    call sudo nssm start LanguageTool
     echo LanguageTool service registered and started.
 ) else (
     echo LanguageTool service already registered, skipping.
