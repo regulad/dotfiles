@@ -33,6 +33,8 @@ G = 6.7e-11  # N * (m^2/kg^2)
 # constants from NCSU PY 205
 # Approx. grav field near Earth's surface
 g = 9.8  # N/kg
+# Electron volt
+eV = 1.6e-19  # J
 # specific heat capacity of water
 C = 4.2  # kJ/kg/degC
 # Room temperature
