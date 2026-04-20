@@ -58,7 +58,14 @@ if errorlevel 1 (
     echo Adding regulad bucket...
     call scoop bucket add regulad https://github.com/regulad/scoop-regulad.git
 ) else (
-    echo extras regulad already present, skipping.
+    echo regulad bucket already present, skipping.
+)
+call scoop bucket list | findstr /R /C:"^versions " >nul 2>&1
+if errorlevel 1 (
+    echo Adding versions bucket...
+    call scoop bucket add versions
+) else (
+    echo versions bucket already present, skipping.
 )
 call scoop bucket list | findstr /R /C:"^psmux " >nul 2>&1
 if errorlevel 1 (
@@ -68,6 +75,7 @@ if errorlevel 1 (
     echo psmux bucket already present, skipping.
 )
 set packages=^
+python27 ^
 dtk ^
 ninja ^
 bitwarden-cli ^
