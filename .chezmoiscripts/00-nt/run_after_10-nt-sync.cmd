@@ -75,6 +75,7 @@ if errorlevel 1 (
     echo psmux bucket already present, skipping.
 )
 set packages=^
+git-filter-repo ^
 python27 ^
 dtk ^
 ninja ^
