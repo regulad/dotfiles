@@ -26,10 +26,6 @@ if %BUILD% GEQ 22000 (
     exit /b 1
 )
 
-REM installing certificate
-echo debug: installing custom certificate
-call sudo certutil -addstore "Root" "%USERPROFILE%\.x509\ipa-ca.crt"
-
 REM Check for winget
 call where winget >nul 2>&1
 if %errorLevel% neq 0 (
@@ -253,5 +249,17 @@ if !errorLevel! neq 0 (
 ) else (
     echo LanguageTool service already registered, skipping.
 )
+
+echo note: installing python tooling
+REM matches unix script
+uv tool install -q ruff
+uv tool install -q ty
+uv tool install -q pre-commit
+uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
+uv tool install --python cp314 -q "rendercv[full]@2.3"
+uv tool install -q hatch
+uv tool install -q autopep8
+uv tool install "yt-dlp[default]"
+uv tool upgrade --quiet --all
 
 echo note: leaving hookscript
