@@ -259,7 +259,7 @@ uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-rendere
 uv tool install --python cp314 -q "rendercv[full]@2.3"
 uv tool install -q hatch
 uv tool install -q autopep8
-uv tool install "yt-dlp[default]"
+uv tool install -q "yt-dlp[default]"
 uv tool upgrade --quiet --all
 
 echo note: leaving hookscript
