@@ -155,11 +155,11 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	# =+= CORE
 	"d:build-essential"
 	"mdr:bash"
-  "m:nushell"
-  "r:nu"
+	"m:nushell"
+	"r:nu"
 	"mdr:tmux"
 	"mdr:fastfetch"	
-  "mdr:telnet"
+	"dr:telnet"
 	"mdr:retry" # no compat on termux
 	"mdr:zsh"
 	"dr:xxd"
@@ -169,7 +169,7 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"mdr:nmap"
 	"mdr:curl"
 	"m:watch"
-  "mdr:age"
+	"mdr:age"
 
 	# =+= CONTAINERIZATION
 	"mdr:podman"
@@ -216,17 +216,17 @@ PRIMARY_BINARY_DEPENDENCIES=(
 
 	# =+= MISC
 	"d:thin-provisioning-tools"  # not natively available redhat
-  "mdr:nyx"
+	"mdr:nyx"
 
 	# =+= EDITOR
 	"mdr:neovim"	
-  "mdr:vim"
+	"mdr:vim"
 	"md:shellcheck"
-  "mdr:tree-sitter-cli"
+	"mdr:tree-sitter-cli"
 	"r:ShellCheck"
-  "mdr:ripgrep"
-  "md:imagemagick"
-  "r:ImageMagick"
+	"mdr:ripgrep"
+	"md:imagemagick"
+	"r:ImageMagick"
 
 	# =+= UTILS
 	"dr:systemd"  # provides utils even when in docker
@@ -287,10 +287,10 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"m:ruby@4"
 	"dr:ruby"
 
-  # =+= LUA
-  "mr:lua"
+	# =+= LUA
+	"mr:lua"
 	"d:lua5.5"
-  "mdr:luarocks"
+	"mdr:luarocks"
 )
 
 # choose manager
@@ -307,6 +307,7 @@ elif command -v brew &>/dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
 	# macOS brew-specific tap / dep setups
 	brew tap kde-mac/kde https://invent.kde.org/packaging/homebrew-kde.git && "$(brew --repo kde-mac/kde)/tools/do-caveats.sh"
 	brew tap regulad/homebrew-tap
+	brew tap Gcenx/wine https://github.com/Gcenx/homebrew-wine
 
 	# software updates
 	if [ "$(arch)" = "arm64" ]; then
@@ -500,6 +501,7 @@ BREW_CASKS_MACOS=(
 	"macfuse" # we finally have `-o backend=fskit`! no kext!
 	"regulad/tap/epson-et8500" # super proprietary 😈
 	"regulad/tap/cricut-design-space" # super proprietary 😈
+	"Gcenx/wine/game-porting-toolkit"
 )
 
 if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "darwin"* ]]; then
