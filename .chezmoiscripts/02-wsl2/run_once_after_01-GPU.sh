@@ -5,18 +5,27 @@
 
 sudo modprobe vgem
 
+sudo tee /etc/systemd/system/vgem.service >/dev/null <<'EOF'
+[Unit]
+Description=Load vgem for WSL GPU support
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/modprobe vgem
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl enable vgem.service
+
 sudo touch /etc/environment
 
 sudo sh -c '
 grep -qxF "GALLIUM_DRIVER=d3d12" /etc/environment || echo "GALLIUM_DRIVER=d3d12" >> /etc/environment
 grep -qxF "LIBVA_DRIVER_NAME=d3d12" /etc/environment || echo "LIBVA_DRIVER_NAME=d3d12" >> /etc/environment
-'
-
-sudo touch /etc/rc.local
-sudo chmod u+x /etc/rc.local
-
-sudo sh -c '
-grep -qxF "modprobe vgem" /etc/rc.local || echo "modprobe vgem" >> /etc/rc.local
 '
 
 sudo groupmod -g "$(stat -c '%g' /dev/dri/renderD128)" render
