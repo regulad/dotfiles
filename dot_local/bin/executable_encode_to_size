@@ -264,7 +264,7 @@ build_filter_args() {
 #                     yuv420p10le) to 8-bit 4:2:0 which libx264 requires.
 # ---------------------------------------------------------------------------
 VF_VAAPI="hwdownload,format=nv12,scale=-2:${OUTPUT_HEIGHT},fps=${OUTPUT_FPS},hwupload,format=vaapi"
-VF_SW="fps=${OUTPUT_FPS},scale=-2:${OUTPUT_HEIGHT},format=yuv420p"
+VF_SW="fps=${OUTPUT_FPS},format=yuv420p,scale=-2:${OUTPUT_HEIGHT}"
 
 PASSLOG="$WORK/pass"
 MAXRATE=$(awk "BEGIN { printf \"%d\", $VIDEO_KBPS * 1.25 }")
