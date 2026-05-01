@@ -282,6 +282,7 @@ if [[ "$SCENARIO" == "A" ]]; then
     echo "-> [A] h264_vaapi VBR  (VA-API hw decode + h264_vaapi encode)"
     build_filter_args "$VF_VAAPI"
     ffmpeg -y \
+        -hide_banner \
         -hwaccel vaapi \
         -hwaccel_device "$VAAPI_DEVICE" \
         -hwaccel_output_format vaapi \
@@ -309,6 +310,7 @@ elif [[ "$SCENARIO" == "B" ]]; then
     # Pass 1 -- analysis only; always use -vf + -an regardless of audio count.
     info "pass 1/2 (analysis) ..."
     ffmpeg -y \
+        -hide_banner \
         -hwaccel vaapi \
         -hwaccel_device "$VAAPI_DEVICE" \
         -hwaccel_output_format vaapi \
@@ -323,6 +325,7 @@ elif [[ "$SCENARIO" == "B" ]]; then
     info "pass 2/2 (encode) ..."
     build_filter_args "hwdownload,format=nv12,$VF_SW"
     ffmpeg -y \
+        -hide_banner \
         -hwaccel vaapi \
         -hwaccel_device "$VAAPI_DEVICE" \
         -hwaccel_output_format vaapi \
@@ -345,6 +348,7 @@ else
 
     info "pass 1/2 (analysis) ..."
     ffmpeg -y \
+        -hide_banner \
         -i "$INPUT" \
         -map "0:v:0" \
         -vf "$VF_SW" \
@@ -355,6 +359,7 @@ else
     info "pass 2/2 (encode) ..."
     build_filter_args "$VF_SW"
     ffmpeg -y \
+        -hide_banner \
         -i "$INPUT" \
         "${FILTER_COMPLEX_ARGS[@]}" \
         "${V_MAP_ARGS[@]}" \
