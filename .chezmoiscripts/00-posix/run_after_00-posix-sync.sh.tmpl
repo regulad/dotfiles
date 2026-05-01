@@ -529,6 +529,9 @@ if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "linux-gnu"* ]]; then
 			brew install --cask -q "$cask" -f
 		fi
 	done
+
+	# final work for brew on linux: unlink ffmpeg so it uses the system version with codecs
+	brew unlink ffmpeg
 fi
 
 ## Mac App Store applications
