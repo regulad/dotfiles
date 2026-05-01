@@ -314,14 +314,14 @@ elif [[ "$SCENARIO" == "B" ]]; then
         -hwaccel_output_format vaapi \
         -i "$INPUT" \
         -map "0:v:0" \
-        -vf "hwdownload,$VF_SW" \
+        -vf "hwdownload,format=nv12,$VF_SW" \
         -c:v libx264 -b:v "${VIDEO_KBPS}k" -preset "$X264_PRESET" \
         -pass 1 -passlogfile "$PASSLOG" \
         -an -f null /dev/null
 
     # Pass 2 -- full encode with audio mixing.
     info "pass 2/2 (encode) ..."
-    build_filter_args "hwdownload,$VF_SW"
+    build_filter_args "hwdownload,format=nv12,$VF_SW"
     ffmpeg -y \
         -hwaccel vaapi \
         -hwaccel_device "$VAAPI_DEVICE" \
