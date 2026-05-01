@@ -30,4 +30,5 @@ grep -qxF "LIBVA_DRIVER_NAME=d3d12" /etc/environment || echo "LIBVA_DRIVER_NAME=
 
 sudo groupmod -g "$(stat -c '%g' /dev/dri/renderD128)" render
 sudo groupmod -g "$(stat -c '%g' /dev/dri/card0)" video
-for g in render video; do id -nG "$USER" | tr ' ' '\n' | grep -qx "$g" || sudo usermod -aG "$g" "$USER" && echo "warning: re-login required" >&2; done
+for g in render video; do sudo usermod -aG "$g" "$USER"; done
+echo "warning: re-login may be required" >&2
