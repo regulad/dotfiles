@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
-# encode_to_size.sh — re-encode a video to fit within a target MiB budget.
+# encode_to_size.sh - re-encode a video to fit within a target MiB budget.
 #
 # Usage:
 #   encode_to_size.sh <size_MiB> <input_file>
 #
 # Output is always:
-#   • H.264 video in an MP4 container
-#   • 30 fps (HFR input is downsampled via the fps filter)
-#   • AAC audio
+#    H.264 video in an MP4 container
+#    30 fps (HFR input is downsampled via the fps filter)
+#    AAC audio
 #
 # Encoding strategy (selected automatically):
 #
-#   [A] Full VA-API  — h264_vaapi encode, VA-API hw decode, GPU-side fps resample.
+#   [A] Full VA-API  - h264_vaapi encode, VA-API hw decode, GPU-side fps resample.
 #                      Requires: vainfo OK + h264_vaapi in ffmpeg + input codec
 #                      is VA-API decodable.  Fastest; size accuracy slightly
 #                      lower than two-pass (single-pass VBR).
 #
-#   [B] Hybrid       — VA-API hw decode → CPU fps/format filter → libx264 two-pass.
+#   [B] Hybrid       - VA-API hw decode  CPU fps/format filter  libx264 two-pass.
 #                      Used when VA-API is available for decode but not encode.
 #                      Best of both worlds for CPU-heavy AV1 sources.
 #
-#   [C] Software     — libx264 two-pass, software decode.
+#   [C] Software     - libx264 two-pass, software decode.
 #                      Fallback when no VA-API is detected.
 #                      Best file-size accuracy.
 #
@@ -33,14 +33,17 @@
 
 set -euo pipefail
 
-# ── tunables ──────────────────────────────────────────────────────────────────
+# �� tunables ������������������������������������������������������������������
 VAAPI_DEVICE="/dev/dri/renderD128"
-AUDIO_KBPS_EACH=128    # AAC budget per audio stream
-OUTPUT_FPS=30          # always-on output frame rate
-X264_PRESET="slow"     # libx264 preset (slower = better quality at same bitrate)
+AUDIO_KBPS_EACH=128 # AAC budget per audio stream
+OUTPUT_FPS=30       # always-on output frame rate
+X264_PRESET="slow"  # libx264 preset (slower = better quality at same bitrate)
 
-# ── helpers ───────────────────────────────────────────────────────────────────
-die()  { echo "error: $*" >&2; exit 1; }
+# �� helpers �������������������������������������������������������������������
+die() {
+    echo "error: $*" >&2
+    exit 1
+}
 warn() { echo "warning: $*" >&2; }
 info() { echo "  $*"; }
 
@@ -52,55 +55,55 @@ usage() {
 
 require_cmd() { command -v "$1" &>/dev/null || die "required tool not found: $1"; }
 
-# ── argument validation ───────────────────────────────────────────────────────
+# �� argument validation �������������������������������������������������������
 [[ $# -ne 2 ]] && usage
 
 TARGET_MIB="$1"
 INPUT="$2"
 
-[[ "$TARGET_MIB" =~ ^[0-9]+(\.[0-9]+)?$ ]] \
-    || die "size_MiB must be a positive number, got: '$TARGET_MIB'"
-[[ -f "$INPUT" ]] \
-    || die "input file not found: $INPUT"
+[[ "$TARGET_MIB" =~ ^[0-9]+(\.[0-9]+)?$ ]] ||
+    die "size_MiB must be a positive number, got: '$TARGET_MIB'"
+[[ -f "$INPUT" ]] ||
+    die "input file not found: $INPUT"
 
 require_cmd ffmpeg
 require_cmd ffprobe
 require_cmd awk
 require_cmd stat
 
-# ── output filename ───────────────────────────────────────────────────────────
+# �� output filename �����������������������������������������������������������
 STEM=$(basename "${INPUT%.*}")
 OUTPUT="${STEM}_${TARGET_MIB}MiB.mp4"
 
-# ── probe: duration ───────────────────────────────────────────────────────────
+# �� probe: duration �����������������������������������������������������������
 DURATION=$(ffprobe -v error \
     -show_entries format=duration \
     -of csv=p=0 \
-    "$INPUT") \
-    || die "ffprobe could not read '$INPUT'"
+    "$INPUT") ||
+    die "ffprobe could not read '$INPUT'"
 
-[[ -n "$DURATION" && "$DURATION" != "N/A" ]] \
-    || die "could not determine duration of '$INPUT'"
+[[ -n "$DURATION" && "$DURATION" != "N/A" ]] ||
+    die "could not determine duration of '$INPUT'"
 
-# ── probe: input video codec (for hw decode eligibility) ─────────────────────
+# �� probe: input video codec (for hw decode eligibility) ���������������������
 INPUT_VCODEC=$(ffprobe -v error \
     -select_streams v:0 \
     -show_entries stream=codec_name \
     -of csv=p=0 \
     "$INPUT" 2>/dev/null || true)
 
-# ── probe: audio stream count ─────────────────────────────────────────────────
+# �� probe: audio stream count �������������������������������������������������
 AUDIO_COUNT=$(
     ffprobe -v error \
         -select_streams a \
         -show_entries stream=index \
         -of csv=p=0 \
-        "$INPUT" \
-    | grep -c . || true
+        "$INPUT" |
+        grep -c . || true
 )
 AUDIO_COUNT="${AUDIO_COUNT:-0}"
 
-# ── probe: subtitle codec names ───────────────────────────────────────────────
+# �� probe: subtitle codec names �����������������������������������������������
 SUB_CODECS=$(
     ffprobe -v error \
         -select_streams s \
@@ -109,19 +112,19 @@ SUB_CODECS=$(
         "$INPUT" 2>/dev/null || true
 )
 
-# ── probe: input frame rate ───────────────────────────────────────────────────
-# Informational only — the fps filter handles the actual conversion.
+# �� probe: input frame rate ���������������������������������������������������
+# Informational only - the fps filter handles the actual conversion.
 INPUT_FPS=$(ffprobe -v error \
     -select_streams v:0 \
     -show_entries stream=avg_frame_rate \
     -of csv=p=0 \
-    "$INPUT" 2>/dev/null \
-    | awk -F/ '{ if ($2>0) printf "%.2f", $1/$2; else print "?" }' || echo "?")
+    "$INPUT" 2>/dev/null |
+    awk -F/ '{ if ($2>0) printf "%.2f", $1/$2; else print "?" }' || echo "?")
 
-# ── bitrate math ──────────────────────────────────────────────────────────────
-# Formula: total_kbps = MiB × 8192 / duration_s  (MiB → kibibits / second)
+# �� bitrate math ��������������������������������������������������������������
+# Formula: total_kbps = MiB x 8192 / duration_s  (MiB  kibibits / second)
 # Subtract the audio budget to get the video ceiling.
-TOTAL_AUDIO_KBPS=$(( AUDIO_COUNT * AUDIO_KBPS_EACH ))
+TOTAL_AUDIO_KBPS=$((AUDIO_COUNT * AUDIO_KBPS_EACH))
 
 VIDEO_KBPS=$(awk "BEGIN {
     v = ($TARGET_MIB * 8192 / $DURATION) - $TOTAL_AUDIO_KBPS
@@ -129,7 +132,7 @@ VIDEO_KBPS=$(awk "BEGIN {
     printf \"%d\", v
 }")
 
-# ── capability detection ──────────────────────────────────────────────────────
+# �� capability detection ������������������������������������������������������
 # Codecs with common VA-API decode support on Intel iHD / AMD radeonsi.
 # AV1 decode requires Intel Gen12+ or AMD RDNA2+.
 VAAPI_DECODE_CODECS="av1 h264 hevc vp8 vp9 mpeg2video vc1"
@@ -138,9 +141,9 @@ VAAPI_AVAIL=0
 VAAPI_ENCODE=0
 VAAPI_DECODE=0
 
-if [[ -e "$VAAPI_DEVICE" ]] \
-   && command -v vainfo &>/dev/null \
-   && vainfo &>/dev/null 2>&1; then
+if [[ -e "$VAAPI_DEVICE" ]] &&
+    command -v vainfo &>/dev/null &&
+    vainfo &>/dev/null 2>&1; then
     VAAPI_AVAIL=1
 
     # Confirm the ffmpeg binary has h264_vaapi compiled in
@@ -154,90 +157,90 @@ if [[ -e "$VAAPI_DEVICE" ]] \
     fi
 fi
 
-# ── choose scenario ───────────────────────────────────────────────────────────
+# �� choose scenario �����������������������������������������������������������
 if [[ $VAAPI_ENCODE -eq 1 && $VAAPI_DECODE -eq 1 ]]; then
-    SCENARIO="A"   # full VA-API: hw decode + hw encode (single-pass VBR)
+    SCENARIO="A" # full VA-API: hw decode + hw encode (single-pass VBR)
 elif [[ $VAAPI_DECODE -eq 1 ]]; then
-    SCENARIO="B"   # hybrid: hw decode + libx264 two-pass
+    SCENARIO="B" # hybrid: hw decode + libx264 two-pass
 else
-    SCENARIO="C"   # pure software: libx264 two-pass
+    SCENARIO="C" # pure software: libx264 two-pass
 fi
 
-# ── summary banner ────────────────────────────────────────────────────────────
-echo "┌─────────────────────────────────────────────────"
-echo "│ input      : $INPUT"
-echo "│ output     : $OUTPUT"
-printf "│ duration   : %.2f s\n" "$DURATION"
-printf "│ input fps  : %s → output fps: %d\n" "$INPUT_FPS" "$OUTPUT_FPS"
-echo "│ input codec: ${INPUT_VCODEC:-unknown}"
-echo "│ audio      : ${AUDIO_COUNT} stream(s) × ${AUDIO_KBPS_EACH} kbps = ${TOTAL_AUDIO_KBPS} kbps"
-echo "│ video      : ${VIDEO_KBPS} kbps  (target ≤ ${TARGET_MIB} MiB)"
-echo "│ scenario   : $SCENARIO"
-echo "└─────────────────────────────────────────────────"
+# �� summary banner ������������������������������������������������������������
+echo "��������������������������������������������������"
+echo "� input      : $INPUT"
+echo "� output     : $OUTPUT"
+printf "� duration   : %.2f s\n" "$DURATION"
+printf "� input fps  : %s  output fps: %d\n" "$INPUT_FPS" "$OUTPUT_FPS"
+echo "� input codec: ${INPUT_VCODEC:-unknown}"
+echo "� audio      : ${AUDIO_COUNT} stream(s) x ${AUDIO_KBPS_EACH} kbps = ${TOTAL_AUDIO_KBPS} kbps"
+echo "� video      : ${VIDEO_KBPS} kbps  (target � ${TARGET_MIB} MiB)"
+echo "� scenario   : $SCENARIO"
+echo "��������������������������������������������������"
 
-[[ "$VIDEO_KBPS" -lt 100 ]] && \
-    warn "video bitrate is very low (${VIDEO_KBPS} kbps) — quality will be poor"
+[[ "$VIDEO_KBPS" -lt 100 ]] &&
+    warn "video bitrate is very low (${VIDEO_KBPS} kbps) - quality will be poor"
 
-# ── stream mapping ────────────────────────────────────────────────────────────
-# 0:v:0 → first video stream only; skips cover-art MJPEG tracks in MKV.
-MAP_ARGS=( -map 0:v:0 )
+# �� stream mapping ������������������������������������������������������������
+# 0:v:0  first video stream only; skips cover-art MJPEG tracks in MKV.
+MAP_ARGS=(-map 0:v:0)
 
 if [[ "$AUDIO_COUNT" -gt 0 ]]; then
-    MAP_ARGS+=( -map "0:a?" )
-    AUDIO_ARGS=( -c:a aac -b:a "${AUDIO_KBPS_EACH}k" )
+    MAP_ARGS+=(-map "0:a?")
+    AUDIO_ARGS=(-c:a aac -b:a "${AUDIO_KBPS_EACH}k")
 else
-    AUDIO_ARGS=( -an )
+    AUDIO_ARGS=(-an)
 fi
 
-# ── subtitle handling ─────────────────────────────────────────────────────────
+# �� subtitle handling ���������������������������������������������������������
 # MP4 only supports mov_text; bitmap subs (PGS/VOBSUB) must be dropped.
 if [[ -z "$SUB_CODECS" ]]; then
-    SUB_ARGS=( -sn )
+    SUB_ARGS=(-sn)
 else
     ALL_TEXT=true
     while IFS= read -r codec; do
         case "$codec" in
-            subrip|srt|ass|ssa|webvtt|mov_text) ;;
-            *) ALL_TEXT=false ;;
+        subrip | srt | ass | ssa | webvtt | mov_text) ;;
+        *) ALL_TEXT=false ;;
         esac
-    done <<< "$SUB_CODECS"
+    done <<<"$SUB_CODECS"
 
     if $ALL_TEXT; then
-        MAP_ARGS+=( -map "0:s?" )
-        SUB_ARGS=( -c:s mov_text )
+        MAP_ARGS+=(-map "0:s?")
+        SUB_ARGS=(-c:s mov_text)
     else
-        SUB_ARGS=( -sn )
+        SUB_ARGS=(-sn)
         warn "non-text subtitle track(s) dropped (incompatible with MP4)"
     fi
 fi
 
-# ── temp dir for two-pass log files ──────────────────────────────────────────
+# �� temp dir for two-pass log files ������������������������������������������
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 PASSLOG="$WORK/pass"
 
-# ── encode ────────────────────────────────────────────────────────────────────
+# �� encode ��������������������������������������������������������������������
 
 if [[ "$SCENARIO" == "A" ]]; then
-    # ── Scenario A: full VA-API (hw decode + hw encode) ──────────────────────
+    # �� Scenario A: full VA-API (hw decode + hw encode) ����������������������
     #
     # Decode pipeline:
     #   -hwaccel vaapi -hwaccel_output_format vaapi
-    #   → decoded frames stay as VAAPI surfaces on the GPU; no PCIe readback.
+    #    decoded frames stay as VAAPI surfaces on the GPU; no PCIe readback.
     #
     # fps/format filter chain:
-    #   hwdownload        → copy VAAPI surface → CPU as NV12.  10-bit AV1
+    #   hwdownload         copy VAAPI surface  CPU as NV12.  10-bit AV1
     #                        surfaces (P010) are mapped down to 8-bit NV12 here.
-    #   format=nv12       → assert NV12 explicitly before the fps filter
-    #   fps=<N>           → drop/duplicate frames to reach the target rate
-    #   hwupload          → push NV12 frames back onto a VAAPI surface
-    #   format=vaapi      → assert vaapi pixel format for h264_vaapi encoder
+    #   format=nv12        assert NV12 explicitly before the fps filter
+    #   fps=<N>            drop/duplicate frames to reach the target rate
+    #   hwupload           push NV12 frames back onto a VAAPI surface
+    #   format=vaapi       assert vaapi pixel format for h264_vaapi encoder
     #
     # Note: h264_vaapi does not support the log-file two-pass mechanism of
     # libx264.  Single-pass VBR with a maxrate cap is used instead; size
-    # accuracy is ±5% vs ~±2% for libx264 two-pass.
+    # accuracy is �5% vs ~�2% for libx264 two-pass.
     MAXRATE=$(awk "BEGIN { printf \"%d\", $VIDEO_KBPS * 1.25 }")
-    echo "→ [A] h264_vaapi VBR (hw decode + hw encode, maxrate ${MAXRATE} kbps)"
+    echo " [A] h264_vaapi VBR (hw decode + hw encode, maxrate ${MAXRATE} kbps)"
 
     ffmpeg -y \
         -hwaccel vaapi \
@@ -256,19 +259,19 @@ if [[ "$SCENARIO" == "A" ]]; then
         "$OUTPUT"
 
 elif [[ "$SCENARIO" == "B" ]]; then
-    # ── Scenario B: hybrid — VA-API hw decode + libx264 two-pass ─────────────
+    # �� Scenario B: hybrid - VA-API hw decode + libx264 two-pass �������������
     #
     # -hwaccel vaapi WITHOUT -hwaccel_output_format:
     #   The GPU still decodes (offloading the CPU from heavy AV1 work), but
     #   frames are automatically copied back to system memory in NV12 format.
     #   Software filters and libx264 can then consume them directly.
     #
-    # fps=<N>         → drop/duplicate frames to the target rate
-    # format=yuv420p  → libx264 needs 8-bit YUV 4:2:0; handles any 10-bit
+    # fps=<N>          drop/duplicate frames to the target rate
+    # format=yuv420p   libx264 needs 8-bit YUV 4:2:0; handles any 10-bit
     #                    frames (yuv420p10le) that arrive from sw fallback.
-    echo "→ [B] libx264 two-pass + VA-API hw decode"
+    echo " [B] libx264 two-pass + VA-API hw decode"
 
-    info "pass 1/2 (analysis) …"
+    info "pass 1/2 (analysis) ."
     ffmpeg -y \
         -hwaccel vaapi \
         -hwaccel_device "$VAAPI_DEVICE" \
@@ -283,7 +286,7 @@ elif [[ "$SCENARIO" == "B" ]]; then
         -an \
         -f null /dev/null
 
-    info "pass 2/2 (encode) …"
+    info "pass 2/2 (encode) ."
     ffmpeg -y \
         -hwaccel vaapi \
         -hwaccel_device "$VAAPI_DEVICE" \
@@ -301,14 +304,14 @@ elif [[ "$SCENARIO" == "B" ]]; then
         "$OUTPUT"
 
 else
-    # ── Scenario C: pure software — libx264 two-pass ─────────────────────────
+    # �� Scenario C: pure software - libx264 two-pass �������������������������
     #
-    # fps=<N>         → drop/duplicate frames to the target rate
-    # format=yuv420p  → ensures 8-bit 4:2:0 for libx264; converts 10-bit AV1
+    # fps=<N>          drop/duplicate frames to the target rate
+    # format=yuv420p   ensures 8-bit 4:2:0 for libx264; converts 10-bit AV1
     #                    (yuv420p10le) or any other high bit-depth input.
-    echo "→ [C] libx264 two-pass (software decode + encode)"
+    echo " [C] libx264 two-pass (software decode + encode)"
 
-    info "pass 1/2 (analysis) …"
+    info "pass 1/2 (analysis) ."
     ffmpeg -y \
         -i "$INPUT" \
         "${MAP_ARGS[@]}" \
@@ -321,7 +324,7 @@ else
         -an \
         -f null /dev/null
 
-    info "pass 2/2 (encode) …"
+    info "pass 2/2 (encode) ."
     ffmpeg -y \
         -i "$INPUT" \
         "${MAP_ARGS[@]}" \
@@ -337,15 +340,15 @@ else
         "$OUTPUT"
 fi
 
-# ── size verification ─────────────────────────────────────────────────────────
+# �� size verification ���������������������������������������������������������
 OUTPUT_BYTES=$(stat -c%s "$OUTPUT" 2>/dev/null || stat -f%z "$OUTPUT")
 TARGET_BYTES=$(awk "BEGIN { printf \"%d\", $TARGET_MIB * 1024 * 1024 }")
-OUTPUT_MIB=$(awk   "BEGIN { printf \"%.2f\", $OUTPUT_BYTES / 1048576 }")
+OUTPUT_MIB=$(awk "BEGIN { printf \"%.2f\", $OUTPUT_BYTES / 1048576 }")
 
-echo "─────────────────────────────────────────────────"
+echo "�������������������������������������������������"
 if [[ "$OUTPUT_BYTES" -gt "$TARGET_BYTES" ]]; then
-    echo "FAIL: $OUTPUT is ${OUTPUT_MIB} MiB — exceeds target of ${TARGET_MIB} MiB" >&2
+    echo "FAIL: $OUTPUT is ${OUTPUT_MIB} MiB - exceeds target of ${TARGET_MIB} MiB" >&2
     exit 1
 fi
 
-echo "OK: $OUTPUT — ${OUTPUT_MIB} MiB (target ≤ ${TARGET_MIB} MiB)"
+echo "OK: $OUTPUT - ${OUTPUT_MIB} MiB (target � ${TARGET_MIB} MiB)"
