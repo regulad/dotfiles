@@ -1,4 +1,6 @@
 # this file is sourced by both zsh and bash; should use common syntax
+[ -r /etc/environment ] && set -a && . /etc/environment && set +a
+
 export PATH="$HOME/.local/bin:$PATH"
 
 if [ "$(uname -o)" = "Darwin" ]; then
