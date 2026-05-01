@@ -286,7 +286,6 @@ if [[ "$SCENARIO" == "A" ]]; then
         -hwaccel_device "$VAAPI_DEVICE" \
         -hwaccel_output_format vaapi \
         -i "$INPUT" \
-        "${FILTER_COMPLEX_ARGS[@]}" \
         "${V_MAP_ARGS[@]}" \
         "${A_MAP_ARGS[@]}" \
         "${SUB_MAP_ARGS[@]}" \
