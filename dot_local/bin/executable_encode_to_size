@@ -165,9 +165,11 @@ fi
 
 # PW-There is currently a bug somewhere in the VA-API stack for wsl2; it will start and get in some frames, but it will fail with a segfault or malloc panic non-deterministically
 if [[ "$(uname -r)" == *"-microsoft-"* || "$(uname -r)" == *"microsoft-standard-"* ]]; then
-    SCENARIO="C"
+    VAAPI_BUG_PRESENT=1
 elif [[ "$(cat /proc/version 2>/dev/null)" == *"Microsoft"* || "$(cat /proc/version 2>/dev/null)" == *"microsoft"* ]]; then
-    SCENARIO="C"
+    VAAPI_BUG_PRESENT=1
+else
+    VAAPI_BUG_PRESENT=0
 fi
 
 # ---------------------------------------------------------------------------
@@ -280,6 +282,23 @@ MAXRATE=$(awk "BEGIN { printf \"%d\", $VIDEO_KBPS * 1.25 }")
 # Encode
 # ---------------------------------------------------------------------------
 
+software_transcode() {
+    ffmpeg -y \
+        -hide_banner \
+        -i "$INPUT" \
+        "${FILTER_COMPLEX_ARGS[@]}" \
+        "${V_MAP_ARGS[@]}" \
+        "${A_MAP_ARGS[@]}" \
+        "${SUB_MAP_ARGS[@]}" \
+        "${VF_ARGS[@]}" \
+        -c:v libx264 -b:v "${VIDEO_KBPS}k" -preset "$X264_PRESET" \
+        -pass 2 -passlogfile "$PASSLOG" \
+        "${A_ENCODE_ARGS[@]}" \
+        "${SUB_ENCODE_ARGS[@]}" \
+        -movflags +faststart \
+        "$OUTPUT"
+}
+
 if [[ "$SCENARIO" == "A" ]]; then
     # -- Scenario A: full VA-API (hw decode + h264_vaapi encode) ---------------
     # h264_vaapi does not support libx264's log-file two-pass mechanism.
@@ -330,25 +349,29 @@ elif [[ "$SCENARIO" == "B" ]]; then
 
     # Pass 2 -- full encode with audio mixing.
     info "pass 2/2 (encode) ..."
-    build_filter_args "hwdownload,format=nv12,$VF_SW"
-    ffmpeg -y \
-        -hide_banner \
-        -hwaccel vaapi \
-        -hwaccel_device "$VAAPI_DEVICE" \
-        -hwaccel_output_format vaapi \
-        -i "$INPUT" \
-        "${FILTER_COMPLEX_ARGS[@]}" \
-        "${V_MAP_ARGS[@]}" \
-        "${A_MAP_ARGS[@]}" \
-        "${SUB_MAP_ARGS[@]}" \
-        "${VF_ARGS[@]}" \
-        -c:v libx264 -b:v "${VIDEO_KBPS}k" -preset "$X264_PRESET" \
-        -pass 2 -passlogfile "$PASSLOG" \
-        "${A_ENCODE_ARGS[@]}" \
-        "${SUB_ENCODE_ARGS[@]}" \
-        -movflags +faststart \
-        "$OUTPUT"
-
+    if [[ $VAAPI_BUG_PRESENT -eq 1 ]]; then
+        build_filter_args "$VF_SW"
+        software_transcode
+    else
+        build_filter_args "hwdownload,format=nv12,$VF_SW"
+        ffmpeg -y \
+            -hide_banner \
+            -hwaccel vaapi \
+            -hwaccel_device "$VAAPI_DEVICE" \
+            -hwaccel_output_format vaapi \
+            -i "$INPUT" \
+            "${FILTER_COMPLEX_ARGS[@]}" \
+            "${V_MAP_ARGS[@]}" \
+            "${A_MAP_ARGS[@]}" \
+            "${SUB_MAP_ARGS[@]}" \
+            "${VF_ARGS[@]}" \
+            -c:v libx264 -b:v "${VIDEO_KBPS}k" -preset "$X264_PRESET" \
+            -pass 2 -passlogfile "$PASSLOG" \
+            "${A_ENCODE_ARGS[@]}" \
+            "${SUB_ENCODE_ARGS[@]}" \
+            -movflags +faststart \
+            "$OUTPUT"
+    fi
 else
     # -- Scenario C: pure software (libx264 two-pass) -------------------------
     echo "-> [C] libx264 two-pass  (software decode + encode)"
@@ -365,20 +388,7 @@ else
 
     info "pass 2/2 (encode) ..."
     build_filter_args "$VF_SW"
-    ffmpeg -y \
-        -hide_banner \
-        -i "$INPUT" \
-        "${FILTER_COMPLEX_ARGS[@]}" \
-        "${V_MAP_ARGS[@]}" \
-        "${A_MAP_ARGS[@]}" \
-        "${SUB_MAP_ARGS[@]}" \
-        "${VF_ARGS[@]}" \
-        -c:v libx264 -b:v "${VIDEO_KBPS}k" -preset "$X264_PRESET" \
-        -pass 2 -passlogfile "$PASSLOG" \
-        "${A_ENCODE_ARGS[@]}" \
-        "${SUB_ENCODE_ARGS[@]}" \
-        -movflags +faststart \
-        "$OUTPUT"
+    software_transcode
 fi
 
 # ---------------------------------------------------------------------------
