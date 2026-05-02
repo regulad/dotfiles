@@ -163,6 +163,13 @@ else
     SCENARIO="C"
 fi
 
+# PW-There is currently a bug somewhere in the VA-API stack for wsl2; it will start and get in some frames, but it will fail with a segfault or malloc panic non-deterministically
+if [[ "$(uname -r)" == *"-microsoft-"* || "$(uname -r)" == *"microsoft-standard-"* ]]; then
+    SCENARIO="C"
+elif [[ "$(cat /proc/version 2>/dev/null)" == *"Microsoft"* || "$(cat /proc/version 2>/dev/null)" == *"microsoft"* ]]; then
+    SCENARIO="C"
+fi
+
 # ---------------------------------------------------------------------------
 # Summary banner  (ASCII only)
 # ---------------------------------------------------------------------------
