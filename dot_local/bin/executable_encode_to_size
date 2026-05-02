@@ -172,6 +172,11 @@ else
     VAAPI_BUG_PRESENT=0
 fi
 
+# AMD driver timeout when using B only
+if [[ $VAAPI_BUG_PRESENT -eq 1 ]] && [[ $SCENARIO == "B" ]]; then
+    SCENARIO="C"
+fi
+
 # ---------------------------------------------------------------------------
 # Summary banner  (ASCII only)
 # ---------------------------------------------------------------------------
@@ -271,7 +276,7 @@ build_filter_args() {
 #                    aspect ratio; -2 ensures width is divisible by 2.
 #   format=yuv420p -- converts any input pixel format (including 10-bit AV1
 #                     yuv420p10le) to 8-bit 4:2:0 which libx264 requires.
-# ---------------------------------------------------------------------------
+# ----------------------------------- ----------------------------------------
 VF_VAAPI="hwdownload,format=nv12,scale=-2:${OUTPUT_HEIGHT},fps=${OUTPUT_FPS},hwupload,format=vaapi"
 VF_SW="fps=${OUTPUT_FPS},scale=-2:${OUTPUT_HEIGHT},format=yuv420p"
 
@@ -349,29 +354,24 @@ elif [[ "$SCENARIO" == "B" ]]; then
 
     # Pass 2 -- full encode with audio mixing.
     info "pass 2/2 (encode) ..."
-    if [[ $VAAPI_BUG_PRESENT -eq 1 ]]; then
-        build_filter_args "$VF_SW"
-        software_transcode
-    else
-        build_filter_args "hwdownload,format=nv12,$VF_SW"
-        ffmpeg -y \
-            -hide_banner \
-            -hwaccel vaapi \
-            -hwaccel_device "$VAAPI_DEVICE" \
-            -hwaccel_output_format vaapi \
-            -i "$INPUT" \
-            "${FILTER_COMPLEX_ARGS[@]}" \
-            "${V_MAP_ARGS[@]}" \
-            "${A_MAP_ARGS[@]}" \
-            "${SUB_MAP_ARGS[@]}" \
-            "${VF_ARGS[@]}" \
-            -c:v libx264 -b:v "${VIDEO_KBPS}k" -preset "$X264_PRESET" \
-            -pass 2 -passlogfile "$PASSLOG" \
-            "${A_ENCODE_ARGS[@]}" \
-            "${SUB_ENCODE_ARGS[@]}" \
-            -movflags +faststart \
-            "$OUTPUT"
-    fi
+    build_filter_args "hwdownload,format=nv12,$VF_SW"
+    ffmpeg -y \
+        -hide_banner \
+        -hwaccel vaapi \
+        -hwaccel_device "$VAAPI_DEVICE" \
+        -hwaccel_output_format vaapi \
+        -i "$INPUT" \
+        "${FILTER_COMPLEX_ARGS[@]}" \
+        "${V_MAP_ARGS[@]}" \
+        "${A_MAP_ARGS[@]}" \
+        "${SUB_MAP_ARGS[@]}" \
+        "${VF_ARGS[@]}" \
+        -c:v libx264 -b:v "${VIDEO_KBPS}k" -preset "$X264_PRESET" \
+        -pass 2 -passlogfile "$PASSLOG" \
+        "${A_ENCODE_ARGS[@]}" \
+        "${SUB_ENCODE_ARGS[@]}" \
+        -movflags +faststart \
+        "$OUTPUT"
 else
     # -- Scenario C: pure software (libx264 two-pass) -------------------------
     echo "-> [C] libx264 two-pass  (software decode + encode)"
