@@ -673,12 +673,19 @@ fi
 #       This can be changed if the python-requires spec at https://packaging.python.org/en/latest/specifications/core-metadata/#core-metadata-requires-python
 #       is ever updated to better accomidate the Python ecosystem with its alternative implementations and ABIs.
 #
-#       Until then, for cli apps, I will be using the lowest version of Cpython that has is checked.
+#       Until then, for cli apps, I will be using the latest version of Cpython that the app has been tested against.
+#       For example, pre-commit tests against https://github.com/pre-commit/pre-commit/blob/main/.github/workflows/main.yml 3.13 as its newest supported python version.
+#
+#       Some tools here like "mangadex-downloader" have a pre-prepared Dockerfile that uses a pinned Python version.
+#       Those versions are mirrored in the selected version for the tools.
 uv tool install -q ruff # astral-backed
 uv tool install -q ty   # astral-backed
-uv tool install -q pre-commit
+
+uv tool install --python cp313 -q pre-commit
+uv tool install --python cp313 -q "mangadex-downloader[optional]"
 uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
-uv tool install --python cp314 -q "rendercv[full]@2.3"  # you break semver! fuck you! no AI slop without bumping major!
+uv tool install --python cp314 -q "rendercv[full]@2.3"  # breaks semver; AI slop beyond this version
+
 # like in the JS ecosystem, some python tools are available as tools/bottles from brew
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q \
@@ -688,6 +695,7 @@ else
 	uv tool install -q hatch
 	uv tool install -q autopep8
 fi
+
 uv tool upgrade --quiet --all
 
 # rust
