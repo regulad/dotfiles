@@ -8,19 +8,28 @@ Dockerfile*
 # Credentialfiles
 {{- if .useDummySecrets }}
 key.txt
+
 .npmrc
+
 .claude/settings.json
+
 .config/vesktop
+
 .wakatime.cfg
+
 .ssh/config
 .ssh/id*
+
 .secrets/
 .cargo/credentials.toml
 .aws/
+
 # will have to insta-gen android secrets if needed
 .android/adbkey
 .android/adbkey.pub
 .android/debug.keystore
+
+.wiiu/common-key
 {{- end }}
 
 # Head
