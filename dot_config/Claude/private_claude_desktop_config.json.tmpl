@@ -14,5 +14,34 @@
         "customGroupOrder": {}
       }
     }
+  },
+  "mcpServers": {
+    "desktop": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--env", "VNCMCP_HOST",
+        "--env", "VNCMCP_PORT",
+        "--env", "VNCMCP_TIMEOUT",
+        "--env", "VNCMCP_USERNAME",
+        "--env", "VNCMCP_PASSWORD",
+        "-i",
+        "--rm",
+        "--pull=always",
+        "--network=host",
+        "ghcr.io/regulad/vnc-mcp:latest"
+      ],
+      "env": {
+        "VNCMCP_HOST": "localhost",
+        "VNCMCP_PORT": "5900",
+        "VNCMCP_TIMEOUT": "15.0",
+        "VNCMCP_USERNAME": "{{ .chezmoi.username }}",
+{{- if eq .chezmoi.hostname "penumbra" }}
+        "VNCMCP_PASSWORD": "{{ (bitwarden "item" "75de9835-d062-49f3-896a-566a3b979b7c").login.password }}"
+{{- else }}
+        "VNCMCP_PASSWORD": "ChangeMeImInsecure!!"
+{{- end }}
+      }
+    },
   }
 }
