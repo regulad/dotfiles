@@ -44,10 +44,10 @@
       }
     },
     "mcp-caldav": {
-      "command": "uvx",
+      "command": "/opt/homebrew/bin/pnpx",
       "args": ["mcp-caldav"],
       "env": {
-        "CALDAV_URL": "https://nextcloud.regulad.xyz/remote.php/dav/calendars/{{ (bitwarden "item" "7bc3cc6e-0ae5-4140-98b8-c7b3f65c9d44").login.username }}/",
+        "CALDAV_BASE_URL": "https://nextcloud.regulad.xyz/remote.php/dav/calendars/{{ (bitwarden "item" "7bc3cc6e-0ae5-4140-98b8-c7b3f65c9d44").login.username }}/",
         "CALDAV_USERNAME": "{{ (bitwarden "item" "7bc3cc6e-0ae5-4140-98b8-c7b3f65c9d44").login.username }}",
         "CALDAV_PASSWORD": "{{ (index (bitwardenFields "item" "7bc3cc6e-0ae5-4140-98b8-c7b3f65c9d44") "caldav-mcp").value }}"
       }
