@@ -1,0 +1,21 @@
+{
+  "preferences": {
+    "coworkScheduledTasksEnabled": false,
+    "ccdScheduledTasksEnabled": false,
+    "coworkWebSearchEnabled": true,
+    "remoteToolsDeviceName": "penumbra-tail11540-ts-net",
+    "epitaxyPrefs": {
+      "starred-local-code-sessions": [],
+      "starred-cowork-spaces": [],
+      "starred-session-groups": [],
+      "dframe-local-slice": {
+        "pinnedOrder": [],
+        "customGroupAssignments": {},
+        "customGroupOrder": {}
+      }
+    },
+    "bypassPermissionsGateByAccount": {
+      "a95f6b69-0990-4bed-97b1-b60a04ef3a86": false
+    }
+  }
+}
