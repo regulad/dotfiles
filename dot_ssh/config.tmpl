@@ -151,9 +151,9 @@ Host doppelgangerhq.com
     ForwardAgent yes
 
 # Oracle (wahlecloud)
-Host tailscalerouter
+Host pubsub-wahlecloud--tailscalerouter
 
-Match Host tailscalerouter User opc
+Match Host pubsub-wahlecloud--tailscalerouter User opc
 {{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key.pub
     IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key  # fallback
