@@ -136,6 +136,7 @@ call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
 echo debug: installing winget packages
 REM Install/update winget packages
 set winget_packages=^
+NirSoft.USBDeview ^
 UrBackup.UrBackup.Client ^
 qBittorrent.qBittorrent ^
 Logseq.Logseq ^
