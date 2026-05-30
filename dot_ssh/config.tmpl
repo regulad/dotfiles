@@ -61,7 +61,33 @@ Host penumbra
     HostName penumbra.tail11540.ts.net
     ForwardAgent yes
 
-# Special VMs
+# Router VMs
+Host nagumo
+    HostName nagumo.home.arpa
+    User admin
+    PubkeyAuthentication yes
+    PreferredAuthentications publickey   
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent no
+
+# Master VMs
+Host gendo
+    HostName gendo.tail11540.ts.net
+    ForwardAgent yes
+
+Host misato
+    HostName misato.tail11540.ts.net
+    ForwardAgent yes
+
+# Misc. special
+Host tinker
+    HostName tinker.home.arpa
+    ForwardAgent yes
+
 Host pihole
     HostName pihole.home.arpa
     User root
@@ -71,19 +97,6 @@ Host pihole
 
 Host macserver
     HostName macserver.tail11540.ts.net
-    ForwardAgent yes
-
-Host gendo
-    HostName gendo.tail11540.ts.net
-    ForwardAgent yes
-
-Host misato
-    HostName misato.tail11540.ts.net
-    ForwardAgent yes
-
-# Master VMs
-Host tinker
-    HostName tinker.home.arpa
     ForwardAgent yes
 
 # llama.cpp hosts
