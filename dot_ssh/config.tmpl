@@ -74,6 +74,18 @@ Host nagumo
     IdentitiesOnly yes
     ForwardAgent no
 
+Host niikura
+    HostName niikura.home.arpa
+    User admin
+    PubkeyAuthentication yes
+    PreferredAuthentications publickey   
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent no
+
 # Master VMs
 Host gendo
     HostName gendo.tail11540.ts.net
