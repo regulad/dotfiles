@@ -405,6 +405,7 @@ fi
 # most of them are needed for specific workflows (i.e. kotlin, python, java)
 SECONDARY_BINARY_DEPENDENCIES=(
 	"awscli"
+	"go"  # needed for newer versions of toolchain
 	"languagetool"
 	"cloudflared"
 	"wakatime-cli"
@@ -424,7 +425,6 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"deno"
 	"shfmt"
 	"ghidra"
-	"oven-sh/bun/bun"  # addl. javascript runtime
 	"poppler"
 	"tesseract"
 	"ocrmypdf"
@@ -682,6 +682,8 @@ fi
 uv tool install -q ruff # astral-backed
 uv tool install -q ty   # astral-backed
 
+uv tool install --python cp310 -q frida-tools
+uv tool install --python cp314 -q keydive
 uv tool install --python cp313 -q pre-commit
 uv tool install --python cp313 -q "mangadex-downloader[optional]"
 uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
