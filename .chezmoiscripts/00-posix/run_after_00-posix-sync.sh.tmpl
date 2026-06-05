@@ -11,6 +11,7 @@ UBUNTU_MINIMUM_VERSION=26.04
 
 echo "note: entering hookscript" >&2
 export DEBIAN_FRONTEND=noninteractive
+export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
 trap 'echo "error: line $LINENO: Command was: $BASH_COMMAND" >&2' ERR
 
 # needed for Android native builds
@@ -455,6 +456,7 @@ fi
 
 ## addl. brew things packaged as casks
 BREW_CASKS_MACOS=(
+	"airserver"  # proprietary paid
 	"nx-studio"  # proprietary freeware
 	"thetimemachinemechanic"
 	"lulu"

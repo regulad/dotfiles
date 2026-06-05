@@ -2,6 +2,7 @@
 [ -r /etc/environment ] && set -a && . /etc/environment && set +a
 
 export PATH="$HOME/.local/bin:$PATH"
+export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
 
 if [ "$(uname -o)" = "Darwin" ]; then
     if [ "$(arch)" = "arm64" ]; then
