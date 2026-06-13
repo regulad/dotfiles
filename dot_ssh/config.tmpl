@@ -107,25 +107,32 @@ Host pihole
     PreferredAuthentications password
     ForwardAgent yes
 
-Host macserver
-    HostName macserver.tail11540.ts.net
-    ForwardAgent yes
-
-# llama.cpp hosts
+# LXC
 Host llamarpcmaster
     HostName llamarpcmaster.home.arpa
     ForwardAgent yes
 
-Host jon-llamarpcslave
-    HostName jon-llamarpcslave.home.arpa
+Host openclaw
+    HostName openclaw.home.arpa
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
 
-Host pro-llamarpcslave
-    HostName pro-llamarpcslave.home.arpa
+Host openwebui
+    HostName openwebui.home.arpa
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
 
-Host neo-llamarpcslave
-    HostName neo-llamarpcslave.home.arpa
-
-# Normal VMs
+# VMs
 Host pelican
     HostName pelican.home.arpa
 
