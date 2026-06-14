@@ -97,16 +97,22 @@
                 "startingDirectory": "%USERPROFILE%"
             },
             {
+                "commandline": "C:\\Windows\\system32\\wsl.exe --distribution-id {ac35047c-ace9-4a5a-9425-f08cddd3edb7} --cd ~",
                 "guid": "{3dcb3c7d-57fe-5319-8091-990edfa89222}",
                 "hidden": false,
+                "icon": "C:\\Users\\parke\\AppData\\Local\\wsl\\{ac35047c-ace9-4a5a-9425-f08cddd3edb7}\\shortcut.ico",
                 "name": "Ubuntu-26.04",
-                "source": "Microsoft.WSL"
+                "pathTranslationStyle": "wsl",
+                "startingDirectory": "~"
             },
             {
-                "guid": "{d470adea-33e3-44e2-b610-2e280da0dda5}",
+                "commandline": "C:\\Windows\\system32\\wsl.exe --distribution-id {a7a2d13d-b7da-4425-bcdd-afadf3e7cb0f} --cd ~",
+                "guid": "{72d266e5-14fa-49eb-b4de-038dd7a54f89}",
                 "hidden": false,
+                "icon": "C:\\Users\\parke\\AppData\\Local\\wsl\\{a7a2d13d-b7da-4425-bcdd-afadf3e7cb0f}\\shortcut.ico",
                 "name": "FedoraLinux-43",
-                "source": "Microsoft.WSL"
+                "pathTranslationStyle": "wsl",
+                "startingDirectory": "~"
             }
         ]
     },
