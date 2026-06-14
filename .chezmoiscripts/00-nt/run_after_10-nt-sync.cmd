@@ -136,6 +136,7 @@ call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
 echo debug: installing winget packages
 REM Install/update winget packages
 set winget_packages=^
+Ollama.Ollama ^
 NirSoft.ShellExView ^
 NirSoft.USBDeview ^
 Microsoft.Sysinternals.ProcessExplorer ^
@@ -214,7 +215,6 @@ KDE.Kdenlive ^
 EpicGames.EpicGamesLauncher ^
 TexasInstruments.TIConnect ^
 MoonlightGameStreamingProject.Moonlight ^
-AMD.LemonadeServer ^
 BillStewart.SyncthingWindowsSetup
 
 REM following winget packages are not installed even though I would like them:
