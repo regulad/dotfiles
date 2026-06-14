@@ -61,6 +61,11 @@ repositories  # symlink
 .zshrc
 {{- end }}
 
+# Specific POSIX
+{{- if ne .chezmoi.osRelease.id "fedora" }}
+.chezmoiscripts/00-posix/01-fedora.sh
+{{- end }}
+
 # Linux
 {{- if ne .chezmoi.os "linux" }}
 .chezmoiscripts/01-linux/*

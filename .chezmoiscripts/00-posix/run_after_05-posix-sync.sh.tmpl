@@ -362,13 +362,11 @@ if [[ -n "$MANAGER" ]]; then
 	if [[ ${#TO_INSTALL[@]} -gt 0 ]]; then
 		case "$MANAGER" in
 		dnf)
-			echo "warning: ensure RPMFusion or equivalent for your spin is enabled" >&2
 			sudo dnf group install -q -y "development-tools"
 			sudo dnf install -q -y "${TO_INSTALL[@]}"
 			sudo dnf upgrade --refresh -y
 			;;
 		apt)			
-			echo "warning: ensure multiverse is enabled on apt" >&2
 			sudo apt update -qq
 			sudo apt install -qq -y "${TO_INSTALL[@]}"
 			sudo apt upgrade -qq -y
