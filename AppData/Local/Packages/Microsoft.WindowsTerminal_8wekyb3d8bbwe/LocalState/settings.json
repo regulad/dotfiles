@@ -95,6 +95,18 @@
                 "icon": "\ue70a",
                 "name": "psmux",
                 "startingDirectory": "%USERPROFILE%"
+            },
+            {
+                "guid": "{3dcb3c7d-57fe-5319-8091-990edfa89222}",
+                "hidden": false,
+                "name": "Ubuntu-26.04",
+                "source": "Microsoft.WSL"
+            },
+            {
+                "guid": "{d470adea-33e3-44e2-b610-2e280da0dda5}",
+                "hidden": false,
+                "name": "FedoraLinux-43",
+                "source": "Microsoft.WSL"
             }
         ]
     },
