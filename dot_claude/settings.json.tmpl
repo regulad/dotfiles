@@ -1,13 +1,9 @@
 {
   "env": {
-    "ANTHROPIC_BASE_URL": "https://ai.regulad.xyz/api",
-    "CLAUDE_CODE_DISABLE_1M_CONTEXT": "1",
-    "ANTHROPIC_MODEL": "opusplan",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "router.fullfat",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "router.fullfat",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "router.smallfast",
-    "CLAUDE_CODE_SUBAGENT_MODEL": "router.smallfast",
-    "ANTHROPIC_AUTH_TOKEN": "{{- (bitwardenFields "item" "ai.regulad.xyz").apiKey.value -}}"
+    "ANTHROPIC_BASE_URL": "http://localhost:11434",
+    "ANTHROPIC_AUTH_TOKEN": "ollama",
+    "ANTHROPIC_API_KEY": "",
+    "ANTHROPIC_MODEL": "qwen3-coder-next:latest"
   },
   "extraKnownMarketplaces": {
     "wakatime": {
