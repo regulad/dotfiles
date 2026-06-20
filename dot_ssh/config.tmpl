@@ -128,6 +128,46 @@ Host openwebui
     IdentitiesOnly yes
     ForwardAgent yes
 
+Host immich
+    HostName immich.home.arpa
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
+
+Host uptime
+    HostName uptime.home.arpa
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
+
+Host peppercord
+    HostName peppercord.home.arpa
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
+
+Host cordpepperer
+    HostName cordpepperer.home.arpa
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
+
 # VMs
 Host pelican
     HostName pelican.home.arpa
