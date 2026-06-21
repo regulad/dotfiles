@@ -64,6 +64,7 @@ repositories  # symlink
 
 # Linux
 {{- if ne .chezmoi.os "linux" }}
+.chezmoiscripts/00-posix/01-fedora.sh
 .chezmoiscripts/01-linux/*
 .chezmoiscripts/02-wsl2/*
 .config/systemd/
