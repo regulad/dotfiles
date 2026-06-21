@@ -210,12 +210,14 @@ Host home-arpa--tailscalerouter
 
 # Oracle (Legacy VCN)
 Host doppelgangerhq.com
+    AddressFamily inet  # IPv6 broken
     User ubuntu
 {{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa3072.pub
     IdentityFile ~/.ssh/id_rsa3072  # fallback
 {{- end }}
     IdentitiesOnly yes
+    ForwardAgent yes
 
 # Oracle (wahlecloud)
 Host pubsub-wahlecloud--tailscalerouter
