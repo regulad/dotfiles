@@ -52,11 +52,6 @@ autorun.cmd
 AppData
 Winaero Tweaker.ini
 repositories  # symlink
-
-# Specific POSIX
-{{-     if ne .chezmoi.osRelease.id "fedora" }}
-.chezmoiscripts/00-posix/01-fedora.sh
-{{-     end }}
 {{- else }}
 .chezmoiscripts/00-posix/*
 .profile
@@ -73,6 +68,10 @@ repositories  # symlink
 .chezmoiscripts/02-wsl2/*
 .config/systemd/
 {{- else }}
+# Specific POSIX
+{{-     if ne .chezmoi.osRelease.id "fedora" }}
+.chezmoiscripts/00-posix/01-fedora.sh
+{{-     end }}
 {{-     if not (contains "WSL2" (output "uname" "-r")) }}
 .chezmoiscripts/02-wsl2/*
 {{-     else }}
