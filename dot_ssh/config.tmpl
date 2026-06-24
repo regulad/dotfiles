@@ -168,6 +168,26 @@ Host cordpepperer
     IdentitiesOnly yes
     ForwardAgent yes
 
+Host tvheadend
+    HostName tvheadend.home.arpa
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
+
+Host vaultwarden
+    HostName vaultwarden.home.arpa
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
+
 # VMs
 Host pelican
     HostName pelican.home.arpa
