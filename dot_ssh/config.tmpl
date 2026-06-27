@@ -118,6 +118,16 @@ Host openclaw
     IdentitiesOnly yes
     ForwardAgent yes
 
+Host timemachine
+    HostName timemachine.home.arpa
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
+
 Host openwebui
     HostName openwebui.home.arpa
     User root
@@ -200,9 +210,6 @@ Host freeipa
 
 Host authentik
     HostName authentik.home.arpa
-
-Host timemachine
-    HostName timemachine.home.arpa
 
 Host mastodon
     HostName mastodon.home.arpa
