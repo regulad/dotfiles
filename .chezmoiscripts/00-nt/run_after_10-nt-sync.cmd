@@ -42,19 +42,13 @@ call refreshenv >nul 2>&1
 
 echo debug: updating scoop
 call scoop update
+
 call scoop bucket list | findstr /R /C:"^extras " >nul 2>&1
 if errorlevel 1 (
     echo Adding extras bucket...
     call scoop bucket add extras
 ) else (
     echo extras bucket already present, skipping.
-)
-call scoop bucket list | findstr /R /C:"^regulad " >nul 2>&1
-if errorlevel 1 (
-    echo Adding regulad bucket...
-    call scoop bucket add regulad https://github.com/regulad/scoop-regulad.git
-) else (
-    echo regulad bucket already present, skipping.
 )
 call scoop bucket list | findstr /R /C:"^versions " >nul 2>&1
 if errorlevel 1 (
@@ -63,6 +57,28 @@ if errorlevel 1 (
 ) else (
     echo versions bucket already present, skipping.
 )
+call scoop bucket list | findstr /R /C:"^nonportable " >nul 2>&1
+if errorlevel 1 (
+    echo Adding nonportable bucket...
+    call scoop bucket add nonportable
+) else (
+    echo nonportable already present, skipping.
+)
+call scoop bucket list | findstr /R /C:"^games " >nul 2>&1
+if errorlevel 1 (
+    echo Adding games bucket...
+    call scoop bucket add games
+) else (
+    echo games already present, skipping.
+)
+
+call scoop bucket list | findstr /R /C:"^regulad " >nul 2>&1
+if errorlevel 1 (
+    echo Adding regulad bucket...
+    call scoop bucket add regulad https://github.com/regulad/scoop-regulad.git
+) else (
+    echo regulad bucket already present, skipping.
+)
 call scoop bucket list | findstr /R /C:"^psmux " >nul 2>&1
 if errorlevel 1 (
     echo Adding psmux bucket...
@@ -70,7 +86,11 @@ if errorlevel 1 (
 ) else (
     echo psmux bucket already present, skipping.
 )
-set packages=^
+
+set user_packages=^
+mongosh ^
+mongodb-compass ^
+mpv ^
 git-filter-repo ^
 python27 ^
 dtk ^
@@ -109,11 +129,11 @@ nssm
 
 REM Complex command blocks inside for loops break cmd's parser even without pipes.
 REM Subroutine call isolates each package check cleanly. Fix by Claude Sonnet 4.6 (Anthropic).
-echo debug: installing new scoop packages
-for %%p in (%packages%) do call :check_install %%p
-goto :after_check_install
+echo debug: installing new scoop user packages
+for %%p in (%user_packages%) do call :check_install_user %%p
+goto :after_check_install_user
 
-:check_install
+:check_install_user
 scoop list %1 2>nul | findstr /r /c:"%1  *[0-9]" >nul 2>&1
 if errorlevel 1 (
     echo debug: %1 not installed, installing...
@@ -123,7 +143,27 @@ if errorlevel 1 (
 )
 exit /b
 
-:after_check_install
+:after_check_install_user
+
+set admin_packages=^
+icaros-np
+
+echo debug: installing new scoop admin packages
+for %%p in (%admin_packages%) do call :check_install_admin %%p
+goto :after_check_install_admin
+
+:check_install_admin
+scoop list %1 2>nul | findstr /r /c:"%1  *[0-9]" >nul 2>&1
+if errorlevel 1 (
+    echo debug: %1 not installed, installing...
+    sudo scoop install %1
+) else (
+    echo debug: %1 already installed, skipping
+)
+exit /b
+
+:after_check_install_admin
+
 call refreshenv >nul 2>&1
 
 echo debug: updating existing scoop packages
@@ -234,11 +274,8 @@ for %%p in (%winget_packages%) do (
 call refreshenv >nul 2>&1
 
 echo warning: the following pieces of software need manual installs:
-echo   - AMD Adrenalin Software / Radeon Driver Suite
 echo   - SoftEther VPN Client (Ver 4.44, Build 9807, rtm)
-echo   - SoftEther VPN Server and VPN Bridge (Ver 4.44, Build 9807, rtm)
 echo   - Acronis True Image for Sabrent
-echo   - UrBackup from server
 
 REM service setup
 call sc query LanguageTool >nul 2>&1
