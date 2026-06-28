@@ -37,24 +37,12 @@ Host jondingus
     IdentitiesOnly yes
     ForwardAgent yes
 
-Host samsung-sm-a526u1
-    HostName samsung-sm-a526u1.tail11540.ts.net
-    Port 8022
-    User u0_a322
-{{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa3072.pub
-    IdentityFile ~/.ssh/id_rsa3072  # fallback
-{{- end }}
-    IdentitiesOnly yes
-    ForwardAgent yes
-
 Host turk
     HostName turk.tail11540.ts.net
     ForwardAgent yes
 
-Host honker
-    HostName honker.tail11540.ts.net
-    ForwardAgent yes
+# Switches
+Host JPE18280417
 
 # Linux & macOS laptops
 Host penumbra
