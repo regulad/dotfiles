@@ -145,6 +145,9 @@ exit /b
 
 :after_check_install_user
 
+REM prompts mpv to use the chezmoi provided config in .config
+Remove-Item "$env:USERPROFILE\scoop\apps\mpv\current\portable_config" -Recurse -Force
+
 set admin_packages=^
 icaros-np
 
