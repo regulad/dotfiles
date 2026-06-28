@@ -55,3 +55,10 @@ hwdec-codecs=all
 [deinterlace]
 vf=bwdif=mode=send_field:deint=all
 {{- end }}
+
+[downmix-ac4]
+profile-cond=p["audio-params/channel-count"] > 2
+profile-restore=copy
+audio-channels=stereo
+audio-normalize-downmix=no
+af=lavfi=[pan=stereo|FL=FL+0.707*FC+0.707*BL+0.707*SL|FR=FR+0.707*FC+0.707*BR+0.707*SR,loudnorm=I=-16:LRA=11:TP=-1.5]
