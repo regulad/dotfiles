@@ -2,6 +2,9 @@
 Include config.d/*
 AddKeysToAgent yes
 HashKnownHosts yes
+UpdateHostKeys ask
+VerifyHostKeyDNS yes
+VisualHostKey yes
 
 Host *
   EnableEscapeCommandline yes
@@ -43,6 +46,8 @@ Host turk
 
 # Switches
 Host JPE18280417
+    # Embedded
+    WarnWeakCrypto no
     HostName jpe18280417.home.arpa
 
 # Linux & macOS laptops
