@@ -258,7 +258,6 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"mdr:gh" # GitHub
 	"mdr:restic"
 	"mdr:ffmpeg"
-	"mdr:yt-dlp" # previously managed by uv
 	"mdr:syncthing"
 
 	# =+= JS/TS
@@ -682,6 +681,7 @@ fi
 uv tool install -q ruff # astral-backed
 uv tool install -q ty   # astral-backed
 
+uv tool install --python "pypy@3.11" -q --with "bgutil-ytdlp-pot-provider" "yt-dlp[pin,pin-curl-cffi,pin-secretstorage,pin-deno]"
 uv tool install --python cp310 -q frida-tools
 uv tool install --python cp314 -q keydive
 uv tool install --python cp313 -q pre-commit
