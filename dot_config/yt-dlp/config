@@ -1,5 +1,5 @@
 --remote-components "ejs:npm"
---sleep-requests "10"
+--sleep-requests 5
 --cookies "~/.local/state/yt-dlp/cookies.txt"
 --embed-thumbnail
 --embed-metadata
