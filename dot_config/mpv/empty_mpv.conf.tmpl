@@ -17,9 +17,21 @@ scale=ewa_lanczos4sharp
 cscale=ewa_lanczos4sharp
 dscale=ewa_lanczos4sharp
 
+scale-antiring=0.7
+cscale-antiring=0.7
+dscale-antiring=0.7
+
 sigmoid-upscaling=yes
 correct-downscaling=yes
 linear-downscaling=yes
+
+##############################
+# Bit depth
+##############################
+fbo-format=rgba16hf
+dither-depth=auto
+dither=error-diffusion
+error-diffusion=sierra-lite
 
 ##############################
 # Platform-specific decode / render / deinterlace
