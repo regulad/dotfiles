@@ -175,7 +175,6 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	# =+= CONTAINERIZATION
 	"mdr:podman"
 	"mdr:podman-compose"
-#	"dr:podman-docker" # mutually exclusive with docker
 
 	# =+= macOS-SPECIFIC
 	"m:reattach-to-user-namespace"
@@ -232,6 +231,12 @@ PRIMARY_BINARY_DEPENDENCIES=(
 	"mdr:ripgrep"
 	"md:imagemagick"
 	"r:ImageMagick"
+
+	# =+= DESKTOP
+	"mdr:mpv"
+
+	# =+= SERIAL
+	"mdr:minicom"
 
 	# =+= UTILS
 	"dr:systemd"  # provides utils even when in docker
