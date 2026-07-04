@@ -10,28 +10,8 @@ Host *
   EnableEscapeCommandline yes
 
 # Hardware hosts
-Host neodingus
-    HostName neodingus.tail11540.ts.net
-    User root
-{{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa3072.pub
-    IdentityFile ~/.ssh/id_rsa3072  # fallback
-{{- end }}
-    IdentitiesOnly yes
-    ForwardAgent yes
-
 Host prodingus
     HostName prodingus.tail11540.ts.net
-    User root
-{{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa3072.pub
-    IdentityFile ~/.ssh/id_rsa3072  # fallback
-{{- end }}
-    IdentitiesOnly yes
-    ForwardAgent yes
-
-Host jondingus
-    HostName jondingus.tail11540.ts.net
     User root
 {{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa3072.pub
@@ -55,39 +35,13 @@ Host penumbra
     HostName penumbra.tail11540.ts.net
     ForwardAgent yes
 
-# Router VMs
-Host nagumo
-    HostName nagumo.home.arpa
-    User admin
-    PubkeyAuthentication yes
-    PreferredAuthentications publickey   
-{{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa3072.pub
-    IdentityFile ~/.ssh/id_rsa3072  # fallback
-{{- end }}
-    IdentitiesOnly yes
-    ForwardAgent no
-
-Host niikura
-    HostName niikura.home.arpa
-    User admin
-    PubkeyAuthentication yes
-    PreferredAuthentications publickey   
-{{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa3072.pub
-    IdentityFile ~/.ssh/id_rsa3072  # fallback
-{{- end }}
-    IdentitiesOnly yes
-    ForwardAgent no
-
 # Master VMs
 Host gendo
     HostName gendo.tail11540.ts.net
     ForwardAgent yes
 
-Host misato
-    HostName misato.tail11540.ts.net
-    ForwardAgent yes
+Host pelican
+    HostName pelican.home.arpa
 
 # Misc.
 Host pihole
@@ -195,9 +149,6 @@ Host vaultwarden
     ForwardAgent yes
 
 # VMs
-Host pelican
-    HostName pelican.home.arpa
-
 Host lancache
     HostName lancache.home.arpa
 
