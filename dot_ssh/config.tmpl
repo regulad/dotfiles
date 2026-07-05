@@ -30,6 +30,16 @@ Host JPE18280417
     WarnWeakCrypto no
     HostName jpe18280417.regulad-verizon-livingston.internal
 
+Host jetkvm-6fbf631cd25f647c
+    # JetKVM
+    HostName http://jetkvm-6fbf631cd25f647c.regulad-verizon-livingston.internal/
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa4096.pub
+    IdentityFile ~/.ssh/id_rsa4096  # fallback
+{{- end }}
+    IdentitiesOnly yes
+
 # Master VMs
 Host aboriginal
     HostName aboriginal.tail11540.ts.net
