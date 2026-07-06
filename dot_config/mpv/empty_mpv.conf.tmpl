@@ -66,6 +66,12 @@ hwdec-codecs=all
 vf=bwdif=mode=send_field:deint=all
 {{- end }}
 
+[wnbc-denoise]
+profile-desc=WNBC FL denoise
+profile-cond=p["media-title"] == "4.1 : WNBC   "
+profile-restore=copy
+af-pre=lavfi=[pan=5.1|FL=FL|FC=FC|FR=FR|BL=BL|BR=BR|SL=SL|SR=SR|LFE=LFE,afftdn=nf=-25:ch=FL]
+
 [downmix-ac4-style]
 profile-cond=p["audio-params/channel-count"] > 2
 profile-restore=copy
