@@ -63,6 +63,8 @@ hwdec=videotoolbox-copy
 hwdec-codecs=all
 
 [deinterlace]
+profile-cond=p["video-frame-info/tff"] or p["video-frame-info/interlaced"]
+profile-restore=copy
 vf=bwdif=mode=send_field:deint=all
 {{- end }}
 
