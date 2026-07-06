@@ -83,5 +83,5 @@ af-pre=lavfi=[asplit=2[a][b];[a]pan=stereo|FL=0.707*FC+0.707*BL+0.707*SL|FR=FR+0
 af-add=lavfi=[pan=1c|c0=0.5*c0+0.5*c1]
 
 [mpeg2-deartifact]
-profile-cond=video_format == 'mpeg2video'
-vf=lavfi=[hqdn3d=1.5:1.5:3:3]
+profile-cond=video_format == "mpeg2video"
+vf=vf=spp=quality=6:mode=1,hqdn3d=3:2:4.5:3
