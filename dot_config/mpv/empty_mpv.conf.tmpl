@@ -70,7 +70,8 @@ vf=bwdif=mode=send_field:deint=all
 profile-desc=WNBC FL denoise
 profile-cond=p["media-title"] == "4.1 : WNBC"
 profile-restore=copy
-af-pre=lavfi=[pan=5.1|FL=FL|FC=FC|FR=FR|BL=BL|BR=BR|SL=SL|SR=SR|LFE=LFE,afftdn=nf=-25:ch=FL]
+af-pre=lavfi=[asplit=2[a][b];[a]pan=stereo|FL=0.707*FC+0.707*BL+0.707*SL|FR=FR+0.707*FC+0.707*BR+0.707*SR[base];[b]pan=mono|c0=FL[flraw];[flraw]afftdn=nf=-25[fldp];[fldp]anlmdn=s=7:p=0.002[fld];[fld]pan=stereo|FL=c0|FR=0[fldstereo];[base][fldstereo]amix=inputs=2:normalize=0[out]]
+af-add=lavfi=[pan=1c|c0=0.5*c0+0.5*c1]
 
 [downmix-ac4-style]
 profile-cond=p["audio-params/channel-count"] > 2
