@@ -13,9 +13,9 @@ demuxer-lavf-o=fflags=+genpts
 ##############################
 # Filtering
 ##############################
-scale=ewa_lanczos4sharp
-cscale=ewa_lanczos4sharp
-dscale=ewa_lanczos4sharp
+scale=ewa_lanczos4sharpest
+cscale=ewa_lanczos4sharpest
+dscale=ewa_lanczos4sharpest
 
 scale-antiring=0.7
 cscale-antiring=0.7
@@ -68,7 +68,7 @@ vf=bwdif=mode=send_field:deint=all
 
 [wnbc-denoise]
 profile-desc=WNBC FL denoise
-profile-cond=p["media-title"] == "4.1 : WNBC   "
+profile-cond=p["media-title"] == "4.1 : WNBC"
 profile-restore=copy
 af-pre=lavfi=[pan=5.1|FL=FL|FC=FC|FR=FR|BL=BL|BR=BR|SL=SL|SR=SR|LFE=LFE,afftdn=nf=-25:ch=FL]
 
