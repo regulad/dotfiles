@@ -285,7 +285,7 @@ call sc query LanguageTool >nul 2>&1
 if !errorLevel! neq 0 (
     echo Registering LanguageTool service...
     set LT_PATH=%USERPROFILE%\scoop\apps\languagetool-java\current
-    call sudo nssm install LanguageTool "%JAVA_HOME%\bin\java.exe"
+    call sudo nssm install LanguageTool "%JAVA_HOME%bin\java.exe"
     call sudo nssm set LanguageTool AppParameters "-cp \"!LT_PATH!\languagetool-server.jar\" org.languagetool.server.HTTPServer --port 8081 --allow-origin \"*\""
     call sudo nssm set LanguageTool AppDirectory "!LT_PATH!"
     call sudo nssm set LanguageTool Start SERVICE_AUTO_START
