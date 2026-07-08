@@ -40,20 +40,18 @@ Host jetkvm-6fbf631cd25f647c
 {{- end }}
     IdentitiesOnly yes
 
-# Master VMs
-Host aboriginal
+# gonkputer
+Host aboriginal # 100
     HostName aboriginal.tail11540.ts.net
     ForwardAgent yes
 
-Host pelican
+Host pelican # 101
     HostName pelican.regulad-verizon-livingston.internal
 
-# LXC
-Host llamarpcmaster
-    HostName llamarpcmaster.regulad-verizon-livingston.internal
-    ForwardAgent yes
+Host gha # 102
+    HostName gha.regulad-verizon-livingston.internal
 
-Host openclaw
+Host openclaw # 103
     HostName openclaw.regulad-verizon-livingston.internal
     User root
 {{- if not .useDummySecrets }}
@@ -63,7 +61,7 @@ Host openclaw
     IdentitiesOnly yes
     ForwardAgent yes
 
-Host timemachine
+Host timemachine # 104
     HostName timemachine.regulad-verizon-livingston.internal
     User root
 {{- if not .useDummySecrets }}
@@ -73,7 +71,22 @@ Host timemachine
     IdentitiesOnly yes
     ForwardAgent yes
 
-Host openwebui
+Host mastodon # 105
+    HostName mastodon.regulad-verizon-livingston.internal
+
+Host authentik # 109
+    HostName authentik.regulad-verizon-livingston.internal
+
+Host urbackup # 111
+    HostName urbackup.regulad-verizon-livingston.internal
+
+Host freeipa # 113
+    HostName freeipa.regulad-verizon-livingston.internal
+
+Host softether # 114
+    HostName softether.regulad-verizon-livingston.internal
+
+Host openwebui # 115
     HostName openwebui.regulad-verizon-livingston.internal
     User root
 {{- if not .useDummySecrets }}
@@ -83,7 +96,7 @@ Host openwebui
     IdentitiesOnly yes
     ForwardAgent yes
 
-Host immich
+Host immich # 116
     HostName immich.regulad-verizon-livingston.internal
     User root
 {{- if not .useDummySecrets }}
@@ -93,7 +106,7 @@ Host immich
     IdentitiesOnly yes
     ForwardAgent yes
 
-Host uptime
+Host uptime # 117
     HostName uptime.regulad-verizon-livingston.internal
     User root
 {{- if not .useDummySecrets }}
@@ -103,17 +116,7 @@ Host uptime
     IdentitiesOnly yes
     ForwardAgent yes
 
-Host peppercord
-    HostName peppercord.regulad-verizon-livingston.internal
-    User root
-{{- if not .useDummySecrets }}
-    IdentityFile ~/.ssh/id_rsa3072.pub
-    IdentityFile ~/.ssh/id_rsa3072  # fallback
-{{- end }}
-    IdentitiesOnly yes
-    ForwardAgent yes
-
-Host cordpepperer
+Host cordpepperer # 118
     HostName cordpepperer.regulad-verizon-livingston.internal
     User root
 {{- if not .useDummySecrets }}
@@ -123,7 +126,27 @@ Host cordpepperer
     IdentitiesOnly yes
     ForwardAgent yes
 
-Host tvheadend
+Host llamarpcmaster # 119
+    HostName llamarpcmaster.regulad-verizon-livingston.internal
+    ForwardAgent yes
+
+Host tailscalerouter-regulad--verizon--livingston-internal # 122
+    HostName tailscalerouter.regulad-verizon-livingston.internal
+
+Host act # 123
+    HostName act.regulad-verizon-livingston.internal
+
+Host peppercord # 126
+    HostName peppercord.regulad-verizon-livingston.internal
+    User root
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa3072.pub
+    IdentityFile ~/.ssh/id_rsa3072  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
+
+Host tvheadend # 127
     HostName tvheadend.regulad-verizon-livingston.internal
     User root
 {{- if not .useDummySecrets }}
@@ -133,7 +156,7 @@ Host tvheadend
     IdentitiesOnly yes
     ForwardAgent yes
 
-Host vaultwarden
+Host vaultwarden # 128
     HostName vaultwarden.regulad-verizon-livingston.internal
     User root
 {{- if not .useDummySecrets }}
@@ -142,37 +165,6 @@ Host vaultwarden
 {{- end }}
     IdentitiesOnly yes
     ForwardAgent yes
-
-# VMs
-Host lancache
-    HostName lancache.regulad-verizon-livingston.internal
-
-Host freeipa
-    HostName freeipa.regulad-verizon-livingston.internal
-
-Host authentik
-    HostName authentik.regulad-verizon-livingston.internal
-
-Host mastodon
-    HostName mastodon.regulad-verizon-livingston.internal
-
-Host urbackup
-    HostName urbackup.regulad-verizon-livingston.internal
-
-Host obico
-    HostName obico.regulad-verizon-livingston.internal
-
-Host softether
-    HostName softether.regulad-verizon-livingston.internal
-
-Host gha
-    HostName gha.regulad-verizon-livingston.internal
-
-Host act
-    HostName act.regulad-verizon-livingston.internal
-
-Host tailscalerouter-regulad--verizon--livingston-internal
-    HostName tailscalerouter.regulad-verizon-livingston.internal
 
 # Windows hosts are no longer included for ssh key auth.
 # There is a ton of garbage with "key scopes" that prevents the use of junctions while connected.
