@@ -41,31 +41,19 @@ vo=gpu
 gpu-api=vulkan
 hwdec=vaapi
 hwdec-codecs=all
-
-[deinterlace]
-profile-cond=p["video-frame-info/tff"] or p["video-frame-info/interlaced"]
-profile-restore=copy
 vf=vavpp:deint=weave:interlaced-only=yes
 {{- else if eq .chezmoi.os "windows" }}
 vo=gpu-next
 gpu-api=vulkan
 hwdec=vulkan-copy
 hwdec-codecs=all
-
-[deinterlace]
-profile-cond=p["video-frame-info/tff"] or p["video-frame-info/interlaced"]
-profile-restore=copy
 vf=bwdif=mode=1:parity=-1:deint=1
 {{- else if eq .chezmoi.os "darwin" }}
 vo=gpu-next
 gpu-api=vulkan
 hwdec=videotoolbox-copy
 hwdec-codecs=all
-
-[deinterlace]
-profile-cond=p["video-frame-info/tff"] or p["video-frame-info/interlaced"]
-profile-restore=copy
-vf=bwdif=mode=send_field:deint=all
+vf=bwdif=mode=1:parity=-1:deint=1
 {{- end }}
 
 [downmix-ac4-style]
