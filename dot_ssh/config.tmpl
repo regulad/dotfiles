@@ -29,6 +29,12 @@ Host JPE18280417
     # Arista 7010T-48 Switch
     WarnWeakCrypto no
     HostName jpe18280417.regulad-verizon-livingston.internal
+    User regulad
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa4096.pub
+    IdentityFile ~/.ssh/id_rsa4096  # fallback
+{{- end }}
+    IdentitiesOnly yes
 
 Host switch45f304
     # Cisco SG300-10 Switch
@@ -38,6 +44,12 @@ Host switch45f304
     HostKeyAlgorithms +ssh-rsa
     MACs +hmac-sha1
     PubkeyAcceptedAlgorithms +ssh-rsa
+    User regulad
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa4096.pub
+    IdentityFile ~/.ssh/id_rsa4096  # fallback
+{{- end }}
+    IdentitiesOnly yes
 
 Host jetkvm-6fbf631cd25f647c
     # JetKVM
