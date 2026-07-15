@@ -30,6 +30,15 @@ Host JPE18280417
     WarnWeakCrypto no
     HostName jpe18280417.regulad-verizon-livingston.internal
 
+Host switch45f304
+    # Cisco SG300-10 Switch
+    WarnWeakCrypto no
+    HostName switch45f304.regulad-verizon-livingston.internal
+    KexAlgorithms +diffie-hellman-group1-sha1
+    HostKeyAlgorithms +ssh-rsa
+    MACs +hmac-sha1
+    PubkeyAcceptedAlgorithms +ssh-rsa
+
 Host jetkvm-6fbf631cd25f647c
     # JetKVM
     HostName jetkvm-6fbf631cd25f647c.regulad-verizon-livingston.internal
