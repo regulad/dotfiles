@@ -1,3 +1,7 @@
+# name: Show a suggestion in a muted color
+# type: boolean
+autosuggest.inline = True
+
 # name: Auto-update the Clink program files
 # type: enum
 # options: off,check,prompt,auto
