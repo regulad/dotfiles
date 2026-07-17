@@ -52,8 +52,24 @@ Host switch45f304
 {{- end }}
     IdentitiesOnly yes
 
+Host switch070e26
+    # Cisco SG300-10PP Switch
+    # WARNING! Does not support PQ nor SHA256
+    WarnWeakCrypto no
+    HostName switch070e26.regulad-verizon-livingston.internal
+    KexAlgorithms +diffie-hellman-group1-sha1
+    HostKeyAlgorithms +ssh-rsa
+    MACs +hmac-sha1
+    PubkeyAcceptedAlgorithms +ssh-rsa
+    User regulad
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_rsa4096.pub
+    IdentityFile ~/.ssh/id_rsa4096  # fallback
+{{- end }}
+    IdentitiesOnly yes
+
 Host jetkvm-6fbf631cd25f647c
-    # JetKVM
+    # JetKVM (Non-PoE)
     HostName jetkvm-6fbf631cd25f647c.regulad-verizon-livingston.internal
     User root
 {{- if not .useDummySecrets }}
