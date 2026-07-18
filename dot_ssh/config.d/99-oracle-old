@@ -1,0 +1,5 @@
+Host doppelgangerhq.com
+    AddressFamily inet  # IPv6 broken
+    User ubuntu
+    Tag rsa3072
+    ForwardAgent yes

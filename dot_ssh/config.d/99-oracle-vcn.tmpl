@@ -1,0 +1,31 @@
+Host tailscalerouter-pubsub-wahlecloud-oraclevcn-com
+    HostName tailscalerouter.pubsub.wahlecloud.oraclevcn.com
+
+Match Host tailscalerouter-pubsub-wahlecloud-oraclevcn-com User opc
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key.pub
+    IdentityFile ~/.ssh/ssh-key-2025-12-08_tailscalerouter.key  # fallback
+{{- end }}
+    IdentitiesOnly yes
+    ForwardAgent yes
+
+Host livekit
+
+Match Host livekit User opc
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/ssh-key-2025-12-19_livekit.key.pub
+    IdentityFile ~/.ssh/ssh-key-2025-12-19_livekit.key  # fallback
+{{- end }}
+    IdentitiesOnly yes
+
+Host mail
+
+Match Host mail User opc
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/ssh-key-2025-12-08_mail.key.pub
+    IdentityFile ~/.ssh/ssh-key-2025-12-08_mail.key  # fallback
+{{- end }}
+    IdentitiesOnly yes
+
+Match Host mail User regulad
+    ForwardAgent yes

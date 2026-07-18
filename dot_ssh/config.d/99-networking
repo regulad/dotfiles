@@ -1,0 +1,31 @@
+Host JPE18280417
+    # Arista 7010T-48 Switch
+    HostName jpe18280417.regulad-verizon-livingston.internal
+    User regulad
+    Tag rsa4096
+    WarnWeakCrypto no
+
+Host switch45f304
+    # Cisco SG300-10 Switch
+    HostName switch45f304.regulad-verizon-livingston.internal
+    User regulad
+    Tag rsa4096 ciscolegacy
+
+Host switch070e26
+    # Cisco SG300-10PP Switch
+    HostName switch070e26.regulad-verizon-livingston.internal
+    User regulad
+    Tag rsa4096 ciscolegacy
+
+Host jetkvm-6fbf631cd25f647c
+    # JetKVM (Non-PoE)
+    HostName jetkvm-6fbf631cd25f647c.regulad-verizon-livingston.internal
+    User root
+    Tag rsa4096
+
+Match tag ciscolegacy
+    WarnWeakCrypto no
+    KexAlgorithms +diffie-hellman-group1-sha1
+    HostKeyAlgorithms +ssh-rsa
+    MACs +hmac-sha1
+    PubkeyAcceptedAlgorithms +ssh-rsa

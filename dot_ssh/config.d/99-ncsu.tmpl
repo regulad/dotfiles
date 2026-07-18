@@ -1,0 +1,51 @@
+## rotating host keys and password only authentication.
+## excellent security, mr. bond
+Host eos
+    # lab server
+    HostName remote.eos.ncsu.edu
+    User pewahle    
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    IdentitiesOnly no
+    PubkeyAuthentication no
+    PreferredAuthentications password
+
+Host grendel
+    # x86_64
+    ForwardX11 yes
+    HostName grendel.ece.ncsu.edu
+    User pewahle
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    IdentitiesOnly no
+    PubkeyAuthentication no
+    PreferredAuthentications password
+
+Host hydra
+    # GPU
+    ForwardX11 yes
+    HostName hydra.ece.ncsu.edu
+    User pewahle
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    IdentitiesOnly no
+    PubkeyAuthentication no
+    PreferredAuthentications password
+
+Host kraken
+    # arm
+    ForwardX11 yes
+    HostName kraken.ece.ncsu.edu
+    User pewahle
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+    IdentitiesOnly no
+    PubkeyAuthentication no
+    PreferredAuthentications password
+
+Match User pewahle  # ncsu
+{{- if not .useDummySecrets }}
+    IdentityFile ~/.ssh/id_ed25519_ncstate.pub
+    IdentityFile ~/.ssh/id_ed25519_ncstate  # fallback
+{{- end }}
+    IdentitiesOnly yes

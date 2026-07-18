@@ -1,0 +1,10 @@
+Host prodingus
+    HostName prodingus.tail11540.ts.net
+    User root
+    Tag rsa3072
+
+Host turk
+    HostName turk.tail11540.ts.net
+
+Host overture
+    HostName overture.tail11540.ts.net

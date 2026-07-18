@@ -1,0 +1,82 @@
+Host aboriginal # 100
+    HostName aboriginal.tail11540.ts.net
+    ForwardAgent yes
+
+Host pelican # 101
+    HostName pelican.regulad-verizon-livingston.internal
+
+Host openclaw # 103
+    HostName openclaw.regulad-verizon-livingston.internal
+    User root
+    Tag rsa3072
+    ForwardAgent yes
+
+Host timemachine # 104
+    HostName timemachine.regulad-verizon-livingston.internal
+    User root
+    Tag rsa3072
+
+Host mastodon # 105
+    HostName mastodon.regulad-verizon-livingston.internal
+
+Host authentik # 109
+    HostName authentik.regulad-verizon-livingston.internal
+
+Host urbackup # 111
+    HostName urbackup.regulad-verizon-livingston.internal
+
+Host freeipa # 113
+    HostName freeipa.regulad-verizon-livingston.internal
+
+Host softether # 114
+    HostName softether.regulad-verizon-livingston.internal
+
+Host openwebui # 115
+    HostName openwebui.regulad-verizon-livingston.internal
+    User root
+    Tag rsa3072
+
+Host immich # 116
+    HostName immich.regulad-verizon-livingston.internal
+    User root
+    Tag rsa3072
+
+Host uptime # 117
+    HostName uptime.regulad-verizon-livingston.internal
+    User root
+    Tag rsa3072
+
+Host cordpepperer # 118
+    HostName cordpepperer.regulad-verizon-livingston.internal
+    User root
+    Tag rsa3072
+    ForwardAgent yes
+
+Host llamarpcmaster # 119
+    HostName llamarpcmaster.regulad-verizon-livingston.internal
+    ForwardAgent yes
+
+Host ingress # 121
+    HostName ingress.regulad-verizon-livingston.internal
+
+Host tailscalerouter-regulad--verizon--livingston-internal # 122
+    HostName tailscalerouter.regulad-verizon-livingston.internal
+
+Host act # 123
+    HostName act.regulad-verizon-livingston.internal
+
+Host peppercord # 126
+    HostName peppercord.regulad-verizon-livingston.internal
+    User root
+    Tag rsa3072
+    ForwardAgent yes
+
+Host tvheadend # 127
+    HostName tvheadend.regulad-verizon-livingston.internal
+    User root
+    Tag rsa3072
+
+Host vaultwarden # 128
+    HostName vaultwarden.regulad-verizon-livingston.internal
+    User root
+    Tag rsa3072

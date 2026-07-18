@@ -1,0 +1,4 @@
+Host invent.kde.org
+    HostName invent.kde.org
+    User git
+    Tag rsa3072

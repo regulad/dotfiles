@@ -1,0 +1,5 @@
+Host git-ssh.regulad.xyz
+    ProxyCommand cloudflared access ssh --hostname %h
+    HostName git-ssh.regulad.xyz
+    User forgejo
+    Tag rsa3072
