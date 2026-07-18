@@ -5,6 +5,9 @@ Host aboriginal # 100
 Host pelican # 101
     HostName pelican.regulad-verizon-livingston.internal
 
+Host unifi-network-application # 102
+    HostName unifi-network-application.regulad-verizon-livingston.internal
+
 Host openclaw # 103
     HostName openclaw.regulad-verizon-livingston.internal
     User root
