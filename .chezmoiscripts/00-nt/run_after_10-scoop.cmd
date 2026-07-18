@@ -1,38 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo note: entering hookscript
-
-REM Check Windows version
-for /f "tokens=3" %%v in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v CurrentBuildNumber 2^>nul') do set BUILD=%%v
-for /f "tokens=3" %%v in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v UBR 2^>nul') do set UBR=%%v
-
-set VERSION=%BUILD%.%UBR%
-
-REM Check if Windows 11 (build 22000+) with versios build 19045.6691 (KB5071546, December 2025)
-if %BUILD% GEQ 22000 (
-    if %BUILD% LSS 26200 (
-        echo ERROR: Windows 11 version must be >= 10.0.26200.7462
-        exit /b 1
-    )
-    if %BUILD% EQU 26200 (
-        if %UBR% LSS 7462 (
-            echo ERROR: Windows 11 version must be >= 10.0.26200.7462
-            exit /b 1
-        )
-    )
-) else (
-    echo ERROR: Windows version must be Windows 11 ^>= 10.0.26200.7462 
-    exit /b 1
-)
-
-REM Check for winget
-call where winget >nul 2>&1
-if %errorLevel% neq 0 (
-    echo ERROR: winget is not available
-    exit /b 1
-)
-
 call where scoop >nul 2>&1
 if %errorLevel% neq 0 (
     echo debug: installing scoop
@@ -176,110 +144,6 @@ call refreshenv >nul 2>&1
 echo debug: setting autorun
 call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
 
-echo debug: installing winget packages
-REM Install/update winget packages
-set winget_packages=^
-KDE.KDEConnect ^
-Ollama.Ollama ^
-NirSoft.ShellExView ^
-NirSoft.USBDeview ^
-Microsoft.Sysinternals.ProcessExplorer ^
-UrBackup.UrBackup.Client ^
-qBittorrent.qBittorrent ^
-Logseq.Logseq ^
-Anthropic.ClaudeCode ^
-Telerik.Fiddler.Classic ^
-WiresharkFoundation.Wireshark ^
-Microsoft.WindowsTerminal ^
-Element.Element ^
-JetBrains.Toolbox ^
-Zoom.Zoom.EXE ^
-PrismLauncher.PrismLauncher ^
-OpenWhisperSystems.Signal ^
-Bitwarden.Bitwarden ^
-Jellyfin.JellyfinMediaPlayer ^
-Anthropic.Claude ^
-WinSCP.WinSCP ^
-GnuPG.GnuPG ^
-MHNexus.HxD ^
-VideoLAN.VLC ^
-Prusa3D.PrusaSlicer ^
-PuTTY.PuTTY ^
-REALiX.HWiNFO ^
-VB-Audio.Voicemeeter.Potato ^
-9PB2MZ1ZMB1S ^
-9NP83LWLPZ9K ^
-9PC3H3V7Q9CH ^
-EclipseAdoptium.Temurin.25.JDK ^
-EclipseAdoptium.Temurin.21.JDK ^
-OpenJS.NodeJS.LTS ^
-Vencord.Vesktop ^
-DenoLand.Deno ^
-Microsoft.VisualStudioCode ^
-TeamViewer.TeamViewer ^
-Microsoft.PowerShell ^
-Mozilla.Firefox ^
-WinFsp.WinFsp ^
-Microsoft.Sysinternals.Suite ^
-dotPDN.PaintDotNet ^
-GlavSoft.TightVNC ^
-Autodesk.Fusion360 ^
-Wakatime.DesktopWakatime ^
-Logitech.GHUB ^
-Adobe.Acrobat.Reader.64-bit ^
-7zip.7zip ^
-Audacity.Audacity ^
-CrystalDewWorld.CrystalDiskInfo ^
-CrystalDewWorld.CrystalDiskMark ^
-Docker.DockerDesktop ^
-Mozilla.Thunderbird ^
-Notepad++.Notepad++ ^
-Meta.Oculus ^
-Parsec.Parsec ^
-LizardByte.Sunshine ^
-winaero.tweaker ^
-darktable.darktable ^
-Nextcloud.NextcloudDesktop ^
-calibre.calibre ^
-Google.GoogleDrive ^
-Oracle.VirtualBox ^
-WinDirStat.WinDirStat ^
-IDRIX.VeraCrypt ^
-Tailscale.Tailscale ^
-Inkscape.Inkscape ^
-angryziber.AngryIPScanner ^
-Google.Chrome.EXE ^
-HandBrake.HandBrake ^
-LIGHTNINGUK.ImgBurn ^
-OBSProject.OBSStudio ^
-Libretro.RetroArch ^
-Valve.Steam ^
-eliboa.TegraRcmGUI ^
-KDE.Kdenlive ^
-EpicGames.EpicGamesLauncher ^
-TexasInstruments.TIConnect ^
-MoonlightGameStreamingProject.Moonlight ^
-BillStewart.SyncthingWindowsSetup
-
-REM following winget packages are not installed even though I would like them:
-REM Syncthing.Syncthing - doesn't install GUI; billstewart version is psuedo-official and is used instead
-
-for %%p in (%winget_packages%) do (
-    call winget list --id %%p --exact >nul 2>&1
-    if !errorLevel! == 0 (
-        echo debug: winget updating %%p...
-        call winget upgrade --id %%p --silent --accept-source-agreements --accept-package-agreements
-    ) else (
-        echo debug: winget installing %%p...
-        call winget install --id %%p --silent --accept-source-agreements --accept-package-agreements
-    )
-)
-call refreshenv >nul 2>&1
-
-echo warning: the following pieces of software need manual installs:
-echo   - SoftEther VPN Client (Ver 4.44, Build 9807, rtm)
-echo   - Acronis True Image for Sabrent
-
 REM service setup
 call sc query LanguageTool >nul 2>&1
 if !errorLevel! neq 0 (
@@ -294,17 +158,3 @@ if !errorLevel! neq 0 (
 ) else (
     echo LanguageTool service already registered, skipping.
 )
-
-echo note: installing python tooling
-REM matches unix script
-uv tool install -q ruff
-uv tool install -q ty
-uv tool install -q pre-commit
-uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
-uv tool install --python cp314 -q "rendercv[full]@2.3"
-uv tool install -q hatch
-uv tool install -q autopep8
-uv tool install -q "yt-dlp[default]"
-uv tool upgrade --quiet --all
-
-echo note: leaving hookscript

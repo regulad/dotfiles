@@ -42,8 +42,9 @@ if (-not (Get-Volume -DriveLetter D).FileSystemLabel) {
 
 # Register scheduled task if not already present
 if (-not (Get-ScheduledTask -TaskName "MountDevDrive" -ErrorAction SilentlyContinue)) {
+    # moves any drive on D to E or greater and puts the dev drive there instead
     $action = New-ScheduledTaskAction -Execute "powershell.exe" `
-        -Argument "-NonInteractive -WindowStyle Hidden -Command `"Mount-VHD -Path C:\DevDrive.vhdx`""
+        -Argument "-NonInteractive -WindowStyle Hidden -Command `"`$free=(69..90|%{[char]`$_}|?{-not(Get-Volume -DriveLetter `$_ -ErrorAction SilentlyContinue)}|select -First 1);`$v=Get-CimInstance Win32_Volume -Filter 'DriveLetter=''D:''';if(`$v){Set-CimInstance -InputObject `$v -Property @{DriveLetter=(`$free+':')}};`$p=Mount-VHD -Path C:\DevDrive.vhdx -PassThru|Get-Disk|Get-Partition|?{`$_.Type -ne 'Reserved'};if(`$p.DriveLetter -ne 'D'){`$p|Set-Partition -NewDriveLetter D}`""
     $trigger = New-ScheduledTaskTrigger -AtStartup
     Register-ScheduledTask -TaskName "MountDevDrive" -Action $action -Trigger $trigger `
         -RunLevel Highest -User "SYSTEM"
