@@ -18,14 +18,14 @@ Host *
 Match User regulad
     Tag rsa3072
 
-Match tag rsa3072
+Match tagged rsa3072
 {{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa3072.pub
     IdentityFile ~/.ssh/id_rsa3072  # fallback
 {{- end }}
     IdentitiesOnly yes
 
-Match tag rsa4096
+Match tagged rsa4096
 {{- if not .useDummySecrets }}
     IdentityFile ~/.ssh/id_rsa4096.pub
     IdentityFile ~/.ssh/id_rsa4096  # fallback

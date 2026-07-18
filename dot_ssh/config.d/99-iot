@@ -1,0 +1,12 @@
+Host JPE18280417
+    # Arista 7010T-48 Switch
+    HostName jpe18280417.regulad-verizon-livingston.internal
+    User regulad
+    Tag rsa3072
+    WarnWeakCrypto no
+
+Host jetkvm-6fbf631cd25f647c
+    # JetKVM (Non-PoE)
+    HostName jetkvm-6fbf631cd25f647c.regulad-verizon-livingston.internal
+    User root
+    Tag rsa4096

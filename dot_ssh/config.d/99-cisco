@@ -1,0 +1,18 @@
+Host switch45f304
+    # Cisco SG300-10 Switch
+    HostName switch45f304.regulad-verizon-livingston.internal
+    User regulad
+    Tag rsa3072 
+
+Host switch070e26
+    # Cisco SG300-10PP Switch
+    HostName switch070e26.regulad-verizon-livingston.internal
+    User regulad
+    Tag rsa3072
+
+Match Host "switch45f304.regulad-verizon-livingston.internal,switch070e26.regulad-verizon-livingston.internal"
+    WarnWeakCrypto no
+    KexAlgorithms +diffie-hellman-group1-sha1
+    HostKeyAlgorithms +ssh-rsa
+    MACs +hmac-sha1
+    PubkeyAcceptedAlgorithms +ssh-rsa
