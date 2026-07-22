@@ -24,6 +24,11 @@ Host timemachine # 104
 Host mastodon # 105
     HostName mastodon.regulad-verizon-livingston.internal
 
+Host procontainer # 106
+    HostName procontainer.regulad-verizon-livingston.internal
+    User root
+    Tag rsa3072
+
 Host authentik # 109
     HostName authentik.regulad-verizon-livingston.internal
 
