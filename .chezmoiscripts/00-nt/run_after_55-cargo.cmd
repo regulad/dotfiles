@@ -17,5 +17,12 @@ if errorlevel 1 (
 
 call refreshenv >nul 2>&1
 
+where cargo >nul 2>&1
+if not errorlevel 1 (
+    echo cargo is already resolvable on PATH.
+    goto :eof
+)
+
 call cargo install cargo-disasm
 call cargo install vtracer 
+call cargo install binwalk
