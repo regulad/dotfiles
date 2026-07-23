@@ -36,7 +36,7 @@ error-diffusion=sierra-lite
 ##############################
 # Frame timecode display
 ##############################
-osd-status-msg=${estimated-frame-number}/${estimated-frame-count} ${time-pos} / ${duration}        ${user-data/timecode-approx}
+osd-status-msg=${time-pos} / ${duration}  ${user-data/frame-padded}  ${user-data/timecode-approx}
 
 ##############################
 # Misc.
@@ -82,7 +82,7 @@ af-add=lavfi=[pan=1c|c0=0.5*c0+0.5*c1]
 
 [mpeg2-deartifact]
 profile-cond=video_format == "mpeg2video"
-vf=vf=spp=quality=6:mode=1,hqdn3d=3:2:4.5:3
+vf=spp=quality=6:mode=1,hqdn3d=3:2:4.5:3
 
 {{- if not .useDummySecrets }}
 {{- $bw := bitwarden "item" "tvheadend-livingston" }}
