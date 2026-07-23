@@ -34,6 +34,16 @@ dither=error-diffusion
 error-diffusion=sierra-lite
 
 ##############################
+# Frame timecode display
+##############################
+osd-status-msg=${estimated-frame-number}/${estimated-frame-count} ${time-pos} / ${duration}        ${user-data/timecode-approx}
+
+##############################
+# Misc.
+##############################
+loop=inf
+
+##############################
 # Platform-specific decode / render / deinterlace
 ##############################
 {{- if eq .chezmoi.os "linux" }}
