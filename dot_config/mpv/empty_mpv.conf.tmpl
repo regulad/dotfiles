@@ -78,8 +78,8 @@ af-add=lavfi=[pan=stereo|FL=FL+0.707*FC+0.707*BL+0.707*SL|FR=FR+0.707*FC+0.707*B
 
 [mpeg2-deartifact]
 profile-cond=video_format == "mpeg2video"
-vf-add=pp=hb/vb/dr/al:autoq
-#vf-add=nlmeans=s=3:p=7:r=15
+vf-add=deblock=filter=strong:block=8
+vf-add=nlmeans=s=3:p=7:r=15
 vf-add=gradfun=3.0:16
 
 {{- if not .useDummySecrets }}
