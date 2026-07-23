@@ -54,19 +54,19 @@ vo=gpu
 gpu-api=vulkan
 hwdec=vaapi
 hwdec-codecs=all
-vf=vavpp:deint=weave:interlaced-only=yes
+vf-pre=vavpp:deint=weave:interlaced-only=yes
 {{- else if eq .chezmoi.os "windows" }}
 vo=gpu-next
 gpu-api=vulkan
 hwdec=vulkan-copy
 hwdec-codecs=all
-vf=bwdif=mode=1:parity=-1:deint=1
+vf-pre=bwdif=mode=1:parity=-1:deint=1
 {{- else if eq .chezmoi.os "darwin" }}
 vo=gpu-next
 gpu-api=vulkan
 hwdec=videotoolbox-copy
 hwdec-codecs=all
-vf=bwdif=mode=1:parity=-1:deint=1
+vf-pre=bwdif=mode=1:parity=-1:deint=1
 {{- end }}
 
 [downmix-ac4-style]
@@ -74,7 +74,7 @@ profile-cond=p["audio-params/channel-count"] > 2
 profile-restore=copy
 audio-channels=stereo
 audio-normalize-downmix=no
-af=lavfi=[pan=stereo|FL=FL+0.707*FC+0.707*BL+0.707*SL|FR=FR+0.707*FC+0.707*BR+0.707*SR,loudnorm=I=-16:LRA=11:TP=-1.5,alimiter=limit=0.891:attack=5:release=50:level=disabled]
+af-add=lavfi=[pan=stereo|FL=FL+0.707*FC+0.707*BL+0.707*SL|FR=FR+0.707*FC+0.707*BR+0.707*SR,loudnorm=I=-16:LRA=11:TP=-1.5,alimiter=limit=0.891:attack=5:release=50:level=disabled]
 
 [wnbc-denoise]
 profile-desc=WNBC FL denoise
