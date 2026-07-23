@@ -76,15 +76,23 @@ audio-channels=stereo
 audio-normalize-downmix=no
 af-add=lavfi=[pan=stereo|FL=FL+0.707*FC+0.707*BL+0.707*SL|FR=FR+0.707*FC+0.707*BR+0.707*SR,loudnorm=I=-16:LRA=11:TP=-1.5,alimiter=limit=0.891:attack=5:release=50:level=disabled]
 
+[atsc-chroma-upsampling]
+profile-desc="4:2:0 chroma upsampling (KrigBilateral)"
+profile-cond=p["video-params/pixelformat"] == "yuv420p" or p["video-params/pixelformat"] == "yuv420p10"
+profile-restore=copy
+glsl-shaders-append="~~/shaders/KrigBilateral.glsl"
+
 [mpeg2-deartifact]
 profile-cond=video_format == "mpeg2video"
+profile-restore=copy
 vf-add=deblock=filter=strong:block=8
-vf-add=hqdn3d=4:3:6:4.5
 vf-add=gradfun=3.0:16
+glsl-shaders-append="~~/shaders/nlmeans.glsl"
 
 {{- if not .useDummySecrets }}
 {{- $bw := bitwarden "item" "tvheadend-livingston" }}
 [tvheadend-livingston-auth]
 profile-cond=(string.find(get("stream-open-filename") or "", "tvheadend%.regulad%-verizon%-livingston%.internal:9981") ~= nil) or (string.find(get("stream-open-filename") or "", "tvheadend%-livingston%.regulad%.xyz") ~= nil)
+profile-restore=copy
 http-header-fields=Authorization: Basic {{ printf "%s:%s" $bw.login.username $bw.login.password | b64enc }}
 {{- end }}
