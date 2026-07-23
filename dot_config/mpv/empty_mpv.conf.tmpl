@@ -7,8 +7,8 @@ cache=yes
 demuxer-readahead-secs=5
 network-timeout=10
 keep-open=yes
-#stream-lavf-o-add=reconnect=1
-#stream-lavf-o-add=reconnect_streamed=1
+stream-lavf-o-add=reconnect=1
+stream-lavf-o-add=reconnect_streamed=1
 #stream-lavf-o-add=reconnect_at_eof=1
 #stream-lavf-o-add=reconnect_delay_max=5
 demuxer-lavf-o=fflags=+genpts
@@ -85,7 +85,7 @@ af-add=lavfi=[pan=1c|c0=0.5*c0+0.5*c1]
 
 [mpeg2-deartifact]
 profile-cond=video_format == "mpeg2video"
-vf=spp=quality=6:mode=1,hqdn3d=3:2:4.5:3
+vf-pre=spp=quality=6:mode=1,hqdn3d=3:2:4.5:3
 
 {{- if not .useDummySecrets }}
 {{- $bw := bitwarden "item" "tvheadend-livingston" }}
