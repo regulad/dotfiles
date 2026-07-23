@@ -76,7 +76,7 @@ audio-channels=stereo
 audio-normalize-downmix=no
 af=lavfi=[pan=stereo|FL=FL+0.707*FC+0.707*BL+0.707*SL|FR=FR+0.707*FC+0.707*BR+0.707*SR,loudnorm=I=-16:LRA=11:TP=-1.5,alimiter=limit=0.891:attack=5:release=50:level=disabled]
 
-[wnbc-denoise]
+[wnbc-denoise
 profile-desc=WNBC FL denoise
 profile-cond=p["media-title"] == "4.1 : WNBC" and p["audio-params/channel-count"] == 6
 profile-restore=copy
@@ -85,7 +85,7 @@ af-add=lavfi=[pan=1c|c0=0.5*c0+0.5*c1]
 
 [mpeg2-deartifact]
 profile-cond=video_format == "mpeg2video"
-vf-pre=spp=quality=6:mode=1,hqdn3d=3:2:4.5:3
+vf-add=spp=quality=6:mode=1
 
 {{- if not .useDummySecrets }}
 {{- $bw := bitwarden "item" "tvheadend-livingston" }}
