@@ -3,90 +3,93 @@ Host aboriginal # 100
     ForwardAgent yes
 
 Host pelican # 101
-    HostName pelican.regulad-verizon-livingston.internal
+    HostName pelican.regulad.internal
 
 Host unifi-network-application # 102
-    HostName unifi-network-application.regulad-verizon-livingston.internal
+    HostName unifi-network-application.regulad.internal
     User root
     Tag rsa3072
 
 Host openclaw # 103
-    HostName openclaw.regulad-verizon-livingston.internal
+    HostName openclaw.regulad.internal
     User root
     Tag rsa3072
     ForwardAgent yes
 
 Host timemachine # 104
-    HostName timemachine.regulad-verizon-livingston.internal
+    HostName timemachine.regulad.internal
     User root
     Tag rsa3072
 
 Host mastodon # 105
-    HostName mastodon.regulad-verizon-livingston.internal
+    HostName mastodon.regulad.internal
 
 Host procontainer # 106
-    HostName procontainer.regulad-verizon-livingston.internal
+    HostName procontainer.regulad.internal
     User root
     Tag rsa3072
 
+Host arawi # 108
+    HostName arawi.regulad.internal
+
 Host authentik # 109
-    HostName authentik.regulad-verizon-livingston.internal
+    HostName authentik.regulad.internal
 
 Host urbackup # 111
-    HostName urbackup.regulad-verizon-livingston.internal
+    HostName urbackup.regulad.internal
 
 Host freeipa # 113
-    HostName freeipa.regulad-verizon-livingston.internal
+    HostName freeipa.regulad.internal
 
 Host softether # 114
-    HostName softether.regulad-verizon-livingston.internal
+    HostName softether.regulad.internal
 
 Host openwebui # 115
-    HostName openwebui.regulad-verizon-livingston.internal
+    HostName openwebui.regulad.internal
     User root
     Tag rsa3072
 
 Host immich # 116
-    HostName immich.regulad-verizon-livingston.internal
+    HostName immich.regulad.internal
     User root
     Tag rsa3072
 
 Host uptime # 117
-    HostName uptime.regulad-verizon-livingston.internal
+    HostName uptime.regulad.internal
     User root
     Tag rsa3072
 
 Host cordpepperer # 118
-    HostName cordpepperer.regulad-verizon-livingston.internal
+    HostName cordpepperer.regulad.internal
     User root
     Tag rsa3072
     ForwardAgent yes
 
 Host llamarpcmaster # 119
-    HostName llamarpcmaster.regulad-verizon-livingston.internal
+    HostName llamarpcmaster.regulad.internal
     ForwardAgent yes
 
 Host ingress # 121
-    HostName ingress.regulad-verizon-livingston.internal
+    HostName ingress.regulad.internal
 
 Host tailscalerouter-regulad--verizon--livingston-internal # 122
-    HostName tailscalerouter.regulad-verizon-livingston.internal
+    HostName tailscalerouter.regulad.internal
 
 Host act # 123
-    HostName act.regulad-verizon-livingston.internal
+    HostName act.regulad.internal
 
 Host peppercord # 126
-    HostName peppercord.regulad-verizon-livingston.internal
+    HostName peppercord.regulad.internal
     User root
     Tag rsa3072
     ForwardAgent yes
 
 Host tvheadend # 127
-    HostName tvheadend.regulad-verizon-livingston.internal
+    HostName tvheadend.regulad.internal
     User root
     Tag rsa3072
 
 Host vaultwarden # 128
-    HostName vaultwarden.regulad-verizon-livingston.internal
+    HostName vaultwarden.regulad.internal
     User root
     Tag rsa3072
