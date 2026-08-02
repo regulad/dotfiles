@@ -72,7 +72,7 @@ Host llamarpcmaster # 119
 Host ingress # 121
     HostName ingress.regulad.internal
 
-Host tailscalerouter-regulad--verizon--livingston-internal # 122
+Host tailscalerouter-regulad-internal # 122
     HostName tailscalerouter.regulad.internal
 
 Host act # 123
