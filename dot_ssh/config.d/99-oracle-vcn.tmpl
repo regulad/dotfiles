@@ -10,6 +10,7 @@ Match Host tailscalerouter-pubsub-wahlecloud-oraclevcn-com User opc
     ForwardAgent yes
 
 Host livekit
+    HostName livekit.pubsub.wahlecloud.oraclevcn.com
 
 Match Host livekit User opc
 {{- if not .useDummySecrets }}
@@ -19,6 +20,7 @@ Match Host livekit User opc
     IdentitiesOnly yes
 
 Host mail
+    HostName mail.pubsub.wahlecloud.oraclevcn.com
 
 Match Host mail User opc
 {{- if not .useDummySecrets }}
