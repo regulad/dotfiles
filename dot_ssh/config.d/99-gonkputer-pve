@@ -38,6 +38,11 @@ Host authentik # 109
 Host urbackup # 111
     HostName urbackup.regulad.internal
 
+Host pihole # 112
+    HostName pihole.regulad.internal
+    User root
+    Tag rsa3072
+
 Host freeipa # 113
     HostName freeipa.regulad.internal
 
