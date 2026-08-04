@@ -74,6 +74,11 @@ Host llamarpcmaster # 119
     HostName llamarpcmaster.regulad.internal
     ForwardAgent yes
 
+Host pterodactyl # 120
+    Hostname pterodactyl.regulad.internal
+    User root
+    Tag rsa3072
+
 Host ingress # 121
     HostName ingress.regulad.internal
 
