@@ -1,6 +1,6 @@
 @echo off
-REM installing certificate
-echo debug: installing custom certificate(s)
+
+echo debug: installing custom CA(s)
 REM home.arpa
 sudo certutil -addstore "Root" "%USERPROFILE%\.x509\ipa-ca.crt"
 REM regulad.internal
@@ -9,3 +9,6 @@ REM cohensstore003.internal
 sudo certutil -addstore "Root" "%USERPROFILE%\.x509\cohensstore003.internal.crt"
 REM gonkputer nonspecific
 sudo certutil -addstore "Root" "%USERPROFILE%\.x509\pve-root-ca.pem"
+
+echo debug: installing client certificate
+certutil -user -importpfx "My" "%USERPROFILE%\.x509\dotfiles.p12"
