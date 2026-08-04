@@ -11,4 +11,4 @@ REM gonkputer nonspecific
 sudo certutil -addstore "Root" "%USERPROFILE%\.x509\pve-root-ca.pem"
 
 echo debug: installing client certificate
-certutil -user -importpfx "My" "%USERPROFILE%\.x509\dotfiles.p12"
+certutil -user -p "" -importpfx "My" "%USERPROFILE%\.x509\dotfiles.p12"
