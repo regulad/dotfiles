@@ -1,0 +1,13 @@
+{{ template "posix-preamble.sh" . }}
+# install user services
+if [[ "$OSTYPE" == "linux-gnu"* ]] && ! [ "$CONTAINERIZED" -eq 1 ]; then
+	if systemctl --user is-system-running &>/dev/null || systemctl --user status &>/dev/null; then
+		systemctl --user enable --now tmux@default.socket
+		systemctl --user enable --now syncthing.service
+		systemctl --user enable --now podman.socket
+	else
+		echo "warning: user session broken (couldn't run systemd --user)" >&2
+	fi
+fi
+
+echo "note: exiting hookscript. don't buy it if something after this point asks for sudo!" >&2

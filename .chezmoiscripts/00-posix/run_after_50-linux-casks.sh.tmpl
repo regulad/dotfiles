@@ -1,0 +1,18 @@
+{{ template "posix-preamble.sh" . }}
+## cask library on linux is SUBSTANTIALLY different than the cask library on macos
+BREW_CASKS_LINUX=(
+	"claude-code" # proprietary!
+	"android-platform-tools"
+	"android-commandlinetools"
+)
+
+if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "linux-gnu"* ]]; then
+	for cask in "${BREW_CASKS_LINUX[@]}"; do
+		if ! brew list --cask "$cask" &>/dev/null; then
+			brew install --cask -q "$cask" -f
+		fi
+	done
+
+	# final work for brew on linux: unlink ffmpeg so it uses the system version with codecs
+	brew unlink ffmpeg
+fi

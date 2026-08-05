@@ -1,0 +1,65 @@
+{{ template "posix-preamble.sh" . }}
+## addl. brew things packaged as casks
+BREW_CASKS_MACOS=(
+	"retroarch-metal@nightly"
+	"airserver"  # proprietary paid
+	"nx-studio"  # proprietary freeware
+	"thetimemachinemechanic"
+	"lulu"
+	"ghostty"
+	"prusaslicer"
+	"wakatime"  # proprietary freeware
+	"zoom"  # proprietary trialware
+	"firefox"  # for extension dev; i hate firefox for regular browsing
+	"xquartz"  # for X server forwarding
+	"suspicious-package"  # proprietary freeware
+	"adobe-digital-editions"  # proprietary freeware
+	"handbrake-app"
+	"grandperspective"
+	"claude-code"  # proprietary freeware
+	"jetbrains-toolbox"  # proprietary freeware
+	"gimp"
+	"signal"
+	"tailscale-app"  # proprietary! ... kinda?
+	"appcleaner"  # no idea
+	"google-chrome"  # proprietary freeware (you can't make me use anything other than chrome)
+	"nextcloud-vfs"
+	"docker-desktop"  # proprietary trialware
+	"obs"
+	"utm"
+	"bartender" # proprietary trialware # i have a license
+	"stats"
+	"claude"
+	"element"
+	"forklift"
+	"prismlauncher"
+	"spotify"
+	"steam"
+	"vagrant"
+	"raspberry-pi-imager"
+	"vlc"
+	"calibre"
+	"hex-fiend"
+	"google-drive"  # proprietary trialware
+	"visual-studio-code"  # partially proprietary
+	"autodesk-fusion"  # proprietary trialware # i have a license
+	"thunderbird@esr"
+	"safe-exam-browser"  # partially proprietary
+	"kde-connect"
+	"android-platform-tools"
+	"android-commandlinetools"
+	"syncthing-app"
+	"vesktop"
+	"macfuse" # we finally have `-o backend=fskit`! no kext!
+	"regulad/tap/epson-et8500" # super proprietary 😈
+	"regulad/tap/cricut-design-space" # super proprietary 😈
+	"Gcenx/wine/game-porting-toolkit"
+)
+
+if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "darwin"* ]]; then
+	for cask in "${BREW_CASKS_MACOS[@]}"; do
+		if ! brew list --cask "$cask" &>/dev/null; then
+			brew install --cask -q "$cask" -f
+		fi
+	done
+fi

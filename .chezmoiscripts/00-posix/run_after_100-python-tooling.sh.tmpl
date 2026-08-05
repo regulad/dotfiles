@@ -1,0 +1,63 @@
+{{ template "posix-preamble.sh" . }}
+# Poetry
+# NOTE: redhat repositories provide poetry-core but not the CLI
+# NOTE: on brew platforms, the --user pip environment is externally handled
+if [ "$MANAGER" = "apt" ]; then
+	sudo apt install -qq -y python3-poetry
+elif [ "$HAS_BREW" = "true" ]; then
+	brew install -q poetry
+else
+	pip install --user -q poetry
+fi
+
+# UV
+if [ "$HAS_BREW" = "true" ]; then
+	brew install -q uv
+else
+	pip install --user -q uv
+fi
+
+# NOTE: poetry is for legacy workflows.
+# NOTE: `uv tool install` replaces pipx
+# can install with `pipx i <package>`
+# or `uv tool install <package>`
+# NOTE: uv deliberately ignores upper bounds on requires-python,
+#       which boosts speed since pip likes to "backstep" and take
+#       the highest package version which supports the python version.
+#
+#       This leads to issues with code that requires stable ABI presence.
+#
+#       I have chosen to only download tools with uv against known-good python versions.
+#
+#       to native package managers that test against specific python versions.
+#
+#       This can be changed if the python-requires spec at https://packaging.python.org/en/latest/specifications/core-metadata/#core-metadata-requires-python
+#       is ever updated to better accomidate the Python ecosystem with its alternative implementations and ABIs.
+#
+#       Until then, for cli apps, I will be using the latest version of Cpython that the app has been tested against.
+#       For example, pre-commit tests against https://github.com/pre-commit/pre-commit/blob/main/.github/workflows/main.yml 3.13 as its newest supported python version.
+#
+#       Some tools here like "mangadex-downloader" have a pre-prepared Dockerfile that uses a pinned Python version.
+#       Those versions are mirrored in the selected version for the tools.
+uv tool install -q ruff # astral-backed
+uv tool install -q ty   # astral-backed
+
+uv tool install --python "pypy@3.11" -q --with "bgutil-ytdlp-pot-provider" "yt-dlp[pin,pin-curl-cffi,pin-secretstorage,pin-deno]"
+uv tool install --python cp310 -q frida-tools
+uv tool install --python cp314 -q keydive
+uv tool install --python cp313 -q pre-commit
+uv tool install --python cp313 -q "mangadex-downloader[optional]"
+uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
+uv tool install --python cp314 -q "rendercv[full]@2.3"  # breaks semver; AI slop beyond this version
+
+# like in the JS ecosystem, some python tools are available as tools/bottles from brew
+if [ "$HAS_BREW" = "true" ]; then
+	brew install -q \
+		hatch \
+		autopep8
+else
+	uv tool install -q hatch
+	uv tool install -q autopep8
+fi
+
+uv tool upgrade --quiet --all
