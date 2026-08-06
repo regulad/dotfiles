@@ -60,6 +60,7 @@ deno ^
 mongosh ^
 mongodb-compass ^
 mpv ^
+act ^
 git-filter-repo ^
 python27 ^
 dtk ^
