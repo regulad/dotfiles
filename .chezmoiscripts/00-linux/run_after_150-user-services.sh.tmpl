@@ -1,6 +1,6 @@
 {{ template "posix-preamble.sh" . }}
 # install user services
-if [[ "$OSTYPE" == "linux-gnu"* ]] && ! [ "$CONTAINERIZED" -eq 1 ]; then
+if ! [ "$CONTAINERIZED" -eq 1 ]; then
 	if systemctl --user is-system-running &>/dev/null || systemctl --user status &>/dev/null; then
 		systemctl --user enable --now tmux@default.socket
 		systemctl --user enable --now syncthing.service

@@ -38,8 +38,9 @@ key.txt
 # Head
 {{- if .useHeadless }}
 .config/vesktop
-.chezmoiscripts/00-posix/10-vencord.sh
-.chezmoiscripts/00-nt/10-vencord.cmd
+.chezmoiscripts/00-nt/run_after_60-vencord.cmd.tmpl
+.chezmoiscripts/00-macos/run_after_80-vencord.sh.tmpl
+.chezmoiscripts/00-linux/run_after_80-vencord.sh.tmpl
 {{- end }}
 
 # Windows
@@ -53,7 +54,6 @@ AppData
 Winaero Tweaker.ini
 repositories  # symlink
 {{- else }}
-.chezmoiscripts/00-posix/*
 .profile
 .bash_profile
 .bashrc
@@ -62,37 +62,32 @@ repositories  # symlink
 {{- end }}
 
 
-# Linux
-{{- if ne .chezmoi.os "linux" }}
-.chezmoiscripts/00-posix/01-fedora.sh
-.chezmoiscripts/01-linux/*
-.chezmoiscripts/02-wsl2/*
-.config/systemd/
-{{- else }}
-# Specific POSIX
-{{-     if ne .chezmoi.osRelease.id "fedora" }}
-.chezmoiscripts/00-posix/01-fedora.sh
-{{-     end }}
-{{-     if not (contains "WSL2" (output "uname" "-r")) }}
-.chezmoiscripts/02-wsl2/*
-{{-     else }}
-# special case: tailscale is handled from the windows side for WSL2 hosts
-.chezmoiscripts/00-posix/80-tailscale.sh
-{{-     end }}
-{{- end }}
-
-## Android
-{{- if eq .chezmoi.os "android" }}
-# special case: tailscale is handled from the Android side for Android hosts (no /dev/net/tun)
-.chezmoiscripts/00-posix/80-tailscale.sh
-{{- end }}
-
-# darwin (macOS, primarily)
+# macOS
 {{- if ne .chezmoi.os "darwin" }}
 Library
 .bootstrap.sh
-.chezmoiscripts/01-darwin/*
+.chezmoiscripts/00-macos/*
+{{- end }}
+
+# Linux
+{{- if ne .chezmoi.os "linux" }}
+.chezmoiscripts/00-linux/*
+.config/systemd/
 {{- else }}
-# special case: tailscale needs to be manually installed on macOS
-.chezmoiscripts/00-posix/80-tailscale.sh
+# only one package manager's script applies per distro
+{{-     if ne .chezmoi.osRelease.id "fedora" }}
+.chezmoiscripts/00-linux/run_once_after_10-fedora.sh.tmpl
+.chezmoiscripts/00-linux/run_after_20-dnf-packages.sh.tmpl
+{{-     end }}
+{{-     if not (or (eq .chezmoi.osRelease.id "ubuntu") (eq .chezmoi.osRelease.id "debian")) }}
+.chezmoiscripts/00-linux/run_after_21-apt-packages.sh.tmpl
+{{-     end }}
+{{-     if not (contains "WSL2" (output "uname" "-r")) }}
+# mask out the WSL-only scriptlets on a non-WSL Linux kernel
+.chezmoiscripts/00-linux/run_once_after_05-wslview.sh
+.chezmoiscripts/00-linux/run_once_after_06-wsl-gpu.sh
+{{-     else }}
+# special case: tailscale is handled from the windows side for WSL2 hosts
+.chezmoiscripts/00-linux/run_once_after_90-tailscale.sh
+{{-     end }}
 {{- end }}

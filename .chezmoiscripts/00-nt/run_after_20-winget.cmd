@@ -6,14 +6,12 @@ REM Install/update winget packages
 set winget_packages=^
 WireGuard.WireGuard ^
 KDE.KDEConnect ^
-Ollama.Ollama ^
 NirSoft.ShellExView ^
 NirSoft.USBDeview ^
 Microsoft.Sysinternals.ProcessExplorer ^
 UrBackup.UrBackup.Client ^
 qBittorrent.qBittorrent ^
 Logseq.Logseq ^
-Anthropic.ClaudeCode ^
 Telerik.Fiddler.Classic ^
 WiresharkFoundation.Wireshark ^
 Microsoft.WindowsTerminal ^
@@ -25,6 +23,7 @@ OpenWhisperSystems.Signal ^
 Bitwarden.Bitwarden ^
 Jellyfin.JellyfinMediaPlayer ^
 Anthropic.Claude ^
+Anthropic.ClaudeCode ^
 WinSCP.WinSCP ^
 GnuPG.GnuPG ^
 MHNexus.HxD ^
@@ -62,9 +61,7 @@ Mozilla.Thunderbird ^
 Notepad++.Notepad++ ^
 Meta.Oculus ^
 Parsec.Parsec ^
-LizardByte.Sunshine ^
 winaero.tweaker ^
-darktable.darktable ^
 Nextcloud.NextcloudDesktop ^
 calibre.calibre ^
 Google.GoogleDrive ^
@@ -73,7 +70,6 @@ WinDirStat.WinDirStat ^
 IDRIX.VeraCrypt ^
 Tailscale.Tailscale ^
 Inkscape.Inkscape ^
-angryziber.AngryIPScanner ^
 Google.Chrome.EXE ^
 HandBrake.HandBrake ^
 LIGHTNINGUK.ImgBurn ^
@@ -84,7 +80,6 @@ eliboa.TegraRcmGUI ^
 KDE.Kdenlive ^
 EpicGames.EpicGamesLauncher ^
 TexasInstruments.TIConnect ^
-MoonlightGameStreamingProject.Moonlight ^
 BillStewart.SyncthingWindowsSetup
 
 REM following winget packages are not installed even though I would like them:

@@ -39,12 +39,6 @@ encryption = "age"
 [bitwarden]
     unlock = "auto"
 [data]
-    ollamaBase = "https://dingus-server.tail11540.ts.net:11443" # 8 GiB VRAM
-{{- if eq .chezmoi.os "android" }}
-    bash = "/data/data/com.termux/files/usr/bin/bash"
-{{- else }}
-    bash = "/bin/bash"
-{{- end }}
     useDummySecrets = {{ env "CHEZMOI_USE_DUMMY" | not | not }}
     useHeadless = {{ env "CHEZMOI_USE_HEADLESS" | not | not }}
 [data.chassis]

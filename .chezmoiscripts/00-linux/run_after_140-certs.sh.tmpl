@@ -1,0 +1,52 @@
+{{ template "posix-preamble.sh" . }}
+# Certificate installation
+CERT_PATHS=(
+	"$HOME/.x509/ipa-ca.crt"          # home.arpa
+	"$HOME/.x509/regulad.internal.crt"        # regulad.internal
+	"$HOME/.x509/cohensstore003.internal.crt" # cohensstore003.internal
+	"$HOME/.x509/pve-root-ca.pem"     # gonkputer nonspecific
+)
+
+if [ "$CAN_SUDO" = "true" ]; then
+	NEEDS_UPDATE=0
+
+	for CERT_PATH in "${CERT_PATHS[@]}"; do
+		# Check if certificate is already in system trust store
+		if ! openssl verify -CApath /etc/ssl/certs "$CERT_PATH" &>/dev/null; then
+			CERT_NAME=$(basename "$CERT_PATH")
+
+			if [ -d /etc/pki/ca-trust/source/anchors ]; then
+				# Fedora
+				sudo cp "$CERT_PATH" "/etc/pki/ca-trust/source/anchors/$CERT_NAME"
+				NEEDS_UPDATE=1
+			elif [ -d /usr/local/share/ca-certificates ]; then
+				# Debian/Ubuntu
+				sudo cp "$CERT_PATH" "/usr/local/share/ca-certificates/$CERT_NAME"
+				NEEDS_UPDATE=1
+			fi
+		fi
+	done
+
+	# Update trust store only if new certs were added
+	if [ "$NEEDS_UPDATE" -eq 1 ]; then
+		if [ -d /etc/pki/ca-trust/source/anchors ]; then
+			sudo update-ca-trust
+		elif [ -d /usr/local/share/ca-certificates ]; then
+			sudo update-ca-certificates
+		fi
+	fi
+else
+	echo "warning: sudo required to install system certificate on Linux, skipping" >&2
+fi
+
+# Client certificate (matches the "My" store import on NT); imported into the
+# per-user NSS database that Chrome and other NSS-based tools read from.
+if command -v pk12util &>/dev/null; then
+	mkdir -p "$HOME/.pki/nssdb"
+	if [ ! -f "$HOME/.pki/nssdb/cert9.db" ]; then
+		certutil -N -d "sql:$HOME/.pki/nssdb" --empty-password
+	fi
+	pk12util -d "sql:$HOME/.pki/nssdb" -i "$HOME/.x509/dotfiles.p12" -W "" 2>/dev/null || true
+else
+	echo "warning: pk12util not available, skipping client certificate import" >&2
+fi

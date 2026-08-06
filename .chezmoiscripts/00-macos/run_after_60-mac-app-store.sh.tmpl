@@ -13,7 +13,7 @@ MAS_APP_IDS=(
 #	"497799835"   # Xcode  # xcode doesn't work right through mas
 )
 
-if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "darwin"* ]]; then
+if [ "$HAS_BREW" = "true" ]; then
 	# mas is distributed via brew
   mas update
 	for mas_id in "${MAS_APP_IDS[@]}"; do
@@ -25,13 +25,8 @@ fi
 ## Android
 #if [ "$HAS_BREW" = "true" ]; then
 #	# sdkmanager is available now; will have been installed in the brew cask
-#	if [[ "$OSTYPE" == "darwin"* ]]; then
-#		export ANDROID_HOME="$HOME/Library/Android/sdk"
-#		export ANDROID_SDK_ROOT="$HOME/Library/Android/sdk"
-#	else
-#		export ANDROID_HOME="$HOME/Android/sdk"
-#		export ANDROID_SDK_ROOT="$HOME/Android/sdk"
-#	fi
+#	export ANDROID_HOME="$HOME/Library/Android/sdk"
+#	export ANDROID_SDK_ROOT="$HOME/Library/Android/sdk"
 #	# sdkmanager-managed sdkmanager overrides brew-managed sdkmanager
 #	export PATH=$ANDROID_HOME/platform-tools:$PATH
 #	export PATH=$ANDROID_HOME/tools:$PATH
@@ -44,14 +39,8 @@ fi
 #		"build-tools;36.0.0"
 #		"platforms;android-36"
 #		"emulator"
+#		"system-images;android-36;google_apis;arm64-v8a"
 #	)
-#
-#	ARCH=$(uname -m)
-#	if [[ "$ARCH" == "arm64" || "$ARCH" == "aarch64" ]]; then
-#		ANDROID_SDK_COMPONENTS+=("system-images;android-36;google_apis;arm64-v8a")
-#	else
-#		ANDROID_SDK_COMPONENTS+=("system-images;android-36;google_apis;x86_64")
-#	fi
 #
 #	sdkmanager "${ANDROID_SDK_COMPONENTS[@]}"
 #fi

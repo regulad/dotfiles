@@ -1,0 +1,23 @@
+{{ template "posix-preamble.sh" . }}
+# Certificate installation
+CERT_PATHS=(
+	"$HOME/.x509/ipa-ca.crt"          # home.arpa
+	"$HOME/.x509/regulad.internal.crt"        # regulad.internal
+	"$HOME/.x509/cohensstore003.internal.crt" # cohensstore003.internal
+	"$HOME/.x509/pve-root-ca.pem"     # gonkputer nonspecific
+)
+
+for CERT_PATH in "${CERT_PATHS[@]}"; do
+	# Check if certificate is already trusted
+	if ! security verify-cert -c "$CERT_PATH" &>/dev/null; then
+		if [ "$CAN_SUDO" = "true" ]; then
+			sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$CERT_PATH"
+		else
+			security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db "$CERT_PATH"
+			echo "warning: added certificate to user keychain only (no sudo available)" >&2
+		fi
+	fi
+done
+
+# Client certificate (matches the "My" store import on NT)
+security import "$HOME/.x509/dotfiles.p12" -k ~/Library/Keychains/login.keychain-db -P "" 2>/dev/null || true

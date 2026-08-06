@@ -77,6 +77,10 @@ bind ^
 pnpm ^
 nmap ^
 rust ^
+go ^
+fastfetch ^
+ripgrep ^
+hadolint ^
 telnet ^
 unzip ^
 vim ^

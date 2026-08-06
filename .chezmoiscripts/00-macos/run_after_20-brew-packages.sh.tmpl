@@ -1,0 +1,123 @@
+{{ template "posix-preamble.sh" . }}
+# system-level binary dependencies for macOS hosts (brew).
+# these are typically very stable applications that MUST be provided by a
+# package manager; they are not particularly version-sensitive and are all f(l)oss.
+BREW_PACKAGES=(
+	# =+= CORE
+	bash
+	nushell
+	tmux
+	fastfetch
+	retry
+	zsh
+	binwalk
+	ncdu
+	htop
+	nmap
+	curl
+	watch
+	age
+
+	# =+= CONTAINERIZATION
+	podman
+	podman-compose
+
+	# =+= macOS-SPECIFIC
+	reattach-to-user-namespace
+	mas
+	smartmontools
+	pam-reattach
+	pinentry-mac
+
+	# =+= BUILD TOOLS
+	ninja
+	pkgconf
+	cmake
+
+	# =+= DEPENDENCIES
+	cairo  # needed by cairo PyPi package
+	libxml2
+	freetype
+	jpeg
+	## libolm is depreciated upstream but still needed to build the mautrix tools
+	libolm
+
+	# =+= MISC
+	nyx
+
+	# =+= EDITOR
+	neovim
+	vim
+	shellcheck
+	tree-sitter-cli
+	ripgrep
+	imagemagick
+
+	# =+= DESKTOP
+	mpv
+
+	# =+= SERIAL
+	minicom
+
+	# =+= UTILS
+	socat
+	inetutils
+	binutils
+	perl
+	sshpass
+	git
+	git-lfs
+	git-filter-repo
+	gnupg # gpg
+	gpgme
+	openssh # ssh-agent & ssh
+	keychain
+	gh # GitHub
+	restic
+	ffmpeg
+	syncthing
+
+	# =+= JS/TS
+	node
+	npm # just to install pnpm
+
+	# =+= JVM
+	openjdk
+	maven
+
+	# =+= RUST
+	rustup
+
+	# =+= PYTHON (>= 3.12)
+	python3
+
+	# =+= GO
+	go
+
+	# =+= RUBY
+	ruby@4
+
+	# =+= LUA
+	lua
+	luarocks
+)
+
+brew install -q "${BREW_PACKAGES[@]}"
+brew upgrade -q
+
+# Setup Rust toolchain if needed
+if command -v rustup-init &>/dev/null && [[ ! -d "$HOME/.cargo" ]]; then
+	rustup-init -y --default-toolchain stable --profile default
+	source "$HOME/.cargo/env"
+	rustup component add rust-analyzer
+elif command -v rustup &>/dev/null && rustup toolchain list 2>&1 | grep -qE "(no installed toolchains|^$)"; then
+	rustup default stable
+	rustup set profile default
+	rustup toolchain install stable
+	rustup component add rust-analyzer
+fi
+
+if [ "$CAN_SUDO" = "true" ]; then
+	# special case needed to link the openjdk into the system java wrapper
+	sudo ln -sfn $HOMEBREW_PREFIX/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
+fi

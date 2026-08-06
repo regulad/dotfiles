@@ -1,0 +1,63 @@
+{{ template "posix-preamble.sh" . }}
+# oh my zsh
+if ! [ -d ~/.oh-my-zsh ]; then
+	# oh my zsh install process mutates the user's ~/.zshrc and there is no way to disable this behaviour
+	touch ~/.zshrc
+	mv ~/.zshrc ~/.zshrc.pre-oh-my-zsh
+	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended >/dev/null
+	rm ~/.zshrc
+	mv ~/.zshrc.pre-oh-my-zsh ~/.zshrc
+else
+	~/.oh-my-zsh/tools/upgrade.sh
+fi
+
+if [ -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
+	git -C ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions pull
+else
+	git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+fi
+
+# these commands only run on non-cattle hosts (persistent)
+# load zsh as primary shell
+ZSH_PATH=$(command -v zsh)
+
+if command -v chsh &>/dev/null; then
+	# Check if detected zsh is in /etc/shells
+	if [ -n "$ZSH_PATH" ] && ! grep -q "^$ZSH_PATH$" /etc/shells; then
+		echo "warning: $ZSH_PATH not in /etc/shells, using zsh in /etc/shells if exists" >&2
+		ZSH_PATH=$(grep -m1 '/zsh$' /etc/shells)
+	fi
+
+	# If no zsh in /etc/shells, fall back to bash
+	if [ -z "$ZSH_PATH" ]; then
+		echo "warning: falling back to bash since zsh isn't available in /etc/shells" >&2
+
+		BASH_PATH=$(command -v bash)
+
+		if [ -n "$BASH_PATH" ] && ! grep -q "^$BASH_PATH$" /etc/shells; then
+			echo "warning: $BASH_PATH not in /etc/shells, using bash in /etc/shells if exists" >&2
+			BASH_PATH=$(grep -m1 '/bash$' /etc/shells)
+		fi
+
+		if [ -z "$BASH_PATH" ]; then
+			echo "error: no valid shell found in /etc/shells" >&2
+			exit 1
+		fi
+
+		SHELL_PATH="$BASH_PATH"
+	else
+		SHELL_PATH="$ZSH_PATH"
+	fi
+
+	# Change shell if not already set
+	if [ "$SHELL" != "$SHELL_PATH" ]; then
+		if [ "$CAN_SUDO" = "true" ]; then
+			sudo chsh -s "$SHELL_PATH"
+		else
+			chsh -s "$SHELL_PATH"
+		fi
+		echo "note: shell was changed" >&2
+	fi
+else
+	echo "warning: could not autoset shell" >&2
+fi

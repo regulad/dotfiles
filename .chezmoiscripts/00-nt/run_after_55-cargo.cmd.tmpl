@@ -9,7 +9,7 @@ if defined CARGO_HOME (
 
 echo ;%PATH%; | find /I ";%CARGO_BIN%;" >nul
 if errorlevel 1 (
-    setx PATH "%PATH%;%CARGO_BIN%"
+    call :neosetx PATH "%PATH%;%CARGO_BIN%"
     echo Added %CARGO_BIN% to PATH.
 ) else (
     echo %CARGO_BIN% is already in PATH.
@@ -24,5 +24,8 @@ if not errorlevel 1 (
 )
 
 call cargo install cargo-disasm
-call cargo install vtracer 
+call cargo install vtracer
 call cargo install binwalk
+
+goto :eof
+{{ template "neosetx.cmd" . }}

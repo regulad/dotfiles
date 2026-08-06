@@ -4,7 +4,7 @@ if ! [ -d ~/.oh-my-zsh ]; then
 	# oh my zsh install process mutates the user's ~/.zshrc and there is no way to disable this behaviour
 	touch ~/.zshrc
 	mv ~/.zshrc ~/.zshrc.pre-oh-my-zsh
-	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended &>/dev/null
+	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended >/dev/null
 	rm ~/.zshrc
 	mv ~/.zshrc.pre-oh-my-zsh ~/.zshrc
 else
@@ -21,7 +21,7 @@ fi
 # load zsh as primary shell
 ZSH_PATH=$(command -v zsh)
 
-if command -v chsh &>/dev/null && ! [ "$(uname -o)" = "Android" ]; then
+if command -v chsh &>/dev/null; then
 	# Check if detected zsh is in /etc/shells
 	if [ -n "$ZSH_PATH" ] && ! grep -q "^$ZSH_PATH$" /etc/shells; then
 		echo "warning: $ZSH_PATH not in /etc/shells, using zsh in /etc/shells if exists" >&2
@@ -58,8 +58,6 @@ if command -v chsh &>/dev/null && ! [ "$(uname -o)" = "Android" ]; then
 		fi
 		echo "note: shell was changed" >&2
 	fi
-elif command -v chsh &>/dev/null; then
-	chsh -s zsh
 else
 	echo "warning: could not autoset shell" >&2
 fi

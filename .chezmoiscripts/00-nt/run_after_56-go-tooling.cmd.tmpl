@@ -1,0 +1,36 @@
+@echo off
+setlocal enabledelayedexpansion
+
+REM matches unix script (minus osc52pty, which is darwin-only there too)
+
+if defined GOPATH (
+    set "GO_BIN=%GOPATH%\bin"
+) else (
+    set "GO_BIN=%USERPROFILE%\go\bin"
+)
+
+echo ;%PATH%; | find /I ";%GO_BIN%;" >nul
+if errorlevel 1 (
+    call :neosetx PATH "%PATH%;%GO_BIN%"
+    echo Added %GO_BIN% to PATH.
+) else (
+    echo %GO_BIN% is already in PATH.
+)
+
+call refreshenv >nul 2>&1
+
+where go >nul 2>&1
+if errorlevel 1 (
+    echo warning: go not resolvable on PATH, skipping tool installs >&2
+    goto :eof
+)
+
+echo debug: installing go tooling
+call go install mvdan.cc/sh/v3/cmd/shfmt@latest
+call go install golang.org/x/tools/gopls@latest
+call go install golang.org/x/tools/cmd/goimports@latest
+call go install honnef.co/go/tools/cmd/staticcheck@latest
+call go install github.com/twpayne/find-duplicates@latest
+
+goto :eof
+{{ template "neosetx.cmd" . }}

@@ -1,0 +1,126 @@
+{{ template "posix-preamble.sh" . }}
+# system-level binary dependencies for Debian/Ubuntu hosts (apt).
+# these are typically very stable applications that MUST be provided by a
+# package manager; they are not particularly version-sensitive and are all f(l)oss.
+APT_PACKAGES=(
+	# =+= CORE
+	build-essential
+	bash
+	tmux
+	fastfetch
+	telnet
+	retry
+	zsh
+	xxd
+	binwalk
+	ncdu
+	htop
+	nmap
+	curl
+	age
+
+	# =+= CONTAINERIZATION
+	podman
+	podman-compose
+
+	# =+= BUILD TOOLS
+	ninja-build
+	pkgconf
+	cmake
+
+	# =+= DEPENDENCIES
+	libcairo2-dev  # needed by cairo PyPi package
+	libxml2-dev
+	libfreetype-dev
+	libjpeg-dev  # libjpeg62-turbo-dev provides this
+	libdevmapper-dev  # needed by thin-provisioning-tools build
+	pciutils  # needed by llama.cpp
+	libcurl4-openssl-dev
+	## libolm is depreciated upstream but still needed to build the mautrix tools
+	libolm-dev
+	libsimdjson-dev
+
+	# =+= MISC
+	thin-provisioning-tools  # not natively available redhat
+	nyx
+	vainfo
+	mesa-utils
+
+	# =+= EDITOR
+	neovim
+	vim
+	shellcheck
+	tree-sitter-cli
+	ripgrep
+	imagemagick
+
+	# =+= DESKTOP
+	mpv
+
+	# =+= SERIAL
+	minicom
+
+	# =+= UTILS
+	systemd  # provides utils even when in docker
+	socat
+	inetutils-telnet
+	inetutils-ping
+	inetutils-ftp
+	binutils
+	net-tools
+	perl
+	sshpass
+	git
+	git-lfs
+	git-filter-repo
+	gnupg # gpg
+	openssh-client
+	keychain
+	gh # GitHub
+	restic
+	ffmpeg
+	syncthing
+	libnss3-tools  # pk12util/certutil, needed to import the client cert into the NSS DB
+
+	# =+= JS/TS
+	nodejs
+	npm # just to install pnpm
+
+	# =+= JVM
+	default-jdk
+	maven
+
+	# =+= RUST
+	rustup
+
+	# =+= PYTHON (>= 3.12)
+	python3
+	python3-pip
+	python3-venv
+
+	# =+= GO
+	golang
+
+	# =+= RUBY
+	ruby
+
+	# =+= LUA
+	lua5.5
+	luarocks
+)
+
+sudo apt update -qq
+sudo apt install -qq -y "${APT_PACKAGES[@]}"
+sudo apt upgrade -qq -y
+
+# Setup Rust toolchain if needed
+if command -v rustup-init &>/dev/null && [[ ! -d "$HOME/.cargo" ]]; then
+	rustup-init -y --default-toolchain stable --profile default
+	source "$HOME/.cargo/env"
+	rustup component add rust-analyzer
+elif command -v rustup &>/dev/null && rustup toolchain list 2>&1 | grep -qE "(no installed toolchains|^$)"; then
+	rustup default stable
+	rustup set profile default
+	rustup toolchain install stable
+	rustup component add rust-analyzer
+fi

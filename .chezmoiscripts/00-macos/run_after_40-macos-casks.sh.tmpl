@@ -56,7 +56,7 @@ BREW_CASKS_MACOS=(
 	"Gcenx/wine/game-porting-toolkit"
 )
 
-if [ "$HAS_BREW" = "true" ] && [[ "$OSTYPE" == "darwin"* ]]; then
+if [ "$HAS_BREW" = "true" ]; then
 	for cask in "${BREW_CASKS_MACOS[@]}"; do
 		if ! brew list --cask "$cask" &>/dev/null; then
 			brew install --cask -q "$cask" -f

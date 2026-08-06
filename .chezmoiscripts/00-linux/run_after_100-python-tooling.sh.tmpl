@@ -1,7 +1,6 @@
 {{ template "posix-preamble.sh" . }}
 # Poetry
 # NOTE: redhat repositories provide poetry-core but not the CLI
-# NOTE: on brew platforms, the --user pip environment is externally handled
 if [ "$MANAGER" = "apt" ]; then
 	sudo apt install -qq -y python3-poetry
 elif [ "$HAS_BREW" = "true" ]; then

@@ -16,6 +16,7 @@
     }
   },
   "mcpServers": {
+{{- if not .useDummySecrets }}
     "desktop": {
       "command": "docker",
       "args": [
@@ -52,5 +53,6 @@
         "CALDAV_PASSWORD": "{{ (index (bitwardenFields "item" "7bc3cc6e-0ae5-4140-98b8-c7b3f65c9d44") "caldav-mcp").value }}"
       }
     }
+{{- end }}
   }
 }

@@ -1,0 +1,114 @@
+{{ template "posix-preamble.sh" . }}
+# system-level binary dependencies for Fedora/RHEL-family hosts (dnf).
+# these are typically very stable applications that MUST be provided by a
+# package manager; they are not particularly version-sensitive and are all f(l)oss.
+DNF_PACKAGES=(
+	# =+= CORE
+	bash
+	nu
+	tmux
+	fastfetch
+	telnet
+	retry
+	zsh
+	xxd
+	binwalk
+	ncdu
+	htop
+	nmap
+	curl
+	age
+
+	# =+= CONTAINERIZATION
+	podman
+	podman-compose
+
+	# =+= BUILD TOOLS
+	ninja-build
+	pkgconf
+	cmake
+
+	# =+= DEPENDENCIES
+	cairo-devel  # needed by cairo PyPi package
+	libxml2-devel
+	freetype-devel
+	libjpeg-turbo-devel
+	device-mapper-devel  # needed by thin-provisioning-tools build
+	pciutils  # needed by llama.cpp
+	libcurl-devel
+	## libolm is depreciated upstream but still needed to build the mautrix tools
+	libolm-devel
+	simdjson-devel
+
+	# =+= MISC
+	nyx
+	libva-utils
+	glx-utils
+
+	# =+= EDITOR
+	neovim
+	vim
+	tree-sitter-cli
+	ShellCheck
+	ripgrep
+	ImageMagick
+
+	# =+= DESKTOP
+	mpv
+
+	# =+= SERIAL
+	minicom
+
+	# =+= UTILS
+	systemd  # provides utils even when in docker
+	gawk  # not bundled by default
+	socat
+	iputils
+	binutils
+	net-tools
+	perl
+	sshpass
+	git
+	git-lfs
+	git-filter-repo
+	gnupg2 # gpg
+	openssh # ssh-agent & ssh
+	keychain
+	gh # GitHub
+	restic
+	ffmpeg
+	syncthing
+	nss-tools  # pk12util/certutil, needed to import the client cert into the NSS DB
+
+	# =+= JS/TS
+	nodejs
+	npm # just to install pnpm
+
+	# =+= JVM
+	java-latest-openjdk
+	maven
+
+	# =+= RUST
+	cargo
+	rustfmt
+	rust
+	rust-analyzer
+
+	# =+= PYTHON (>= 3.12)
+	python3
+	python3-pip
+
+	# =+= GO
+	golang
+
+	# =+= RUBY
+	ruby
+
+	# =+= LUA
+	lua
+	luarocks
+)
+
+sudo dnf group install -q -y "development-tools"
+sudo dnf install -q -y "${DNF_PACKAGES[@]}"
+sudo dnf upgrade --refresh -y
