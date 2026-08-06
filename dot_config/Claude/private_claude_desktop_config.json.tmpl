@@ -49,7 +49,7 @@
 {{- if eq .chezmoi.os "darwin" }}
       "command": "/opt/homebrew/bin/pnpx",
 {{- else if eq .chezmoi.os "windows" }}
-      "command": "{{ env "USERPROFILE" }}\scoop\shims\pnpx.EXE",
+      "command": "{{ env "USERPROFILE" | replace "\\" "\\\\" }}\scoop\shims\pnpx.EXE",
 {{- else }}
       "command": "/home/linuxbrew/.linuxbrew/bin/pnpx",
 {{- end }}
