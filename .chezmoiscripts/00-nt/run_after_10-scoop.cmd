@@ -80,6 +80,7 @@ rust ^
 go ^
 fastfetch ^
 ripgrep ^
+actionlint ^
 hadolint ^
 telnet ^
 unzip ^
