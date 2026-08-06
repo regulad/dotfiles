@@ -27,24 +27,21 @@ jobs:
     strategy:
       matrix:
         include:
-          # GHA caching is configured so there is no cost incurred by specifiying the same arrangement twice
+          # "" and "-ubuntu" are the same image; the ubuntu leg below publishes both
+          # tag sets from a single build instead of building Dockerfile.ubuntu twice.
           - username: "regulad.linux"
             uid: "1000"
             groupname: "regulad.linux"
             gid: "1000"
             suffix: ""
-            file: "Dockerfile.ubuntu"
-          - username: "regulad.linux"
-            uid: "1000"
-            groupname: "regulad.linux"
-            gid: "1000"
-            suffix: "-ubuntu"
+            alt_suffix: "-ubuntu"
             file: "Dockerfile.ubuntu"
           - username: "regulad.linux"
             uid: "1000"
             groupname: "regulad.linux"
             gid: "1000"
             suffix: "-fedora"
+            alt_suffix: ""
             file: "Dockerfile.fedora"
           #- username: "pewahle.linux"
           #  uid: "461513"
@@ -102,13 +99,32 @@ jobs:
         uses: docker/metadata-action@v6.0.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            suffix=${{ matrix.suffix }},onlatest=true
           # the below values enable the latest tag only on the default branch
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}${{ matrix.suffix != '' && format(',suffix={0}', matrix.suffix) || '' }}
-            type=schedule${{ matrix.suffix != '' && format(',suffix={0}', matrix.suffix) || '' }}
-            type=ref,event=branch${{ matrix.suffix != '' && format(',suffix={0}', matrix.suffix) || '' }}
-            type=ref,event=tag${{ matrix.suffix != '' && format(',suffix={0}', matrix.suffix) || '' }}
-            type=ref,event=pr${{ matrix.suffix != '' && format(',suffix={0}', matrix.suffix) || '' }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
+
+      # Same image as the step above, published under a second tag namespace
+      # (e.g. "-ubuntu" alongside the unsuffixed "latest") without rebuilding.
+      - name: Extract Docker metadata (alt suffix)
+        id: meta-alt
+        if: matrix.alt_suffix != ''
+        uses: docker/metadata-action@v6.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            suffix=${{ matrix.alt_suffix }},onlatest=true
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=tag
+            type=ref,event=pr
 
       # Build and push Docker image with Buildx (don't push on PR)
       # https://github.com/docker/build-push-action
@@ -122,7 +138,9 @@ jobs:
           context: "."
           file: "./${{ matrix.file }}"
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ${{ steps.meta-alt.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -157,7 +175,9 @@ jobs:
         if: ${{ github.event_name != 'pull_request' }}
         env:
           # https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#using-an-intermediate-environment-variable
-          TAGS: ${{ steps.meta.outputs.tags }}
+          TAGS: |
+            ${{ steps.meta.outputs.tags }}
+            ${{ steps.meta-alt.outputs.tags }}
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
         # This step uses the identity token to provision an ephemeral certificate
         # against the sigstore community Fulcio instance.

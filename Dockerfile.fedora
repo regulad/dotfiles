@@ -1,4 +1,4 @@
-# Dockerfile for sandbox environment with s6-overlay supervisor and dotfiles
+# Dockerfile for sandbox environment with tini supervisor and dotfiles
 #
 # Author: Parker Wahle (regulad)
 # Assisted by: Claude Sonnet 4.5
@@ -12,8 +12,6 @@ ARG USERNAME="regulad.linux"
 ARG UID="1000"
 ARG GROUPNAME="regulad.linux"
 ARG GID="1000"
-
-ARG S6_OVERLAY_VERSION=3.2.2.0
 
 ENV TZ="America/New_York"
 
@@ -65,7 +63,7 @@ COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 ## NOTE: since the docker buildx GHA action doesn't support squashing, all installs have to be done in a single layer.
 ##       who cares about caching!
 # Install all development packages
-# Install s6-overlay
+# Install tini
 # Install Homebrew as the UID 1000 user
 # Install pnpm globally
 # Install chezmoi via Homebrew
@@ -105,16 +103,12 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
     xz \
     systemd \
     libxcrypt-compat \
+    tini \
   && dnf -y group install "development-tools" \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
   && echo "LANG=en_US.UTF-8" > /etc/locale.conf \
   \
   && visudo -c && for f in /etc/sudoers.d/*; do visudo -c -f "$f"; done \
-  \
-  && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz -o /tmp/s6-overlay-noarch.tar.xz \
-  && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
-  && curl -fsSL https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-$(uname -m).tar.xz -o /tmp/s6-overlay-$(uname -m).tar.xz \
-  && tar -C / -Jxpf /tmp/s6-overlay-$(uname -m).tar.xz \
   \
   && su -l ${USERNAME} -c 'NONINTERACTIVE=1 CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' \
   && npm install -g pnpm \
@@ -123,8 +117,9 @@ RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
   \
   && rm -rf /home/${USERNAME}/.cache/* \
 
-# Set s6-overlay as the init system
-ENTRYPOINT ["/init"]
+# Set tini as the init system
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["sleep", "infinity"]
 
 # To get a login shell, use one of:
 #   docker exec -it <container> su - <username>

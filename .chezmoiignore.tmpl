@@ -82,8 +82,12 @@ Library
 {{-     if not (or (eq .chezmoi.osRelease.id "ubuntu") (eq .chezmoi.osRelease.id "debian")) }}
 .chezmoiscripts/00-linux/run_after_21-apt-packages.sh.tmpl
 {{-     end }}
-{{-     if not (contains "WSL2" (output "uname" "-r")) }}
-# mask out the WSL-only scriptlets on a non-WSL Linux kernel
+{{-     $virt := trim (output "sh" "-c" "systemd-detect-virt --container 2>/dev/null || echo none") }}
+{{-     if or (not (contains "WSL2" (output "uname" "-r"))) (ne $virt "none") }}
+# mask out the WSL-only scriptlets on a non-WSL kernel, and also inside any
+# container: containers share the host kernel, so a WSL2-backed Docker host
+# (e.g. Docker Desktop) still reports a WSL2 uname -r even though modprobe/
+# wslview integration doesn't apply inside the container.
 .chezmoiscripts/00-linux/run_once_after_05-wslview.sh
 .chezmoiscripts/00-linux/run_once_after_06-wsl-gpu.sh
 {{-     else }}

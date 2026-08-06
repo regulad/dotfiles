@@ -36,11 +36,12 @@
         "VNCMCP_HOST": "localhost",
         "VNCMCP_PORT": "5900",
         "VNCMCP_TIMEOUT": "15.0",
+{{- if eq .chezmoi.os "darwin" }}
         "VNCMCP_USERNAME": "{{ .chezmoi.username }}",
-{{- if eq .chezmoi.hostname "penumbra" }}
         "VNCMCP_PASSWORD": "{{ (bitwarden "item" "75de9835-d062-49f3-896a-566a3b979b7c").login.password }}"
 {{- else }}
-        "VNCMCP_PASSWORD": "ChangeMeImInsecure!!"
+        "VNCMCP_USERNAME": "",
+        "VNCMCP_PASSWORD": "Claude487"
 {{- end }}
       }
     },
