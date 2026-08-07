@@ -14,7 +14,7 @@ cd~=cd /d "%USERPROFILE%"
 
 ssh-privpub=for %%f in ($*) do @(echo %%f | findstr /i ".pub$" >nul || (if exist "%%f" ssh-keygen -y -f "%%f" > "%%f.pub" 2>nul && echo %%f.pub))
 
-sha1sum=shasum -a 1
-sha256sum=shasum -a 256
-sha384sum=shasum -a 384
-sha512sum=shasum -a 512
+sha1sum=shasum -a 1 $*
+sha256sum=shasum -a 256 $*
+sha384sum=shasum -a 384 $*
+sha512sum=shasum -a 512 $*
