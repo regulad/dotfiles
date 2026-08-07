@@ -8,13 +8,13 @@ else
 	npm install -g --prefix ~/.local -q pnpm@latest
 fi
 
+# `pnpm setup`'s self-managed-copy step is flaky when pnpm is already installed
+# via brew/npm (fails to link its own bundled binary), so just set PNPM_HOME
+# directly instead of relying on it.
 if [ -z "$PNPM_HOME" ]; then
-	touch ~/.bashrc
-	mv ~/.bashrc ~/.bashrc.pre-pnpm
-	SHELL=bash pnpm setup &>/dev/null
-	source ~/.bashrc
-	rm ~/.bashrc
-	mv ~/.bashrc.pre-pnpm ~/.bashrc
+	export PNPM_HOME="$HOME/.local/share/pnpm"
+	export PATH="$PNPM_HOME/bin:$PATH"
+	mkdir -p "$PNPM_HOME/bin"
 fi
 
 PNPM_CLI_PACKAGES=(

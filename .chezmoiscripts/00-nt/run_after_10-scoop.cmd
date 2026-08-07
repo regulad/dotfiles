@@ -56,6 +56,7 @@ if errorlevel 1 (
 )
 
 set user_packages=^
+shasum ^
 deno ^
 mongosh ^
 mongodb-compass ^

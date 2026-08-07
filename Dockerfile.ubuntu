@@ -19,6 +19,10 @@ ARG GID="1000"
 
 ENV TZ="America/New_York"
 ENV DEBIAN_FRONTEND="noninteractive"
+# tells systemd and package post-install hooks they're in a container so they skip
+# live systemctl/dbus calls that would otherwise hang forever.
+# https://www.freedesktop.org/wiki/Software/systemd/ContainerInterface/
+ENV container=docker
 
 # overwrite the existing ubuntu.sources with a version that includes non-free assets,
 # which is important for the propriteary toolchains like nvcc
@@ -137,7 +141,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   && su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; brew install chezmoi' \
   && su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; CHEZMOI_USE_DUMMY=1 CHEZMOI_USE_HEADLESS=1 chezmoi init; chezmoi apply --exclude encrypted' \
   \
-  && rm -rf /home/${USERNAME}/.cache/* \
+  && rm -rf /home/${USERNAME}/.cache/*
 
 # Set tini as the init system
 ENTRYPOINT ["/usr/bin/tini", "--"]

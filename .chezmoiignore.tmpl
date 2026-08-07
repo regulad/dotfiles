@@ -38,9 +38,9 @@ key.txt
 # Head
 {{- if .useHeadless }}
 .config/vesktop
-.chezmoiscripts/00-nt/run_after_60-vencord.cmd.tmpl
-.chezmoiscripts/00-macos/run_after_80-vencord.sh.tmpl
-.chezmoiscripts/00-linux/run_after_80-vencord.sh.tmpl
+.chezmoiscripts/00-nt/60-vencord.cmd
+.chezmoiscripts/00-macos/080-vencord.sh
+.chezmoiscripts/00-linux/080-vencord.sh
 {{- end }}
 
 # Windows
@@ -75,23 +75,28 @@ Library
 .config/systemd/
 {{- else }}
 # only one package manager's script applies per distro
+# NOTE: chezmoiignore patterns match the target-relative path, i.e. with the
+# run_once_after_/run_after_ prefix and any .tmpl suffix already stripped.
+# NOTE: chezmoi orders scripts by plain lexicographic string comparison of
+# that stripped name (not numeric), so every script number in this directory
+# MUST stay zero-padded to 3 digits (e.g. 020, not 20) or a two-digit script
+# will silently sort after a three-digit one (e.g. "20-x" running after "100-y").
 {{-     if ne .chezmoi.osRelease.id "fedora" }}
-.chezmoiscripts/00-linux/run_once_after_10-fedora.sh.tmpl
-.chezmoiscripts/00-linux/run_after_20-dnf-packages.sh.tmpl
+.chezmoiscripts/00-linux/010-fedora.sh
+.chezmoiscripts/00-linux/020-dnf-packages.sh
 {{-     end }}
 {{-     if not (or (eq .chezmoi.osRelease.id "ubuntu") (eq .chezmoi.osRelease.id "debian")) }}
-.chezmoiscripts/00-linux/run_after_21-apt-packages.sh.tmpl
+.chezmoiscripts/00-linux/021-apt-packages.sh
 {{-     end }}
-{{-     $virt := trim (output "sh" "-c" "systemd-detect-virt --container 2>/dev/null || echo none") }}
-{{-     if or (not (contains "WSL2" (output "uname" "-r"))) (ne $virt "none") }}
-# mask out the WSL-only scriptlets on a non-WSL kernel, and also inside any
-# container: containers share the host kernel, so a WSL2-backed Docker host
-# (e.g. Docker Desktop) still reports a WSL2 uname -r even though modprobe/
-# wslview integration doesn't apply inside the container.
-.chezmoiscripts/00-linux/run_once_after_05-wslview.sh
-.chezmoiscripts/00-linux/run_once_after_06-wsl-gpu.sh
+{{-     if eq (env "WSL_DISTRO_NAME") "" }}
+# mask out the WSL-only scriptlets unless running inside a genuine WSL2 distro.
+# WSL_DISTRO_NAME is only set by WSL's own session bootstrap; `uname -r` alone
+# is unreliable since containers on a WSL2-backed Docker host (e.g. Docker
+# Desktop) inherit the same host kernel string without being WSL themselves.
+.chezmoiscripts/00-linux/005-wslview.sh
+.chezmoiscripts/00-linux/006-wsl-gpu.sh
 {{-     else }}
 # special case: tailscale is handled from the windows side for WSL2 hosts
-.chezmoiscripts/00-linux/run_once_after_90-tailscale.sh
+.chezmoiscripts/00-linux/090-tailscale.sh
 {{-     end }}
 {{- end }}

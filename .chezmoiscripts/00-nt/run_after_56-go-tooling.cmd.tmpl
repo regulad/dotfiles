@@ -25,6 +25,9 @@ if errorlevel 1 (
     goto :eof
 )
 
+REM auto lets Go fetch a newer toolchain on demand if a tool (like gopls) needs one
+set "GOTOOLCHAIN=auto"
+
 echo debug: installing go tooling
 call go install mvdan.cc/sh/v3/cmd/shfmt@latest
 call go install golang.org/x/tools/gopls@latest

@@ -1,5 +1,7 @@
 {{ template "posix-preamble.sh" . }}
 # go
+# auto lets Go fetch a newer toolchain on demand if a tool (like gopls) needs one
+export GOTOOLCHAIN=auto
 go install mvdan.cc/sh/v3/cmd/shfmt@latest
 go install golang.org/x/tools/gopls@latest
 go install golang.org/x/tools/cmd/goimports@latest

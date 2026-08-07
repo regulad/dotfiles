@@ -1,5 +1,9 @@
 {{ template "posix-preamble.sh" . }}
 # go
+# Fedora's golang package defaults GOTOOLCHAIN=local, which refuses to install
+# tools (like gopls) that require a newer Go than the one on PATH; auto lets Go
+# fetch the toolchain it actually needs.
+export GOTOOLCHAIN=auto
 go install mvdan.cc/sh/v3/cmd/shfmt@latest
 go install golang.org/x/tools/gopls@latest
 go install golang.org/x/tools/cmd/goimports@latest
