@@ -1,0 +1,4 @@
+Host u5g-us
+    HostName u5g-us.regulad.internal
+    User regulad
+    Tag rsa3072
