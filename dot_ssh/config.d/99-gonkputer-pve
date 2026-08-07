@@ -7,7 +7,6 @@ Host dodo # 101
 
 Host unifi # 102
     HostName unifi.regulad.internal
-    User root
     Tag rsa3072
 
 Host openclaw # 103
