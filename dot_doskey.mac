@@ -2,10 +2,19 @@ v=nvim $*
 v-wt=chezmoi edit --apply "%USERPROFILE%\AppData\Local\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
 v-ah=chezmoi edit --apply "%USERPROFILE%\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\hotkeys.ahk"
 v-vs=chezmoi edit --apply "%USERPROFILE%\.config\Code\User\settings.json"
+
 c3=uv run "--directory=%USERPROFILE%\.local\share\pycalc3" ipython --no-banner -i --profile=default
 t3=uv run "--directory=%USERPROFILE%\.local\share\pycalc3" ipython --no-banner -i --profile=sympy
+
 clear=cls
 gsudo=sudo $*
+
 chezmoi-cd=cd /d "%USERPROFILE%\.local\share\chezmoi"
 cd~=cd /d "%USERPROFILE%"
+
 ssh-privpub=for %%f in ($*) do @(echo %%f | findstr /i ".pub$" >nul || (if exist "%%f" ssh-keygen -y -f "%%f" > "%%f.pub" 2>nul && echo %%f.pub))
+
+sha1sum=shasum -a 1
+sha256sum=shasum -a 256
+sha384sum=shasum -a 384
+sha512sum=shasum -a 512
