@@ -76,7 +76,10 @@ DNF_PACKAGES=(
 	keychain
 	gh # GitHub
 	restic
-	ffmpeg
+	# TODO: RPM Fusion's ffmpeg-libs-8.1.2-3.fc44 currently Conflicts: with Fedora's
+	# own libswresample-free-8.1.2-4.fc44 (RPM Fusion hasn't rebuilt against the
+	# newer Fedora multimedia-stack release yet). Re-add ffmpeg once that's resolved
+	# upstream: https://bugzilla.rpmfusion.org/
 	syncthing
 	nss-tools  # pk12util/certutil, needed to import the client cert into the NSS DB
 

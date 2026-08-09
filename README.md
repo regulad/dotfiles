@@ -22,7 +22,7 @@ Supported environments:
 
 - macOS latest (w/ `brew`)
 - Ubuntu GNU/Linux >= 25.10
-- Fedora GNU/Linux >= 42
+- Fedora GNU/Linux >= 44
 - Windows 11 `cmd`
 
 Brew will be installed on macOS and Linux if it is not already installed. Rootless installs are supported but a warning will be emitted since I can't test every edge case.

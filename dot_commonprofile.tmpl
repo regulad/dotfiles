@@ -63,7 +63,8 @@ if [[ -f /etc/os-release ]]; then
   fi
 fi
 
-# Set browser to wslview if in WSL
+# Set browser to wslview if in WSL (provided by ~/.local/bin/wslview, a thin
+# explorer.exe wrapper -- no wslu package required)
 if grep -qi wsl /proc/version 2>/dev/null; then
     export BROWSER=wslview
 fi
@@ -95,20 +96,25 @@ export PATH="$HOME/go/bin:$PATH"
 unset _bw_sock
 case "$(uname -o)" in
   Darwin)
-    for _bw_sock in \
+    for _agent_sock in \
       "$HOME/.bitwarden-ssh-agent.sock" \
       "$HOME/Library/Containers/com.bitwarden.desktop/Data/.bitwarden-ssh-agent.sock"
     do
-      [ -S "$_bw_sock" ] && export SSH_AUTH_SOCK="$_bw_sock" && break
+      [ -S "$_agent_sock" ] && export SSH_AUTH_SOCK="$_agent_sock" && break
     done
     ;;
   GNU/Linux)
-    for _bw_sock in \
+    # .wsl-ssh-agent.sock is relayed from the Windows openssh-ssh-agent named pipe
+    # by ssh-agent-relay.service (see .chezmoiscripts/00-linux/007-ssh-agent-relay.sh);
+    # it's agent-agnostic on the Windows side (Bitwarden, native OpenSSH, 1Password, ...
+    # whatever is bound to that pipe).
+    for _agent_sock in \
+      "$HOME/.wsl-ssh-agent.sock" \
       "$HOME/.bitwarden-ssh-agent.sock" \
       "$HOME/snap/bitwarden/current/.bitwarden-ssh-agent.sock" \
       "$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock"
     do
-      [ -S "$_bw_sock" ] && export SSH_AUTH_SOCK="$_bw_sock" && break
+      [ -S "$_agent_sock" ] && export SSH_AUTH_SOCK="$_agent_sock" && break
     done
     ;;
 esac

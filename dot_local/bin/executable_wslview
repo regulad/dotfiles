@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Minimal replacement for wslu's wslview: opens a URL/path in the Windows
+# side of a WSL2 install via explorer.exe. explorer.exe always exits 1
+# regardless of outcome, so that's swallowed here rather than propagated.
+
+target="$1"
+
+case "$target" in
+	*://*) ;;
+	*) target="$(wslpath -w "$target")" ;;
+esac
+
+explorer.exe "$target" || true

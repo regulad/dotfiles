@@ -1,0 +1,13 @@
+[Unit]
+Description=Relay the Windows OpenSSH agent named pipe into a WSL2 Unix socket
+Documentation=https://github.com/jstarks/npiperelay
+
+[Service]
+Type=simple
+ExecStartPre=/usr/bin/rm -f %h/.wsl-ssh-agent.sock
+ExecStart=/usr/bin/socat UNIX-LISTEN:%h/.wsl-ssh-agent.sock,fork,mode=0600 EXEC:'npiperelay.exe -ei -s //./pipe/openssh-ssh-agent',nofork
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

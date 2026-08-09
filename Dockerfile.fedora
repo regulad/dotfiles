@@ -4,7 +4,7 @@
 # Assisted by: Claude Sonnet 4.5
 # License: AGPLv3.0 - see LICENSE.md
 
-FROM fedora:43
+FROM fedora:44
 
 # Build arguments
 # dot linux suffix is lima-style (https://github.com/lima-vm/lima/discussions/2622#discussioncomment-108517600)

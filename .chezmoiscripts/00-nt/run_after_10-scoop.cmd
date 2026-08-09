@@ -78,6 +78,7 @@ gow ^
 bind ^
 pnpm ^
 nmap ^
+npiperelay ^
 rust ^
 go ^
 fastfetch ^
