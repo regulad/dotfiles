@@ -30,7 +30,7 @@ Host procontainer # 106
 
 Host arawi # 108
     HostName arawi.regulad.internal
-    AddressFamily inet
+    AddressFamily inet # IPv6 on-link traffic spotty from laptop
 
 Host authentik # 109
     HostName authentik.regulad.internal
