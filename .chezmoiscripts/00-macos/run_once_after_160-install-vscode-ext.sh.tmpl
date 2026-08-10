@@ -19,6 +19,23 @@ if command -v code &>/dev/null; then
     # newer version than the marketplace has, which `code` reports as a
     # permanent, unretryable failure. Don't let that abort the whole apply.
     retry -t 5 -d 2 -m 60 -- code "${flags[@]}" --force || echo "warning: some extensions failed to install (see above)" >&2
+
+    # Uninstall anything installed that isn't in dot_vscode-extensions.txt.
+    is_wanted() {
+        local candidate="${1,,}" w
+        for w in "${extensions[@]}"; do
+            [[ "${w,,}" == "$candidate" ]] && return 0
+        done
+        return 1
+    }
+    mapfile -t installed < <(code --list-extensions)
+    uninstall_flags=()
+    for extension in "${installed[@]}"; do
+        is_wanted "$extension" || uninstall_flags+=(--uninstall-extension "$extension")
+    done
+    if [ "${#uninstall_flags[@]}" -gt 0 ]; then
+        retry -t 5 -d 2 -m 60 -- code "${uninstall_flags[@]}" --force || echo "warning: some extensions failed to uninstall (see above)" >&2
+    fi
 else
     echo "warning: VSCode 'code' command not found in PATH, skipping extension installation"
 fi

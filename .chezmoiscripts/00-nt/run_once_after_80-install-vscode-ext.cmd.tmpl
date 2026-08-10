@@ -13,6 +13,18 @@ if %ERRORLEVEL% EQU 0 (
         set "FLAGS=!FLAGS! --install-extension %%A"
     )
     call code !FLAGS! --force
+
+    REM Uninstall anything installed that isn't in dot_vscode-extensions.txt.
+    set "UNINSTALL_FLAGS="
+    for /F "tokens=*" %%B in ('call code --list-extensions') do (
+        findstr /I /X /C:"%%B" "%USERPROFILE%\.vscode-extensions.txt" >nul 2>nul
+        if errorlevel 1 (
+            set "UNINSTALL_FLAGS=!UNINSTALL_FLAGS! --uninstall-extension %%B"
+        )
+    )
+    if defined UNINSTALL_FLAGS (
+        call code !UNINSTALL_FLAGS! --force
+    )
     endlocal
 ) else (
     echo warning: VSCode 'code' command not found in PATH, skipping extension installation
