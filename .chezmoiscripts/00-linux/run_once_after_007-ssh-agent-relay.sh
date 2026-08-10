@@ -1,11 +1,15 @@
 #!/bin/bash -e
 
 # belt-and-suspenders: this script is already WSL-gated in .chezmoiignore
-# (masked unless WSL_DISTRO_NAME is set, which Docker containers never have),
-# but skip explicitly too since containers have no real systemd --user session
-# and this now hard-fails instead of warning.
-if systemd-detect-virt --container &>/dev/null; then
-	echo "note: containerized, skipping ssh-agent-relay.service" >&2
+# (masked unless WSL_DISTRO_NAME is set), but re-check here rather than
+# trusting the mask alone, since this hard-fails instead of warning.
+#
+# NOTE: do NOT swap this for `systemd-detect-virt --container`. systemd
+# classifies WSL itself as a container -- it prints "wsl" and exits 0 inside a
+# genuine distro -- so that check made this entire script a permanent no-op and
+# ssh-agent-relay.service was never actually enabled.
+if [ -z "${WSL_DISTRO_NAME:-}" ]; then
+	echo "note: not a WSL session, skipping ssh-agent-relay.service" >&2
 	exit 0
 fi
 

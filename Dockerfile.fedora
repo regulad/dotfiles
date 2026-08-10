@@ -56,7 +56,12 @@ RUN mkdir -p \
 RUN echo 'keepcache=True' >> /etc/dnf/dnf.conf
 
 # RPMFusion
-RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+# NOTE: the cache mount target must be /var/cache/libdnf5, NOT /var/cache/dnf.
+# Fedora 41+ ships dnf5, whose compiled-in cachedir is /var/cache/libdnf5; there
+# is no cachedir override in /etc/dnf. Pointing the mount at the dnf4 path is a
+# silent no-op that gives no build-time caching AND lets keepcache=True bake
+# every downloaded RPM into the image layer (measured: 1.58 GB / 1129 rpms).
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     dnf install -y \
     "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm" \
     "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm"
@@ -73,7 +78,7 @@ COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 # Install chezmoi via Homebrew
 # Initialize and apply chezmoi (expects brew and pnpm to already exist)
 # Clean up dnf cache after chezmoi apply since it may install packages via sudo
-RUN --mount=type=cache,target=/var/cache/dnf,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     --mount=type=cache,target=/var/cache/buildkit/uv,uid=${UID},gid=${GID} \
     --mount=type=cache,target=/var/cache/buildkit/pip,uid=${UID},gid=${GID} \
     --mount=type=cache,target=/var/cache/buildkit/npm,uid=${UID},gid=${GID} \

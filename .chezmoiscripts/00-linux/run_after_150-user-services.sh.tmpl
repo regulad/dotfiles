@@ -3,8 +3,12 @@
 if ! [ "$CONTAINERIZED" -eq 1 ]; then
 	if systemctl --user is-system-running &>/dev/null || systemctl --user status &>/dev/null; then
 		systemctl --user enable --now tmux@default.socket
-		systemctl --user enable --now syncthing.service
 		systemctl --user enable --now podman.socket
+		# syncthing runs on native GNU/Linux only -- intentionally not started
+		# inside WSL.
+		if [ "$IS_WSL" -eq 0 ]; then
+			systemctl --user enable --now syncthing.service
+		fi
 	else
 		echo "error: user session broken (couldn't run systemd --user)" >&2
 		exit 1

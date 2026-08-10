@@ -9,7 +9,7 @@ UBUNTU_MINIMUM_VERSION=26.04
 # Shared preamble included by every .chezmoiscripts/00-posix/run_after_* script
 # via `{{ "{{" }} template "posix-preamble.sh" . {{ "}}" }}`. Guards against unsupported
 # platforms, captures sudo, loads/installs Homebrew, and picks a system package
-# manager. Exports: CAN_SUDO, CONTAINERIZED, HAS_BREW, MANAGER.
+# manager. Exports: CAN_SUDO, CONTAINERIZED, IS_WSL, HAS_BREW, MANAGER.
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
 
 echo "note: entering hookscript" >&2
@@ -43,12 +43,25 @@ else
 	CAN_SUDO=true
 fi
 
+# NOTE: WSL must be tested BEFORE systemd-detect-virt, not after. systemd
+# classifies WSL as a container: `systemd-detect-virt --container` prints "wsl"
+# and exits 0 inside a genuine WSL2 distro, so checking it first silently
+# marked every WSL session CONTAINERIZED=1 and skipped all of the user-service
+# setup that keys off it. (It also prints "wsl" inside a Docker container on a
+# WSL2-backed host, which is why WSL_DISTRO_NAME -- set only by WSL's own
+# session bootstrap -- is the one signal that actually separates the two.)
 if [[ "$OSTYPE" == "darwin"* ]]; then
 	CONTAINERIZED=0
+	IS_WSL=0
+elif [ -n "${WSL_DISTRO_NAME:-}" ]; then
+	CONTAINERIZED=0
+	IS_WSL=1
 elif systemd-detect-virt --container &>/dev/null; then
 	CONTAINERIZED=1
+	IS_WSL=0
 else
 	CONTAINERIZED=0
+	IS_WSL=0
 fi
 
 # START CLAUDE (Claude Sonnet 4.5)

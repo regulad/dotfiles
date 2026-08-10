@@ -83,11 +83,44 @@ Library
 # will silently sort after a three-digit one (e.g. "20-x" running after "100-y").
 {{-     if ne .chezmoi.osRelease.id "fedora" }}
 .chezmoiscripts/00-linux/010-fedora.sh
+.chezmoiscripts/00-linux/012-vscode-dnf-repo.sh
 .chezmoiscripts/00-linux/020-dnf-packages.sh
 {{-     end }}
 {{-     if not (or (eq .chezmoi.osRelease.id "ubuntu") (eq .chezmoi.osRelease.id "debian")) }}
 .chezmoiscripts/00-linux/011-vscode-apt-repo.sh
 .chezmoiscripts/00-linux/021-apt-packages.sh
+{{-     end }}
+{{-     if or (ne (env "WSL_DISTRO_NAME") "") (eq (output "sh" "-c" "systemd-detect-virt --container --quiet && echo yes || echo no" | trim) "yes") }}
+# VSCode is installed on native GNU/Linux desktops only -- not in containers,
+# not in WSL.
+#
+# Containers have no display to run it on, and `code` plus its extensions is
+# ~1.5 GB of the published images.
+#
+# WSL is excluded because the Linux `code` CLI manages the wrong directory
+# there: Remote-WSL runs out of ~/.vscode-server/extensions, which the
+# Windows-side client populates, while `code --install-extension` writes
+# ~/.vscode/extensions. Verified on a live distro -- `code --list-extensions`
+# matched ~/.vscode/extensions exactly (33/33) and differed from the effective
+# remote set. There is no supported CLI or settings hook to drive the server's
+# extension directory from inside the distro (`remote.WSL.defaultExtensions`
+# does not exist; only Dev Containers has an equivalent), so this is left to
+# the Windows client entirely.
+#
+# NOTE: systemd classifies WSL itself as a container -- `systemd-detect-virt
+# --container` prints "wsl" and exits 0 inside a real WSL distro -- and it
+# *also* prints "wsl" inside a Docker container whose host is WSL2-backed
+# (Docker Desktop), because the microsoft kernel string wins over the
+# container= env var. detect-virt therefore cannot distinguish the two on its
+# own; that both arms of this `or` land on the same answer here is a
+# coincidence of this rule, not a general truth.
+#
+# NOTE: phrased as "--quiet && echo yes || echo no" rather than comparing
+# systemd-detect-virt's stdout, so that a missing systemd-detect-virt fails
+# towards "not a container" (installing VSCode) instead of silently masking it.
+.chezmoiscripts/00-linux/011-vscode-apt-repo.sh
+.chezmoiscripts/00-linux/012-vscode-dnf-repo.sh
+.chezmoiscripts/00-linux/160-install-vscode-ext.sh
 {{-     end }}
 {{-     if eq (env "WSL_DISTRO_NAME") "" }}
 # mask out the WSL-only scriptlets unless running inside a genuine WSL2 distro.

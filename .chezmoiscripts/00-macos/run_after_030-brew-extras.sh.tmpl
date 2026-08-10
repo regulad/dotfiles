@@ -21,8 +21,11 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"jdtls"
 	"emscripten"
 	"harper"
-	"lima"
-	"lima-additional-guestagents"
+	# NOTE: lima was dropped here and on GNU/Linux. Its 87 MB of binaries drag in an
+	# exclusive 4.29 GB dependency subtree (llvm, qemu, mesa, gtk+3, z3, libclc,
+	# spirv-*) -- 37% of the brew Cellar in the published container images, for a
+	# VM manager inside a VM. The `quarantine` script that used limactl was
+	# removed along with it.
 	"deno"
 	"shfmt"
 	"ghidra"

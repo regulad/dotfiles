@@ -76,10 +76,9 @@ DNF_PACKAGES=(
 	keychain
 	gh # GitHub
 	restic
-	# TODO: RPM Fusion's ffmpeg-libs-8.1.2-3.fc44 currently Conflicts: with Fedora's
-	# own libswresample-free-8.1.2-4.fc44 (RPM Fusion hasn't rebuilt against the
-	# newer Fedora multimedia-stack release yet). Re-add ffmpeg once that's resolved
-	# upstream: https://bugzilla.rpmfusion.org/
+	# NOTE: ffmpeg is deliberately absent from this list -- it needs
+	# --allowerasing, which must not be applied to the whole list. It's
+	# installed on its own after the main transaction below.
 	syncthing
 	nss-tools  # pk12util/certutil, needed to import the client cert into the NSS DB
 
@@ -114,4 +113,22 @@ DNF_PACKAGES=(
 
 sudo dnf group install -q -y "development-tools"
 sudo dnf install -q -y "${DNF_PACKAGES[@]}"
+
+# RPM Fusion's ffmpeg is a *replacement* for Fedora's ffmpeg-free, not an
+# addition: it declares `Conflicts: ffmpeg-free`, and its ffmpeg-libs likewise
+# conflicts with each of the split libav*-free / libsw*-free packages. That is
+# by design and will never "resolve upstream" -- the TODO this replaced was
+# waiting on an RPM Fusion rebuild that is never coming, because the packages
+# are mutually exclusive on purpose. Erasing the free build in the same
+# transaction is the documented fix.
+#
+# Kept out of DNF_PACKAGES so --allowerasing applies to this one package only
+# and can't silently erase something else to satisfy the main transaction.
+# Verified on Fedora 44: mpv keeps working afterwards (ffmpeg-libs provides the
+# same sonames the libav*-free split packages did), and the libx264 / libx265 /
+# libfdk_aac encoders that ffmpeg-free lacks become available -- which is the
+# whole point of `brew unlink ffmpeg` in 050-linux-casks preferring the system
+# build "with codecs".
+sudo dnf install -q -y --allowerasing ffmpeg
+
 sudo dnf upgrade --refresh -y
