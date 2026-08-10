@@ -79,6 +79,14 @@ jobs:
           DIGEST: ${{ inputs.digest }}
           ARCH: ${{ matrix.arch }}
           FLAVOR: ${{ inputs.flavor }}
+          # Force net/http down to HTTP/1.1. go-containerregistry drops large
+          # blobs mid-stream over HTTP/2 with "stream error: stream ID 1;
+          # PROTOCOL_ERROR received from peer" -- google/go-containerregistry#2084,
+          # open, with no crane flag for it. These images are close to the worst
+          # case: the Dockerfiles put every install in a single layer (buildx in
+          # GHA cannot squash), so the whole rootfs is one multi-GB blob in one
+          # stream. Run 31428570880 lost all four legs to this ~5 minutes in.
+          GODEBUG: http2client=0
         run: |
           set -euo pipefail
           out="regulad-${FLAVOR}-${ARCH}.wsl"
@@ -105,15 +113,40 @@ jobs:
           # No --format: bsdtar's default (restricted pax) preserves the
           # extended attributes that carry file capabilities. Forcing gnutar
           # would silently drop them.
-          crane --platform "linux/${ARCH}" export "${IMAGE}@${DIGEST}" - \
-            | bsdtar --numeric-owner -cf - \
-                --exclude '.dockerenv' \
-                --exclude 'etc/resolv.conf' \
-                --exclude 'etc/hostname' \
-                --exclude 'etc/hosts' \
-                --exclude 'etc/machine-id' \
-                @- \
-            | pigz -9 > "$out"
+          #
+          # Retried as a whole rather than resumed: crane cannot restart a blob
+          # mid-stream, so a dropped connection means starting over. Three
+          # attempts, since HTTP/1.1 is expected to fix the common case and
+          # this is only insurance against an ordinary network blip over a
+          # transfer that runs for several minutes.
+          export_rootfs() {
+            crane --platform "linux/${ARCH}" export "${IMAGE}@${DIGEST}" - \
+              | bsdtar --numeric-owner -cf - \
+                  --exclude '.dockerenv' \
+                  --exclude 'etc/resolv.conf' \
+                  --exclude 'etc/hostname' \
+                  --exclude 'etc/hosts' \
+                  --exclude 'etc/machine-id' \
+                  @- \
+              | pigz -9 > "$out"
+          }
+
+          attempts=3
+          for attempt in $(seq 1 "$attempts"); do
+            echo "::group::export attempt ${attempt}/${attempts}"
+            if export_rootfs; then
+              echo "::endgroup::"
+              break
+            fi
+            echo "::endgroup::"
+            rm -f "$out"
+            if [ "$attempt" -eq "$attempts" ]; then
+              echo "::error::rootfs export failed after ${attempts} attempts"
+              exit 1
+            fi
+            echo "warning: export attempt ${attempt} failed, retrying" >&2
+            sleep $((attempt * 30))
+          done
 
           echo "out=$out" >> "$GITHUB_OUTPUT"
           echo "bytes=$(stat -c %s "$out")" >> "$GITHUB_OUTPUT"
