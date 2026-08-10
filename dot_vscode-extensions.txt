@@ -1,4 +1,5 @@
 asvetliakov.vscode-neovim
+anthropic.claude-code
 bradlc.vscode-tailwindcss
 ms-python.black-formatter
 dbaeumer.vscode-eslint
