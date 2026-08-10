@@ -19,11 +19,16 @@ for CERT_PATH in "${CERT_PATHS[@]}"; do
 	fi
 done
 
+{{ if not .useDummySecrets -}}
 # Client certificate (matches the "My" store import on NT). `security import`
 # has no idempotent "already present" check of its own, but reliably exits 45
 # (errSecDuplicateItem, -25299 truncated to a Unix exit status) when the
 # identity is already in the keychain -- treat that as success, anything else
 # as a real failure.
+#
+# Templated out entirely under useDummySecrets, matching the GNU/Linux script:
+# the source file is dot_x509/encrypted_dotfiles.p12.age, so the decrypted .p12
+# is absent wherever the state was applied with --exclude encrypted.
 if ! security import "$HOME/.x509/dotfiles.p12" -k ~/Library/Keychains/login.keychain-db -P ""; then
 	import_status=$?
 	if [ "$import_status" -ne 45 ]; then
@@ -32,3 +37,4 @@ if ! security import "$HOME/.x509/dotfiles.p12" -k ~/Library/Keychains/login.key
 	fi
 	echo "note: client certificate already present in keychain" >&2
 fi
+{{- end }}

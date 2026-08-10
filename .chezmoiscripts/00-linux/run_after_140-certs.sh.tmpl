@@ -39,8 +39,16 @@ else
 	echo "warning: sudo required to install system certificate on Linux, skipping" >&2
 fi
 
+{{ if not .useDummySecrets -}}
 # Client certificate (matches the "My" store import on NT); imported into the
 # per-user NSS database that Chrome and other NSS-based tools read from.
+#
+# Templated out entirely under useDummySecrets: the source file is
+# dot_x509/encrypted_dotfiles.p12.age, and the container images build with
+# `CHEZMOI_USE_DUMMY=1 ... chezmoi apply --exclude encrypted`, so the decrypted
+# .p12 never lands there. Emitting the import anyway made pk12util fail with
+# PR_FILE_NOT_FOUND_ERROR and took the whole image build down with it, ~11
+# minutes into the run.
 if command -v pk12util &>/dev/null; then
 	mkdir -p "$HOME/.pki/nssdb"
 	if [ ! -f "$HOME/.pki/nssdb/cert9.db" ]; then
@@ -53,3 +61,4 @@ else
 	echo "error: pk12util not available, can't import client certificate" >&2
 	exit 1
 fi
+{{- end }}
