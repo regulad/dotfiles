@@ -147,3 +147,35 @@ jobs:
             [ -n "$tag" ] && tag_args+=(-t "$tag")
           done <<< "$TAGS"
           docker buildx imagetools create "${tag_args[@]}" "ghcr.io/${{ github.repository }}@${DIGEST}"
+
+  # Repackages each published image as a WSL distribution tarball (.wsl), one
+  # per flavor per architecture. These consume the manifest that was just
+  # pushed -- addressed by digest, so they package exactly the image this run
+  # produced rather than whatever a tag happens to point at by then.
+  #
+  # See .github/workflows/wsl-package.yml for what is and isn't in the result:
+  # notably it ships no /etc/wsl.conf or /etc/wsl-distribution.conf yet, so an
+  # imported instance starts as root with systemd off.
+  package-wsl-ubuntu:
+    needs: build-ubuntu
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/wsl-package.yml
+    with:
+      flavor: ubuntu
+      image: ghcr.io/${{ github.repository }}
+      digest: ${{ needs.build-ubuntu.outputs.digest }}
+
+  package-wsl-fedora:
+    needs: build-fedora
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: read
+    uses: ./.github/workflows/wsl-package.yml
+    with:
+      flavor: fedora
+      image: ghcr.io/${{ github.repository }}
+      digest: ${{ needs.build-fedora.outputs.digest }}

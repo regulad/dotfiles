@@ -1,0 +1,178 @@
+name: Package WSL distribution
+
+# Repackages an already-published container image as a WSL distribution
+# tarball (a .wsl file -- see https://learn.microsoft.com/windows/wsl/build-custom-distro).
+#
+# Called once per flavor from docker-publish.yml. Kept as a reusable workflow
+# rather than inlined twice because the step list is long enough that the
+# duplication would drift.
+#
+# NOTE: what this produces is a bootable root filesystem, not yet a finished
+# distribution. It deliberately contains neither /etc/wsl.conf nor
+# /etc/wsl-distribution.conf, so an imported instance starts as root with
+# systemd disabled, and `wsl --install --from-file` has no oobe.defaultName to
+# register it under. Adding those is a separate, deliberate change.
+
+on:
+  workflow_call:
+    inputs:
+      flavor:
+        description: Flavor name used in the output filename (e.g. "ubuntu", "fedora").
+        required: true
+        type: string
+      image:
+        description: Fully-qualified image repository, without a tag (e.g. ghcr.io/owner/repo).
+        required: true
+        type: string
+      digest:
+        description: Manifest-list digest of the image to repackage.
+        required: true
+        type: string
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    # Deliberately not matched to a native arm64 runner the way the build jobs
+    # are. crane only streams and repacks layers -- nothing out of the image is
+    # ever executed -- so there is nothing for QEMU to emulate and no reason to
+    # pay for a second runner type.
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Free up disk space
+        run: |
+          set -euo pipefail
+          # A hosted runner ships with ~14 GB free, and the compressed rootfs is
+          # a large fraction of that. None of these are used by this job.
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /opt/hostedtoolcache /usr/local/share/boost
+          df -h /
+
+      - name: Install crane, pigz and bsdtar
+        env:
+          CRANE_VERSION: "0.21.9"
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          # pigz: gzip is single-threaded and this is several GB.
+          # libarchive-tools: provides bsdtar, which can filter a tar *stream*.
+          sudo apt-get install -y -qq pigz libarchive-tools
+          curl -fsSL "https://github.com/google/go-containerregistry/releases/download/v${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin crane
+          crane version
+
+      - name: Authenticate to the registry
+        env:
+          ACTOR: ${{ github.actor }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: crane auth login ghcr.io -u "$ACTOR" --password-stdin <<< "$TOKEN"
+
+      - name: Export and repack the root filesystem
+        id: pack
+        env:
+          IMAGE: ${{ inputs.image }}
+          DIGEST: ${{ inputs.digest }}
+          ARCH: ${{ matrix.arch }}
+          FLAVOR: ${{ inputs.flavor }}
+        run: |
+          set -euo pipefail
+          out="regulad-${FLAVOR}-${ARCH}.wsl"
+
+          # `crane export` streams the *flattened* filesystem -- the equivalent
+          # of `docker export` -- so there are no layer whiteouts to interpret,
+          # and the image is never materialised on disk. That matters: the
+          # extracted rootfs is larger than a hosted runner's whole disk.
+          #
+          # bsdtar reads that stream (the `@-` operand) and writes a new one,
+          # dropping files WSL populates itself at first boot.
+          #
+          # Verified against a real registry image: etc/hosts and etc/machine-id
+          # *are* baked into the image and really do get stripped here.
+          # etc/resolv.conf and .dockerenv are not -- Docker injects those into
+          # a container at runtime, so a registry-side export never sees them --
+          # but they stay listed because they would appear the moment anyone
+          # swapped crane for `docker export`, and they cannot be deleted from a
+          # running container either (Docker bind-mounts them, so `rm` fails
+          # with "Device or resource busy"). WSL replaces resolv.conf with a
+          # symlink to /mnt/wsl/resolv.conf on first boot, and Microsoft
+          # documents that a distribution tar must not ship one.
+          #
+          # No --format: bsdtar's default (restricted pax) preserves the
+          # extended attributes that carry file capabilities. Forcing gnutar
+          # would silently drop them.
+          crane --platform "linux/${ARCH}" export "${IMAGE}@${DIGEST}" - \
+            | bsdtar --numeric-owner -cf - \
+                --exclude '.dockerenv' \
+                --exclude 'etc/resolv.conf' \
+                --exclude 'etc/hostname' \
+                --exclude 'etc/hosts' \
+                --exclude 'etc/machine-id' \
+                @- \
+            | pigz -9 > "$out"
+
+          echo "out=$out" >> "$GITHUB_OUTPUT"
+          echo "bytes=$(stat -c %s "$out")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the tarball
+        env:
+          OUT: ${{ steps.pack.outputs.out }}
+        run: |
+          set -euo pipefail
+          pigz -dc "$OUT" | tar -tf - > entries.txt
+
+          leftovers=$(grep -xE '\.dockerenv|etc/(resolv\.conf|hostname|hosts|machine-id)' entries.txt || true)
+          if [ -n "$leftovers" ]; then
+            echo "::error::tarball still ships files WSL populates at first boot:"
+            printf '%s\n' "$leftovers"
+            exit 1
+          fi
+
+          # The root of the tar must be the root of the filesystem, not a
+          # directory containing it.
+          for required in etc/passwd etc/os-release etc/shadow; do
+            grep -qx "$required" entries.txt || {
+              echo "::error::missing $required -- tar is not rooted at /"
+              exit 1
+            }
+          done
+
+          grep -q '^home/regulad\.linux/' entries.txt || {
+            echo "::error::uid 1000 home directory is absent"
+            exit 1
+          }
+
+          echo "entries: $(wc -l < entries.txt)"
+
+      - name: Summarize
+        env:
+          OUT: ${{ steps.pack.outputs.out }}
+          BYTES: ${{ steps.pack.outputs.bytes }}
+          FLAVOR: ${{ inputs.flavor }}
+          ARCH: ${{ matrix.arch }}
+          DIGEST: ${{ inputs.digest }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### WSL tarball: \`${FLAVOR}\` / \`${ARCH}\`"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| File | \`${OUT}\` |"
+            echo "| Compressed | $(numfmt --to=iec --suffix=B "$BYTES") |"
+            echo "| Source digest | \`${DIGEST}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: wsl-${{ inputs.flavor }}-${{ matrix.arch }}
+          path: ${{ steps.pack.outputs.out }}
+          # Already gzipped; re-zipping it would only burn time.
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
