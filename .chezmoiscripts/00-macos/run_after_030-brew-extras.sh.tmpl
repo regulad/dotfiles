@@ -51,5 +51,6 @@ if [ "$HAS_BREW" = "true" ]; then
 		brew services start languagetool
 	fi
 else
-	echo "warning: no brew for misc. binary deps" >&2
+	echo "error: no brew for misc. binary deps" >&2
+	exit 1
 fi

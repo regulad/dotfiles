@@ -107,7 +107,7 @@ nssm
 REM Complex command blocks inside for loops break cmd's parser even without pipes.
 REM Subroutine call isolates each package check cleanly. Fix by Claude Sonnet 4.6 (Anthropic).
 echo debug: installing new scoop user packages
-for %%p in (%user_packages%) do call :check_install_user %%p
+for %%p in (%user_packages%) do call :check_install_user %%p || goto :scoop_install_failed
 goto :after_check_install_user
 
 :check_install_user
@@ -115,10 +115,14 @@ scoop list %1 2>nul | findstr /r /c:"%1  *[0-9]" >nul 2>&1
 if errorlevel 1 (
     echo debug: %1 not installed, installing...
     scoop install %1
+    if errorlevel 1 (
+        echo error: failed to install scoop package %1 1>&2
+        exit /b 1
+    )
 ) else (
     echo debug: %1 already installed, skipping
 )
-exit /b
+exit /b 0
 
 :after_check_install_user
 
@@ -129,7 +133,7 @@ set admin_packages=^
 icaros-np
 
 echo debug: installing new scoop admin packages
-for %%p in (%admin_packages%) do call :check_install_admin %%p
+for %%p in (%admin_packages%) do call :check_install_admin %%p || goto :scoop_install_failed
 goto :after_check_install_admin
 
 :check_install_admin
@@ -137,10 +141,14 @@ scoop list %1 2>nul | findstr /r /c:"%1  *[0-9]" >nul 2>&1
 if errorlevel 1 (
     echo debug: %1 not installed, installing...
     sudo scoop install %1
+    if errorlevel 1 (
+        echo error: failed to install scoop package %1 1>&2
+        exit /b 1
+    )
 ) else (
     echo debug: %1 already installed, skipping
 )
-exit /b
+exit /b 0
 
 :after_check_install_admin
 
@@ -167,3 +175,9 @@ if !errorLevel! neq 0 (
 ) else (
     echo LanguageTool service already registered, skipping.
 )
+
+goto :eof
+
+:scoop_install_failed
+echo error: scoop package install failed, aborting 1>&2
+exit /b 1

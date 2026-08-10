@@ -21,8 +21,8 @@ call refreshenv >nul 2>&1
 
 where go >nul 2>&1
 if errorlevel 1 (
-    echo warning: go not resolvable on PATH, skipping tool installs >&2
-    goto :eof
+    echo error: go not resolvable on PATH 1>&2
+    exit /b 1
 )
 
 REM auto lets Go fetch a newer toolchain on demand if a tool (like gopls) needs one

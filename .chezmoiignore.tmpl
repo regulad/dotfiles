@@ -86,6 +86,7 @@ Library
 .chezmoiscripts/00-linux/020-dnf-packages.sh
 {{-     end }}
 {{-     if not (or (eq .chezmoi.osRelease.id "ubuntu") (eq .chezmoi.osRelease.id "debian")) }}
+.chezmoiscripts/00-linux/011-vscode-apt-repo.sh
 .chezmoiscripts/00-linux/021-apt-packages.sh
 {{-     end }}
 {{-     if eq (env "WSL_DISTRO_NAME") "" }}

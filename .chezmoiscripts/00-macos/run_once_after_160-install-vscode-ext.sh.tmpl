@@ -37,5 +37,6 @@ if command -v code &>/dev/null; then
         retry -t 5 -d 2 -m 60 -- code "${uninstall_flags[@]}" --force || echo "warning: some extensions failed to uninstall (see above)" >&2
     fi
 else
-    echo "warning: VSCode 'code' command not found in PATH, skipping extension installation"
+    echo "error: VSCode 'code' command not found in PATH" >&2
+    exit 1
 fi

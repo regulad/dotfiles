@@ -59,5 +59,6 @@ if command -v chsh &>/dev/null; then
 		echo "note: shell was changed" >&2
 	fi
 else
-	echo "warning: could not autoset shell" >&2
+	echo "error: chsh not found, could not autoset shell" >&2
+	exit 1
 fi

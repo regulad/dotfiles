@@ -46,7 +46,10 @@ if command -v pk12util &>/dev/null; then
 	if [ ! -f "$HOME/.pki/nssdb/cert9.db" ]; then
 		certutil -N -d "sql:$HOME/.pki/nssdb" --empty-password
 	fi
-	pk12util -d "sql:$HOME/.pki/nssdb" -i "$HOME/.x509/dotfiles.p12" -W "" 2>/dev/null || true
+	# pk12util re-importing an already-present cert+key is a verified no-op
+	# (exit 0, no stderr output) -- no idempotency guard needed here.
+	pk12util -d "sql:$HOME/.pki/nssdb" -i "$HOME/.x509/dotfiles.p12" -W ""
 else
-	echo "warning: pk12util not available, skipping client certificate import" >&2
+	echo "error: pk12util not available, can't import client certificate" >&2
+	exit 1
 fi

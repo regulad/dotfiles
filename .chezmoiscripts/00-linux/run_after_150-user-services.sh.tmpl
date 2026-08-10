@@ -6,7 +6,8 @@ if ! [ "$CONTAINERIZED" -eq 1 ]; then
 		systemctl --user enable --now syncthing.service
 		systemctl --user enable --now podman.socket
 	else
-		echo "warning: user session broken (couldn't run systemd --user)" >&2
+		echo "error: user session broken (couldn't run systemd --user)" >&2
+		exit 1
 	fi
 fi
 

@@ -19,5 +19,16 @@ for CERT_PATH in "${CERT_PATHS[@]}"; do
 	fi
 done
 
-# Client certificate (matches the "My" store import on NT)
-security import "$HOME/.x509/dotfiles.p12" -k ~/Library/Keychains/login.keychain-db -P "" 2>/dev/null || true
+# Client certificate (matches the "My" store import on NT). `security import`
+# has no idempotent "already present" check of its own, but reliably exits 45
+# (errSecDuplicateItem, -25299 truncated to a Unix exit status) when the
+# identity is already in the keychain -- treat that as success, anything else
+# as a real failure.
+if ! security import "$HOME/.x509/dotfiles.p12" -k ~/Library/Keychains/login.keychain-db -P ""; then
+	import_status=$?
+	if [ "$import_status" -ne 45 ]; then
+		echo "error: failed to import client certificate (exit $import_status)" >&2
+		exit 1
+	fi
+	echo "note: client certificate already present in keychain" >&2
+fi
