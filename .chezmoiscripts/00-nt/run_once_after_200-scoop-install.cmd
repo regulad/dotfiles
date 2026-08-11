@@ -1,6 +1,13 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM Install half of the scoop setup. Upgrading existing packages lives in
+REM 210-scoop-update.cmd, which runs on every apply; this one is run_once.
+REM
+REM run_once keys on the script contents, so adding a package to either list
+REM below changes the hash and this re-runs -- the lists stay self-healing
+REM without needing to reinstall everything on every apply.
+
 call where scoop >nul 2>&1
 if %errorLevel% neq 0 (
     echo debug: installing scoop
@@ -8,7 +15,10 @@ if %errorLevel% neq 0 (
 )
 call refreshenv >nul 2>&1
 
-echo debug: updating scoop
+REM Refresh bucket manifests before installing, or a stale checkout installs a
+REM stale version. This is manifest refresh, not package upgrade -- the latter
+REM is `scoop update --all` and belongs to 210-scoop-update.cmd.
+echo debug: refreshing scoop manifests
 call scoop update
 
 call scoop bucket list | findstr /R /C:"^extras " >nul 2>&1
@@ -128,7 +138,18 @@ exit /b 0
 :after_check_install_user
 
 REM prompts mpv to use the chezmoi provided config in .config
-Remove-Item "$env:USERPROFILE\scoop\apps\mpv\current\portable_config" -Recurse -Force
+REM NOTE: this was a PowerShell Remove-Item line sitting in a .cmd file, so cmd
+REM reported "not recognized as an internal or external command" and carried on
+REM -- the directory was never actually removed and mpv kept using its portable
+REM config. Rewritten in cmd, and guarded so a missing directory is not an error.
+if exist "%USERPROFILE%\scoop\apps\mpv\current\portable_config" (
+    echo debug: removing mpv portable_config so the chezmoi config in .config wins
+    rmdir /s /q "%USERPROFILE%\scoop\apps\mpv\current\portable_config"
+    if errorlevel 1 (
+        echo error: failed to remove mpv portable_config 1>&2
+        exit /b 1
+    )
+)
 
 set admin_packages=^
 icaros-np
@@ -155,9 +176,9 @@ exit /b 0
 
 call refreshenv >nul 2>&1
 
-echo debug: updating existing scoop packages
-call scoop update --all
-call refreshenv >nul 2>&1
+REM `scoop update --all` used to be here; it upgrades already-installed
+REM packages, which is an every-apply concern, so it moved to
+REM 210-scoop-update.cmd.
 
 echo debug: setting autorun
 call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
