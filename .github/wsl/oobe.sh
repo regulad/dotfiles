@@ -25,13 +25,17 @@
 #                            WSL-only scriptlets that are masked everywhere else
 #
 # Credentials: `bw login --apikey` reads BW_CLIENTID and BW_CLIENTSECRET from
-# the environment and prompts for them when they are absent. ~/.secrets/.bwrc
-# exports exactly those two variables, so it is sourced when present -- but it
-# cannot be relied on for a first run, because that file is itself templated
-# *out of* Bitwarden (see dot_secrets/dot_bwrc.tmpl) and so does not exist
-# until an authenticated apply has already happened. First run prompts; later
-# runs pick the file up. Nothing secret is ever baked into the image: both
-# ~/.secrets/ and ~/key.txt are masked by useDummySecrets during the build.
+# the environment and prompts for them when absent. ~/.secrets/.bwrc exports
+# exactly those two variables. It cannot exist yet inside a fresh instance --
+# that file is itself templated *out of* Bitwarden (dot_secrets/dot_bwrc.tmpl),
+# so it only appears after an authenticated apply -- but the Windows host this
+# instance runs on has already been provisioned by the same repo, so its copy
+# is sitting at %USERPROFILE%\.secrets\.bwrc, reachable over DrvFs at
+# /mnt/c/Users/<profile>/.secrets/.bwrc. That is preferred over prompting.
+#
+# Nothing secret is ever baked into the image: ~/.secrets/ and ~/key.txt are
+# both masked by useDummySecrets during the build. The Windows copy is read at
+# first run, from the user's own machine, and never written into the tarball.
 
 set -u
 
@@ -49,6 +53,63 @@ retry_hint() {
     warn "or follow the manual sequence in ~/.local/share/chezmoi/README.md"
 }
 
+# /etc/wsl.conf sets [automount] enabled=true root=/mnt/, so C: should already
+# be there. Checked rather than assumed because the Windows-side .bwrc lives on
+# it, and a bare `[ -d /mnt/c ]` would be satisfied by an empty leftover
+# directory with nothing mounted on it.
+ensure_windows_drive() {
+    if findmnt -rno TARGET /mnt/c >/dev/null 2>&1; then
+        return 0
+    fi
+    warn "/mnt/c is not mounted; attempting to mount C: manually"
+    mkdir -p /mnt/c
+    mount -t drvfs C: /mnt/c 2>/dev/null || true
+    findmnt -rno TARGET /mnt/c >/dev/null 2>&1
+}
+
+# Locate a .bwrc to source. Preference order:
+#   1. this instance's own ~/.secrets/.bwrc  (present on a re-run)
+#   2. the Windows host's, over DrvFs        (present on a genuine first run)
+# Prints the path on stdout, or nothing if neither exists.
+#
+# The Windows profile is found by glob rather than by asking Windows for
+# %USERPROFILE%: that would need interop, and interop is exactly what is
+# unreliable at this point in a fresh instance -- the WSLInterop binfmt
+# registration races systemd-binfmt, which is what 004-wsl-binfmt-interop.sh
+# fixes, and that has not run yet on a first boot.
+find_bwrc() {
+    local candidate matches=() home
+    home="$(getent passwd "$DISTRO_UID" | cut -d: -f6)"
+
+    if [ -r "$home/.secrets/.bwrc" ]; then
+        printf '%s\n' "$home/.secrets/.bwrc"
+        return 0
+    fi
+
+    ensure_windows_drive || {
+        warn "could not mount C:; falling back to prompting for API credentials"
+        return 1
+    }
+
+    for candidate in /mnt/c/Users/*/.secrets/.bwrc; do
+        [ -r "$candidate" ] && matches+=("$candidate")
+    done
+
+    case "${#matches[@]}" in
+        0) return 1 ;;
+        1) printf '%s\n' "${matches[0]}"; return 0 ;;
+        *)
+            # More than one Windows profile has been provisioned by this repo.
+            # Guessing would be worse than asking.
+            warn "several Windows profiles have a .bwrc:"
+            printf '  %s\n' "${matches[@]}" >&2
+            read -r -p "path to use (blank to type credentials instead): " chosen || chosen=""
+            [ -n "$chosen" ] && [ -r "$chosen" ] && printf '%s\n' "$chosen" && return 0
+            return 1
+            ;;
+    esac
+}
+
 if ! getent passwd "$DISTRO_UID" >/dev/null 2>&1; then
     warn "uid $DISTRO_UID is missing from this image, which should be impossible."
     warn "skipping first-run setup."
@@ -63,9 +124,10 @@ cat <<BANNER
   What is left is the part that cannot be baked into a public image: your
   secrets.
 
-  You will be asked for your Bitwarden API client id and secret. Get them
-  from ${BW_SERVER} under Account Settings -> Security -> Keys ->
-  View API Key.
+  Credentials come from the Windows host's own .secrets/.bwrc where that is
+  readable. Otherwise you will be asked for your Bitwarden API client id and
+  secret, from ${BW_SERVER} under Account Settings -> Security ->
+  Keys -> View API Key.
 
   Skipping is safe. You keep a fully working shell either way, and you can
   run 'sudo /etc/oobe.sh' whenever you like.
@@ -80,6 +142,16 @@ case "${reply:-Y}" in
         exit 0
         ;;
 esac
+
+# Discovered here rather than before the prompt, because the multiple-profile
+# branch asks a question of its own and there is no reason to ask it of someone
+# who is about to decline anyway.
+BWRC="$(find_bwrc || true)"
+if [ -n "$BWRC" ]; then
+    say "using API credentials from ${BWRC}"
+else
+    say "no .bwrc found; you will be prompted for API credentials"
+fi
 
 # The real work runs as the unprivileged user, in a login shell, via a script
 # file rather than `runuser -c '<long string>'` -- quoting a heredoc through
@@ -100,10 +172,18 @@ set -u
 # systemd-detect-virt reports "wsl" for both.
 export WSL_DISTRO_NAME="${WSL_DISTRO_NAME:-}"
 
-if [ -r "\$HOME/.secrets/.bwrc" ]; then
-    echo "note: sourcing existing \$HOME/.secrets/.bwrc for API credentials" >&2
-    # shellcheck disable=SC1091
-    . "\$HOME/.secrets/.bwrc"
+# Path only -- the credentials themselves are never passed through argv or the
+# environment of this script, so they never appear in ps for other users.
+BWRC="${BWRC}"
+if [ -n "\$BWRC" ] && [ -r "\$BWRC" ]; then
+    # shellcheck disable=SC1090
+    . "\$BWRC"
+    if [ -n "\${BW_CLIENTID:-}" ] && [ -n "\${BW_CLIENTSECRET:-}" ]; then
+        export BW_CLIENTID BW_CLIENTSECRET
+        echo "note: API credentials loaded from \$BWRC" >&2
+    else
+        echo "warning: \$BWRC did not define BW_CLIENTID/BW_CLIENTSECRET; will prompt" >&2
+    fi
 fi
 
 bw config server "${BW_SERVER}" || exit 1
