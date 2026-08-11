@@ -86,11 +86,25 @@ jobs:
           stage="$RUNNER_TEMP/stage"
           mkdir -p "$stage/etc/systemd/system" "$stage/etc/systemd/user"
 
-          install -m 0644 .github/wsl/wsl.conf "$stage/etc/wsl.conf"
-          install -m 0755 .github/wsl/oobe.sh  "$stage/etc/oobe.sh"
-          sed "s/@FLAVOR@/${FLAVOR}/g" .github/wsl/wsl-distribution.conf \
+          # CR is stripped on the way in. .gitattributes is `* text=auto`, so
+          # the blobs are stored LF and a Linux checkout gets LF -- this is
+          # insurance, not a live fix. It is cheap insurance though: a CRLF
+          # oobe.sh fails at the shebang, WSL reads that as a failed first run,
+          # and the user cannot open a shell in the instance at all.
+          sed 's/\r$//' .github/wsl/wsl.conf > "$stage/etc/wsl.conf"
+          chmod 0644 "$stage/etc/wsl.conf"
+          sed 's/\r$//' .github/wsl/oobe.sh > "$stage/etc/oobe.sh"
+          chmod 0755 "$stage/etc/oobe.sh"
+          sed -e 's/\r$//' -e "s/@FLAVOR@/${FLAVOR}/g" .github/wsl/wsl-distribution.conf \
             > "$stage/etc/wsl-distribution.conf"
           chmod 0644 "$stage/etc/wsl-distribution.conf"
+
+          # Nothing staged may contain a CR; see above.
+          if grep -rlU $'\r' "$stage" 2>/dev/null | grep -q .; then
+            echo "::error::CR found in staged overlay files"
+            grep -rlU $'\r' "$stage"
+            exit 1
+          fi
 
           # An EMPTY /etc/machine-id, not an absent one, and not the image's.
           #
