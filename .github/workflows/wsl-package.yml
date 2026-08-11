@@ -44,6 +44,12 @@ jobs:
       contents: read
       packages: read
     steps:
+      - name: Check out the distribution config
+        uses: actions/checkout@v5.0.0
+        with:
+          sparse-checkout: .github/wsl
+          sparse-checkout-cone-mode: false
+
       - name: Free up disk space
         run: |
           set -euo pipefail
@@ -71,6 +77,81 @@ jobs:
           ACTOR: ${{ github.actor }}
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: crane auth login ghcr.io -u "$ACTOR" --password-stdin <<< "$TOKEN"
+
+      - name: Stage the distribution overlay
+        env:
+          FLAVOR: ${{ inputs.flavor }}
+        run: |
+          set -euo pipefail
+          stage="$RUNNER_TEMP/stage"
+          mkdir -p "$stage/etc/systemd/system" "$stage/etc/systemd/user"
+
+          install -m 0644 .github/wsl/wsl.conf "$stage/etc/wsl.conf"
+          install -m 0755 .github/wsl/oobe.sh  "$stage/etc/oobe.sh"
+          sed "s/@FLAVOR@/${FLAVOR}/g" .github/wsl/wsl-distribution.conf \
+            > "$stage/etc/wsl-distribution.conf"
+          chmod 0644 "$stage/etc/wsl-distribution.conf"
+
+          # An EMPTY /etc/machine-id, not an absent one, and not the image's.
+          #
+          # Absent is actively broken: systemd then sees ConditionFirstBoot=yes
+          # and starts systemd-firstboot.service, which on Fedora runs
+          #   systemd-firstboot --prompt-locale --prompt-keymap-auto
+          #                     --prompt-timezone --prompt-root-password
+          # and blocks forever waiting for input nobody can give. That wedges
+          # sysinit.target, so dbus-broker never starts, so systemctl cannot
+          # reach the system bus, so every user unit this repo installs --
+          # tmux@default, podman.socket, ssh-agent-relay -- is dead. Caught by
+          # importing a real test tarball: /sbin/init failed to start within
+          # 10000ms, with systemd-firstboot.service stuck in "start running".
+          #
+          # Keeping the image's id is also wrong: every instance imported from
+          # this tarball would share one machine id.
+          #
+          # Empty is the documented "generate a fresh one at boot" state --
+          # see machine-id(5) -- so each instance gets its own.
+          : > "$stage/etc/machine-id"
+          chmod 0444 "$stage/etc/machine-id"
+
+          # Microsoft's list of units that misbehave under WSL. Masked with a
+          # symlink to /dev/null rather than deleted: masking is reversible by
+          # the user (`systemctl unmask`) and cannot break a unit elsewhere
+          # that has a Requires= on one of them, which deleting the unit file
+          # would. /etc/systemd overrides /usr/lib/systemd, so these win.
+          #
+          # systemd-resolved and systemd-networkd in particular fight WSL for
+          # /etc/resolv.conf, which [network] generateResolvConf=true in
+          # wsl.conf already owns.
+          for unit in \
+              systemd-firstboot.service \
+              systemd-resolved.service \
+              systemd-networkd.service \
+              NetworkManager.service \
+              systemd-tmpfiles-setup.service \
+              systemd-tmpfiles-clean.service \
+              systemd-tmpfiles-clean.timer \
+              systemd-tmpfiles-setup-dev-early.service \
+              systemd-tmpfiles-setup-dev.service \
+              tmp.mount
+          do
+            ln -sf /dev/null "$stage/etc/systemd/system/$unit"
+          done
+
+          # The same guidance applies to the user manager, where the tmpfiles
+          # units also exist. Masking them here matters more than usual for
+          # this repo, because every user unit it installs -- tmux@default,
+          # podman.socket, ssh-agent-relay -- lives in that same manager.
+          for unit in \
+              systemd-tmpfiles-setup.service \
+              systemd-tmpfiles-clean.service \
+              systemd-tmpfiles-clean.timer
+          do
+            ln -sf /dev/null "$stage/etc/systemd/user/$unit"
+          done
+
+          echo "STAGE=$stage" >> "$GITHUB_ENV"
+          echo "--- overlay ---"
+          find "$stage" -mindepth 1 -printf '%y %M %P\n' | sort
 
       - name: Export and repack the root filesystem
         id: pack
@@ -119,6 +200,13 @@ jobs:
           # attempts, since HTTP/1.1 is expected to fix the common case and
           # this is only insurance against an ordinary network blip over a
           # transfer that runs for several minutes.
+          #
+          # The `-C "$STAGE" etc` operand after `@-` appends the distribution
+          # overlay staged above. Order is load-bearing: tar has no notion of
+          # replacing an entry, so a later entry simply overwrites an earlier
+          # one at extraction time, and the overlay has to come second to win.
+          # Verified that it does, and that /dev/null mask symlinks survive the
+          # round trip as symlinks rather than being dereferenced.
           export_rootfs() {
             crane --platform "linux/${ARCH}" export "${IMAGE}@${DIGEST}" - \
               | bsdtar --numeric-owner -cf - \
@@ -126,8 +214,8 @@ jobs:
                   --exclude 'etc/resolv.conf' \
                   --exclude 'etc/hostname' \
                   --exclude 'etc/hosts' \
-                  --exclude 'etc/machine-id' \
                   @- \
+                  -C "$STAGE" etc \
               | pigz -9 > "$out"
           }
 
@@ -158,7 +246,7 @@ jobs:
           set -euo pipefail
           pigz -dc "$OUT" | tar -tf - > entries.txt
 
-          leftovers=$(grep -xE '\.dockerenv|etc/(resolv\.conf|hostname|hosts|machine-id)' entries.txt || true)
+          leftovers=$(grep -xE '\.dockerenv|etc/(resolv\.conf|hostname|hosts)' entries.txt || true)
           if [ -n "$leftovers" ]; then
             echo "::error::tarball still ships files WSL populates at first boot:"
             printf '%s\n' "$leftovers"
@@ -173,6 +261,58 @@ jobs:
               exit 1
             }
           done
+
+          # The overlay has to have survived the repack, and the masks have to
+          # still be symlinks rather than dereferenced copies of /dev/null.
+          for required in etc/wsl.conf etc/wsl-distribution.conf etc/oobe.sh \
+                          etc/systemd/system/systemd-resolved.service \
+                          etc/systemd/user/systemd-tmpfiles-clean.timer; do
+            grep -qx "$required" entries.txt || {
+              echo "::error::distribution overlay is missing $required"
+              exit 1
+            }
+          done
+
+          pigz -dc "$OUT" | bsdtar -tvf - \
+            'etc/wsl.conf' 'etc/wsl-distribution.conf' 'etc/oobe.sh' \
+            'etc/systemd/system/systemd-resolved.service' > overlay.txt
+          cat overlay.txt
+          grep -q '^lrwxr.*systemd-resolved\.service -> /dev/null' overlay.txt || {
+            echo "::error::unit masks did not survive as symlinks to /dev/null"
+            exit 1
+          }
+          grep -qE '^-rwxr-xr-x.*etc/oobe\.sh' overlay.txt || {
+            echo "::error::oobe.sh is not executable; WSL would fail the first run"
+            exit 1
+          }
+
+          # machine-id must be present AND zero length. Absent means systemd
+          # runs the interactive systemd-firstboot and the instance never
+          # finishes booting; non-empty means every instance shares an id.
+          # There are deliberately TWO etc/machine-id entries: the image's and
+          # the empty overlay one. The image's cannot simply be excluded --
+          # bsdtar applies --exclude to the staged `-C "$STAGE" etc` operand as
+          # well as to the piped archive, so excluding the path drops the
+          # replacement too and leaves machine-id absent, which is the hanging
+          # boot this whole thing exists to avoid. Overwriting via a later
+          # entry is the mechanism that works, so check the LAST one, which is
+          # the one extraction actually lands.
+          mid_size=$(pigz -dc "$OUT" | bsdtar -tvf - 'etc/machine-id' | awk '{print $5}' | tail -1)
+          if [ -z "$mid_size" ]; then
+            echo "::error::etc/machine-id is absent -- systemd-firstboot will hang the boot"
+            exit 1
+          fi
+          if [ "$mid_size" != "0" ]; then
+            echo "::error::etc/machine-id is $mid_size bytes; it must be empty"
+            exit 1
+          fi
+
+          # oobe.command returning non-zero locks the user out of the shell
+          # permanently, so assert the script has no way to do that.
+          if grep -qE '^\s*set\s+-[a-z]*e' .github/wsl/oobe.sh; then
+            echo "::error::oobe.sh must not use set -e; a non-zero exit bricks the distro"
+            exit 1
+          fi
 
           grep -q '^home/regulad\.linux/' entries.txt || {
             echo "::error::uid 1000 home directory is absent"

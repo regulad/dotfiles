@@ -37,6 +37,7 @@ VB-Audio.Voicemeeter.Potato ^
 9PC3H3V7Q9CH ^
 EclipseAdoptium.Temurin.25.JDK ^
 EclipseAdoptium.Temurin.21.JDK ^
+Microsoft.DotNet.SDK.8 ^
 OpenJS.NodeJS.LTS ^
 Vencord.Vesktop ^
 DenoLand.Deno ^
