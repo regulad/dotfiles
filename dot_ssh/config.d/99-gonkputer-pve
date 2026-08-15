@@ -88,6 +88,11 @@ Host tailscalerouter-regulad-internal # 122
 Host act # 123
     HostName act.regulad.internal
 
+Host tsexit # 124
+    HostName tsexit.regulad.internal
+    User root
+    Tag rsa3072
+
 Host peppercord # 126
     HostName peppercord.regulad.internal
     User root
