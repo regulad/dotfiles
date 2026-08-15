@@ -89,7 +89,7 @@ Host act # 123
     HostName act.regulad.internal
 
 Host tsexit # 124
-    HostName tsexit.tail11540.ts.net
+    HostName tsexit.tail11540.ts.net  # must use tailnet name since node is located in subnet with native tailnet access and tailnet-sourced packets will have their return path through tsexit which is not a supported configuration of tailscale (TCP state tracking issue, stateless traffic is likely to be fine but untested)
     User root
     Tag rsa3072
 
