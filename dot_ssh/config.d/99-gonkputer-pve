@@ -89,7 +89,7 @@ Host act # 123
     HostName act.regulad.internal
 
 Host tsexit # 124
-    HostName tsexit.regulad.internal
+    HostName tsexit.tail11540.ts.net
     User root
     Tag rsa3072
 
