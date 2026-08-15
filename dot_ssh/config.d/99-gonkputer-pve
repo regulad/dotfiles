@@ -93,8 +93,8 @@ Host tsexit # 124
     User root
     Tag rsa3072
 
-Host ncsusplitt
-    HostName ncsusplitt.regulad.internal
+Host ncsusplitt # 125
+    HostName ncsusplitt.tail11540.ts.net  # ditto
     User root
     Tag rsa3072
 
