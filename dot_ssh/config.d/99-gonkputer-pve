@@ -30,7 +30,7 @@ Host procontainer # 106
 
 Host arawi # 108
     HostName arawi.regulad.internal
-    AddressFamily inet # IPv6 on-link traffic spotty from laptop
+    AddressFamily inet  # IPv6 on-link traffic spotty from laptop
 
 Host authentik # 109
     HostName authentik.regulad.internal
@@ -44,7 +44,7 @@ Host pihole # 112
     Tag rsa3072
 
 Host freeipa # 113
-    HostName freeipa.regulad.internal
+    HostName freeipa.regulad-verizon-livingston.internal  # legacy
 
 Host softether # 114
     HostName softether.regulad.internal
@@ -89,7 +89,7 @@ Host act # 123
     HostName act.regulad.internal
 
 Host tsexit # 124
-    HostName tsexit.tail11540.ts.net  # must use tailnet name since node is located in subnet with native tailnet access and tailnet-sourced packets will have their return path through tsexit which is not a supported configuration of tailscale (TCP state tracking issue, stateless traffic is likely to be fine but untested)
+    HostName tsexit.tail11540.ts.net  # must use tailnet name since node is located in subnet with native tailnet access and tailnet-sourced packets will have their return path through tsexit which is not a supported configuration of tailscale
     User root
     Tag rsa3072
 
