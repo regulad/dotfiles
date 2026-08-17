@@ -1,0 +1,71 @@
+{{ template "posix-preamble.sh" . }}
+# run_onchange_ (was run_after_): chezmoi re-runs a script whose *rendered*
+# contents differ from what this filename last ran successfully, so the digests
+# below are the trigger -- add, edit or remove anything in dot_x509/ca and the
+# install re-runs; an otherwise unchanged apply skips the trust-store dance.
+#
+# run_once_ would not do: it keys on the content digest alone with no filename,
+# so any block it has *ever* run successfully never runs again. Reverting a CA
+# edit, or removing a CA and adding it back, reproduces an already-seen block
+# and would silently install nothing.
+#
+{{ $caDir := joinPath .chezmoi.sourceDir "dot_x509" "ca" -}}
+{{ $caFiles := concat (glob (joinPath $caDir "*.crt")) (glob (joinPath $caDir "*.pem")) | sortAlpha -}}
+# CA source digests (source filenames, so chezmoi attribute prefixes such as
+# readonly_ are still attached):
+{{ range $caFiles -}}
+#     {{ base . }} {{ include . | sha256sum }}
+{{ end }}
+# Every .crt and .pem in ~/.x509/ca is installed -- no hardcoded list to keep in
+# sync. Both extensions are enumerated because the CA directory holds both
+# (pve-root-ca.pem); a bare * would also pick up any stray non-certificate file.
+CA_DIR="$HOME/.x509/ca"
+shopt -s nullglob
+CERT_PATHS=("$CA_DIR"/*.crt "$CA_DIR"/*.pem)
+shopt -u nullglob
+
+if [ "${#CERT_PATHS[@]}" -eq 0 ]; then
+	echo "warning: no CA certificates found in $CA_DIR" >&2
+fi
+
+if [ "$CAN_SUDO" = "true" ]; then
+	NEEDS_UPDATE=0
+
+	for CERT_PATH in "${CERT_PATHS[@]}"; do
+		# Check if certificate is already in system trust store
+		if ! openssl verify -CApath /etc/ssl/certs "$CERT_PATH" &>/dev/null; then
+			CERT_NAME=$(basename "$CERT_PATH")
+
+			if [ -d /etc/pki/ca-trust/source/anchors ]; then
+				# Fedora. The extension is irrelevant here: update-ca-trust(8)
+				# accepts anchors as "one or multiple certificates in either the
+				# DER file format or in the PEM (BEGIN/END CERTIFICATE) file
+				# format", with no extension requirement -- so .pem is copied in
+				# under its own name.
+				sudo cp "$CERT_PATH" "/etc/pki/ca-trust/source/anchors/$CERT_NAME"
+				NEEDS_UPDATE=1
+			elif [ -d /usr/local/share/ca-certificates ]; then
+				# Debian/Ubuntu, which unlike Fedora *does* filter on extension:
+				# "all certificates with a .crt extension found below
+				# /usr/local/share/ca-certificates are also included as
+				# implicitly trusted" (update-ca-certificates(8)). A .pem copied
+				# in under its own name is silently ignored, so re-suffix it.
+				# The contents need no conversion -- both distros' tooling reads
+				# PEM regardless of what the file is called.
+				sudo cp "$CERT_PATH" "/usr/local/share/ca-certificates/${CERT_NAME%.*}.crt"
+				NEEDS_UPDATE=1
+			fi
+		fi
+	done
+
+	# Update trust store only if new certs were added
+	if [ "$NEEDS_UPDATE" -eq 1 ]; then
+		if [ -d /etc/pki/ca-trust/source/anchors ]; then
+			sudo update-ca-trust
+		elif [ -d /usr/local/share/ca-certificates ]; then
+			sudo update-ca-certificates
+		fi
+	fi
+else
+	echo "warning: sudo required to install system certificate on Linux, skipping" >&2
+fi

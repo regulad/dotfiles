@@ -1,0 +1,26 @@
+{{ template "posix-preamble.sh" . }}
+{{- $clientP12 := joinPath .chezmoi.sourceDir "dot_x509" "client" "encrypted_dotfiles.p12.age" }}
+# Client certificate (matches the "My" store import on NT). `security import`
+# has no idempotent "already present" check of its own, but reliably exits 45
+# (errSecDuplicateItem, -25299 truncated to a Unix exit status) when the
+# identity is already in the keychain -- treat that as success, anything else
+# as a real failure.
+#
+# Split out from the CA install (140-ca-certs) so the two re-run independently
+# and so .chezmoiignore can mask *only* this script under useDummySecrets,
+# matching the GNU/Linux side. The CAs are not secrets and stay installed there.
+#
+# run_onchange_ trigger: the digest is of the age *ciphertext*, since the
+# `include` template function does not decrypt. That means no age identity is
+# needed to render this script, and rotating the client cert re-runs it.
+#
+# Client cert source digest:
+#     dot_x509/client/encrypted_dotfiles.p12.age {{ include $clientP12 | sha256sum }}
+if ! security import "$HOME/.x509/client/dotfiles.p12" -k ~/Library/Keychains/login.keychain-db -P ""; then
+	import_status=$?
+	if [ "$import_status" -ne 45 ]; then
+		echo "error: failed to import client certificate (exit $import_status)" >&2
+		exit 1
+	fi
+	echo "note: client certificate already present in keychain" >&2
+fi

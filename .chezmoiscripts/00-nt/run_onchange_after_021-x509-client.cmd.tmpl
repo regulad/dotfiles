@@ -1,0 +1,40 @@
+{{- $clientP12 := joinPath .chezmoi.sourceDir "dot_x509" "client" "encrypted_dotfiles.p12.age" -}}
+@echo off
+
+REM Client certificate, split out from the CA install (020-x509-ca) so that the
+REM two re-run independently and so .chezmoiignore can mask *only* this script
+REM under useDummySecrets -- the CAs are not secrets and stay installed there.
+REM
+REM run_onchange_ trigger: the digest is of the age *ciphertext*, since the
+REM `include` template function does not decrypt. That means no age identity is
+REM needed to render this script, and rotating the client cert re-runs it.
+REM
+REM Client cert source digest:
+REM     dot_x509/client/encrypted_dotfiles.p12.age {{ include $clientP12 | sha256sum }}
+
+echo debug: installing client certificate
+certutil -user -p "" -importpfx "My" "%USERPROFILE%\.x509\client\dotfiles.p12"
+
+echo debug: configuring Chrome to auto-present the client certificate
+REM Without AutoSelectCertificateForUrls, Chrome puts up a "Select a
+REM certificate" prompt on every TLS client-auth handshake. Each numbered value
+REM under the subkey is one rule, and rules match on the *issuer*, so anything
+REM chaining to the regulad.internal root -- CN taken from
+REM .x509/ca/regulad.internal.crt, which is a self-signed root (subject ==
+REM issuer) -- is presented without asking. Today that is exactly the CN=dotfiles
+REM cert imported above, which carries the clientAuth EKU.
+REM
+REM [*.] is Chrome's URL-pattern syntax for "this domain and every subdomain",
+REM so these two rules cover regulad.xyz and regulad.internal themselves plus
+REM anything under them, on any port.
+REM
+REM HKLM rather than HKCU: it matches 000-policy.cmd and is the scope Chrome's
+REM policy documentation is written against -- hence the sudo. A machine-wide
+REM rule pairs correctly with the per-user "My" import above, since the rule only
+REM chooses among certificates the browsing user already holds.
+REM
+REM The \" escaping is load-bearing. reg.exe takes the whole JSON object as one
+REM argument and cmd would otherwise strip the inner quotes.
+set CHROME_AUTOSELECT=HKLM\SOFTWARE\Policies\Google\Chrome\AutoSelectCertificateForUrls
+sudo reg add "%CHROME_AUTOSELECT%" /v 1 /t REG_SZ /d "{\"pattern\":\"https://[*.]regulad.xyz\",\"filter\":{\"ISSUER\":{\"CN\":\"regulad.internal\"}}}" /f
+sudo reg add "%CHROME_AUTOSELECT%" /v 2 /t REG_SZ /d "{\"pattern\":\"https://[*.]regulad.internal\",\"filter\":{\"ISSUER\":{\"CN\":\"regulad.internal\"}}}" /f

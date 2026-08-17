@@ -1,0 +1,33 @@
+{{ template "posix-preamble.sh" . }}
+{{- $clientP12 := joinPath .chezmoi.sourceDir "dot_x509" "client" "encrypted_dotfiles.p12.age" }}
+# Client certificate (matches the "My" store import on NT); imported into the
+# per-user NSS database that Chrome and other NSS-based tools read from.
+#
+# Split out from the CA install (140-ca-certs) so the two re-run independently
+# and so .chezmoiignore can mask *only* this script under useDummySecrets. The
+# container images run `CHEZMOI_USE_DUMMY=1 ... chezmoi init` -- the env var is
+# read by .chezmoi.toml.tmpl at init time and baked into the generated config as
+# useDummySecrets = true -- then `chezmoi apply --exclude encrypted` with no env
+# var set (Dockerfile.fedora / Dockerfile.ubuntu). The decrypted .p12 therefore
+# never lands there; emitting the import anyway made pk12util fail with
+# PR_FILE_NOT_FOUND_ERROR and took the whole image build down with it, ~11
+# minutes into the run. The CAs are not secrets and stay installed there.
+#
+# run_onchange_ trigger: the digest is of the age *ciphertext*, since the
+# `include` template function does not decrypt. That means no age identity is
+# needed to render this script, and rotating the client cert re-runs it.
+#
+# Client cert source digest:
+#     dot_x509/client/encrypted_dotfiles.p12.age {{ include $clientP12 | sha256sum }}
+if command -v pk12util &>/dev/null; then
+	mkdir -p "$HOME/.pki/nssdb"
+	if [ ! -f "$HOME/.pki/nssdb/cert9.db" ]; then
+		certutil -N -d "sql:$HOME/.pki/nssdb" --empty-password
+	fi
+	# pk12util re-importing an already-present cert+key is a verified no-op
+	# (exit 0, no stderr output) -- no idempotency guard needed here.
+	pk12util -d "sql:$HOME/.pki/nssdb" -i "$HOME/.x509/client/dotfiles.p12" -W ""
+else
+	echo "error: pk12util not available, can't import client certificate" >&2
+	exit 1
+fi

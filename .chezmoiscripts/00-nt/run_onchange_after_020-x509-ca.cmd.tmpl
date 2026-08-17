@@ -1,0 +1,31 @@
+{{- $caDir := joinPath .chezmoi.sourceDir "dot_x509" "ca" -}}
+{{- $caFiles := concat (glob (joinPath $caDir "*.crt")) (glob (joinPath $caDir "*.pem")) | sortAlpha -}}
+@echo off
+
+REM run_onchange_ (was run_once_): chezmoi re-runs a script whose *rendered*
+REM contents differ from what this filename last ran successfully, so the
+REM digests below are the trigger -- add, edit or remove anything in
+REM dot_x509/ca and the install re-runs; an otherwise unchanged apply skips it.
+REM
+REM run_once_ would not do: it keys on the content digest alone with no
+REM filename, so any block it has *ever* run successfully never runs again.
+REM Reverting a CA edit, or removing a CA and adding it back, reproduces an
+REM already-seen block and would silently install nothing.
+REM
+REM CA source digests (source filenames, so chezmoi attribute prefixes such as
+REM readonly_ are still attached):
+{{ range $caFiles -}}
+REM     {{ base . }} {{ include . | sha256sum }}
+{{ end }}
+echo debug: installing custom CA(s)
+REM Every .crt and .pem in ~/.x509/ca is installed -- no per-certificate list to
+REM keep in sync here. Both extensions are enumerated because the CA directory
+REM holds both (pve-root-ca.pem); matching on a bare * instead would also try to
+REM install any stray non-certificate file that lands there.
+REM
+REM certutil takes PEM and DER alike, and -addstore on an already-present
+REM certificate is a no-op.
+for %%f in ("%USERPROFILE%\.x509\ca\*.crt" "%USERPROFILE%\.x509\ca\*.pem") do (
+    echo debug:   %%~nxf
+    sudo certutil -addstore "Root" "%%~ff"
+)

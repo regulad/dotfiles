@@ -32,6 +32,20 @@ key.txt
 
 .wiiu/common-key
 
+# Only the *private* halves of the x509 tree are masked. The CAs in .x509/ca
+# are public trust anchors, not secrets, so they and their install scripts stay
+# in place -- images built with CHEZMOI_USE_DUMMY still trust home.arpa et al.
+#
+# The client cert's install scripts have to be masked alongside the .p12
+# itself: the images apply with `--exclude encrypted`, which drops the
+# decrypted file but not the scripts, and importing a nonexistent .p12 fails
+# hard (pk12util: PR_FILE_NOT_FOUND_ERROR), which previously took a whole image
+# build down ~11 minutes in.
+.x509/client/
+.chezmoiscripts/00-linux/141-client-cert.sh
+.chezmoiscripts/00-macos/141-client-cert.sh
+.chezmoiscripts/00-nt/021-x509-client.cmd
+
 .x509/codesign/
 {{- end }}
 

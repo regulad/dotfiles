@@ -1,0 +1,43 @@
+{{ template "posix-preamble.sh" . }}
+# run_onchange_ (was run_after_): chezmoi re-runs a script whose *rendered*
+# contents differ from what this filename last ran successfully, so the digests
+# below are the trigger -- add, edit or remove anything in dot_x509/ca and the
+# install re-runs; an otherwise unchanged apply skips the keychain dance.
+#
+# run_once_ would not do: it keys on the content digest alone with no filename,
+# so any block it has *ever* run successfully never runs again. Reverting a CA
+# edit, or removing a CA and adding it back, reproduces an already-seen block
+# and would silently install nothing.
+#
+{{ $caDir := joinPath .chezmoi.sourceDir "dot_x509" "ca" -}}
+{{ $caFiles := concat (glob (joinPath $caDir "*.crt")) (glob (joinPath $caDir "*.pem")) | sortAlpha -}}
+# CA source digests (source filenames, so chezmoi attribute prefixes such as
+# readonly_ are still attached):
+{{ range $caFiles -}}
+#     {{ base . }} {{ include . | sha256sum }}
+{{ end }}
+# Every .crt and .pem in ~/.x509/ca is installed -- no hardcoded list to keep in
+# sync. Both extensions are enumerated because the CA directory holds both
+# (pve-root-ca.pem); a bare * would also pick up any stray non-certificate file.
+# `security` cares about contents, not the extension, so .pem needs no special
+# handling on this side (unlike Debian's update-ca-certificates).
+CA_DIR="$HOME/.x509/ca"
+shopt -s nullglob
+CERT_PATHS=("$CA_DIR"/*.crt "$CA_DIR"/*.pem)
+shopt -u nullglob
+
+if [ "${#CERT_PATHS[@]}" -eq 0 ]; then
+	echo "warning: no CA certificates found in $CA_DIR" >&2
+fi
+
+for CERT_PATH in "${CERT_PATHS[@]}"; do
+	# Check if certificate is already trusted
+	if ! security verify-cert -c "$CERT_PATH" &>/dev/null; then
+		if [ "$CAN_SUDO" = "true" ]; then
+			sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$CERT_PATH"
+		else
+			security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db "$CERT_PATH"
+			echo "warning: added certificate to user keychain only (no sudo available)" >&2
+		fi
+	fi
+done
