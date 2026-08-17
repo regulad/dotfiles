@@ -4,8 +4,8 @@ setlocal enabledelayedexpansion
 echo debug: installing winget packages
 REM Install/update winget packages
 set winget_packages=^
+ETHZurich.SafeExamBrowser ^
 WireGuard.WireGuard ^
-KDE.KDEConnect ^
 NirSoft.ShellExView ^
 NirSoft.USBDeview ^
 Microsoft.Sysinternals.ProcessExplorer ^
