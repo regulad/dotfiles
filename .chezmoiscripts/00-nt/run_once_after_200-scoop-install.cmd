@@ -66,6 +66,9 @@ if errorlevel 1 (
 )
 
 set user_packages=^
+cmake ^
+make ^
+whisper-cpp ^
 iperf3 ^
 tinyxnb ^
 shasum ^
