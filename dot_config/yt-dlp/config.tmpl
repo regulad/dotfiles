@@ -1,0 +1,7 @@
+--remote-components "ejs:npm"
+--sleep-requests 5
+--cookies "~/.local/state/yt-dlp/cookies.txt"
+--embed-thumbnail
+--embed-chapters
+--embed-metadata
+--proxy "socks5://{{ (index (bitwardenFields "item" "dashboard.webshare.io") "proxy-username").value }}:{{ (index (bitwardenFields "item" "dashboard.webshare.io") "proxy-password").value }}@p.webshare.io:80"
