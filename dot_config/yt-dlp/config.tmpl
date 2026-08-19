@@ -1,6 +1,6 @@
 --remote-components "ejs:npm"
 --sleep-requests 5
---cookies "~/.local/state/yt-dlp/cookies.txt"
+--cookies "{{ joinPath .chezmoi.homeDir ".local/state/yt-dlp/cookies.txt" }}"
 --embed-thumbnail
 --embed-chapters
 --embed-metadata
