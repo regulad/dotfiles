@@ -1,0 +1,83 @@
+@echo off
+setlocal enabledelayedexpansion
+
+REM matches unix script (pnpm branch; bitwarden-cli covered by scoop instead)
+
+call refreshenv >nul 2>&1
+
+where pnpm >nul 2>&1
+if errorlevel 1 (
+    echo error: pnpm not resolvable on PATH 1>&2
+    exit /b 1
+)
+
+REM pnpm links global binaries into their own directory rather than next to
+REM pnpm.exe. scoop's package puts it on PATH via env_add_path, but that hasn't
+REM propagated into this session on a first apply (and pnpm may not have come
+REM from scoop at all), so resolve and wire it up here instead of assuming.
+set "PNPM_BIN="
+for /f "delims=" %%i in ('pnpm bin -g') do set "PNPM_BIN=%%i"
+if not defined PNPM_BIN (
+    echo error: could not resolve pnpm global bin directory 1>&2
+    exit /b 1
+)
+
+set "PNPM_GLOBAL_DIR="
+for /f "delims=" %%i in ('pnpm root -g') do set "PNPM_GLOBAL_DIR=%%i"
+
+echo ;%PATH%; | find /I ";%PNPM_BIN%;" >nul
+if errorlevel 1 set "PATH=%PNPM_BIN%;%PATH%"
+
+REM append to the User-scope PATH specifically -- reusing %PATH% here would fold
+REM the Machine-scope entries into the user's own copy of it.
+set "PNPM_USER_PATH="
+for /f "delims=" %%i in ('powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "[Environment]::GetEnvironmentVariable('PATH','User')"') do set "PNPM_USER_PATH=%%i"
+echo ;!PNPM_USER_PATH!; | find /I ";%PNPM_BIN%;" >nul
+if errorlevel 1 (
+    call :neosetx PATH "!PNPM_USER_PATH!;%PNPM_BIN%"
+    echo Added %PNPM_BIN% to PATH.
+) else (
+    echo %PNPM_BIN% is already in PATH.
+)
+
+REM pnpm blocks dependency build scripts by default and prompts to approve them
+REM interactively -- including for transitive deps -- which stalls an unattended
+REM apply. Opt out, but scoped to the global install directory (pnpm reads its
+REM settings from there) so ordinary projects keep the safe default.
+if defined PNPM_GLOBAL_DIR (
+    if not exist "!PNPM_GLOBAL_DIR!" mkdir "!PNPM_GLOBAL_DIR!"
+    call pnpm -C "!PNPM_GLOBAL_DIR!" config set --location project dangerouslyAllowAllBuilds true
+)
+
+REM go-ios' postinstall places its binary the way npm would, reading
+REM npm_config_prefix to find the target directory. pnpm doesn't set that, so the
+REM postinstall throws and fails the whole global install transaction -- leaving
+REM every other package unlinked. On Windows npm's prefix *is* the bin directory,
+REM so point it at pnpm's. Kept local to this script; npm shouldn't inherit it.
+set "npm_config_prefix=%PNPM_BIN%"
+
+set pnpm_packages=^
+@mermaid-js/mermaid-cli@latest ^
+go-ios@latest ^
+typescript@latest ^
+typescript-language-server@latest ^
+bash-language-server@latest ^
+yaml-language-server@latest
+
+REM deliberately not --silent: it suppresses fatal errors too, which is how the
+REM failing go-ios postinstall went unnoticed.
+echo debug: installing pnpm global tooling
+call pnpm i -g %pnpm_packages%
+if errorlevel 1 (
+    echo error: pnpm global install failed 1>&2
+    exit /b 1
+)
+
+call pnpm update --global
+if errorlevel 1 (
+    echo error: pnpm global update failed 1>&2
+    exit /b 1
+)
+
+goto :eof
+{{ template "neosetx.cmd" . }}
