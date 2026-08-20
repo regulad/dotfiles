@@ -4,4 +4,6 @@
 --embed-thumbnail
 --embed-chapters
 --embed-metadata
+{{ if not .useDummySecrets -}}
 --proxy "socks5://{{ (index (bitwardenFields "item" "dashboard.webshare.io") "proxy-username").value }}:{{ (index (bitwardenFields "item" "dashboard.webshare.io") "proxy-password").value }}@p.webshare.io:80"
+{{- end }}

@@ -2,7 +2,11 @@
 ## cask library on linux is SUBSTANTIALLY different than the cask library on macos
 BREW_CASKS_LINUX=(
 	"claude-code" # proprietary!
+{{- if eq .chezmoi.arch "amd64" }}
+	# the linux cask ships Google's Intel-only SDK platform-tools build and
+	# refuses to install on aarch64
 	"android-platform-tools"
+{{- end }}
 	"android-commandlinetools"
 )
 
