@@ -5,6 +5,7 @@ REM matches unix script (pnpm branch; bitwarden-cli covered by scoop instead)
 
 set pnpm_packages=^
 @mermaid-js/mermaid-cli@latest ^
+go-ios@latest ^
 typescript@latest ^
 typescript-language-server@latest ^
 bash-language-server@latest ^
