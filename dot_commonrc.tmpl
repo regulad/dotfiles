@@ -114,5 +114,42 @@ if [[ $- == *i* && -z ${DID_COMMONRC_SPLASH+x} ]]; then
         echo "warning: last chezmoi sync was $LAST_SYNC, resync soon" >&2
     fi
 
-    fastfetch >&2
+    # Keep ublue's art without keeping ublue's config.
+    #
+    # Bluefin points fastfetch at a directory of its own ASCII logos and picks
+    # one at random per invocation -- /etc/ublue-os/fastfetch.json is
+    #   {"logo-directory": "/usr/share/ublue-os/bluefin-logos/symbols",
+    #    "shuffle-logo": true}
+    # and ublue-fastfetch turns that into `fastfetch --logo <random file>`.
+    #
+    # The art is worth keeping; the wrapper is not, because it also forces
+    # --config /usr/share/ublue-os/fastfetch.jsonc and that beats
+    # ~/.config/fastfetch/config.jsonc (which is what the unalias further up is
+    # undoing). So do the logo pick here instead: same --logo call ublue makes,
+    # against the same directory, but with this repo's compact module list.
+    #
+    # Falls straight through to a bare `fastfetch` anywhere the directory does
+    # not exist, which is every non-Bluefin host -- note `shuf` is coreutils and
+    # absent on macOS, so it must stay behind the -d guard.
+    UBLUE_LOGO_DIR="/usr/share/ublue-os/bluefin-logos/symbols"
+    UBLUE_LOGO=""
+    if [ -d "$UBLUE_LOGO_DIR" ]; then
+        UBLUE_LOGO="$(find "$UBLUE_LOGO_DIR" -type f 2>/dev/null | shuf -n 1)"
+    fi
+
+    # --logo-type auto is load-bearing, not decoration. In fastfetch's
+    # src/options/logo.c, `--logo <value>` only assigns options->source unless
+    # the value is literally "none" or "small" -- it never touches
+    # options->type. This repo's config.jsonc pins "logo": {"type": "small"},
+    # so that type would survive and the builtin small logo would render while
+    # the file path was ignored. ublue never hits this because its own config
+    # has no logo block at all, leaving the type at its default. Resetting to
+    # auto first restores that default and lets fastfetch work out whether the
+    # file is text or an image.
+    if [ -n "$UBLUE_LOGO" ]; then
+        fastfetch --logo-type auto --logo "$UBLUE_LOGO" >&2
+    else
+        fastfetch >&2
+    fi
+    unset UBLUE_LOGO_DIR UBLUE_LOGO
 fi
