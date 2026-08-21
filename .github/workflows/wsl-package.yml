@@ -53,8 +53,11 @@ jobs:
       - name: Free up disk space
         run: |
           set -euo pipefail
-          # A hosted runner ships with ~14 GB free, and the compressed rootfs is
-          # a large fraction of that. None of these are used by this job.
+          # Headroom for the exported rootfs tar, which the export step writes
+          # to disk and then asserts it has room for. None of these are used by
+          # this job. (The figure this comment used to quote, ~14 GB free, is
+          # long stale: a current ubuntu-24.04 runner reports 145G total and
+          # 108G free after these removals.)
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
                       /opt/hostedtoolcache /usr/local/share/boost
           df -h /
@@ -167,13 +170,22 @@ jobs:
           echo "--- overlay ---"
           find "$stage" -mindepth 1 -printf '%y %M %P\n' | sort
 
-      - name: Export and repack the root filesystem
-        id: pack
+      # Deliberately split from the repack below. This used to be one
+      # `crane | bsdtar | pigz` pipeline retried as a unit, which meant a
+      # dropped connection also discarded however much repacking had already
+      # been done alongside it. Run 32369485769 spent all three of its attempts
+      # that way on ubuntu/amd64 -- ~9 minutes each, "unexpected EOF" -- while
+      # the other three legs of the same matrix passed. Nothing is wrong with
+      # that image: ghcr serves its layer's declared 5,872,882,259 bytes and
+      # answers range requests for the tail, so the blob is intact and this is
+      # a flaky multi-GB stream. Splitting does not make the stream itself more
+      # reliable; it makes an attempt cheap enough to afford more of them, and
+      # it stops a network fault from being reported as a packaging fault.
+      - name: Export the root filesystem
         env:
           IMAGE: ${{ inputs.image }}
           DIGEST: ${{ inputs.digest }}
           ARCH: ${{ matrix.arch }}
-          FLAVOR: ${{ inputs.flavor }}
           # Force net/http down to HTTP/1.1. go-containerregistry drops large
           # blobs mid-stream over HTTP/2 with "stream error: stream ID 1;
           # PROTOCOL_ERROR received from peer" -- google/go-containerregistry#2084,
@@ -184,15 +196,63 @@ jobs:
           GODEBUG: http2client=0
         run: |
           set -euo pipefail
+
+          # `crane export` writes the *flattened* filesystem -- the equivalent
+          # of `docker export` -- so there are no layer whiteouts to interpret
+          # and the image is never materialised as an image on disk. The
+          # flattened tar now does land on disk, which the previous version of
+          # this step avoided on the grounds that it would not fit. It fits
+          # comfortably: after the cleanup step above, df reports 108G free of
+          # 145G, against a ~5.9 GB compressed layer. Asserted rather than
+          # assumed, because the whole point of writing it down is that a
+          # future runner change should fail here and not somewhere confusing.
+          avail=$(df --output=avail -k / | tail -1 | tr -d ' ')
+          if [ "$avail" -lt 41943040 ]; then
+            echo "::error::only $((avail / 1024 / 1024)) GiB free, need 40 GiB for the exported tar plus the packed output"
+            exit 1
+          fi
+
+          # Retried whole rather than resumed: crane cannot restart a blob
+          # mid-stream, so a dropped connection means starting over. Five
+          # attempts rather than three, because HTTP/1.1 (see GODEBUG above)
+          # was expected to fix the common case and demonstrably has not, and
+          # because an attempt no longer costs any repack work.
+          attempts=5
+          for attempt in $(seq 1 "$attempts"); do
+            echo "::group::export attempt ${attempt}/${attempts}"
+            if crane --platform "linux/${ARCH}" export "${IMAGE}@${DIGEST}" rootfs.tar; then
+              echo "::endgroup::"
+              break
+            fi
+            echo "::endgroup::"
+            rm -f rootfs.tar
+            if [ "$attempt" -eq "$attempts" ]; then
+              echo "::error::rootfs export failed after ${attempts} attempts"
+              exit 1
+            fi
+            echo "warning: export attempt ${attempt} failed, retrying" >&2
+            sleep $((attempt * 30))
+          done
+
+          echo "exported $(stat -c %s rootfs.tar) bytes"
+          df -h /
+
+      - name: Repack as a WSL tarball
+        id: pack
+        env:
+          ARCH: ${{ matrix.arch }}
+          FLAVOR: ${{ inputs.flavor }}
+        run: |
+          set -euo pipefail
           out="regulad-${FLAVOR}-${ARCH}.wsl"
 
-          # `crane export` streams the *flattened* filesystem -- the equivalent
-          # of `docker export` -- so there are no layer whiteouts to interpret,
-          # and the image is never materialised on disk. That matters: the
-          # extracted rootfs is larger than a hosted runner's whole disk.
+          # No network in this step, and so deliberately no retry loop: with
+          # the download hoisted out, anything that fails here is a real defect
+          # and should be read as one rather than hidden behind a second try.
           #
-          # bsdtar reads that stream (the `@-` operand) and writes a new one,
-          # dropping files WSL populates itself at first boot.
+          # bsdtar reads the exported tar (the `@rootfs.tar` operand) and
+          # writes a new one, dropping files WSL populates itself at first
+          # boot.
           #
           # Verified against a real registry image: etc/hosts and etc/machine-id
           # *are* baked into the image and really do get stripped here.
@@ -209,46 +269,25 @@ jobs:
           # extended attributes that carry file capabilities. Forcing gnutar
           # would silently drop them.
           #
-          # Retried as a whole rather than resumed: crane cannot restart a blob
-          # mid-stream, so a dropped connection means starting over. Three
-          # attempts, since HTTP/1.1 is expected to fix the common case and
-          # this is only insurance against an ordinary network blip over a
-          # transfer that runs for several minutes.
-          #
-          # The `-C "$STAGE" etc` operand after `@-` appends the distribution
-          # overlay staged above. Order is load-bearing: tar has no notion of
-          # replacing an entry, so a later entry simply overwrites an earlier
-          # one at extraction time, and the overlay has to come second to win.
-          # Verified that it does, and that /dev/null mask symlinks survive the
-          # round trip as symlinks rather than being dereferenced.
-          export_rootfs() {
-            crane --platform "linux/${ARCH}" export "${IMAGE}@${DIGEST}" - \
-              | bsdtar --numeric-owner -cf - \
-                  --exclude '.dockerenv' \
-                  --exclude 'etc/resolv.conf' \
-                  --exclude 'etc/hostname' \
-                  --exclude 'etc/hosts' \
-                  @- \
-                  -C "$STAGE" etc \
-              | pigz -9 > "$out"
-          }
+          # The `-C "$STAGE" etc` operand after `@rootfs.tar` appends the
+          # distribution overlay staged above. Order is load-bearing: tar has
+          # no notion of replacing an entry, so a later entry simply overwrites
+          # an earlier one at extraction time, and the overlay has to come
+          # second to win. Verified that it does, and that /dev/null mask
+          # symlinks survive the round trip as symlinks rather than being
+          # dereferenced.
+          bsdtar --numeric-owner -cf - \
+              --exclude '.dockerenv' \
+              --exclude 'etc/resolv.conf' \
+              --exclude 'etc/hostname' \
+              --exclude 'etc/hosts' \
+              @rootfs.tar \
+              -C "$STAGE" etc \
+            | pigz -9 > "$out"
 
-          attempts=3
-          for attempt in $(seq 1 "$attempts"); do
-            echo "::group::export attempt ${attempt}/${attempts}"
-            if export_rootfs; then
-              echo "::endgroup::"
-              break
-            fi
-            echo "::endgroup::"
-            rm -f "$out"
-            if [ "$attempt" -eq "$attempts" ]; then
-              echo "::error::rootfs export failed after ${attempts} attempts"
-              exit 1
-            fi
-            echo "warning: export attempt ${attempt} failed, retrying" >&2
-            sleep $((attempt * 30))
-          done
+          # Several times larger than everything downstream of it, and of no
+          # further use once repacked.
+          rm -f rootfs.tar
 
           echo "out=$out" >> "$GITHUB_OUTPUT"
           echo "bytes=$(stat -c %s "$out")" >> "$GITHUB_OUTPUT"
