@@ -100,7 +100,20 @@ BREW_SYSTEM_PACKAGES=(
 
 	# =+= LUA
 	lua
-	luarocks
+	# NOTE: luarocks is deliberately absent here even though DNF_PACKAGES has
+	# it. Its formula configures `--rocks-tree=#{HOMEBREW_PREFIX}`, so its rocks
+	# tree *is* the shared brew prefix -- rocks land directly in
+	# $HOMEBREW_PREFIX/lib/lua/<ver>/ and share/lua/<ver>/, which is exactly
+	# where the lpeg formula's files get linked. lpeg is a hard runtime
+	# dependency of the neovim above, so the two structurally fight over the
+	# same paths. Neither declares conflicts_with, so brew doesn't refuse the
+	# install; it fails at the link step instead, and under the preamble's -e
+	# that takes the whole apply down with it.
+	#
+	# neovim wins that trade -- it's the editor this repo actually configures.
+	# When rocks are needed, keep them out of the prefix with a user tree:
+	#   luarocks --tree "$HOME/.luarocks" install <rock>
+	# or let lazy.nvim manage them via hererocks.
 )
 
 # OMITTED, and why -- keep in sync with DNF_PACKAGES in 020-dnf-packages.sh:
@@ -117,6 +130,8 @@ BREW_SYSTEM_PACKAGES=(
 #     libolm (dropped from homebrew-core; deprecated upstream)
 #     nyx (formula deprecated, repo archived, no native bottle)
 #     device-mapper-devel / thin-provisioning-tools (not packaged by brew)
+#   collides with a formula we want more:
+#     luarocks -- clobbers lpeg, which neovim needs; see the LUA section above
 #   deliberately host-owned:
 #     libva-utils, glx-utils -- the GPU stack belongs to the image, not brew
 #     mpv -- a GUI app, so it belongs in flatpak (io.mpv.Mpv) on this platform
