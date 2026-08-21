@@ -21,54 +21,75 @@ fi
 # load zsh as primary shell
 ZSH_PATH=$(command -v zsh)
 
-if command -v chsh &>/dev/null; then
-	# Check if detected zsh is in /etc/shells
-	if [ -n "$ZSH_PATH" ] && ! grep -q "^$ZSH_PATH$" /etc/shells; then
-		echo "warning: $ZSH_PATH not in /etc/shells, using zsh in /etc/shells if exists" >&2
-		ZSH_PATH=$(grep -m1 '/zsh$' /etc/shells)
+# Check if detected zsh is in /etc/shells
+if [ -n "$ZSH_PATH" ] && ! grep -q "^$ZSH_PATH$" /etc/shells; then
+	echo "warning: $ZSH_PATH not in /etc/shells, using zsh in /etc/shells if exists" >&2
+	ZSH_PATH=$(grep -m1 '/zsh$' /etc/shells)
+fi
+
+# If no zsh in /etc/shells, fall back to bash
+if [ -z "$ZSH_PATH" ]; then
+	echo "warning: falling back to bash since zsh isn't available in /etc/shells" >&2
+
+	BASH_PATH=$(command -v bash)
+
+	if [ -n "$BASH_PATH" ] && ! grep -q "^$BASH_PATH$" /etc/shells; then
+		echo "warning: $BASH_PATH not in /etc/shells, using bash in /etc/shells if exists" >&2
+		BASH_PATH=$(grep -m1 '/bash$' /etc/shells)
 	fi
 
-	# If no zsh in /etc/shells, fall back to bash
-	if [ -z "$ZSH_PATH" ]; then
-		echo "warning: falling back to bash since zsh isn't available in /etc/shells" >&2
-
-		BASH_PATH=$(command -v bash)
-
-		if [ -n "$BASH_PATH" ] && ! grep -q "^$BASH_PATH$" /etc/shells; then
-			echo "warning: $BASH_PATH not in /etc/shells, using bash in /etc/shells if exists" >&2
-			BASH_PATH=$(grep -m1 '/bash$' /etc/shells)
-		fi
-
-		if [ -z "$BASH_PATH" ]; then
-			echo "error: no valid shell found in /etc/shells" >&2
-			exit 1
-		fi
-
-		SHELL_PATH="$BASH_PATH"
-	else
-		SHELL_PATH="$ZSH_PATH"
+	if [ -z "$BASH_PATH" ]; then
+		echo "error: no valid shell found in /etc/shells" >&2
+		exit 1
 	fi
 
-	# Change shell if not already set
-	if [ "$SHELL" != "$SHELL_PATH" ]; then
+	SHELL_PATH="$BASH_PATH"
+else
+	SHELL_PATH="$ZSH_PATH"
+fi
+
+# Compare against the passwd entry, NOT $SHELL. $SHELL only says what the
+# current process was started with, and ~/.profile deliberately exports
+# SHELL=<zsh> before exec'ing into it -- so on an account whose passwd entry is
+# still bash, $SHELL already reads as zsh and this check would conclude there
+# was nothing to do, on every apply, forever. getent is the real source of
+# truth, and it's what a display manager reads when it starts a session.
+CURRENT_SHELL="$(getent passwd "$(id -un)" | cut -d: -f7)"
+
+# Change shell if not already set
+if [ "$CURRENT_SHELL" != "$SHELL_PATH" ]; then
+	if command -v chsh &>/dev/null; then
 		if [ "$CAN_SUDO" = "true" ]; then
 			# The username is NOT optional under sudo. util-linux chsh resolves
 			# its target with `const uid_t uid = getuid();` and only falls back
 			# to that uid when no username was given -- and under sudo the real
 			# uid is 0, so a bare `sudo chsh -s ...` silently rewrites *root's*
-			# shell and leaves this account on whatever it already had. That
-			# failed quietly: the account stayed on bash, kept reading
-			# ~/.profile instead of ~/.zprofile at login, and the shell never
-			# actually changed no matter how many times an apply ran.
+			# shell and leaves this account on whatever it already had.
 			# id -un rather than $USER: $USER is set by login shells and can be
 			# absent when an apply is driven from a non-login context.
 			sudo chsh -s "$SHELL_PATH" "$(id -un)"
 		else
 			chsh -s "$SHELL_PATH"
 		fi
-		echo "note: shell was changed" >&2
+		echo "note: shell was changed to $SHELL_PATH" >&2
+	elif [ "$CAN_SUDO" = "true" ] && command -v usermod &>/dev/null; then
+		# Atomic hosts have no chsh. It lives in util-linux-user, which isn't in
+		# the Silverblue base, and Universal Blue leaves it out on purpose: you
+		# could chsh into a shell and then roll back to an image that doesn't
+		# ship it, leaving an account that can't open a session. `sudo usermod
+		# --shell` is what they point at instead.
+		#
+		# Safe here specifically because SHELL_PATH was already constrained to
+		# an entry in /etc/shells above -- i.e. to a shell the image itself
+		# provides, never a brew-installed one that a rollback could take away.
+		sudo usermod --shell "$SHELL_PATH" "$(id -un)"
+		echo "note: shell was changed to $SHELL_PATH" >&2
+	else
+		# Deliberately not fatal. This used to `exit 1` when chsh was missing,
+		# which on an atomic host aborted the whole apply at this point and took
+		# down everything ordered after it -- CA certs, the client cert, the
+		# user services, the VSCode extensions. A shell preference that didn't
+		# apply is worth a warning, not the loss of all of that.
+		echo "warning: neither chsh nor usermod usable, leaving login shell at $CURRENT_SHELL" >&2
 	fi
-else
-	echo "error: chsh not found, could not autoset shell" >&2
-	exit 1
 fi
