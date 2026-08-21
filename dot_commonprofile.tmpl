@@ -33,6 +33,37 @@ if [ "$(uname -o)" = "Darwin" ]; then
 elif [ "$(uname -o)" = "GNU/Linux" ]; then
     eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
+    # Make brew's TLS clients trust the OS store.
+    #
+    # brew links git, curl, python, ruby and friends against its own openssl@3,
+    # which reads brew's `ca-certificates` formula bundle -- Mozilla's public
+    # roots and nothing else. It never consults /etc/pki, so the private CAs
+    # that 140-ca-certs installs into the system trust store are invisible to
+    # it, and anything they sign fails with "unable to get local issuer
+    # certificate (20)". /usr/bin/git verifies the same URL fine, which makes
+    # this look like a server problem rather than a client one.
+    #
+    # The shellenv above is what makes it bite: it puts $HOMEBREW_PREFIX/bin
+    # ahead of /usr/bin, so brew's git wins whenever brew has one -- and brew
+    # can acquire git as a transitive dependency, or from Bluefin's own
+    # cli.Brewfile, without it ever appearing in a list in this repo.
+    #
+    # The system bundle carries the public roots AND the private anchors, and
+    # update-ca-trust regenerates it, so pointing at it is strictly a superset
+    # of what brew ships. Fedora's path first, Debian/Ubuntu's second.
+    for _ca_bundle in \
+        /etc/pki/tls/certs/ca-bundle.crt \
+        /etc/ssl/certs/ca-certificates.crt
+    do
+        if [ -r "$_ca_bundle" ]; then
+            export SSL_CERT_FILE="$_ca_bundle"   # openssl
+            export CURL_CA_BUNDLE="$_ca_bundle"  # curl
+            export GIT_SSL_CAINFO="$_ca_bundle"  # git
+            break
+        fi
+    done
+    unset _ca_bundle
+
     export PATH="$(brew --prefix ruby)/bin:$PATH"
     export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"
 
