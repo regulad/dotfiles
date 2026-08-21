@@ -9,7 +9,8 @@ UBUNTU_MINIMUM_VERSION=26.04
 # Shared preamble included by every .chezmoiscripts/00-posix/run_after_* script
 # via `{{ "{{" }} template "posix-preamble.sh" . {{ "}}" }}`. Guards against unsupported
 # platforms, captures sudo, loads/installs Homebrew, and picks a system package
-# manager. Exports: CAN_SUDO, CONTAINERIZED, IS_WSL, HAS_BREW, MANAGER.
+# manager. Exports: CAN_SUDO, CONTAINERIZED, IS_WSL, IS_ATOMIC, HAS_BREW,
+# MANAGER.
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
 
 echo "note: entering hookscript" >&2
@@ -64,6 +65,17 @@ else
 	IS_WSL=0
 fi
 
+# Atomic/image-based hosts: Fedora Silverblue and its Universal Blue
+# derivatives (Bluefin, Aurora, Bazzite). /run/ostree-booted is created by
+# ostree-prepare-root during boot and is the canonical signal. Probing for the
+# rpm-ostree binary is NOT equivalent -- a package-mode Fedora can have it
+# installed without being booted from an ostree deployment.
+if [ -f /run/ostree-booted ]; then
+	IS_ATOMIC=1
+else
+	IS_ATOMIC=0
+fi
+
 # START CLAUDE (Claude Sonnet 4.5)
 if [ -f /etc/os-release ]; then
     . /etc/os-release
@@ -81,6 +93,22 @@ case "$OS" in
         REQUIRED="$FEDORA_MINIMUM_VERSION"
         if [ "$VERSION_ID" -lt "$REQUIRED" ]; then
             echo "Error: Fedora $REQUIRED or higher required (found $VERSION_ID)"
+            exit 1
+        fi
+        ;;
+    bluefin)
+        # Universal Blue rewrites ID in /usr/lib/os-release at build time
+        # (ID=bluefin, ID_LIKE="fedora") but leaves VERSION_ID alone, so it is
+        # still the Fedora major the image was built from and the Fedora floor
+        # applies unchanged.
+        #
+        # NOTE: this deliberately rejects Bluefin LTS, which is CentOS Stream
+        # based and reports VERSION_ID=10. Nothing in this repo is CentOS
+        # tested, and 022-brew-packages.sh assumes the Fedora-derived image's
+        # package set when it decides what to leave to the host.
+        REQUIRED="$FEDORA_MINIMUM_VERSION"
+        if [ "$VERSION_ID" -lt "$REQUIRED" ]; then
+            echo "Error: Bluefin built on Fedora $REQUIRED or higher required (found $VERSION_ID)"
             exit 1
         fi
         ;;
@@ -166,7 +194,16 @@ export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:$PATH"
 
 command -v brew &>/dev/null && HAS_BREW=true || HAS_BREW=false
 
-if command -v dnf &>/dev/null && [[ -f /etc/redhat-release ]]; then
+if [ "$IS_ATOMIC" -eq 1 ]; then
+	# /usr belongs to the bootc image and is mounted read-only, so no system
+	# package manager can install into it; brew (in /var/home/linuxbrew) is the
+	# supported route, and 022-brew-packages.sh is the runner that uses it.
+	#
+	# This has to be tested BEFORE the dnf branch, not after it: these images
+	# still carry /etc/redhat-release, and dnf may be on PATH, so the dnf
+	# branch would win and then fail mid-transaction on a read-only /usr.
+	MANAGER="brew"
+elif command -v dnf &>/dev/null && [[ -f /etc/redhat-release ]]; then
 	MANAGER="dnf"
 elif command -v apt &>/dev/null && [[ -f /etc/debian_version ]]; then
 	MANAGER="apt"

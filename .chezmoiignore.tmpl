@@ -105,6 +105,12 @@ Library
 .chezmoiscripts/00-linux/011-vscode-apt-repo.sh
 .chezmoiscripts/00-linux/021-apt-packages.sh
 {{-     end }}
+{{-     if ne .chezmoi.osRelease.id "bluefin" }}
+# Universal Blue rewrites ID=fedora to ID=bluefin in the image, which is what
+# already keeps 020-dnf-packages.sh masked here -- there is no dnf transaction
+# to be had against a read-only /usr. 022 is the brew-backed stand-in.
+.chezmoiscripts/00-linux/022-brew-packages.sh
+{{-     end }}
 {{-     if or (ne (env "WSL_DISTRO_NAME") "") (eq (output "sh" "-c" "systemd-detect-virt --container --quiet && echo yes || echo no" | trim) "yes") }}
 # VSCode is installed on native GNU/Linux desktops only -- not in containers,
 # not in WSL.

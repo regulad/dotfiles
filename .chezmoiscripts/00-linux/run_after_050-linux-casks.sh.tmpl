@@ -18,5 +18,14 @@ if [ "$HAS_BREW" = "true" ]; then
 	done
 
 	# final work for brew on linux: unlink ffmpeg so it uses the system version with codecs
-	brew unlink ffmpeg
+	#
+	# Atomic hosts are the exception. There the "system version with codecs"
+	# doesn't exist: the image ships Fedora's codec-stripped ffmpeg-free, and
+	# the RPM Fusion swap that 020-dnf-packages.sh does with --allowerasing
+	# can't be replayed against a read-only /usr without rebuilding the image.
+	# So 022-brew-packages.sh installs brew's ffmpeg *as* the one with codecs,
+	# and unlinking it here would leave no usable ffmpeg on the box at all.
+	if [ "$IS_ATOMIC" -eq 0 ]; then
+		brew unlink ffmpeg
+	fi
 fi

@@ -64,7 +64,13 @@ APT_PACKAGES=(
 	systemd  # provides utils even when in docker
 	socat
 	inetutils-telnet
-	inetutils-ping
+	# iputils-ping, NOT inetutils-ping. Both provide the `ping` virtual package
+	# and inetutils-ping declares Conflicts:/Replaces: against iputils-ping, so
+	# asking for it makes apt *remove* the iputils-ping that ships in the base
+	# system (it's Priority: important and present on every Ubuntu install) and
+	# swap in a different implementation behind the same name. This also puts
+	# the list back in parity with the Fedora side, which pulls `iputils`.
+	iputils-ping
 	inetutils-ftp
 	binutils
 	net-tools

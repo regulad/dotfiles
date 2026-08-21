@@ -1,0 +1,141 @@
+{{ template "posix-preamble.sh" . }}
+# system-level binary dependencies for atomic Universal Blue hosts (Bluefin).
+#
+# The dnf and apt runners cannot work here: /usr belongs to the bootc image and
+# is read-only, and rpm-ostree layering is an explicit anti-pattern on these
+# images. brew is the supported route for CLI tooling, per Bluefin's own docs:
+# "if you need a tool or utility, use homebrew. If you need a library and
+# dependencies for development work, use a container."
+#
+# This is deliberately NOT a 1:1 port of DNF_PACKAGES. Anything Bluefin already
+# ships in its image, or that the Silverblue base provides, is left to the host
+# instead of being shadowed by a second copy earlier on PATH. The OMITTED block
+# below the array records every dropped entry and the reason, so this stays
+# diffable against 020-dnf-packages.sh when that list changes.
+#
+# Every formula here was checked against the formulae.brew.sh API for existence
+# and for a linux bottle (or an `all`-tagged one); none build from source.
+BREW_SYSTEM_PACKAGES=(
+	# =+= CORE
+	# brew's `telnet` formula is macOS-only, so inetutils is the Linux provider.
+	# It installs its GNU binaries under a `g` prefix EXCEPT for telnet, ftp,
+	# rcp, rexec, rlogin, rsh and dnsdomainname -- so unlike the apt-side
+	# inetutils-ping/iputils-ping collision it cannot shadow the system ping.
+	inetutils
+	retry
+	binwalk
+	ncdu
+	htop
+	nmap
+	age
+
+	# =+= CONTAINERIZATION
+	# podman itself is in Bluefin's image; only the compose shim is missing.
+	podman-compose
+
+	# =+= BUILD TOOLS
+	ninja  # `ninja-build` is the rpm name, `ninja` is the formula
+	pkgconf
+	cmake
+
+	# =+= DEPENDENCIES
+	# the -devel/-dev rpm/deb split doesn't exist in brew: each formula ships
+	# its own headers, so these are the plain names.
+	cairo  # needed by cairo PyPi package
+	libxml2
+	freetype
+	jpeg-turbo
+	pciutils  # needed by llama.cpp
+	simdjson
+
+	# =+= EDITOR
+	neovim
+	vim  # also provides xxd, which brew has no standalone formula for
+	tree-sitter-cli
+	shellcheck
+	ripgrep
+	imagemagick
+
+	# =+= SERIAL
+	minicom
+
+	# =+= UTILS
+	socat
+	sshpass
+	git-lfs
+	git-filter-repo
+	gnupg  # gpg
+	keychain
+	gh  # GitHub
+	syncthing
+	nss  # pk12util/certutil, needed to import the client cert into the NSS DB
+	# Unlike the dnf path there is no RPM Fusion swap to make here -- Fedora's
+	# codec-stripped ffmpeg-free is what the image ships, and RPM Fusion can't
+	# be layered onto a bootc host without rebuilding the image. brew's ffmpeg
+	# IS the one with codecs on this platform, which is why 050-linux-casks
+	# skips its `brew unlink ffmpeg` when IS_ATOMIC.
+	ffmpeg
+
+	# =+= JS/TS
+	node  # nodejs + npm in one formula; just to install pnpm
+
+	# =+= JVM
+	# openjdk and libxml2 above both look keg-only in the formula JSON, but
+	# their reasons are :shadowed_by_macos / :provided_by_macos, and
+	# KegOnlyReason#applicable? is `!by_macos?` off macOS -- so on Linux they
+	# are linked normally and `java` really is on PATH. Don't "fix" this with
+	# a manual PATH prepend.
+	openjdk  # tracks latest, matching java-latest-openjdk
+	maven
+
+	# =+= RUST
+	# brew's `rust` bundles cargo and rustfmt, so there is no rustup dance like
+	# the apt runner needs. This is what makes 110-rust-tooling work here at
+	# all -- cargo otherwise only ever came from the dnf/apt lists.
+	rust
+	rust-analyzer
+
+	# =+= RUBY
+	ruby  # 030-brew-extras assumes `brew --prefix ruby` resolves to a real keg
+
+	# =+= LUA
+	lua
+	luarocks
+)
+
+# OMITTED, and why -- keep in sync with DNF_PACKAGES in 020-dnf-packages.sh:
+#
+#   already in Bluefin's image (build_files/base/04-packages.sh):
+#     tmux, zsh, fastfetch, restic, gcc, gcc-c++, make, python3-pip, rclone,
+#     podman, tailscale, wireguard-tools, just
+#   provided by the Silverblue base:
+#     bash, curl, git, perl, gawk, binutils, net-tools, iputils, openssh,
+#     python3, systemd
+#   already installed by a later hookscript:
+#     nu (nushell) and golang, both in 030-brew-extras
+#   no usable brew formula:
+#     libolm (dropped from homebrew-core; deprecated upstream)
+#     nyx (formula deprecated, repo archived, no native bottle)
+#     device-mapper-devel / thin-provisioning-tools (not packaged by brew)
+#   deliberately host-owned:
+#     libva-utils, glx-utils -- the GPU stack belongs to the image, not brew
+#     mpv -- a GUI app, so it belongs in flatpak (io.mpv.Mpv) on this platform
+#   n/a:
+#     development-tools group -- Bluefin ships gcc/gcc-c++/make already
+
+if [ "$HAS_BREW" != "true" ]; then
+	# Bluefin does not bake brew into the image; brew-setup.service lays it down
+	# in /var/home/linuxbrew on first boot. If that hasn't finished yet, the
+	# preamble's own fallback would race it by pointing Homebrew's installer at
+	# the same prefix, so refuse rather than fight the unit.
+	echo "error: no brew on an atomic host, can't install system packages" >&2
+	echo "note: brew-setup.service provisions it on first boot; check with" >&2
+	echo "note:   systemctl status brew-setup.service" >&2
+	exit 1
+fi
+
+brew install -q "${BREW_SYSTEM_PACKAGES[@]}"
+
+# NOTE: no `brew upgrade` here, deliberately. Bluefin drives upgrades itself on
+# a schedule via brew-update.timer and brew-upgrade.timer; racing those from an
+# apply would just duplicate work and can leave a half-upgraded prefix behind.
