@@ -110,6 +110,14 @@ Library
 # already keeps 020-dnf-packages.sh masked here -- there is no dnf transaction
 # to be had against a read-only /usr. 022 is the brew-backed stand-in.
 .chezmoiscripts/00-linux/022-brew-packages.sh
+{{-     else }}
+# Bluefin ships tailscale in the image itself -- build_files/base/04-packages.sh
+# adds pkgs.tailscale.com as a disabled repo and installs from it at build time
+# -- so there is nothing for 090 to do. It would also fail if it tried:
+# tailscale's install.sh shells out to the system package manager, which cannot
+# write to a read-only /usr. Bring it up with `sudo systemctl enable --now
+# tailscaled` instead.
+.chezmoiscripts/00-linux/090-tailscale.sh
 {{-     end }}
 {{-     if or (ne (env "WSL_DISTRO_NAME") "") (eq (output "sh" "-c" "systemd-detect-virt --container --quiet && echo yes || echo no" | trim) "yes") }}
 # VSCode is installed on native GNU/Linux desktops only -- not in containers,

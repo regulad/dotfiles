@@ -7,7 +7,24 @@ if ! [ "$CONTAINERIZED" -eq 1 ]; then
 		# syncthing runs on native GNU/Linux only -- intentionally not started
 		# inside WSL.
 		if [ "$IS_WSL" -eq 0 ]; then
-			systemctl --user enable --now syncthing.service
+			# Where syncthing came from decides how it gets started. The distro
+			# packages ship a systemd user unit; the brew formula does not, so
+			# on hosts where 022-brew-packages.sh is what provided it there is
+			# no syncthing.service to enable and this would just fail.
+			#
+			# This isn't a systemd-vs-not split: `brew services` on Linux
+			# generates its own ~/.config/systemd/user/homebrew.syncthing.service
+			# and drives systemctl --user, so either branch lands on a systemd
+			# user service. It just has to be the one that owns the unit.
+			#
+			# Safe to re-run: Services::Cli.start skips an already-running
+			# service with a message and returns 0 rather than erroring, so this
+			# won't trip the -e in the preamble on a repeat apply.
+			if [ "$HAS_BREW" = "true" ] && brew list --formula syncthing &>/dev/null; then
+				brew services start syncthing
+			else
+				systemctl --user enable --now syncthing.service
+			fi
 		fi
 	else
 		echo "error: user session broken (couldn't run systemd --user)" >&2
