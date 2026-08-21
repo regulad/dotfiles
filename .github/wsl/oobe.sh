@@ -157,9 +157,14 @@ fi
 # file rather than `runuser -c '<long string>'` -- quoting a heredoc through
 # runuser's -c is a foot-gun, and anything passed on the command line would be
 # visible in ps to every other user on the system.
+#
+# Write first, then hand it over. Doing the chown before the heredoc means
+# root re-opens, with O_CREAT, a file it no longer owns inside /tmp -- which
+# is world-writable and sticky -- and fs.protected_regular (2 on Ubuntu)
+# denies exactly that, root included. The heredoc then failed with
+# "Permission denied", leaving an empty script that runuser dutifully ran as
+# a no-op, so OOBE reported success while having applied nothing.
 inner="$(mktemp /tmp/oobe-inner.XXXXXX.sh)"
-chmod 0700 "$inner"
-chown "$DISTRO_USER" "$inner"
 
 cat > "$inner" <<INNER
 #!/bin/bash
@@ -213,6 +218,23 @@ chezmoi apply "\$HOME/key.txt" || exit 1
 # the WSL-only scriptlets, none of which ran during the image build.
 chezmoi apply || exit 1
 INNER
+
+# Only now that the content is written. runuser invokes it as `bash '$inner'`,
+# so this needs to be readable by the user rather than executable, but 0700
+# plus the chown gives both and keeps it unreadable to anyone else -- the
+# script carries no credentials, only the path to them, but there is no reason
+# to widen it.
+chmod 0700 "$inner"
+chown "$DISTRO_USER" "$inner"
+
+# This script deliberately runs without `set -e`, so a failed heredoc above
+# would otherwise sail past and hand runuser an empty file: a silent no-op
+# reported as a successful first-run apply. Fail loudly instead.
+if [ ! -s "$inner" ]; then
+    say "error: could not write ${inner}; nothing was applied."
+    retry_hint
+    exit 1
+fi
 
 say "running first-run apply as ${DISTRO_USER} (this will take a few minutes)"
 

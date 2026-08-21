@@ -166,9 +166,25 @@ jobs:
             ln -sf /dev/null "$stage/etc/systemd/user/$unit"
           done
 
+          # Everything staged above is created by the runner user -- uid 1001
+          # on GitHub-hosted runners -- and `bsdtar --numeric-owner` records
+          # that uid faithfully. Nothing here is read back by a later step, so
+          # handing the whole stage to root costs nothing.
+          #
+          # This matters more than a stray uid on a config file, because the
+          # overlay's entries include the directories /etc, /etc/systemd,
+          # /etc/systemd/system and /etc/systemd/user themselves. Extracting it
+          # therefore *replaces* those directories' root ownership. Observed on
+          # a real import of the 2026-08-21 build: 21 entries owned 1001:1001,
+          # /etc among them, against an image with no uid 1001 at all -- so
+          # creating any account at uid 1001 would have handed it /etc.
+          sudo chown -R 0:0 "$stage"
+
           echo "STAGE=$stage" >> "$GITHUB_ENV"
           echo "--- overlay ---"
-          find "$stage" -mindepth 1 -printf '%y %M %P\n' | sort
+          # %u:%g included deliberately: the ownership bug above survived
+          # because this listing showed only type and mode.
+          find "$stage" -mindepth 1 -printf '%y %M %u:%g %P\n' | sort
 
       # Deliberately split from the repack below. This used to be one
       # `crane | bsdtar | pigz` pipeline retried as a unit, which meant a

@@ -1,2 +1,33 @@
+# ~/.wslconfig -- global WSL2 settings, applying to every distro on this
+# machine. Read once when the utility VM boots, so edits only take effect
+# after `wsl --shutdown`. Distinct from a distro's own /etc/wsl.conf.
+
 [wsl2]
-networkingMode=mirrored
+# NAT, which is WSL's default, stated explicitly so a future edit has to be
+# deliberate.
+#
+# This was mirrored, which hands the VM the Windows host's own adapters
+# instead of giving it a private network. That works until the host's
+# networking changes underneath it: moving between Wi-Fi networks on
+# 2026-08-21 left the VM holding the mirrored interfaces with no default
+# route at all, so every outbound connection failed in tens of milliseconds
+# with "Could not connect to server". Because mirrored shares one namespace
+# across all distros, it broke every distro on the machine at once rather
+# than just one. NAT gives the VM its own gateway and is unaffected by host
+# adapter changes.
+#
+# Two things are knowingly given up:
+#
+#   - IPv6. Microsoft lists IPv6 as a mirrored-mode benefit; NAT does not
+#     provide routable IPv6, and there is no setting that adds it. Accepted
+#     deliberately -- nothing here needs it.
+#   - Reaching a Windows-host service from inside a distro as localhost.
+#     Under NAT that direction needs the host's address, which is the
+#     gateway: `ip route show default | awk '{print $3}'`. The reverse
+#     direction, reaching a WSL service from Windows as localhost, still
+#     works via localhostForwarding, which defaults on.
+#
+# Note also that the VM's subnet is a random 172.x/20 chosen per boot. WSL
+# exposes no option to pin it; the only way is re-addressing the Hyper-V NAT
+# out of band, which WSL undoes on every boot. Do not rely on the address.
+networkingMode=nat
