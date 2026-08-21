@@ -163,9 +163,19 @@ if [[ $- == *i* && -z ${DID_COMMONRC_SPLASH+x} ]]; then
     # pins "logo": {"type": "small"}, and per src/options/logo.c a bare
     # `--logo <path>` sets only options->source and never options->type -- the
     # pinned "small" would survive and the builtin logo would render instead.
-    # Note chafa alone is not enough: fastfetch decodes and resizes through
-    # imagemagick first, then hands pixels to chafa, so both must be in the
-    # build (`fastfetch --list-features`).
+    # chafa alone is not enough, and this fails silently when it is missing
+    # something. fastfetch decodes and resizes through ImageMagick and only then
+    # hands pixels to chafa -- printImageChafa sits inside the
+    # FF_HAVE_IMAGEMAGICK{6,7} block in src/logo/image/image.c, and MagickCore is
+    # dlopen'd at runtime. If that load fails, ffLogoPrint() quietly renders the
+    # *detected distro* logo instead and prints nothing, because its error branch
+    # only reports for builtin/small types. The symptom is a plain Fedora logo
+    # with no explanation; `fastfetch --show-errors ...` is what surfaces
+    # "Logo: Image Magick library not found".
+    #
+    # 022-brew-packages.sh installs fastfetch, chafa and imagemagick from brew
+    # for exactly this reason -- an atomic host has no ImageMagick RPM for the
+    # image's own fastfetch to find.
     if [ -n "$UBLUE_LOGO" ]; then
         fastfetch --logo-type chafa --logo-height 9 --logo "$UBLUE_LOGO" >&2
     else
