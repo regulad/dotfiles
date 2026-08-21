@@ -13,6 +13,32 @@ else
 fi
 
 # === ALIASES
+# Undo Bluefin's fastfetch hijack.
+#
+# /etc/profile.d/ublue-fastfetch.sh (from projectbluefin/common) is three lines:
+#   alias neofetch='ublue-fastfetch'
+#   alias neowofetch='ublue-fastfetch'
+#   alias fastfetch='ublue-fastfetch'
+#
+# and /usr/bin/ublue-fastfetch ends in
+#   exec fastfetch --color "$(ublue-bling-fastfetch)" --config "$FASTFETCH_CONFIG"
+#
+# where FASTFETCH_CONFIG defaults to /usr/share/ublue-os/fastfetch.jsonc. An
+# explicit --config always beats ~/.config/fastfetch/config.jsonc, so the
+# compact config this repo ships never applies and every interactive shell gets
+# the full splash instead -- distro logo, image-info line, uptime and the rest --
+# because the psuedoMOTD at the bottom of this file calls fastfetch on startup.
+#
+# Dropping the aliases is enough; the binary and its own config take over again.
+# ublue-fastfetch is still on PATH under its own name when it's wanted, and
+# nothing here touches the image, so a system update won't fight it.
+#
+# The alternative, if the wrapper is ever preferable, is a
+# /etc/ublue-os/fastfetch.json containing {"fastfetch-config": "<path>"} -- but
+# that needs sudo and has to be redone per machine, which is exactly what this
+# repo exists to avoid.
+unalias fastfetch neofetch neowofetch 2>/dev/null || true
+
 alias c3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=default"
 alias t3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=sympy"
 alias "chomp=perl -pi -e 'chomp if eof'"
