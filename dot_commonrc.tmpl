@@ -127,57 +127,49 @@ if [[ $- == *i* && -z ${DID_COMMONRC_SPLASH+x} ]]; then
     # ~/.config/fastfetch/config.jsonc (which is what the unalias further up is
     # undoing). So do the pick here instead, with this repo's module list.
     #
-    # Use the PNG originals, not symbols/. That directory also holds
-    # bluefin.png, chicken.png, dolly.png and karl.png -- the raster sources the
-    # other two renditions were generated from. symbols/ is a fixed 36x24
-    # dithered render carrying its detail almost entirely in per-cell truecolor,
-    # so it cannot be resized: dropping cells to shrink it destroys the picture.
-    # The PNGs resample cleanly to any size via chafa. -maxdepth 1 keeps the
-    # pick out of the sixels/ and symbols/ subdirectories.
+    # The art is rendered ahead of time, into ~/.config/fastfetch/logos, rather
+    # than converted on every shell start. Three reasons:
     #
-    # Falls straight through to a bare `fastfetch` anywhere the directory does
-    # not exist, which is every non-Bluefin host -- note `shuf` is coreutils and
-    # absent on macOS, so it must stay behind the -d guard.
-    UBLUE_LOGO_DIR="/usr/share/ublue-os/bluefin-logos"
+    #   1. ublue's symbols/ renders are a fixed 36x24 and cannot be shrunk. They
+    #      carry their detail in per-cell truecolor over near-arbitrary block
+    #      glyphs, so dropping cells to resize them destroys the picture.
+    #   2. Converting the PNG originals at runtime means fastfetch's image path,
+    #      which is gated behind FF_HAVE_IMAGEMAGICK{6,7} in
+    #      src/logo/image/image.c and dlopens MagickCore -- chafa decodes
+    #      nothing itself, it only colours pixels ImageMagick already produced.
+    #      That proved unreliable here: with brew's fastfetch, chafa and
+    #      imagemagick all installed, and `magick identify` reading the files
+    #      fine, fastfetch still failed with "Failed to load / convert the image
+    #      source". Not worth chasing for a MOTD.
+    #   3. A text file needs no ImageMagick, no chafa and no decode work on every
+    #      interactive shell, and looks identical on every machine.
+    #
+    # Generated from bluefin.png / chicken.png / dolly.png / karl.png in
+    # /usr/share/ublue-os/bluefin-logos: alpha-trimmed, Lanczos-scaled, emitted
+    # as U+2580 half blocks with truecolor fg/bg -- the same shape as ublue's
+    # symbols/ files, sized to fit 16x9. That box is the footprint of
+    # fastfetch's builtin fedora_small (16 cols x 9 lines), which is what this
+    # repo's config.jsonc "type": "small" draws on every other host. Alpha is
+    # respected, so the silhouette stays transparent rather than becoming a
+    # rectangle. `chafa --size 16x9 <png>` regenerates equivalents.
+    #
+    # Falls through to a bare `fastfetch` wherever the directory is absent,
+    # which is every non-Bluefin host -- .chezmoiignore only applies these on
+    # Bluefin. Note `shuf` is coreutils and missing on macOS, so it has to stay
+    # behind the -d guard.
+    UBLUE_LOGO_DIR="$HOME/.config/fastfetch/logos"
     UBLUE_LOGO=""
     if [ -d "$UBLUE_LOGO_DIR" ]; then
-        UBLUE_LOGO="$(find "$UBLUE_LOGO_DIR" -maxdepth 1 -type f -name '*.png' 2>/dev/null | shuf -n 1)"
+        UBLUE_LOGO="$(find "$UBLUE_LOGO_DIR" -maxdepth 1 -type f 2>/dev/null | shuf -n 1)"
     fi
 
-    # Height only, deliberately -- do NOT also pass --logo-width.
-    #
-    # In fastfetch's src/logo/image/image.c, when exactly one of the two is left
-    # at zero the other is derived from the image's own proportions:
-    #     logoPixelWidth = (columns / rows) * logoPixelHeight
-    # Pass both and it uses both literally, stretching the image to fill the
-    # box. These logos are portrait (bluefin.png is 372x493) while the target
-    # box is wider than it is tall, so pinning both would visibly squash them.
-    #
-    # 9 is the line count of fastfetch's builtin fedora_small logo (16 cols x 9
-    # lines), which is what this repo's config.jsonc "type": "small" renders
-    # everywhere else. Height is also the dimension that decides how far the
-    # module list is pushed down, so matching it is what actually keeps the
-    # footprint the same. The derived width lands around 13-14 cells.
-    #
-    # --logo-type chafa is explicit rather than auto because this repo's config
-    # pins "logo": {"type": "small"}, and per src/options/logo.c a bare
-    # `--logo <path>` sets only options->source and never options->type -- the
-    # pinned "small" would survive and the builtin logo would render instead.
-    # chafa alone is not enough, and this fails silently when it is missing
-    # something. fastfetch decodes and resizes through ImageMagick and only then
-    # hands pixels to chafa -- printImageChafa sits inside the
-    # FF_HAVE_IMAGEMAGICK{6,7} block in src/logo/image/image.c, and MagickCore is
-    # dlopen'd at runtime. If that load fails, ffLogoPrint() quietly renders the
-    # *detected distro* logo instead and prints nothing, because its error branch
-    # only reports for builtin/small types. The symptom is a plain Fedora logo
-    # with no explanation; `fastfetch --show-errors ...` is what surfaces
-    # "Logo: Image Magick library not found".
-    #
-    # 022-brew-packages.sh installs fastfetch, chafa and imagemagick from brew
-    # for exactly this reason -- an atomic host has no ImageMagick RPM for the
-    # image's own fastfetch to find.
+    # --logo-type file is explicit because this repo's config.jsonc pins
+    # "logo": {"type": "small"}, and per src/options/logo.c a bare
+    # `--logo <path>` assigns options->source while never touching
+    # options->type. The pinned "small" would otherwise survive and fastfetch
+    # would draw its builtin logo while ignoring the file entirely.
     if [ -n "$UBLUE_LOGO" ]; then
-        fastfetch --logo-type chafa --logo-height 9 --logo "$UBLUE_LOGO" >&2
+        fastfetch --logo-type file --logo "$UBLUE_LOGO" >&2
     else
         fastfetch >&2
     fi

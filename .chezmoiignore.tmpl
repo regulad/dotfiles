@@ -110,6 +110,10 @@ Library
 # already keeps 020-dnf-packages.sh masked here -- there is no dnf transaction
 # to be had against a read-only /usr. 022 is the brew-backed stand-in.
 .chezmoiscripts/00-linux/022-brew-packages.sh
+# The pre-rendered mascots are Bluefin branding and the MOTD only reaches for
+# them when this directory exists, so everywhere else keeps the builtin small
+# logo instead of shipping four files it will never read.
+.config/fastfetch/logos/
 {{-     else }}
 # Bluefin ships tailscale in the image itself -- build_files/base/04-packages.sh
 # adds pkgs.tailscale.com as a disabled repo and installs from it at build time

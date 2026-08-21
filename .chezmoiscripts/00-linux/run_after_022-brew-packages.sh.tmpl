@@ -29,27 +29,6 @@ BREW_SYSTEM_PACKAGES=(
 	nmap
 	age
 
-	# fastfetch from brew, even though Bluefin's image already has an RPM one.
-	#
-	# The MOTD in .commonrc renders Bluefin's PNG mascots through chafa. In
-	# fastfetch's src/logo/image/image.c the entire image path -- printImageChafa
-	# included -- sits inside
-	#     #if defined(FF_HAVE_IMAGEMAGICK7) || defined(FF_HAVE_IMAGEMAGICK6)
-	# and the MagickCore symbols are dlopen'd at runtime. chafa never receives
-	# pixels of its own accord; ImageMagick decodes and resizes first. So on an
-	# atomic host, where no ImageMagick RPM is installed and one cannot be
-	# layered without rebuilding the image, the system fastfetch fails the
-	# dlopen and ffLogoPrint() falls back to the *detected distro* logo -- and
-	# says nothing about it unless --show-errors is passed, because the error
-	# branch there only reports for builtin/small types.
-	#
-	# Taking fastfetch from brew puts it alongside brew's imagemagick and chafa,
-	# which it can actually load, and the shellenv in .commonprofile means it is
-	# the one on PATH. Both have to be listed explicitly: brew's fastfetch
-	# formula declares chafa and imagemagick as *build* dependencies only, since
-	# it dlopens them, so installing fastfetch alone pulls in neither.
-	fastfetch
-	chafa
 
 	# =+= CONTAINERIZATION
 	# podman itself is in Bluefin's image; only the compose shim is missing.
@@ -141,11 +120,13 @@ BREW_SYSTEM_PACKAGES=(
 # OMITTED, and why -- keep in sync with DNF_PACKAGES in 020-dnf-packages.sh:
 #
 #   already in Bluefin's image (build_files/base/04-packages.sh):
-#     tmux, zsh, restic, gcc, gcc-c++, make, python3-pip, rclone, podman,
-#     tailscale, wireguard-tools, just
-#     (fastfetch is in the image too, but is installed from brew above anyway --
-#      see the note there; the RPM one cannot render image logos on an atomic
-#      host because there is no ImageMagick for it to dlopen)
+#     tmux, zsh, fastfetch, restic, gcc, gcc-c++, make, python3-pip, rclone,
+#     podman, tailscale, wireguard-tools, just
+#     (fastfetch and chafa were briefly pulled in from brew here so the MOTD
+#      could convert PNG logos at runtime. That path never worked on this host
+#      even with both installed, so the art is pre-rendered into
+#      ~/.config/fastfetch/logos instead and the image's own fastfetch is fine
+#      again -- it only has to read a text file. See the note in .commonrc.)
 #   provided by the Silverblue base:
 #     bash, curl, git, perl, gawk, binutils, net-tools, iputils, openssh,
 #     python3, systemd
