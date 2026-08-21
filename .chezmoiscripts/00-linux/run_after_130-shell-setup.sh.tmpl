@@ -52,7 +52,17 @@ if command -v chsh &>/dev/null; then
 	# Change shell if not already set
 	if [ "$SHELL" != "$SHELL_PATH" ]; then
 		if [ "$CAN_SUDO" = "true" ]; then
-			sudo chsh -s "$SHELL_PATH"
+			# The username is NOT optional under sudo. util-linux chsh resolves
+			# its target with `const uid_t uid = getuid();` and only falls back
+			# to that uid when no username was given -- and under sudo the real
+			# uid is 0, so a bare `sudo chsh -s ...` silently rewrites *root's*
+			# shell and leaves this account on whatever it already had. That
+			# failed quietly: the account stayed on bash, kept reading
+			# ~/.profile instead of ~/.zprofile at login, and the shell never
+			# actually changed no matter how many times an apply ran.
+			# id -un rather than $USER: $USER is set by login shells and can be
+			# absent when an apply is driven from a non-login context.
+			sudo chsh -s "$SHELL_PATH" "$(id -un)"
 		else
 			chsh -s "$SHELL_PATH"
 		fi

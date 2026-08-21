@@ -10,12 +10,28 @@ fi
 
 . "$HOME/.commonprofile"
 
-# change into zsh if possible
-ZSH="$(command -v zsh)"
-if [ "$SHELL" != "$ZSH" ] && [ -x "$ZSH" ]; then
-    export SHELL="$ZSH"
-    exec "$ZSH" "$@"
-fi
+# change into zsh if possible -- interactive shells ONLY.
+#
+# This file is read by every login shell, not just the ones attached to a
+# terminal, and `exec` in a non-interactive one replaces the command the caller
+# actually asked for. Display managers are the case that bites: GDM starts the
+# desktop through a login shell, so an unguarded exec here swallows
+# gnome-session, the session ends the moment it begins, and you get dropped back
+# on the greeter. A text TTY keeps working throughout, because there exec'ing
+# into zsh is precisely the intent -- which is what makes the failure look like
+# "GDM is broken" rather than "a dotfile is".
+#
+# Anything else that runs `sh -lc ...` / `bash -lc ...` (scp, rsync, ssh
+# one-shot commands, systemd units with a login shell) is hijacked the same way.
+case $- in
+    *i*)
+        ZSH="$(command -v zsh)"
+        if [ "$SHELL" != "$ZSH" ] && [ -x "$ZSH" ]; then
+            export SHELL="$ZSH"
+            exec "$ZSH" "$@"
+        fi
+        ;;
+esac
 
 # if running bash; execute after commonprofile to match zsh behavior
 if [ -n "$BASH_VERSION" ]; then
@@ -25,5 +41,9 @@ if [ -n "$BASH_VERSION" ]; then
     fi
 fi
 
-# warning
-echo "warning: bashrc is no longer updated, use zsh" >&2
+# warning -- interactive only, for the same reason as the exec above: this is
+# noise in every non-interactive login shell otherwise, and it lands in the
+# session journal on each graphical login.
+case $- in
+    *i*) echo "warning: bashrc is no longer updated, use zsh" >&2 ;;
+esac
