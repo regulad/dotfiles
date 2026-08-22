@@ -120,7 +120,7 @@ elif command -v rustup &>/dev/null && rustup toolchain list 2>&1 | grep -qE "(no
 	rustup component add rust-analyzer
 fi
 
-if [ "$CAN_SUDO" = "true" ]; then
+if can_sudo; then
 	# special case needed to link the openjdk into the system java wrapper
 	sudo ln -sfn $HOMEBREW_PREFIX/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
 fi

@@ -1,7 +1,11 @@
 {{ template "posix-preamble.sh" . }}
 # Poetry
 # NOTE: redhat repositories provide poetry-core but not the CLI
-if [ "$MANAGER" = "apt" ]; then
+# The can_sudo test is what used to be guaranteed by the preamble, which
+# refused to run at all on an apt host without sudo. That blanket check is
+# gone (it was probing sudo in all 26 scripts), so ask here -- and on an apt
+# host that can't sudo, fall through to brew or pip rather than dying.
+if [ "$MANAGER" = "apt" ] && can_sudo; then
 	sudo apt install -qq -y python3-poetry
 elif [ "$HAS_BREW" = "true" ]; then
 	brew install -q poetry

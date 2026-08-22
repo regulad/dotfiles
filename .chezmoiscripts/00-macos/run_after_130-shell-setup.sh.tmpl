@@ -51,7 +51,7 @@ if command -v chsh &>/dev/null; then
 
 	# Change shell if not already set
 	if [ "$SHELL" != "$SHELL_PATH" ]; then
-		if [ "$CAN_SUDO" = "true" ]; then
+		if can_sudo; then
 			sudo chsh -s "$SHELL_PATH"
 		else
 			chsh -s "$SHELL_PATH"

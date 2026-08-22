@@ -2,7 +2,7 @@
 # pnpm
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q pnpm
-elif [ "$CAN_SUDO" = "true" ]; then
+elif can_sudo; then
 	sudo npm i -g -q pnpm@latest
 else
 	npm install -g --prefix ~/.local -q pnpm@latest

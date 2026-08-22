@@ -8,9 +8,12 @@ UBUNTU_MINIMUM_VERSION=26.04
 
 # Shared preamble included by every .chezmoiscripts/00-posix/run_after_* script
 # via `{{ "{{" }} template "posix-preamble.sh" . {{ "}}" }}`. Guards against unsupported
-# platforms, captures sudo, loads/installs Homebrew, and picks a system package
-# manager. Exports: CAN_SUDO, CONTAINERIZED, IS_WSL, IS_ATOMIC, HAS_BREW,
-# MANAGER.
+# platforms, loads/installs Homebrew, and picks a system package manager.
+# Exports: CONTAINERIZED, IS_WSL, IS_ATOMIC, HAS_BREW, MANAGER.
+# Defines: can_sudo, require_sudo, load_brew.
+#
+# Sudo is NOT captured here -- it is acquired lazily by can_sudo, so that the
+# scripts which never run a privileged command never trigger a password prompt.
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
 
 echo "note: entering hookscript" >&2
@@ -35,14 +38,41 @@ if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
 	exit 1
 fi
 
-# TODO: fix the ai slop =true and =false and replace it with a real bash =0 and =1
-if ! sudo -l &>/dev/null; then
-	echo "warning: Can't sudo. Will not attempt to install things that need sudo." >&2
-	CAN_SUDO=false
-else
-	echo "note: Successfully captured sudo. Will use it." >&2
-	CAN_SUDO=true
-fi
+# Whether we can sudo is answered lazily, on first use, and cached for the rest
+# of the script.
+#
+# This used to be an unconditional `sudo -l` right here. Every script includes
+# this preamble and every script is its own process, so that probe ran once per
+# script -- and `sudo -l` prompts for a password whenever the sudoers timestamp
+# has expired or isn't shared with this tty. The result was an apply that asked
+# for a password on behalf of the many scripts that never run a single
+# privileged command: the go, rust, js and python tooling, brew and its extras,
+# the casks, vencord, the user services, the client cert.
+#
+# So: call can_sudo from the branch that is about to use sudo, and only once the
+# privileged work is known to be necessary. Nothing above this line may use it.
+can_sudo() {
+	if [ -z "$_CAN_SUDO" ]; then
+		if sudo -l &>/dev/null; then
+			_CAN_SUDO=true
+			echo "note: successfully captured sudo, will use it" >&2
+		else
+			_CAN_SUDO=false
+			echo "warning: can't sudo, will not attempt things that need it" >&2
+		fi
+	fi
+	[ "$_CAN_SUDO" = true ]
+}
+_CAN_SUDO=
+
+# For scripts whose entire job is privileged -- installing system packages --
+# there is no degraded mode worth running, so say so and stop.
+require_sudo() {
+	if ! can_sudo; then
+		echo "error: ${1:-this script} requires sudo but it isn't available" >&2
+		exit 1
+	fi
+}
 
 # NOTE: WSL must be tested BEFORE systemd-detect-virt, not after. systemd
 # classifies WSL as a container: `systemd-detect-virt --container` prints "wsl"
@@ -133,27 +163,44 @@ case "$OS" in
 esac
 # END CLAUDE
 
-# Try to load homebrew if it is installed
-if [[ -d "/opt/homebrew" && "$CAN_SUDO" = "true" ]]; then
-	# Apple Silicon Mac (rootful)
-	eval "$(/opt/homebrew/bin/brew shellenv)"
-elif [[ (-d "/usr/local/Homebrew" || -d "/usr/local/bin/brew") && "$CAN_SUDO" = "true" ]]; then
-	# Intel Mac (rootful)
-	eval "$(/usr/local/bin/brew shellenv)"
-elif [[ -d "/home/linuxbrew/.linuxbrew" && "$CAN_SUDO" = "true" ]]; then
-	# Linux
-	eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-elif [[ -d "$HOME/homebrew" ]]; then
-	# Rootless homebrew (macOS & Linux)
-	echo "warning: loading rootless brew. this often works but is unsupported." >&2
-	eval "$("$HOME/homebrew/bin/brew" shellenv)"
-fi
+# Try to load homebrew if it is installed.
+#
+# Loading an already-installed brew needs no privileges whatsoever, so none of
+# these branches consults can_sudo. The sudo test that used to gate the three
+# rootful ones was the single biggest reason an apply asked for a password in
+# every script: on any machine that has brew -- i.e. all of them -- the first
+# branch was reached, and reaching it meant probing sudo.
+#
+# Probing for the brew binary rather than its prefix directory is also the more
+# honest check: a prefix survives a half-finished uninstall, and /usr/local
+# exists on practically every Intel Mac whether or not brew is under it.
+load_brew() {
+	local candidate
+	for candidate in \
+		/opt/homebrew/bin/brew \
+		/usr/local/bin/brew \
+		/home/linuxbrew/.linuxbrew/bin/brew \
+		"$HOME/homebrew/bin/brew"; do
+		[ -x "$candidate" ] || continue
+		if [ "$candidate" = "$HOME/homebrew/bin/brew" ]; then
+			echo "warning: loading rootless brew. this often works but is unsupported." >&2
+		fi
+		eval "$("$candidate" shellenv)"
+		return 0
+	done
+	return 1
+}
+
+load_brew || true
 
 # brew is a nother binary dependency but ONLY on linux for addl. userspace packages
 # don't think any of the addl. userpsace packages need to be installed by this script
 if ! command -v brew &>/dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)" == "GNU/Linux" ]]; then
 	echo "note: installing brew" >&2
-	if [ "$CAN_SUDO" = "true" ]; then
+	# One of the few places that legitimately asks: the official installer puts
+	# brew under /opt/homebrew or /home/linuxbrew, both of which need root to
+	# create. Only reached when brew is genuinely absent.
+	if can_sudo; then
 		NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 		if [ "$(uname -o)" = "Darwin" ] && [ "$(arch)" = "arm64" ]; then
 			sudo launchctl config user path /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
@@ -164,27 +211,19 @@ if ! command -v brew &>/dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)
 		fi
 	else
 		echo "warning: can't do default brew install w/o sudo; installing rootlessly" >&2
-		mkdir homebrew && curl -L https://github.com/Homebrew/brew/tarball/main | tar xz --strip-components 1 -C homebrew
+		# Explicitly $HOME/homebrew: this used to be a bare `mkdir homebrew`,
+		# which lands wherever the apply happens to be running from, while
+		# every detection branch looks under $HOME. They coincide only because
+		# chezmoi usually runs scripts from the destination dir.
+		mkdir -p "$HOME/homebrew" && curl -L https://github.com/Homebrew/brew/tarball/main | tar xz --strip-components 1 -C "$HOME/homebrew"
 
-		eval "$(homebrew/bin/brew shellenv)"
+		eval "$("$HOME/homebrew/bin/brew" shellenv)"
 		brew update --force --quiet
 		chmod -R go-w "$(brew --prefix)/share/zsh"
 	fi
 
 	# After Homebrew installation, detect and load it
-	if [[ -d "/opt/homebrew" && "$CAN_SUDO" = "true" ]]; then
-		# Apple Silicon Mac (rootful)
-		eval "$(/opt/homebrew/bin/brew shellenv)"
-	elif [[ (-d "/usr/local/Homebrew" || -d "/usr/local/bin/brew") && "$CAN_SUDO" = "true" ]]; then
-		# Intel Mac (rootful)
-		eval "$(/usr/local/bin/brew shellenv)"
-	elif [[ -d "/home/linuxbrew/.linuxbrew" && "$CAN_SUDO" = "true" ]]; then
-		# Linux
-		eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-	elif [[ -d "$HOME/homebrew" ]]; then
-		# Rootless homebrew (macOS & Linux)
-		eval "$(homebrew/bin/brew shellenv)"
-	fi
+	load_brew || true
 fi
 
 # every split script runs as its own process, so re-derive PATH/env that earlier
@@ -225,11 +264,11 @@ else
 	MANAGER=""
 fi
 
-# Check sudo requirement for dnf5 and apt
-if [[ "$MANAGER" == "dnf" || "$MANAGER" == "apt" ]] && ! [ "$CAN_SUDO" = "true" ]; then
-	echo "warning: package manager needs sudo but it isn't available" >&2
-  exit 1
-fi
+# NOTE: the "dnf/apt need sudo, bail out if we haven't got it" check used to sit
+# here. Being here is what made it a problem: MANAGER is dnf or apt on every
+# Fedora and Ubuntu box, so the check fired -- and probed sudo -- in all 26
+# scripts that include this preamble, not just the two that hand work to the
+# package manager. It now lives in those two, as `require_sudo`.
 
 # Check if any manager was detected
 if [[ -z "$MANAGER" ]]; then

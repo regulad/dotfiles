@@ -28,33 +28,46 @@ if [ "${#CERT_PATHS[@]}" -eq 0 ]; then
 	echo "warning: no CA certificates found in $CA_DIR" >&2
 fi
 
-if [ "$CAN_SUDO" = "true" ]; then
+# Which certificates are already trusted is answerable without any privileges,
+# and on a machine that has been applied to before the answer is "all of them".
+# Work that out first and ask for sudo only if there is something to install --
+# the old order tested sudo up front, so this script prompted on every apply
+# just to discover it had nothing to do.
+UNTRUSTED_CERTS=()
+for CERT_PATH in "${CERT_PATHS[@]}"; do
+	if ! openssl verify -CApath /etc/ssl/certs "$CERT_PATH" &>/dev/null; then
+		UNTRUSTED_CERTS+=("$CERT_PATH")
+	fi
+done
+
+if [ "${#UNTRUSTED_CERTS[@]}" -eq 0 ]; then
+	echo "note: all CA certificates already in the system trust store" >&2
+elif ! can_sudo; then
+	echo "warning: sudo required to install system certificate on Linux, skipping" >&2
+else
 	NEEDS_UPDATE=0
 
-	for CERT_PATH in "${CERT_PATHS[@]}"; do
-		# Check if certificate is already in system trust store
-		if ! openssl verify -CApath /etc/ssl/certs "$CERT_PATH" &>/dev/null; then
-			CERT_NAME=$(basename "$CERT_PATH")
+	for CERT_PATH in "${UNTRUSTED_CERTS[@]}"; do
+		CERT_NAME=$(basename "$CERT_PATH")
 
-			if [ -d /etc/pki/ca-trust/source/anchors ]; then
-				# Fedora. The extension is irrelevant here: update-ca-trust(8)
-				# accepts anchors as "one or multiple certificates in either the
-				# DER file format or in the PEM (BEGIN/END CERTIFICATE) file
-				# format", with no extension requirement -- so .pem is copied in
-				# under its own name.
-				sudo cp "$CERT_PATH" "/etc/pki/ca-trust/source/anchors/$CERT_NAME"
-				NEEDS_UPDATE=1
-			elif [ -d /usr/local/share/ca-certificates ]; then
-				# Debian/Ubuntu, which unlike Fedora *does* filter on extension:
-				# "all certificates with a .crt extension found below
-				# /usr/local/share/ca-certificates are also included as
-				# implicitly trusted" (update-ca-certificates(8)). A .pem copied
-				# in under its own name is silently ignored, so re-suffix it.
-				# The contents need no conversion -- both distros' tooling reads
-				# PEM regardless of what the file is called.
-				sudo cp "$CERT_PATH" "/usr/local/share/ca-certificates/${CERT_NAME%.*}.crt"
-				NEEDS_UPDATE=1
-			fi
+		if [ -d /etc/pki/ca-trust/source/anchors ]; then
+			# Fedora. The extension is irrelevant here: update-ca-trust(8)
+			# accepts anchors as "one or multiple certificates in either the
+			# DER file format or in the PEM (BEGIN/END CERTIFICATE) file
+			# format", with no extension requirement -- so .pem is copied in
+			# under its own name.
+			sudo cp "$CERT_PATH" "/etc/pki/ca-trust/source/anchors/$CERT_NAME"
+			NEEDS_UPDATE=1
+		elif [ -d /usr/local/share/ca-certificates ]; then
+			# Debian/Ubuntu, which unlike Fedora *does* filter on extension:
+			# "all certificates with a .crt extension found below
+			# /usr/local/share/ca-certificates are also included as
+			# implicitly trusted" (update-ca-certificates(8)). A .pem copied
+			# in under its own name is silently ignored, so re-suffix it.
+			# The contents need no conversion -- both distros' tooling reads
+			# PEM regardless of what the file is called.
+			sudo cp "$CERT_PATH" "/usr/local/share/ca-certificates/${CERT_NAME%.*}.crt"
+			NEEDS_UPDATE=1
 		fi
 	done
 
@@ -66,6 +79,4 @@ if [ "$CAN_SUDO" = "true" ]; then
 			sudo update-ca-certificates
 		fi
 	fi
-else
-	echo "warning: sudo required to install system certificate on Linux, skipping" >&2
 fi

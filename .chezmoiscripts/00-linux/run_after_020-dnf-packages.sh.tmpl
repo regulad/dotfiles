@@ -113,6 +113,8 @@ DNF_PACKAGES=(
 	luarocks
 )
 
+require_sudo "dnf package installation"
+
 sudo dnf group install -q -y "development-tools"
 sudo dnf install -q -y "${DNF_PACKAGES[@]}"
 

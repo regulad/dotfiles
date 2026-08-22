@@ -59,7 +59,7 @@ CURRENT_SHELL="$(getent passwd "$(id -un)" | cut -d: -f7)"
 # Change shell if not already set
 if [ "$CURRENT_SHELL" != "$SHELL_PATH" ]; then
 	if command -v chsh &>/dev/null; then
-		if [ "$CAN_SUDO" = "true" ]; then
+		if can_sudo; then
 			# The username is NOT optional under sudo. util-linux chsh resolves
 			# its target with `const uid_t uid = getuid();` and only falls back
 			# to that uid when no username was given -- and under sudo the real
@@ -72,7 +72,7 @@ if [ "$CURRENT_SHELL" != "$SHELL_PATH" ]; then
 			chsh -s "$SHELL_PATH"
 		fi
 		echo "note: shell was changed to $SHELL_PATH" >&2
-	elif [ "$CAN_SUDO" = "true" ] && command -v usermod &>/dev/null; then
+	elif command -v usermod &>/dev/null && can_sudo; then
 		# Atomic hosts have no chsh. It lives in util-linux-user, which isn't in
 		# the Silverblue base, and Universal Blue leaves it out on purpose: you
 		# could chsh into a shell and then roll back to an image that doesn't

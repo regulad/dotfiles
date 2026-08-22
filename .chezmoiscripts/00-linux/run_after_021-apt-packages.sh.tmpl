@@ -126,6 +126,8 @@ APT_PACKAGES=(
 	luarocks
 )
 
+require_sudo "apt package installation"
+
 sudo apt update -qq
 sudo apt install -qq -y "${APT_PACKAGES[@]}"
 sudo apt upgrade -qq -y

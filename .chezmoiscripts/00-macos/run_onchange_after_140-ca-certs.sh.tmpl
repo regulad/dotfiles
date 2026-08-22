@@ -33,7 +33,7 @@ fi
 for CERT_PATH in "${CERT_PATHS[@]}"; do
 	# Check if certificate is already trusted
 	if ! security verify-cert -c "$CERT_PATH" &>/dev/null; then
-		if [ "$CAN_SUDO" = "true" ]; then
+		if can_sudo; then
 			sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$CERT_PATH"
 		else
 			security add-trusted-cert -d -r trustRoot -k ~/Library/Keychains/login.keychain-db "$CERT_PATH"
