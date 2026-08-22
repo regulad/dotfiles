@@ -10,8 +10,15 @@ if defined GOPATH (
 )
 
 echo ;%PATH%; | find /I ";%GO_BIN%;" >nul
+if errorlevel 1 set "PATH=%PATH%;%GO_BIN%"
+
+REM append to the User-scope PATH specifically -- reusing %PATH% here would fold
+REM the Machine-scope entries into the user's own copy of it.
+set "GO_USER_PATH="
+for /f "delims=" %%i in ('powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "[Environment]::GetEnvironmentVariable('PATH','User')"') do set "GO_USER_PATH=%%i"
+echo ;!GO_USER_PATH!; | find /I ";%GO_BIN%;" >nul
 if errorlevel 1 (
-    call :neosetx PATH "%PATH%;%GO_BIN%"
+    call :neosetx PATH "!GO_USER_PATH!;%GO_BIN%"
     echo Added %GO_BIN% to PATH.
 ) else (
     echo %GO_BIN% is already in PATH.
@@ -28,12 +35,28 @@ if errorlevel 1 (
 REM auto lets Go fetch a newer toolchain on demand if a tool (like gopls) needs one
 set "GOTOOLCHAIN=auto"
 
+REM the unix scripts run under `bash -e`, so a failing `go install` aborts the
+REM apply there. cmd carries on regardless, so check each one explicitly.
 echo debug: installing go tooling
-call go install mvdan.cc/sh/v3/cmd/shfmt@latest
-call go install golang.org/x/tools/gopls@latest
-call go install golang.org/x/tools/cmd/goimports@latest
-call go install honnef.co/go/tools/cmd/staticcheck@latest
-call go install github.com/twpayne/find-duplicates@latest
+call :goinstall mvdan.cc/sh/v3/cmd/shfmt@latest || goto :go_install_failed
+call :goinstall golang.org/x/tools/gopls@latest || goto :go_install_failed
+call :goinstall golang.org/x/tools/cmd/goimports@latest || goto :go_install_failed
+call :goinstall honnef.co/go/tools/cmd/staticcheck@latest || goto :go_install_failed
+call :goinstall github.com/twpayne/find-duplicates@latest || goto :go_install_failed
+call :goinstall github.com/swaggo/swag/cmd/swag@latest || goto :go_install_failed
 
 goto :eof
+
+:goinstall
+go install %1
+if errorlevel 1 (
+    echo error: go install %1 failed 1>&2
+    exit /b 1
+)
+exit /b 0
+
+:go_install_failed
+echo error: go tooling install failed, aborting 1>&2
+exit /b 1
+
 {{ template "neosetx.cmd" . }}

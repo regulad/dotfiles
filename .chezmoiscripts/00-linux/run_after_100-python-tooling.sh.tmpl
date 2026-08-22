@@ -48,6 +48,8 @@ uv tool install --python cp313 -q pre-commit
 uv tool install --python cp313 -q "mangadex-downloader[optional]"
 uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
 uv tool install --python cp314 -q "rendercv[full]@2.3"  # breaks semver; AI slop beyond this version
+uv tool install --python cp314 -q pymobiledevice3
+uv tool install --python cp314 -q claude-swap
 
 # like in the JS ecosystem, some python tools are available as tools/bottles from brew
 if [ "$HAS_BREW" = "true" ]; then

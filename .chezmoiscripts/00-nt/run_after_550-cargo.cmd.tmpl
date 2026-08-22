@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM matches unix script (plus binwalk, which the unix side gets from the system
+REM package manager instead -- see 020-dnf/021-apt/022-brew-packages)
+
 if defined CARGO_HOME (
     set "CARGO_BIN=%CARGO_HOME%\bin"
 ) else (
@@ -8,8 +11,15 @@ if defined CARGO_HOME (
 )
 
 echo ;%PATH%; | find /I ";%CARGO_BIN%;" >nul
+if errorlevel 1 set "PATH=%PATH%;%CARGO_BIN%"
+
+REM append to the User-scope PATH specifically -- reusing %PATH% here would fold
+REM the Machine-scope entries into the user's own copy of it.
+set "CARGO_USER_PATH="
+for /f "delims=" %%i in ('powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "[Environment]::GetEnvironmentVariable('PATH','User')"') do set "CARGO_USER_PATH=%%i"
+echo ;!CARGO_USER_PATH!; | find /I ";%CARGO_BIN%;" >nul
 if errorlevel 1 (
-    call :neosetx PATH "%PATH%;%CARGO_BIN%"
+    call :neosetx PATH "!CARGO_USER_PATH!;%CARGO_BIN%"
     echo Added %CARGO_BIN% to PATH.
 ) else (
     echo %CARGO_BIN% is already in PATH.
@@ -17,15 +27,35 @@ if errorlevel 1 (
 
 call refreshenv >nul 2>&1
 
+REM NOTE: this test used to be `if not errorlevel 1 goto :eof` -- i.e. it bailed
+REM out precisely when cargo *was* installed, so the crates below were never
+REM installed on a working box, and were attempted (and failed) on one without
+REM cargo. Match the go/pnpm scripts: a missing toolchain is a hard error.
 where cargo >nul 2>&1
-if not errorlevel 1 (
-    echo cargo is already resolvable on PATH.
-    goto :eof
+if errorlevel 1 (
+    echo error: cargo not resolvable on PATH 1>&2
+    exit /b 1
 )
 
-call cargo install cargo-disasm
-call cargo install vtracer
-call cargo install binwalk
+REM the unix scripts run under `bash -e`, so a failing `cargo install` aborts the
+REM apply there. cmd carries on regardless, so check each one explicitly.
+echo debug: installing cargo tooling
+call :cargoinstall cargo-disasm || goto :cargo_install_failed
+call :cargoinstall vtracer || goto :cargo_install_failed
+call :cargoinstall binwalk || goto :cargo_install_failed
 
 goto :eof
+
+:cargoinstall
+cargo install %1
+if errorlevel 1 (
+    echo error: cargo install %1 failed 1>&2
+    exit /b 1
+)
+exit /b 0
+
+:cargo_install_failed
+echo error: cargo tooling install failed, aborting 1>&2
+exit /b 1
+
 {{ template "neosetx.cmd" . }}

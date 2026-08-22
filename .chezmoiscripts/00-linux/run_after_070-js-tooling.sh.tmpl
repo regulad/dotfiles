@@ -19,6 +19,7 @@ fi
 
 PNPM_CLI_PACKAGES=(
 	"@mermaid-js/mermaid-cli@latest"
+	"go-ios@latest"
 )
 
 ## packages available on brew are preferred over their pnpm packages (may have binary bottles pre-built)
@@ -39,8 +40,18 @@ else
 	)
 fi
 
-pnpm i -g --silent "${PNPM_CLI_PACKAGES[@]}"
-pnpm update --global --silent
+# go-ios' postinstall places its binary the way npm would, reading
+# npm_config_prefix to find the target directory. pnpm doesn't set that, so the
+# postinstall throws and fails the whole global install transaction -- leaving
+# every other package unlinked. Point it at the parent of pnpm's global bin,
+# which is what npm's prefix means on unix. Kept local to this script; npm
+# shouldn't inherit it.
+export npm_config_prefix="$(dirname "$(pnpm bin -g)")"
+
+# deliberately not --silent: it suppresses fatal errors too, which is how the
+# failing go-ios postinstall went unnoticed on the NT side.
+pnpm i -g "${PNPM_CLI_PACKAGES[@]}"
+pnpm update --global
 
 # deno
 export DENO_INSTALL="$HOME/.deno"
