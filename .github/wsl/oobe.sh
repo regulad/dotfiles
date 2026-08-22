@@ -25,9 +25,14 @@
 #                            WSL-only scriptlets that are masked everywhere else
 #
 # Credentials: `bw login --apikey` reads BW_CLIENTID and BW_CLIENTSECRET from
-# the environment and prompts for them when absent. ~/.secrets/.bwrc exports
-# exactly those two variables. It cannot exist yet inside a fresh instance --
-# that file is itself templated *out of* Bitwarden (dot_secrets/dot_bwrc.tmpl),
+# the environment and prompts for them when absent. ~/.secrets/.bwrc defines
+# exactly those two variables -- as bare KEY=VALUE, systemd EnvironmentFile
+# syntax, deliberately without `export`, so the same file can back a unit's
+# EnvironmentFile=. Sourcing it therefore sets them in this shell but does not
+# put them in the environment of anything this shell runs, which is why the
+# inner script below exports them explicitly after sourcing. It cannot exist
+# yet inside a fresh instance -- that file is itself templated *out of*
+# Bitwarden (private_dot_secrets/private_dot_bwrc.tmpl),
 # so it only appears after an authenticated apply -- but the Windows host this
 # instance runs on has already been provisioned by the same repo, so its copy
 # is sitting at %USERPROFILE%\.secrets\.bwrc, reachable over DrvFs at

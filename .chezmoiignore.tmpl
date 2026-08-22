@@ -57,6 +57,16 @@ key.txt
 .chezmoiscripts/00-linux/080-vencord.sh
 {{- end }}
 
+# Tailnet
+{{- if ne .chezmoi.os "linux" }}
+# tailscale-ephemeral.service is a systemd --user unit, so the key that feeds it
+# is only ever read on Linux. On macOS and Windows the native client owns the
+# tailnet identity and this would just be a live credential sitting on disk with
+# nothing to redeem it. The linux branch below narrows this further, to
+# containers and WSL only.
+.secrets/tailscale-authkey
+{{- end }}
+
 # Windows
 {{- if ne .chezmoi.os "windows" }}
 .chezmoiscripts/00-nt/*
@@ -65,6 +75,7 @@ autorun.cmd
 .doskey.mac
 .wslconfig
 .local/bin/wsl-deploy.ps1  # drives wsl.exe from the Windows side
+.local/bin/wsl-enter.ps1   # ditto
 AppData
 Winaero Tweaker.ini
 repositories  # symlink
@@ -114,14 +125,6 @@ Library
 # them when this directory exists, so everywhere else keeps the builtin small
 # logo instead of shipping four files it will never read.
 .config/fastfetch/logos/
-{{-     else }}
-# Bluefin ships tailscale in the image itself -- build_files/base/04-packages.sh
-# adds pkgs.tailscale.com as a disabled repo and installs from it at build time
-# -- so there is nothing for 090 to do. It would also fail if it tried:
-# tailscale's install.sh shells out to the system package manager, which cannot
-# write to a read-only /usr. Bring it up with `sudo systemctl enable --now
-# tailscaled` instead.
-.chezmoiscripts/00-linux/090-tailscale.sh
 {{-     end }}
 {{-     if or (ne (env "WSL_DISTRO_NAME") "") (eq (output "sh" "-c" "systemd-detect-virt --container --quiet && echo yes || echo no" | trim) "yes") }}
 # VSCode is installed on native GNU/Linux desktops only -- not in containers,
@@ -155,6 +158,27 @@ Library
 .chezmoiscripts/00-linux/012-vscode-dnf-repo.sh
 .chezmoiscripts/00-linux/160-install-vscode-ext.sh
 {{-     end }}
+{{-     if not (or (ne (env "WSL_DISTRO_NAME") "") (eq (output "sh" "-c" "systemd-detect-virt --container --quiet && echo yes || echo no" | trim) "yes")) }}
+# The ephemeral tailnet join is for disposable hosts only: containers -- so it
+# is in every docker build -- and WSL instances. A hardware machine is the
+# opposite case. Its tailnet identity is long-lived and set up out of band, it
+# is not thrown away and recreated, and re-registering it as a fresh ephemeral
+# node on every boot would be actively wrong.
+#
+# Hardware hosts still get tailscale itself, from 090-tailscale.sh. What they do
+# not get is this unit, the auth key that arms it, or the operator delegation
+# that lets a --user unit drive the daemon -- that last one is a privilege
+# decision that belongs to whoever administers the machine.
+#
+# Same predicate as the VSCode rule above, and it inherits the same caveats:
+# systemd-detect-virt reports "wsl" for a genuine WSL distro *and* for a docker
+# container on a WSL2-backed host, and the phrasing fails towards "not a
+# container" when systemd-detect-virt is missing. Failing that way here means a
+# host we cannot classify is treated as hardware, which is the safe direction --
+# it withholds a credential rather than writing one out.
+.config/systemd/user/tailscale-ephemeral.service
+.secrets/tailscale-authkey
+{{-     end }}
 {{-     if eq (env "WSL_DISTRO_NAME") "" }}
 # mask out the WSL-only scriptlets unless running inside a genuine WSL2 distro.
 # WSL_DISTRO_NAME is only set by WSL's own session bootstrap; `uname -r` alone
@@ -164,8 +188,5 @@ Library
 .chezmoiscripts/00-linux/006-wsl-gpu.sh
 .chezmoiscripts/00-linux/007-ssh-agent-relay.sh
 .config/systemd/user/ssh-agent-relay.service
-{{-     else }}
-# special case: tailscale is handled from the windows side for WSL2 hosts
-.chezmoiscripts/00-linux/090-tailscale.sh
 {{-     end }}
 {{- end }}

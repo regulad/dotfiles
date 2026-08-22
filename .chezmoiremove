@@ -1,0 +1,14 @@
+# Targets to delete from the destination on apply.
+#
+# Dropping a file from the source only makes chezmoi stop managing it; the copy
+# already written to a machine stays exactly where it is. That is fine for most
+# retired files and not fine for this one, so it is listed here explicitly.
+
+# 10-autowatch.zsh hooked chpwd to `source` and then `eval` a .watchrc from
+# whatever directory had just been entered, giving any cloned repository under
+# ~/repositories arbitrary code execution on cd. Removed in favour of direnv,
+# which gates the same behaviour behind `direnv allow`. Leaving the orphaned
+# copy in place would keep it armed on every machine that ever applied it,
+# since ~/.config/zsh/*.zsh is glob-sourced by .zshrc and would still pick it
+# up. Safe to prune from this file once every machine has applied once.
+.config/zsh/10-autowatch.zsh

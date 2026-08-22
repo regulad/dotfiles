@@ -1,0 +1,17 @@
+# Bitwarden API credentials, for `bw login --apikey`.
+#
+# systemd EnvironmentFile syntax: bare KEY=VALUE, no `export`. That keeps this
+# usable two ways -- handed to a unit as EnvironmentFile=, and sourced by a
+# POSIX shell -- where `export` would have made it shell-only, since systemd
+# treats the whole `export BW_CLIENTID` string as a variable name and drops
+# the line.
+#
+# The consequence for shell callers: sourcing this sets the variables in the
+# current shell but does NOT put them in the environment of anything it then
+# runs. Whoever needs that must export them itself. .github/wsl/oobe.sh already
+# does, right after its `. "$BWRC"`.
+#
+# The quotes stay. systemd strips them, and they keep `.` from word-splitting
+# a value that ever contains whitespace.
+BW_CLIENTID="{{- (bitwardenFields "item" "vw.regulad.xyz").client_id.value -}}"
+BW_CLIENTSECRET="{{- (bitwardenFields "item" "vw.regulad.xyz").client_secret.value -}}"

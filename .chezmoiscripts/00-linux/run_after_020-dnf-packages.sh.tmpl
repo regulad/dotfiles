@@ -62,10 +62,12 @@ DNF_PACKAGES=(
 	# =+= UTILS
 	systemd  # provides utils even when in docker
 	gawk  # not bundled by default
+	direnv  # see the note on the apt side; replaces the old .watchrc hook
 	socat
 	iputils
 	binutils
 	net-tools
+	bind-utils  # dig, host, nslookup -- apt splits these, see the note there
 	perl
 	sshpass
 	git

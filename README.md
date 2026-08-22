@@ -20,6 +20,7 @@ The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/
 Supported environments:
 
 - macOS latest (w/ `brew`)
+- Bluefin (Universal Blue's atomic Fedora desktop)
 - Ubuntu GNU/Linux >= 25.10
 - Fedora GNU/Linux >= 44
 - Windows 11 `cmd`
@@ -31,10 +32,11 @@ Linux environments are preferred in the following order:
 1. Fedora
     - Why? DNF5 is fast, deterministic, and RHEL is the industry standard.
     - I trust Red Hat more to ship reliable and efficient software more than I trust Canonical.
+    - Bluefin counts here: it is atomic Fedora. `/usr` belongs to the bootc image and is read-only, and rpm-ostree layering is an explicit anti-pattern on those images, so CLI tooling comes from `brew` rather than `dnf`. That split is what `.chezmoiscripts/00-linux/run_after_022-brew-packages.sh.tmpl` exists for, and it tracks which packages the image already provides so they aren't shadowed by a second copy earlier on `PATH`.
 2. Ubuntu
     - Why? Homebrew builds against Ubuntu, and not base Debian.
 
-All of the above environments are available in Docker pours (see the packages menu on the right). Using `latest` will get you the newest Ubuntu image since fedora-based Docker images are pretty rare.
+The Ubuntu and Fedora environments are available in Docker pours (see the packages menu on the right). Using `latest` will get you the newest Ubuntu image since fedora-based Docker images are pretty rare. Bluefin is not built here — it is a host you apply onto, not an image this repo produces.
 
 > The Debian setup has been migrated to Ubuntu to follow software that tests against Ubuntu.
 
@@ -111,6 +113,34 @@ Make sure you add any extensions you'd like to download to `vscode-extensions.tx
 
 Remember to define the package in the correct hookscript under `.chezmoiscripts/00-posix/` or `.chezmoiscripts/00-nt/`
 
+### WSL: `wsl-deploy` and `wsl-enter`
+
+Two Windows-side helpers in `~/.local/bin`, exposed to `cmd` by doskey macros in `.doskey.mac`. They invoke by full path on purpose: `~/.local/bin` is only put on `PATH` by `.commonprofile`, which is POSIX shells only.
+
+`wsl-deploy [fedora|ubuntu]` installs the newest built image as `regulad-<flavor>`:
+
+```console
+wsl-deploy                    # newest ubuntu image for this architecture
+wsl-deploy fedora
+wsl-deploy.ps1 -SetDefault    # and make it what a bare `wsl` starts
+```
+
+It finds the newest unexpired `wsl-<flavor>-<arch>` artifact, downloads it with a progress readout, and imports it to `%LOCALAPPDATA%\wsl\regulad-<flavor>`. Notable behaviour:
+
+- **It is destructive.** If `regulad-<flavor>` already exists, continuing *unregisters* it — the VHD and everything in it is gone, with no undo. It prompts first; `-Force` skips the prompt.
+- Each import records its provenance in `deployed-from.json` next to the VHD, so later runs can tell you whether the installed instance is already the newest build or is behind one. Nothing in WSL tracks this on its own. The file lives in the install directory precisely so `wsl --unregister` takes it with the instance rather than leaving a stale claim behind.
+- Afterwards it offers, y/N, to make the instance the default distribution — worth taking, since the default is otherwise whatever was installed first, frequently `docker-desktop`.
+- Images are published as Actions artifacts rather than release assets because they are ~5 GB against a 2 GB release-asset cap. Artifacts expire after 14 days, so if none is found, push to `master` or re-run the Docker workflow.
+- Unless `-NoLaunch` is passed, the import opens a shell, which is what triggers `/etc/oobe.sh`. That reads the Bitwarden API credentials from the Windows host's own `%USERPROFILE%\.secrets\.bwrc` over DrvFs and runs the privileged apply; it will ask for the vault master password. To re-run it later: `wsl -d regulad-<flavor> -u root -- /etc/oobe.sh`.
+
+`wsl-enter [fedora|ubuntu]` opens a shell in an already-deployed instance, in the directory you called it from:
+
+```console
+D:\repositories\foo> wsl-enter        # lands in /mnt/d/repositories/foo
+```
+
+It installs nothing and destroys nothing. Where the current directory is something WSL cannot see — a UNC path, a mapped network drive, or a non-filesystem PowerShell provider like `HKLM:` — it starts at `$HOME` and says so, rather than failing the launch and leaving you with no shell. `-NoCd` always starts at `$HOME`.
+
 ## TODOs
 
 - [x] Nt: Write NT self-bootstrapping script
@@ -121,3 +151,5 @@ Remember to define the package in the correct hookscript under `.chezmoiscripts/
 - [x] Nvim: Addl. language server configurations in nvim
 - [ ] Nvim: ensure that treesitter and vim-polyglot aren't clobbering each other
 - [x] Hook: Break java LTS and minimum fedora version into separate vars
+- [ ] Shell: direnv-style watcher script executor with script verification
+- [ ] WSL: IPv6 default route via a localhost-bound WireGuard server on the Windows side, with a host-deterministic ULA and NAT66. Mirrored networking was the only mode that gave WSL IPv6, and `.wslconfig` moved to NAT; NAT provides no routable IPv6 and there is no setting that adds it.

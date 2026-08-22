@@ -13,6 +13,7 @@ chezmoi-cd=cd /d "%USERPROFILE%\.local\share\chezmoi"
 cd~=cd /d "%USERPROFILE%"
 
 wsl-deploy=pwsh -NoProfile -File "%USERPROFILE%\.local\bin\wsl-deploy.ps1" $*
+wsl-enter=pwsh -NoProfile -File "%USERPROFILE%\.local\bin\wsl-enter.ps1" $*
 
 ssh-privpub=for %%f in ($*) do @(echo %%f | findstr /i ".pub$" >nul || (if exist "%%f" ssh-keygen -y -f "%%f" > "%%f.pub" 2>nul && echo %%f.pub))
 

@@ -62,6 +62,12 @@ APT_PACKAGES=(
 
 	# =+= UTILS
 	systemd  # provides utils even when in docker
+	# Replaces the old 10-autowatch.zsh chpwd hook, which sourced and eval'd a
+	# .watchrc out of whatever directory you cd'd into. direnv does the same job
+	# behind an explicit per-directory `direnv allow`, so cloning a repo that
+	# ships an .envrc no longer runs its contents. Hooked up in
+	# dot_config/zsh/10-direnv.zsh.
+	direnv
 	socat
 	inetutils-telnet
 	# iputils-ping, NOT inetutils-ping. Both provide the `ping` virtual package
@@ -74,6 +80,11 @@ APT_PACKAGES=(
 	inetutils-ftp
 	binutils
 	net-tools
+	# dig. `dnsutils` is only a transitional shim on resolute and pulls this in
+	# anyway, so depend on the real package. Note this ships dig and nslookup
+	# but NOT host, which Debian splits into bind9-host -- unlike the Fedora
+	# side, where bind-utils carries all three.
+	bind9-dnsutils
 	perl
 	sshpass
 	git

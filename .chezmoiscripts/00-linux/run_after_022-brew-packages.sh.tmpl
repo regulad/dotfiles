@@ -61,6 +61,10 @@ BREW_SYSTEM_PACKAGES=(
 	minicom
 
 	# =+= UTILS
+	# Bluefin's 04-packages.sh has no direnv, so unlike most of this section it
+	# really does have to come from brew. Only dependency is bash. Replaces the
+	# old 10-autowatch.zsh chpwd hook; see the note on the apt side.
+	direnv
 	socat
 	sshpass
 	git-lfs
@@ -133,6 +137,13 @@ BREW_SYSTEM_PACKAGES=(
 #   already installed by a later hookscript:
 #     nu (nushell) and golang, both in 030-brew-extras
 #   no usable brew formula:
+#     bind-utils (dig/host/nslookup) -- brew has no dig-only formula. The only
+#       one that ships dig is `bind`, the full ISC nameserver, which pulls in
+#       eight dependencies (jemalloc, json-c, libidn2, libnghttp2, libuv,
+#       openssl@3, readline, userspace-rcu) to get one query tool. Bluefin's
+#       04-packages.sh does not carry bind-utils either, so dig is genuinely
+#       absent on atomic hosts; `rpm-ostree install bind-utils` if it is ever
+#       needed there. The dnf and apt lists both have it.
 #     libolm (dropped from homebrew-core; deprecated upstream)
 #     nyx (formula deprecated, repo archived, no native bottle)
 #     device-mapper-devel / thin-provisioning-tools (not packaged by brew)

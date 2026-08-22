@@ -4,6 +4,11 @@ if ! [ "$CONTAINERIZED" -eq 1 ]; then
 	if systemctl --user is-system-running &>/dev/null || systemctl --user status &>/dev/null; then
 		systemctl --user enable --now tmux@default.socket
 		systemctl --user enable --now podman.socket
+		# NOTE: tailscale-ephemeral.service is deliberately NOT enabled here.
+		# It is shipped inside WSL as an option, not as a default: joining a
+		# tailnet is a side effect nobody should get merely from running an
+		# apply. Bring it up by hand when you want it:
+		#   systemctl --user enable --now tailscale-ephemeral.service
 		# syncthing runs on native GNU/Linux only -- intentionally not started
 		# inside WSL.
 		if [ "$IS_WSL" -eq 0 ]; then

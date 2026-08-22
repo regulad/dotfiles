@@ -1,0 +1,90 @@
+[Unit]
+Description=Join the tailnet as an ephemeral node
+Documentation=https://tailscale.com/kb/1111/ephemeral-nodes
+Documentation=https://tailscale.com/kb/1080/cli
+
+# Shipped but NOT enabled. 150-user-services.sh deliberately leaves this alone:
+# joining a tailnet is a side effect nobody should acquire just by running an
+# apply. It is here so that bringing the instance onto the tailnet is one
+# command rather than a research project:
+#
+#   systemctl --user enable --now tailscale-ephemeral.service
+#
+# and to take it back off:
+#
+#   systemctl --user disable --now tailscale-ephemeral.service
+#
+# The disable path logs out via ExecStop, so it really does leave the tailnet
+# rather than just stopping at the next boot.
+
+# Ships on disposable hosts only -- every container build, and WSL instances --
+# never on a hardware machine. A real machine's tailnet identity is long-lived
+# and set up out of band; re-registering it as a fresh ephemeral node each boot
+# would be wrong. Hardware hosts still get tailscale itself, just not this. The
+# scoping lives in .chezmoiignore.
+#
+# Within that scope the secret file, not the platform, is what decides whether
+# this unit does anything -- so it can ship inert into an image and be armed
+# later by an authenticated apply.
+#
+# ConditionFileNotEmpty rather than ConditionPathExists: "set" has to mean the
+# file has contents. An empty file is exactly what a half-finished or dummy
+# apply leaves behind, and it would satisfy a mere existence check and then
+# fail at `tailscale up` with an unhelpful error about an empty auth key.
+#
+# A failed Condition skips the unit and reports success, which is the intent
+# here -- no key means nothing to do, not something broken. Use an Assert
+# instead if a missing key should ever become a loud failure.
+ConditionFileNotEmpty=%h/.secrets/tailscale-authkey
+
+# Deliberately no After=tailscaled.service. This is a --user unit and that is a
+# *system* unit; ordering between the two managers is not expressible, and
+# writing it anyway silently does nothing. The ExecStartPre below is the real
+# synchronisation.
+
+[Service]
+Type=oneshot
+# The join outlives the process that performed it, so the unit has to stay
+# "active" for ExecStop -- and therefore the logout -- to ever fire.
+RemainAfterExit=yes
+
+# tailscaled is started by the system manager, and the user manager reaches
+# default.target quickly enough that its socket may not exist yet. Poll rather
+# than assume; 30s is far longer than it has ever taken in practice.
+ExecStartPre=/bin/sh -c 'for _ in $(seq 1 30); do [ -S /run/tailscale/tailscaled.sock ] && exit 0; sleep 1; done; echo "tailscaled socket never appeared" >&2; exit 1'
+
+# --auth-key=file: rather than passing the key itself. tailscale reads the path
+# and trims it, so the secret never appears in argv, where every other user on
+# the system could read it out of ps. Same reasoning as the inner script in
+# .github/wsl/oobe.sh.
+#
+# There is no --ephemeral flag: whether the node is ephemeral is a property of
+# the key, set when it is minted in the admin console. The Bitwarden field this
+# is templated from must therefore hold an *ephemeral* key, or this quietly
+# registers a permanent node instead.
+#
+# --accept-dns=false because WSL owns /etc/resolv.conf here. wsl.conf sets
+# [network] generateResolvConf=true and the image masks systemd-resolved
+# precisely so nothing else fights over that file; letting tailscale push DNS
+# config would re-open exactly that fight. The cost is no MagicDNS resolution
+# from inside the distro.
+#
+# --hostname: without it the node registers under the OS hostname, which inside
+# WSL is the *Windows* machine name -- colliding with the host's own tailscale
+# node and getting silently deduplicated to <name>-1. The "-ephemeral" suffix
+# is deliberately not "-wsl": this unit ships in every build, and in a container
+# %H is the container's own hostname, where a WSL label would be a lie.
+#
+# This does not disambiguate two ephemeral nodes sharing one %H -- two WSL
+# distros on the same Windows host, or two containers run with --hostname the
+# same. Tailscale dedups those to <name>-1, which is ugly but not wrong, and
+# they are ephemeral so they do not accumulate.
+ExecStart=/usr/bin/tailscale up --auth-key=file:%h/.secrets/tailscale-authkey --hostname=%H-ephemeral --accept-dns=false
+
+# Ephemeral nodes are reaped by the coordination server once they go offline,
+# but only after a timeout. Logging out on stop removes this one promptly and
+# keeps `tailscale status` on the tailnet honest across WSL restarts.
+ExecStop=/usr/bin/tailscale logout
+
+[Install]
+WantedBy=default.target
