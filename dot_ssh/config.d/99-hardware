@@ -1,3 +1,5 @@
+# gonkputer
+
 Host prodingus
     HostName prodingus.tail11540.ts.net
     User root
@@ -8,3 +10,7 @@ Host turk
 
 Host overture
     HostName overture.tail11540.ts.net
+
+# mobile
+Host longitude
+    HostName longitude.tail11540.ts.net
