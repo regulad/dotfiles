@@ -66,6 +66,8 @@ if errorlevel 1 (
 )
 
 set user_packages=^
+tesseract ^
+tesseract-languages ^
 cmake ^
 make ^
 whisper-cpp ^
