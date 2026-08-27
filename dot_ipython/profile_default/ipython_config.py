@@ -261,7 +261,7 @@ c = get_config()  # noqa
 
 ## Whether to display a banner upon starting IPython.
 #  Default: True
-# c.TerminalIPythonApp.display_banner = True
+c.TerminalIPythonApp.display_banner = False
 
 ## Run the file referenced by the PYTHONSTARTUP environment
 #  See also: InteractiveShellApp.exec_PYTHONSTARTUP
@@ -416,7 +416,7 @@ c = get_config()  # noqa
 
 ## Enable magic commands to be called without the leading %.
 #  Default: True
-# c.InteractiveShell.automagic = True
+c.InteractiveShell.automagic = False
 
 ## The part of the banner to be printed before the profile
 #  Default: "Python 3.12.3 (main, Jan  8 2026, 11:30:50) [GCC 13.3.0]\nType 'copyright', 'credits' or 'license' for more information\nIPython 9.9.0 -- An enhanced Interactive Python. Type '?' for help.\n"
@@ -550,11 +550,11 @@ c.InteractiveShell.logstart = True
 ## Automatically add/delete closing bracket or quote when opening bracket or
 #  quote is entered/deleted. Brackets: (), [], {} Quotes: '', ""
 #  Default: False
-# c.TerminalInteractiveShell.auto_match = False
+c.TerminalInteractiveShell.auto_match = True
 
 ##
 #  See also: InteractiveShell.autoawait
-# c.TerminalInteractiveShell.autoawait = True
+c.TerminalInteractiveShell.autoawait = False
 
 ##
 #  See also: InteractiveShell.autocall
@@ -570,7 +570,7 @@ c.InteractiveShell.logstart = True
 
 ##
 #  See also: InteractiveShell.automagic
-# c.TerminalInteractiveShell.automagic = True
+c.TerminalInteractiveShell.automagic = False
 
 ## Specifies from which source automatic suggestions are provided. Can be set to
 #  ``'NavigableAutoSuggestFromHistory'`` (:kbd:`up` and :kbd:`down` swap
@@ -621,7 +621,7 @@ c.InteractiveShell.logstart = True
 
 ## Shortcut style to use at the prompt. 'vi' or 'emacs'.
 #  Default: 'emacs'
-# c.TerminalInteractiveShell.editing_mode = 'emacs'
+c.TerminalInteractiveShell.editing_mode = "vi"
 
 ## Set the editor used by IPython (default to $EDITOR/vi/notepad).
 #  Default: 'vi'
@@ -629,7 +629,7 @@ c.InteractiveShell.logstart = True
 
 ## Add shortcuts from 'emacs' insert mode to 'vi' insert mode.
 #  Default: True
-# c.TerminalInteractiveShell.emacs_bindings_in_vi_insert_mode = True
+c.TerminalInteractiveShell.emacs_bindings_in_vi_insert_mode = False
 
 ## Allows to enable/disable the prompt toolkit history search
 #  Default: True
