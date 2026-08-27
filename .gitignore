@@ -2,3 +2,8 @@ __pycache__/
 *.tmp
 id_rsa
 id_ed25519
+
+# Claude Code's per-machine permission allowlist. Shared project settings
+# belong in .claude/settings.json; this one accumulates whatever the local
+# session happened to approve.
+.claude/settings.local.json
