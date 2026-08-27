@@ -1,0 +1,52 @@
+{{ template "posix-preamble.sh" . }}
+# run_onchange_ (like the CA scripts): chezmoi re-runs a script whose *rendered*
+# contents differ from what this filename last ran successfully, so the digest
+# below is the trigger -- edit dot_firefox-policies.json and the deployment
+# re-runs; an otherwise unchanged apply skips it and never asks for sudo.
+#
+# run_once_ would not do: it keys on the content digest alone with no filename,
+# so any block it has *ever* run successfully never runs again. Reverting a
+# policy edit reproduces an already-seen block and would silently deploy
+# nothing.
+#
+# Policy source digest:
+#     dot_firefox-policies.json {{ include "dot_firefox-policies.json" | sha256sum }}
+#
+# macOS has no system-wide policies.json path -- unlike Linux, which also reads
+# /etc/firefox/policies, the only location Mozilla supports here is the copy
+# inside the app bundle. It lives under the cask-installed Firefox.app from
+# 040-macos-casks, and Firefox's own updater can replace the bundle out from
+# under this, so a re-apply after an update puts it back.
+SRC="$HOME/.firefox-policies.json"
+FIREFOX_APP="/Applications/Firefox.app"
+DEST="$FIREFOX_APP/Contents/Resources/distribution/policies.json"
+
+if [ ! -f "$SRC" ]; then
+	echo "warning: $SRC not found, skipping firefox policy deployment" >&2
+elif [ ! -d "$FIREFOX_APP" ]; then
+	echo "note: $FIREFOX_APP not found, skipping policy deployment" >&2
+elif cmp -s "$SRC" "$DEST"; then
+	# Answered before sudo is touched: on a machine that has been applied to
+	# before this is already true, and the old ordering prompted for a password
+	# just to discover there was nothing to do.
+	echo "note: firefox policies already up to date" >&2
+elif can_sudo; then
+	# `install -D` is a GNU extension that BSD install does not have, so the
+	# directory is created separately rather than by the copy itself.
+	sudo mkdir -p "$(dirname "$DEST")"
+	sudo cp "$SRC" "$DEST"
+	echo "note: deployed firefox policies to $DEST" >&2
+else
+	# Exiting non-zero is the point: chezmoi keys a run_onchange_ script on its
+	# rendered contents, and those do not change just because sudo happened to
+	# be unavailable. Returning 0 after skipping the write would record this
+	# script as having succeeded, and the stale policies.json would then never
+	# be revisited on any later apply.
+	#
+	# Worth knowing when this fires: can_sudo probes with `sudo -l &>/dev/null`,
+	# which suppresses the password prompt along with everything else, so an
+	# expired sudo timestamp looks like a silent skip rather than a prompt. Run
+	# `sudo -v` before the apply to avoid it.
+	echo "error: sudo required to write $DEST; re-run once sudo is available" >&2
+	exit 1
+fi

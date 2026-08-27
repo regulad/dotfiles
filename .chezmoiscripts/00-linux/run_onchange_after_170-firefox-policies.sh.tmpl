@@ -1,0 +1,101 @@
+{{ template "posix-preamble.sh" . }}
+# run_onchange_ (like the CA scripts): chezmoi re-runs a script whose *rendered*
+# contents differ from what this filename last ran successfully, so the digest
+# below is the trigger -- edit dot_firefox-policies.json and the deployment
+# re-runs; an otherwise unchanged apply skips it and never asks for sudo.
+#
+# run_once_ would not do: it keys on the content digest alone with no filename,
+# so any block it has *ever* run successfully never runs again. Reverting a
+# policy edit reproduces an already-seen block and would silently deploy
+# nothing.
+#
+# Policy source digest:
+#     dot_firefox-policies.json {{ include "dot_firefox-policies.json" | sha256sum }}
+#
+SRC="$HOME/.firefox-policies.json"
+
+if [ ! -f "$SRC" ]; then
+	echo "warning: $SRC not found, skipping firefox policy deployment" >&2
+	exit 0
+fi
+
+# Native builds (rpm/deb/tarball) read /etc/firefox/policies/policies.json
+# whatever their install prefix -- Firefox checks that path in addition to
+# <installdir>/distribution on Linux specifically, so there is no per-distro
+# casing to do. Claimed only when a native build actually exists: on a
+# Flatpak-only host (this one) writing it would create a policy directory for a
+# browser that isn't installed, and cost a sudo prompt to do it.
+POLICY_PATHS=()
+if command -v firefox &>/dev/null; then
+	POLICY_PATHS+=(/etc/firefox/policies/policies.json)
+fi
+
+# The Flatpak build is sandboxed away from /etc and reads /app/etc/firefox
+# instead, which the host fills via an extension named
+# org.mozilla.firefox.systemconfig. Nothing has to be `flatpak install`ed for
+# this -- the directory is created by hand and mounted in if present -- but its
+# path is keyed by the arch and branch of the installed build, so ask flatpak
+# rather than assuming x86_64/stable.
+if command -v flatpak &>/dev/null; then
+	while IFS=$'\t' read -r arch branch installation; do
+		if [ "$installation" = "user" ]; then
+			FLATPAK_ROOT="$HOME/.local/share/flatpak"
+		else
+			FLATPAK_ROOT="/var/lib/flatpak"
+		fi
+		POLICY_PATHS+=("$FLATPAK_ROOT/extension/org.mozilla.firefox.systemconfig/$arch/$branch/policies/policies.json")
+	done < <(flatpak list --app --columns=application,arch,branch,installation 2>/dev/null |
+		awk -F'\t' '$1 == "org.mozilla.firefox" { print $2 "\t" $3 "\t" $4 }')
+fi
+
+if [ "${#POLICY_PATHS[@]}" -eq 0 ]; then
+	echo "note: no firefox installation found, skipping policy deployment" >&2
+	exit 0
+fi
+
+# Which destinations are already correct is answerable without any privileges,
+# and on a machine that has been applied to before the answer is "all of them".
+# Work that out first and reach for sudo only if there is something to write --
+# same ordering, and the same reason, as 140-ca-certs.
+STALE_PATHS=()
+for POLICY_PATH in "${POLICY_PATHS[@]}"; do
+	cmp -s "$SRC" "$POLICY_PATH" || STALE_PATHS+=("$POLICY_PATH")
+done
+
+if [ "${#STALE_PATHS[@]}" -eq 0 ]; then
+	echo "note: firefox policies already up to date" >&2
+fi
+
+DEPLOY_FAILED=0
+for POLICY_PATH in "${STALE_PATHS[@]}"; do
+	# A --user flatpak keeps its extension directory under $HOME, where writing
+	# as root would leave root-owned files in the user's own tree. Every other
+	# destination here is system-owned and needs sudo.
+	if [[ "$POLICY_PATH" == "$HOME/"* ]]; then
+		mkdir -p "$(dirname "$POLICY_PATH")"
+		cp "$SRC" "$POLICY_PATH"
+	elif can_sudo; then
+		sudo mkdir -p "$(dirname "$POLICY_PATH")"
+		sudo cp "$SRC" "$POLICY_PATH"
+	else
+		echo "warning: sudo required to write $POLICY_PATH, skipping" >&2
+		DEPLOY_FAILED=1
+		continue
+	fi
+	echo "note: deployed firefox policies to $POLICY_PATH" >&2
+done
+
+# Exiting non-zero is the point: chezmoi keys a run_onchange_ script on its
+# rendered contents, and those do not change just because sudo happened to be
+# unavailable. Returning 0 after skipping a write would record this script as
+# having succeeded, and the stale policies.json would then never be revisited
+# on any later apply -- silently, and for as long as the source file stays put.
+#
+# Worth knowing when this fires: can_sudo probes with `sudo -l &>/dev/null`,
+# which suppresses the password prompt along with everything else, so an
+# expired sudo timestamp looks like a silent skip rather than a prompt. Run
+# `sudo -v` before the apply to avoid it.
+if [ "$DEPLOY_FAILED" -eq 1 ]; then
+	echo "error: firefox policies not fully deployed; re-run once sudo is available" >&2
+	exit 1
+fi

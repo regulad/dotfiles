@@ -1,0 +1,72 @@
+{{ template "posix-preamble.sh" . }}
+# Firefox keeps its own NSS database inside each profile and never reads
+# ~/.pki/nssdb, so the import 141-client-cert does covers Chrome and leaves
+# Firefox without the certificate entirely. There is no OS keystore to fall
+# back on here either: security.osclientcerts.autoload (set in
+# dot_firefox-policies.json) picks the identity straight out of the Windows
+# "My" store and the macOS keychain that 021-x509-client and 141-client-cert
+# already populate, but the osclientcerts module has no GNU/Linux backend. So
+# on this platform the .p12 has to be pushed into each profile's cert9.db.
+#
+# run_after_, not run_onchange_ on the .p12 digest like its 141 sibling: the
+# destinations are Firefox *profiles*, which Firefox creates on first launch,
+# entirely outside chezmoi's knowledge. Keying on the certificate would mean a
+# fresh box never imports anything -- apply (no profile yet), launch Firefox
+# (profile appears), apply again (digest unchanged, script skipped). Importing
+# is cheap and idempotent, so this just runs every time instead.
+CLIENT_P12="$HOME/.x509/client/dotfiles.p12"
+
+if [ ! -f "$CLIENT_P12" ]; then
+	echo "warning: $CLIENT_P12 not found, skipping firefox client cert import" >&2
+	exit 0
+fi
+
+if ! command -v pk12util &>/dev/null; then
+	echo "error: pk12util not available, can't import client certificate" >&2
+	exit 1
+fi
+
+# Native and Flatpak Firefox keep completely separate profile trees and a host
+# can have either or both -- and each of those has two possible locations,
+# because Firefox now honours the XDG base directory spec and puts profiles in
+# $XDG_CONFIG_HOME/mozilla/firefox rather than the legacy ~/.mozilla/firefox.
+# Both are checked: which one is live depends on the Firefox version and on
+# MOZ_LEGACY_HOME, and a profile migrated from an older install can sit in
+# either.
+#
+# The Flatpak's own paths are not $XDG_CONFIG_HOME-derived from this shell's
+# environment. Inside the sandbox $HOME is ~/.var/app/org.mozilla.firefox and
+# XDG_CONFIG_HOME is that directory's config/ subdirectory, so its XDG profile
+# root is config/mozilla/firefox -- which is where a current Flatpak Firefox
+# actually lands, leaving the legacy .mozilla/firefox path empty.
+#
+# Profiles are matched by the presence of cert9.db rather than by name: the
+# .default-release convention is not guaranteed, cert9.db is both the marker of
+# a genuinely initialised profile and the file being written to (pk12util
+# cannot create the database itself), and matching on it skips the
+# non-profile siblings Firefox keeps alongside them -- "Crash Reports",
+# "Pending Pings", "Profile Groups" -- as well as the placeholder .default
+# profile that a fresh install creates but never populates.
+PROFILE_DIRS=()
+for PROFILE_ROOT in \
+	"$HOME/.mozilla/firefox" \
+	"${XDG_CONFIG_HOME:-$HOME/.config}/mozilla/firefox" \
+	"$HOME/.var/app/org.mozilla.firefox/.mozilla/firefox" \
+	"$HOME/.var/app/org.mozilla.firefox/config/mozilla/firefox"; do
+	[ -d "$PROFILE_ROOT" ] || continue
+	while IFS= read -r PROFILE_DIR; do
+		PROFILE_DIRS+=("$PROFILE_DIR")
+	done < <(find "$PROFILE_ROOT" -mindepth 2 -maxdepth 2 -name cert9.db -printf '%h\n' 2>/dev/null)
+done
+
+if [ "${#PROFILE_DIRS[@]}" -eq 0 ]; then
+	echo "note: no firefox profiles found; launch firefox once, then re-apply" >&2
+	exit 0
+fi
+
+for PROFILE_DIR in "${PROFILE_DIRS[@]}"; do
+	# Re-importing a cert+key already in the database is a verified no-op
+	# (exit 0, no output), the same property 141-client-cert relies on.
+	pk12util -d "sql:$PROFILE_DIR" -i "$CLIENT_P12" -W ""
+	echo "note: imported client certificate into $PROFILE_DIR" >&2
+done
