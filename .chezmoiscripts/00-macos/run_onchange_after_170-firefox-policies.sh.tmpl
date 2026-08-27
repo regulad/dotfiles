@@ -1,31 +1,33 @@
 {{ template "posix-preamble.sh" . }}
-# run_onchange_ (like the CA scripts): chezmoi re-runs a script whose *rendered*
-# contents differ from what this filename last ran successfully, so the digest
-# below is the trigger -- edit dot_firefox-policies.json and the deployment
+# run_onchange_: chezmoi re-runs a script whose *rendered* contents differ from
+# what this filename last ran successfully. The policy document is written
+# inline below rather than deployed as its own dotfile, so the trigger is the
+# policy itself -- edit .chezmoitemplates/firefox-policies.json and this
 # re-runs; an otherwise unchanged apply skips it and never asks for sudo.
 #
-# run_once_ would not do: it keys on the content digest alone with no filename,
-# so any block it has *ever* run successfully never runs again. Reverting a
-# policy edit reproduces an already-seen block and would silently deploy
-# nothing.
-#
-# Policy source digest:
-#     dot_firefox-policies.json {{ include "dot_firefox-policies.json" | sha256sum }}
+# That inlining is also why there is no `{{ "{{" }} include ... | sha256sum {{ "}}" }}` digest
+# comment here like the CA scripts carry. Those install a file that lives in
+# the destination in its own right, so they need something to hash; this one
+# has nothing to point at, and hashing the text would only restate what the
+# text already changes.
 #
 # macOS has no system-wide policies.json path -- unlike Linux, which also reads
 # /etc/firefox/policies, the only location Mozilla supports here is the copy
 # inside the app bundle. It lives under the cask-installed Firefox.app from
 # 040-macos-casks, and Firefox's own updater can replace the bundle out from
 # under this, so a re-apply after an update puts it back.
-SRC="$HOME/.firefox-policies.json"
+POLICY_JSON="$(mktemp)"
+trap 'rm -f "$POLICY_JSON"' EXIT
+cat >"$POLICY_JSON" <<'FIREFOX_POLICIES_JSON'
+{{ template "firefox-policies.json" . }}
+FIREFOX_POLICIES_JSON
+
 FIREFOX_APP="/Applications/Firefox.app"
 DEST="$FIREFOX_APP/Contents/Resources/distribution/policies.json"
 
-if [ ! -f "$SRC" ]; then
-	echo "warning: $SRC not found, skipping firefox policy deployment" >&2
-elif [ ! -d "$FIREFOX_APP" ]; then
+if [ ! -d "$FIREFOX_APP" ]; then
 	echo "note: $FIREFOX_APP not found, skipping policy deployment" >&2
-elif cmp -s "$SRC" "$DEST"; then
+elif cmp -s "$POLICY_JSON" "$DEST"; then
 	# Answered before sudo is touched: on a machine that has been applied to
 	# before this is already true, and the old ordering prompted for a password
 	# just to discover there was nothing to do.
@@ -33,8 +35,13 @@ elif cmp -s "$SRC" "$DEST"; then
 elif can_sudo; then
 	# `install -D` is a GNU extension that BSD install does not have, so the
 	# directory is created separately rather than by the copy itself.
+	#
+	# chmod is not optional: mktemp creates at 0600 and cp takes its mode from
+	# the source, which would leave a policies.json only root can read -- and
+	# Firefox reads it as the browsing user.
 	sudo mkdir -p "$(dirname "$DEST")"
-	sudo cp "$SRC" "$DEST"
+	sudo cp "$POLICY_JSON" "$DEST"
+	sudo chmod 0644 "$DEST"
 	echo "note: deployed firefox policies to $DEST" >&2
 else
 	# Exiting non-zero is the point: chezmoi keys a run_onchange_ script on its

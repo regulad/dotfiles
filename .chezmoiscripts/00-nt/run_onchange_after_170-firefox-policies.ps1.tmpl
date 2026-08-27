@@ -1,0 +1,74 @@
+# run_onchange_: chezmoi re-runs a script whose *rendered* contents differ from
+# what this filename last ran successfully. The policy document is written
+# inline below rather than deployed as its own dotfile, so the trigger is the
+# policy itself -- edit .chezmoitemplates/firefox-policies.json and this
+# re-runs; an otherwise unchanged apply skips it and never raises a UAC prompt.
+#
+# That inlining is also why there is no `{{ "{{" }} include ... | sha256sum {{ "}}" }}` digest
+# comment here like the x509 scripts carry. Those install a file that lives in
+# the destination in its own right, so they need something to hash; this one
+# has nothing to point at, and hashing the text would only restate what the
+# text already changes.
+#
+# PowerShell rather than the .cmd this replaced: cmd has no heredoc, and
+# emitting a JSON document through a run of `echo` lines means escaping cmd's
+# metacharacters by hand and losing the indentation. PowerShell here-strings
+# take the text verbatim, and 050-dev-drive.ps1 / 700-out-of-band-appx.ps1
+# already establish .ps1 as a shape the NT scripts come in.
+#
+# Windows has no system-wide policies.json path outside the registry; the only
+# file location Mozilla supports is a distribution\policies.json next to
+# firefox.exe, in the install winget laid down in 100-winget.
+
+$PolicyJson = @'
+{{ template "firefox-policies.json" . }}
+'@
+
+$FirefoxDir = $null
+foreach ($Candidate in @("$env:ProgramFiles\Mozilla Firefox", "${env:ProgramFiles(x86)}\Mozilla Firefox")) {
+    if (Test-Path -LiteralPath (Join-Path $Candidate 'firefox.exe')) { $FirefoxDir = $Candidate }
+}
+if (-not $FirefoxDir) {
+    Write-Host 'note: firefox not found under Program Files, skipping policy deployment'
+    exit 0
+}
+
+$DistDir = Join-Path $FirefoxDir 'distribution'
+$Dest = Join-Path $DistDir 'policies.json'
+
+$Tmp = [System.IO.Path]::GetTempFileName()
+try {
+    # UTF-8 *without* a BOM, explicitly: Mozilla requires policies.json to be
+    # UTF-8, and Firefox's parser rejects the file outright if a BOM is present.
+    # PowerShell 5's Out-File/Set-Content would happily write one.
+    $Utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($Tmp, $PolicyJson + "`r`n", $Utf8NoBom)
+
+    # Compared before sudo is touched, so an up-to-date machine doesn't raise a
+    # UAC prompt only to discover it had nothing to do. Reading Program Files
+    # needs no elevation.
+    $Current = if (Test-Path -LiteralPath $Dest) { (Get-FileHash -LiteralPath $Dest -Algorithm SHA256).Hash } else { '' }
+    $Wanted = (Get-FileHash -LiteralPath $Tmp -Algorithm SHA256).Hash
+    if ($Current -eq $Wanted) {
+        Write-Host 'note: firefox policies already up to date'
+        exit 0
+    }
+
+    Write-Host "debug: deploying firefox policies to $Dest"
+    # Invoked through the call operator with separate arguments, so PowerShell
+    # does the quoting; the inner -Command string uses single quotes around the
+    # paths and therefore never nests a double quote inside a double quote.
+    & sudo powershell -NoProfile -NonInteractive -Command "New-Item -ItemType Directory -Force -Path '$DistDir' | Out-Null; Copy-Item -LiteralPath '$Tmp' -Destination '$Dest' -Force"
+
+    # sudo is pinned to Force New Window mode on this machine (see
+    # 030-w32time.cmd) and reports success unconditionally, so the copy is
+    # verified by reading it back rather than by trusting the exit code.
+    $Written = if (Test-Path -LiteralPath $Dest) { (Get-FileHash -LiteralPath $Dest -Algorithm SHA256).Hash } else { '' }
+    if ($Written -ne $Wanted) {
+        Write-Error 'firefox policy deployment did not apply -- was the elevation prompt declined?'
+        exit 1
+    }
+}
+finally {
+    Remove-Item -LiteralPath $Tmp -Force -ErrorAction SilentlyContinue
+}

@@ -1,30 +1,32 @@
 {{ template "posix-preamble.sh" . }}
-# run_onchange_ (like the CA scripts): chezmoi re-runs a script whose *rendered*
-# contents differ from what this filename last ran successfully, so the digest
-# below is the trigger -- edit dot_firefox-policies.json and the deployment
+# run_onchange_: chezmoi re-runs a script whose *rendered* contents differ from
+# what this filename last ran successfully. The policy document is written
+# inline below rather than deployed as its own dotfile, so the trigger is the
+# policy itself -- edit .chezmoitemplates/firefox-policies.json and this
 # re-runs; an otherwise unchanged apply skips it and never asks for sudo.
+#
+# That inlining is also why there is no `{{ "{{" }} include ... | sha256sum {{ "}}" }}` digest
+# comment here like the CA scripts carry. Those install a file that lives in
+# the destination in its own right, so they need something to hash; this one
+# has nothing to point at, and hashing the text would only restate what the
+# text already changes.
 #
 # run_once_ would not do: it keys on the content digest alone with no filename,
 # so any block it has *ever* run successfully never runs again. Reverting a
 # policy edit reproduces an already-seen block and would silently deploy
 # nothing.
-#
-# Policy source digest:
-#     dot_firefox-policies.json {{ include "dot_firefox-policies.json" | sha256sum }}
-#
-SRC="$HOME/.firefox-policies.json"
-
-if [ ! -f "$SRC" ]; then
-	echo "warning: $SRC not found, skipping firefox policy deployment" >&2
-	exit 0
-fi
+POLICY_JSON="$(mktemp)"
+trap 'rm -f "$POLICY_JSON"' EXIT
+cat >"$POLICY_JSON" <<'FIREFOX_POLICIES_JSON'
+{{ template "firefox-policies.json" . }}
+FIREFOX_POLICIES_JSON
 
 # Native builds (rpm/deb/tarball) read /etc/firefox/policies/policies.json
 # whatever their install prefix -- Firefox checks that path in addition to
 # <installdir>/distribution on Linux specifically, so there is no per-distro
 # casing to do. Claimed only when a native build actually exists: on a
-# Flatpak-only host (this one) writing it would create a policy directory for a
-# browser that isn't installed, and cost a sudo prompt to do it.
+# Flatpak-only host writing it would create a policy directory for a browser
+# that isn't installed, and cost a sudo prompt to do it.
 POLICY_PATHS=()
 if command -v firefox &>/dev/null; then
 	POLICY_PATHS+=(/etc/firefox/policies/policies.json)
@@ -59,7 +61,7 @@ fi
 # same ordering, and the same reason, as 140-ca-certs.
 STALE_PATHS=()
 for POLICY_PATH in "${POLICY_PATHS[@]}"; do
-	cmp -s "$SRC" "$POLICY_PATH" || STALE_PATHS+=("$POLICY_PATH")
+	cmp -s "$POLICY_JSON" "$POLICY_PATH" || STALE_PATHS+=("$POLICY_PATH")
 done
 
 if [ "${#STALE_PATHS[@]}" -eq 0 ]; then
@@ -71,12 +73,18 @@ for POLICY_PATH in "${STALE_PATHS[@]}"; do
 	# A --user flatpak keeps its extension directory under $HOME, where writing
 	# as root would leave root-owned files in the user's own tree. Every other
 	# destination here is system-owned and needs sudo.
+	#
+	# chmod is not optional: mktemp creates at 0600 and cp takes its mode from
+	# the source, which would leave a policies.json only root can read -- and
+	# Firefox reads it as the browsing user.
 	if [[ "$POLICY_PATH" == "$HOME/"* ]]; then
 		mkdir -p "$(dirname "$POLICY_PATH")"
-		cp "$SRC" "$POLICY_PATH"
+		cp "$POLICY_JSON" "$POLICY_PATH"
+		chmod 0644 "$POLICY_PATH"
 	elif can_sudo; then
 		sudo mkdir -p "$(dirname "$POLICY_PATH")"
-		sudo cp "$SRC" "$POLICY_PATH"
+		sudo cp "$POLICY_JSON" "$POLICY_PATH"
+		sudo chmod 0644 "$POLICY_PATH"
 	else
 		echo "warning: sudo required to write $POLICY_PATH, skipping" >&2
 		DEPLOY_FAILED=1
@@ -89,7 +97,7 @@ done
 # rendered contents, and those do not change just because sudo happened to be
 # unavailable. Returning 0 after skipping a write would record this script as
 # having succeeded, and the stale policies.json would then never be revisited
-# on any later apply -- silently, and for as long as the source file stays put.
+# on any later apply -- silently, and for as long as the policy stays put.
 #
 # Worth knowing when this fires: can_sudo probes with `sudo -l &>/dev/null`,
 # which suppresses the password prompt along with everything else, so an

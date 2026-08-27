@@ -12,3 +12,12 @@
 # since ~/.config/zsh/*.zsh is glob-sourced by .zshrc and would still pick it
 # up. Safe to prune from this file once every machine has applied once.
 .config/zsh/10-autowatch.zsh
+
+# ~/.firefox-policies.json was only ever a staging copy: the 170-firefox-policies
+# scripts read it and wrote it out to wherever that host's Firefox actually
+# looks for policies.json. The document now lives in
+# .chezmoitemplates/firefox-policies.json and is emitted inline by those
+# scripts, so nothing reads this path any more -- but every machine that
+# applied before the move still has it sitting in $HOME. Safe to prune from
+# this file once every machine has applied once.
+.firefox-policies.json
