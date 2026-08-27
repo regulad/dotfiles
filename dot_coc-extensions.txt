@@ -1,0 +1,9 @@
+coc-json
+coc-tsserver
+coc-pyright
+coc-rust-analyzer
+coc-java
+coc-go
+coc-yaml
+coc-sh
+coc-solargraph

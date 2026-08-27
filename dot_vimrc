@@ -26,7 +26,15 @@ if !has("nvim")
     Plugin 'doums/darcula'
     Plugin 'andrejlevkovitch/vim-lua-format'
     Plugin 'rust-lang/rust.vim'
-    Plugin 'neoclide/coc.nvim', {'branch': 'release', 'do': 'npm ci'}
+    " No options here on purpose. Vundle reads exactly three -- 'rtp', 'name'
+    " and 'pinned' (:h vundle-plugins-configure) -- so the
+    " {'branch': 'release', 'do': 'npm ci'} this used to carry was accepted,
+    " merged into the bundle dict, and then never looked at by the installer.
+    " Vundle cloned coc's default branch, which ships TypeScript sources and no
+    " build/index.js, so coc never started. The release branch (and the coc
+    " extensions) are placed by the vim-plugins bootstrap script instead;
+    " Vundle leaves an already-populated bundle directory alone.
+    Plugin 'neoclide/coc.nvim'
     " All of your Plugins must be added before the following line
     call vundle#end()            " required
     filetype plugin indent on    " required
@@ -73,7 +81,10 @@ autocmd BufWrite *.lua call LuaFormat()
 
 " Color
 if !exists('g:vscode')
-    colorscheme darcula
+    " silent!: darcula is itself a Vundle plugin, so before the bootstrap
+    " script has run this is an E185 and a "Press ENTER" prompt on every
+    " launch -- including the headless ones the bootstrap uses to install it.
+    silent! colorscheme darcula
     set termguicolors
     set tabstop=8
     if !has("nvim")
@@ -99,5 +110,8 @@ endif
 if has("nvim")
     setlocal spell spelllang=en_us
 else
-    set clipboard+=unnamedplus
+    " ^= not += because the X11 default ends in "exclude:", after which nothing
+    " can be appended.  Builds without +clipboard drop this again once
+    " v:clipmethod is resolved; ~/.vim/plugin/clipboard.vim restores it.
+    set clipboard^=unnamedplus
 end

@@ -1,0 +1,126 @@
+@echo off
+REM Windows half of the vim plugin bootstrap. The reasoning -- why Vundle has to
+REM be cloned from out here, and why coc.nvim has to be pinned to its release
+REM branch rather than declared with a {'branch': ...} Vundle never reads -- is
+REM written out once in .chezmoitemplates/vim-plugins.sh; this is the same three
+REM steps against the same paths.
+REM
+REM Vundle hardcodes $HOME/.vim/bundle on every platform (autoload/vundle.vim),
+REM so this is %USERPROFILE%\.vim, NOT the vimfiles tree Vim would otherwise use
+REM on Windows.
+REM
+REM Re-run whenever the Plugin list or the coc extension list changes:
+REM {{ include "dot_vimrc" | sha256sum }}
+REM {{ include "dot_coc-extensions.txt" | sha256sum }}
+
+setlocal enabledelayedexpansion
+
+set "BUNDLE_DIR=%USERPROFILE%\.vim\bundle"
+set "VIMRC=%USERPROFILE%\.vimrc"
+set "COC_EXTENSIONS_FILE=%USERPROFILE%\.coc-extensions.txt"
+
+where vim >nul 2>nul
+if errorlevel 1 (
+    echo note: vim is not installed, skipping vim plugin bootstrap 1>&2
+    exit /b 0
+)
+
+where git >nul 2>nul
+if errorlevel 1 (
+    echo error: git not found in PATH 1>&2
+    exit /b 1
+)
+
+if not exist "%BUNDLE_DIR%" mkdir "%BUNDLE_DIR%"
+
+call :sync https://github.com/VundleVim/Vundle.vim.git "%BUNDLE_DIR%\Vundle.vim" master
+call :sync https://github.com/neoclide/coc.nvim.git "%BUNDLE_DIR%\coc.nvim" release
+
+REM Plain :PluginInstall (no bang) clones what is missing and leaves existing
+REM checkouts alone, which is what keeps the coc.nvim pin above intact. -E -s is
+REM required: a normal-mode headless Vim stops on the startup "Press ENTER"
+REM prompt and never reaches the queued -c commands. Vundle exits non-zero from
+REM ex mode even on success, so the result is judged by what is on disk.
+echo note: installing vim plugins with Vundle 1>&2
+vim -E -s -N -u "%VIMRC%" -c "PluginInstall" -c "qall!" <nul >nul 2>nul
+
+for %%R in (Vundle.vim coc.nvim darcula) do (
+    if not exist "%BUNDLE_DIR%\%%R" echo warning: %%R missing from %BUNDLE_DIR% after :PluginInstall 1>&2
+)
+
+REM coc.nvim's extensions are npm packages installed through its node host, so
+REM without node there is nothing to install them with.
+where node >nul 2>nul
+if errorlevel 1 (
+    echo warning: node not found, so coc.nvim has no extension host; skipping :CocInstall 1>&2
+    exit /b 0
+)
+
+REM Bail rather than carry on with an empty list: zero entries here would read
+REM to the prune below as "nothing is wanted" and uninstall every extension coc
+REM has.
+if not exist "%COC_EXTENSIONS_FILE%" (
+    echo error: %COC_EXTENSIONS_FILE% is missing; refusing to prune coc extensions against an empty list 1>&2
+    exit /b 1
+)
+
+set "COC_WANTED="
+for /F "usebackq tokens=* delims=" %%A in ("%COC_EXTENSIONS_FILE%") do (
+    if not "%%A"=="" set "COC_WANTED=!COC_WANTED! %%A"
+)
+
+if defined COC_WANTED (
+    REM -sync so the download finishes before Vim exits; :CocInstall is
+    REM otherwise fire-and-forget and qall! would kill it mid-flight.
+    echo note: installing coc extensions:!COC_WANTED! 1>&2
+    vim -E -s -N -u "%VIMRC%" -c "CocInstall -sync!COC_WANTED!" -c "qall!" <nul >nul 2>nul
+)
+
+REM Uninstall anything coc is carrying that the list no longer asks for, so
+REM dot_coc-extensions.txt is the whole truth rather than an append-only
+REM wishlist -- same contract as dot_vscode-extensions.txt.
+REM
+REM Done by hand because coc has no headless uninstall: :CocUninstall is
+REM CocActionAsync and qall! kills it mid-flight, and both CocAction() and the
+REM raw coc#rpc#request underneath it refuse to run until the node host sets
+REM g:coc_service_initialized, which only happens in an interactive session.
+REM This is what coc's own uninstallExtensions does in build/index.js -- delete
+REM the module directory, drop the dependency entry -- and coc rebuilds its
+REM extension set from package.json on the next start.
+REM
+REM Path mirrors coc#util#get_data_home() in autoload/coc/util.vim: it prefers
+REM %XDG_CONFIG_HOME%\coc when that points at a real directory, and falls back
+REM to ~/AppData/Local/coc on Windows rather than the ~/.config/coc used on unix.
+set "COC_DATA_HOME=%USERPROFILE%\AppData\Local\coc"
+if defined XDG_CONFIG_HOME if exist "%XDG_CONFIG_HOME%\" set "COC_DATA_HOME=%XDG_CONFIG_HOME%\coc"
+set "COC_PKG=%COC_DATA_HOME%\extensions\package.json"
+
+if exist "%COC_PKG%" (
+    set "COC_UNWANTED="
+    for /F "usebackq tokens=* delims=" %%B in (`node -e "var d=require(process.argv[1]).dependencies; if(d) for(var k in d) console.log(k);" "%COC_PKG%"`) do (
+        findstr /I /X /C:"%%B" "%COC_EXTENSIONS_FILE%" >nul 2>nul
+        if errorlevel 1 set "COC_UNWANTED=!COC_UNWANTED! %%B"
+    )
+    if defined COC_UNWANTED (
+        echo note: removing unlisted coc extensions:!COC_UNWANTED! 1>&2
+        for %%C in (!COC_UNWANTED!) do rd /s /q "!COC_DATA_HOME!\extensions\node_modules\%%C" 2>nul
+        node -e "var fs=require('fs'),p=process.argv[1],j=JSON.parse(fs.readFileSync(p,'utf8'));process.argv.slice(2).forEach(function(k){delete j.dependencies[k]});fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');" "!COC_PKG!" !COC_UNWANTED!
+    )
+)
+
+endlocal
+exit /b 0
+
+REM Clone %~1 at branch %~3 into %~2, or move an existing checkout onto that
+REM branch. The set-branches/fetch/checkout path is what repairs a coc.nvim left
+REM sitting on the unbuilt default branch, which a plain `git pull` would not.
+:sync
+if exist "%~2\.git" (
+    git -C "%~2" remote set-url origin %~1
+    git -C "%~2" remote set-branches origin %~3
+    git -C "%~2" fetch -q origin %~3
+    git -C "%~2" checkout -q -B %~3 origin/%~3
+) else (
+    git clone -q --branch %~3 --single-branch %~1 "%~2"
+)
+goto :eof

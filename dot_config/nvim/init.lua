@@ -106,13 +106,41 @@ else
     return nil
   end
 
+  -- Mirrors get_paste_cmd: prefer a native tool when the session owns a real
+  -- clipboard, and only fall back to OSC 52 when it doesn't (ssh, bare tty).
+  -- OSC 52 is not universally supported -- notably VTE (GNOME Terminal,
+  -- Ptyxis) ignores it -- so it must not be the local path.
   local function get_copy_cmd()
     --if vim.env.TMUX ~= nil then
     --  return { "tmux", "load-buffer", "-" }
 
     --else
-    if vim.env.PREFIX ~= nil and vim.fn.executable("termux-clipboard-set") == 1 then
+    if vim.fn.has("mac") == 1 then
+      return { "pbcopy" }
+
+    elseif vim.fn.has("wsl") == 1 then
+      return { "clip.exe" }
+
+    elseif vim.fn.has("win32") == 1 then
+      if vim.fn.executable("win32yank") == 1 then
+        return { "win32yank", "-i", "--crlf" }
+      end
+
+    elseif vim.env.PREFIX ~= nil and vim.fn.executable("termux-clipboard-set") == 1 then
+      -- PREFIX is set by Termux
       return { "termux-clipboard-set" }
+
+    elseif vim.env.WAYLAND_DISPLAY ~= nil then
+      if vim.fn.executable("wl-copy") == 1 then
+        return { "wl-copy", "--type", "text/plain" }
+      end
+
+    elseif vim.env.DISPLAY ~= nil then
+      if vim.fn.executable("xclip") == 1 then
+        return { "xclip", "-selection", "clipboard", "-i" }
+      elseif vim.fn.executable("xsel") == 1 then
+        return { "xsel", "--clipboard", "--input" }
+      end
     end
 
     return nil
@@ -141,7 +169,7 @@ else
   end
 
   vim.g.clipboard = {
-    name = "osc52-copy-native-paste",
+    name = "native-with-osc52-fallback",
     copy = {
       ["+"] = make_copy("+"),
       ["*"] = make_copy("*"),

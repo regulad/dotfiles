@@ -1,0 +1,6 @@
+{{ template "posix-preamble.sh" . }}
+# Re-run whenever the Plugin list or the coc extension list changes. The body
+# itself is inlined below, so edits to it retrigger this on their own.
+# {{ include "dot_vimrc" | sha256sum }}
+# {{ include "dot_coc-extensions.txt" | sha256sum }}
+{{ template "vim-plugins.sh" . }}
