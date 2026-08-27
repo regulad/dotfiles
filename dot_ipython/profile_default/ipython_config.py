@@ -775,7 +775,7 @@ c.TerminalInteractiveShell.emacs_bindings_in_vi_insert_mode = False
 # c.TerminalInteractiveShell.prompts_class = 'IPython.terminal.prompts.Prompts'
 
 #  See also: InteractiveShell.quiet
-# c.TerminalInteractiveShell.quiet = False
+c.TerminalInteractiveShell.quiet = True
 
 #  See also: InteractiveShell.separate_in
 # c.TerminalInteractiveShell.separate_in = '\n'
@@ -924,7 +924,7 @@ c.TerminalInteractiveShell.emacs_bindings_in_vi_insert_mode = False
 #
 #              printf "\x1b[38;2;255;100;0mTRUECOLOR\x1b[0m\n"
 #  Default: False
-# c.TerminalInteractiveShell.true_color = False
+c.TerminalInteractiveShell.true_color = False
 
 ## The time in milliseconds that is waited for a key code
 #         to complete.
