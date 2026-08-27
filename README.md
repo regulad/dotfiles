@@ -118,7 +118,7 @@ Two things it will not do for you:
 - **macOS needs the full Xcode**, not the Command Line Tools — Theos builds against the iOS/tvOS platform toolchains that only Xcode.app ships. Nothing here can install it (there is no cask, and `mas` cannot drive it), so an apply on a Mac without `/Applications/Xcode.app` warns and skips.
 - **The Linux toolchain is the non-Swift one.** The installer asks, interactively; the hook answers no via `$CI` so an unattended apply doesn't hang, which gets the smaller and better-maintained L1ghtmann `iOSToolchain`. For Swift, remove `$THEOS/toolchain/linux/iphone` and run `bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"` by hand.
 
-Skipped on atomic hosts (the installer's `dnf` transaction can't write to a read-only `/usr`) and in containers (a toolchain plus the patched SDKs is gigabytes of image, same call as VSCode above).
+Skipped on atomic hosts, where the installer's `dnf` transaction can't write to a read-only `/usr`. Containers are *not* excluded — the images are somewhere tweaks get built, so they carry the toolchain like anything else.
 
 ### Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever
 

@@ -47,15 +47,9 @@ theos_skip() {
 }
 
 theos_supported() {
-	if [ "$CONTAINERIZED" -eq 1 ]; then
-		# Same reasoning as the VSCode rule in .chezmoiignore: the published
-		# images run a full apply at build time, and a toolchain plus the
-		# patched SDKs is a few gigabytes of image for a thing nobody is going
-		# to build tweaks in from a container.
-		theos_skip "containerized host"
-		return 1
-	fi
-
+	# Deliberately NOT gated on CONTAINERIZED. The published images are a place
+	# tweaks get built, not just a place a shell gets opened, so they carry the
+	# toolchain like any other host -- the size is the point of shipping it.
 	if [ "$IS_ATOMIC" -eq 1 ]; then
 		# install-theos's redhat branch is `sudo dnf group install c-development`
 		# plus `sudo dnf install ...`, and /usr belongs to the bootc image. The
