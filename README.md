@@ -109,6 +109,17 @@ The `autorun.cmd` will automatically set up Clink and doskey macros (`pipx`, `vi
 
 Make sure you add any extensions you'd like to download to `vscode-extensions.txt`. The newest version of every extension listed in the file is installed on each apply, and any installed extension not listed in the file is uninstalled.
 
+### Theos
+
+`.chezmoiscripts/00-{linux,macos}/125-theos.sh` install [Theos](https://theos.dev) into `~/theos`, via upstream's own `bin/install-theos`; `.commonprofile` exports `$THEOS` and puts `$THEOS/bin` on `PATH`. The shared body is `.chezmoitemplates/theos.sh`, and the reasoning is all in the comment at the top of it.
+
+Two things it will not do for you:
+
+- **macOS needs the full Xcode**, not the Command Line Tools — Theos builds against the iOS/tvOS platform toolchains that only Xcode.app ships. Nothing here can install it (there is no cask, and `mas` cannot drive it), so an apply on a Mac without `/Applications/Xcode.app` warns and skips.
+- **The Linux toolchain is the non-Swift one.** The installer asks, interactively; the hook answers no via `$CI` so an unattended apply doesn't hang, which gets the smaller and better-maintained L1ghtmann `iOSToolchain`. For Swift, remove `$THEOS/toolchain/linux/iphone` and run `bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"` by hand.
+
+Skipped on atomic hosts (the installer's `dnf` transaction can't write to a read-only `/usr`) and in containers (a toolchain plus the patched SDKs is gigabytes of image, same call as VSCode above).
+
 ### Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever
 
 Remember to define the package in the correct hookscript under `.chezmoiscripts/00-posix/` or `.chezmoiscripts/00-nt/`

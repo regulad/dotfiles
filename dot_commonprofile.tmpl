@@ -123,6 +123,13 @@ fi
 # GO
 export PATH="$HOME/go/bin:$PATH"
 
+# Theos, the iOS toolchain. Set unconditionally, and deliberately *before*
+# anything installs it: bin/install-theos only leaves shell rc files alone when
+# it finds THEOS already exported, and every rc it would otherwise append to is
+# managed by this repo. See .chezmoitemplates/theos.sh.
+export THEOS="$HOME/theos"
+[ -d "$THEOS/bin" ] && export PATH="$THEOS/bin:$PATH"
+
 # ssh daemon
 unset _bw_sock
 case "$(uname -o)" in
