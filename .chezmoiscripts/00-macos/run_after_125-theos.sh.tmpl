@@ -1,2 +1,22 @@
 {{ template "posix-preamble.sh" . }}
-{{ template "theos.sh" . }}
+# Theos, the iOS/tvOS tweak + application toolchain.
+# https://theos.dev/docs/installation-macos
+#
+# Upstream's bin/install-theos is the entire install story and the only
+# supported entry point -- it owns the dependency lists, the toolchain and the
+# SDK fetch, all of which move independently of the docs. Run it and get out of
+# its way.
+#
+# THEOS is exported because, unset, the installer picks a shell rc by hand and
+# appends `export THEOS=~/theos` to it. Every rc it would choose is managed
+# here, so the edit gets reverted by the next apply and re-appended by the one
+# after, forever. Exported, set_theos() is a no-op. The durable half of the
+# same setting is in .commonprofile.
+#
+# NOTE: this needs the full Xcode, not the Command Line Tools the preamble
+# installs -- Theos builds against the iOS/tvOS platform toolchains only
+# Xcode.app ships, and install-theos exits 3 without it. Nothing here can
+# install Xcode: there is no cask, and mas cannot drive it (see
+# 060-mac-app-store).
+export THEOS="$HOME/theos"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"

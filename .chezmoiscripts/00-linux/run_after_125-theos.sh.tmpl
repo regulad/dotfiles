@@ -1,2 +1,25 @@
 {{ template "posix-preamble.sh" . }}
-{{ template "theos.sh" . }}
+# Theos, the iOS/tvOS tweak + application toolchain.
+# https://theos.dev/docs/installation-linux
+#
+# Upstream's bin/install-theos is the entire install story and the only
+# supported entry point -- it owns the dependency lists, the fakeroot
+# alternative, the toolchain tarball URLs and the SDK fetch, all of which move
+# independently of the docs. Run it and get out of its way.
+#
+# The two things it is given:
+#
+#   THEOS  -- unset, the installer picks a shell rc by hand and appends
+#             `export THEOS=~/theos` to it. Every rc it would choose is managed
+#             here, so the edit gets reverted by the next apply and re-appended
+#             by the one after, forever. Exported, set_theos() is a no-op. The
+#             durable half of the same setting is in .commonprofile.
+#   CI     -- the installer asks, interactively, whether the toolchain should
+#             support Swift. An apply is frequently not attached to a terminal,
+#             and that `read` under the installer's own `set -e` fails on EOF
+#             and takes the install with it. $CI is the installer's own escape
+#             hatch for exactly this; it answers no, i.e. the smaller
+#             L1ghtmann iOSToolchain. For Swift, remove
+#             $THEOS/toolchain/linux/iphone and re-run this by hand without it.
+export THEOS="$HOME/theos"
+CI=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
