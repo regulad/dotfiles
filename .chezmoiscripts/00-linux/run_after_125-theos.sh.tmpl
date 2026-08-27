@@ -21,5 +21,17 @@
 #             hatch for exactly this; it answers no, i.e. the smaller
 #             L1ghtmann iOSToolchain. For Swift, remove
 #             $THEOS/toolchain/linux/iphone and re-run this by hand without it.
+#
+# The sed is a workaround for an upstream bug, not a preference. The debian
+# branch's dependency line ends `... perl zip git libxml2`, and Ubuntu 26.04
+# has no binary package by that name -- the runtime went to a versioned name
+# when the soname bumped, leaving `libxml2` a virtual reference with no
+# installation candidate. apt then refuses the whole transaction and the
+# installer exits 3, which took down both Ubuntu legs of the image build while
+# Fedora (where `libxml2` is still a real package) passed. libxml2-dev is the
+# name that survives a soname bump, and 021-apt-packages already installs it,
+# so this asks for nothing new. Addressed to the apt line alone: `libxml2` is
+# correct on the arch, redhat and suse branches and must not be rewritten there.
 export THEOS="$HOME/theos"
-CI=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+CI=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos \
+	| sed '/apt install -y build-essential/s/ libxml2/ libxml2-dev/')"
