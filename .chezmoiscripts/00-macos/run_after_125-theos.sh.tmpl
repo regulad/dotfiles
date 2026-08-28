@@ -2,7 +2,7 @@
 # Theos, the iOS/tvOS tweak + application toolchain.
 # https://theos.dev/docs/installation-macos
 #
-# Upstream's bin/install-theos is the entire install story and the only
+# roothide/theos's bin/install-theos is the entire install story and the only
 # supported entry point -- it owns the dependency lists, the toolchain and the
 # SDK fetch, all of which move independently of the docs. Run it and get out of
 # its way.
@@ -19,4 +19,4 @@
 # install Xcode: there is no cask, and mas cannot drive it (see
 # 060-mac-app-store).
 export THEOS="$HOME/theos"
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"
+bash -c "$(curl -fsSL https://github.com/roothide/theos/raw/refs/heads/master/bin/install-theos)"

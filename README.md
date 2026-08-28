@@ -111,12 +111,12 @@ Make sure you add any extensions you'd like to download to `vscode-extensions.tx
 
 ### Theos
 
-`.chezmoiscripts/00-{linux,macos}/125-theos.sh` install [Theos](https://theos.dev) into `~/theos`. Each is a stub around upstream's own `bin/install-theos`, which is the entire install story and the only supported entry point — it owns the dependency lists, the fakeroot alternative, the toolchain tarball URLs and the SDK fetch, all of which move independently of the docs. `.commonprofile` exports `$THEOS` and puts `$THEOS/bin` on `PATH`.
+`.chezmoiscripts/00-{linux,macos}/125-theos.sh` install [Theos](https://theos.dev) into `~/theos`, from the [roothide](https://github.com/roothide/theos) fork rather than base Theos. Each is a stub around that fork's `bin/install-theos`, which is the entire install story and the only supported entry point — it owns the dependency lists, the fakeroot alternative, the toolchain tarball URLs and the SDK fetch, all of which move independently of the docs. `.commonprofile` exports `$THEOS` and puts `$THEOS/bin` on `PATH`.
 
 Two things worth knowing:
 
 - **macOS needs the full Xcode**, not the Command Line Tools — Theos builds against the iOS/tvOS platform toolchains that only Xcode.app ships, and `install-theos` exits 3 without it. Nothing here can install it: there is no cask, and `mas` cannot drive it.
-- **The Linux toolchain is the non-Swift one.** The installer asks interactively; the hook answers no via `$CI` so an unattended apply doesn't die on the `read`, which gets the smaller and better-maintained L1ghtmann `iOSToolchain`. For Swift, remove `$THEOS/toolchain/linux/iphone` and run `bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos)"` by hand.
+- **The Linux toolchain is the Swift one.** The installer asks interactively; the hook can't answer, because an unattended apply has no terminal and the `read` would kill the install, so it sets `$CI` to skip the prompt and `sed`s the hardcoded default from no to yes. That gets the larger kabiroberai `swift-toolchain-linux` build rather than the smaller L1ghtmann `iOSToolchain`. For the non-Swift one, remove `$THEOS/toolchain/linux/iphone` and re-run the hook without that `sed`.
 
 ### Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever
 

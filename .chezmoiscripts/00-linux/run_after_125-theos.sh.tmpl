@@ -2,7 +2,7 @@
 # Theos, the iOS/tvOS tweak + application toolchain.
 # https://theos.dev/docs/installation-linux
 #
-# Upstream's bin/install-theos is the entire install story and the only
+# roothide/theos's bin/install-theos is the entire install story and the only
 # supported entry point -- it owns the dependency lists, the fakeroot
 # alternative, the toolchain tarball URLs and the SDK fetch, all of which move
 # independently of the docs. Run it and get out of its way.
@@ -18,11 +18,13 @@
 #             support Swift. An apply is frequently not attached to a terminal,
 #             and that `read` under the installer's own `set -e` fails on EOF
 #             and takes the install with it. $CI is the installer's own escape
-#             hatch for exactly this; it answers no, i.e. the smaller
-#             L1ghtmann iOSToolchain. For Swift, remove
-#             $THEOS/toolchain/linux/iphone and re-run this by hand without it.
+#             hatch for exactly this, and skipping that prompt is the only
+#             thing it does here. It leaves `stoolchain` at whatever the
+#             installer initialised it to, which upstream hardcodes to no.
 #
-# The sed is a workaround for an upstream bug, not a preference. The debian
+# Two seds, each addressed at a single line of the installer.
+#
+# The first is a workaround for an upstream bug, not a preference. The debian
 # branch's dependency line ends `... perl zip git libxml2`, and Ubuntu 26.04
 # has no binary package by that name -- the runtime went to a versioned name
 # when the soname bumped, leaving `libxml2` a virtual reference with no
@@ -32,6 +34,15 @@
 # name that survives a soname bump, and 021-apt-packages already installs it,
 # so this asks for nothing new. Addressed to the apt line alone: `libxml2` is
 # correct on the arch, redhat and suse branches and must not be rewritten there.
+#
+# The second is the preference. We want Swift, and $CI on its own answers no,
+# so this flips the default the prompt would have overwritten -- together they
+# mean "don't ask, and yes". That gets the larger kabiroberai
+# swift-toolchain-linux build in place of the smaller L1ghtmann iOSToolchain.
+# For the non-Swift one, remove $THEOS/toolchain/linux/iphone and re-run this
+# by hand without that sed. Anchored, so it misses the commented-out copy of
+# the same line further down the installer.
 export THEOS="$HOME/theos"
-CI=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/theos/theos/master/bin/install-theos \
-	| sed '/apt install -y build-essential/s/ libxml2/ libxml2-dev/')"
+CI=1 bash -c "$(curl -fsSL https://github.com/roothide/theos/raw/refs/heads/master/bin/install-theos \
+	| sed -e '/apt install -y build-essential/s/ libxml2/ libxml2-dev/' \
+	      -e 's/^[[:space:]]*stoolchain="n"$/stoolchain="y"/')"
