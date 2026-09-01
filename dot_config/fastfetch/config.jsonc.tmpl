@@ -1,12 +1,55 @@
+{{- /*
+     On Bluefin the logo comes from ublue's pre-rendered mascots rather than
+     fastfetch's builtin. Setting it *here* rather than on the MOTD's fastfetch
+     command line is what makes a bare `fastfetch`, typed at any prompt, pick up
+     the mascot too -- the old arrangement passed --logo-type/--logo from
+     ~/.commonrc, so only the login splash ever got one.
+
+     A config file is the right lever for this because fastfetch has no other:
+     the binary reads no configuration environment variable at all (the only
+     FF_ or FASTFETCH_ strings in it are the FF_GPU_VENDOR_NAME_ display names),
+     and an alias would be both shell-specific and exactly the kind of wrapper
+     the `unalias fastfetch` in ~/.commonrc exists to undo.
+
+     One fixed mascot, not a shuffle. fastfetch cannot choose randomly on its
+     own -- --logo takes exactly one path, and handing it the logos *directory*
+     is not even an error, it silently falls back to the builtin distro logo.
+     ublue only gets its shuffle from ublue-fastfetch, a wrapper script that
+     resolves {"logo-directory": ..., "shuffle-logo": true} into a concrete
+     --logo before exec'ing fastfetch. Doing that here would mean a wrapper, or
+     a symlink re-pointed from ~/.commonrc, and either way the roll could only
+     happen once per shell rather than once per invocation. A fixed pick is
+     honest about that and leaves no runtime state to go stale.
+
+     Swap the basename below to bluefin, dolly or karl to change it; all four
+     are rendered by tools/render-ublue-logos.sh and shipped in logos/.
+
+     If the file is missing -- a non-Bluefin host, or logos/ not yet applied --
+     fastfetch prints the builtin logo and exits 0, no error and no warning.
+
+     Padding is 0 top and bottom because the logo is sized to the 12-line module
+     block; a row of padding there would push the splash to 13 lines.
+*/ -}}
+{{- $logoType := "small" }}
+{{- $logoSource := "" }}
+{{- if eq .chezmoi.os "linux" }}
+{{-   if eq .chezmoi.osRelease.id "bluefin" }}
+{{-     $logoType = "file" }}
+{{-     $logoSource = printf "%s/.config/fastfetch/logos/chicken" .chezmoi.homeDir }}
+{{-   end }}
+{{- end -}}
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
   "logo": {
-    "type": "small",
+    "type": "{{ $logoType }}",
+{{- if $logoSource }}
+    "source": "{{ $logoSource }}",
+{{- end }}
     "padding": {
-      "top": 1,
+      "top": {{ if $logoSource }}0{{ else }}1{{ end }},
       "left": 1,
       "right": 1,
-      "bottom": 1
+      "bottom": {{ if $logoSource }}0{{ else }}1{{ end }}
     }
   },
   "modules": [

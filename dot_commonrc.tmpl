@@ -97,6 +97,19 @@ bw-unlock() {
     export BW_SESSION="$(bw unlock --raw)"
 }
 
+# rendercv prints a "Welcome to RenderCV!" links table and a "new version is
+# available" warning on every render, and the latter blocks on a PyPI request
+# first. Neither can be turned off -- 2.2 has no flag, config key or environment
+# variable for it. ~/.config/rendercv/quiet/sitecustomize.py stubs out the two
+# functions responsible; putting that directory on PYTHONPATH is what gets it
+# imported, since CPython imports sitecustomize from the path at startup.
+#
+# Scoped to this one invocation rather than exported, so no other interpreter
+# picks it up. See that file for why the patch fails open.
+rendercv() {
+    PYTHONPATH="$HOME/.config/rendercv/quiet${PYTHONPATH:+:$PYTHONPATH}" command rendercv "$@"
+}
+
 if [ "$(uname -o)" = "GNU/Linux" ]; then
   # given a PID show all files that PID has open
   filewatch() {
@@ -127,51 +140,20 @@ if [[ $- == *i* && -z ${DID_COMMONRC_SPLASH+x} ]]; then
     # ~/.config/fastfetch/config.jsonc (which is what the unalias further up is
     # undoing). So do the pick here instead, with this repo's module list.
     #
-    # The art is rendered ahead of time, into ~/.config/fastfetch/logos, rather
-    # than converted on every shell start. Three reasons:
+    # Nothing about the logo happens here any more. Which mascot fastfetch draws
+    # is set by ~/.config/fastfetch/config.jsonc, so a bare `fastfetch` typed at
+    # any prompt gets it too -- this used to pass --logo on this one command
+    # line, which meant only the login splash was ever dressed up.
     #
-    #   1. ublue's symbols/ renders are a fixed 36x24 and cannot be shrunk. They
-    #      carry their detail in per-cell truecolor over near-arbitrary block
-    #      glyphs, so dropping cells to resize them destroys the picture.
-    #   2. Converting the PNG originals at runtime means fastfetch's image path,
-    #      which is gated behind FF_HAVE_IMAGEMAGICK{6,7} in
-    #      src/logo/image/image.c and dlopens MagickCore -- chafa decodes
-    #      nothing itself, it only colours pixels ImageMagick already produced.
-    #      That proved unreliable here: with brew's fastfetch, chafa and
-    #      imagemagick all installed, and `magick identify` reading the files
-    #      fine, fastfetch still failed with "Failed to load / convert the image
-    #      source". Not worth chasing for a MOTD.
-    #   3. A text file needs no ImageMagick, no chafa and no decode work on every
-    #      interactive shell, and looks identical on every machine.
+    # It is a fixed mascot rather than a shuffle: fastfetch has no shuffle of its
+    # own, so randomising would need a wrapper or a symlink re-pointed from here,
+    # and either could only re-roll once per shell anyway. See the comment in
+    # config.jsonc.tmpl.
     #
-    # Generated from bluefin.png / chicken.png / dolly.png / karl.png in
-    # /usr/share/ublue-os/bluefin-logos: alpha-trimmed, Lanczos-scaled, emitted
-    # as U+2580 half blocks with truecolor fg/bg -- the same shape as ublue's
-    # symbols/ files, sized to fit 16x9. That box is the footprint of
-    # fastfetch's builtin fedora_small (16 cols x 9 lines), which is what this
-    # repo's config.jsonc "type": "small" draws on every other host. Alpha is
-    # respected, so the silhouette stays transparent rather than becoming a
-    # rectangle. `chafa --size 16x9 <png>` regenerates equivalents.
-    #
-    # Falls through to a bare `fastfetch` wherever the directory is absent,
-    # which is every non-Bluefin host -- .chezmoiignore only applies these on
-    # Bluefin. Note `shuf` is coreutils and missing on macOS, so it has to stay
-    # behind the -d guard.
-    UBLUE_LOGO_DIR="$HOME/.config/fastfetch/logos"
-    UBLUE_LOGO=""
-    if [ -d "$UBLUE_LOGO_DIR" ]; then
-        UBLUE_LOGO="$(find "$UBLUE_LOGO_DIR" -maxdepth 1 -type f 2>/dev/null | shuf -n 1)"
-    fi
-
-    # --logo-type file is explicit because this repo's config.jsonc pins
-    # "logo": {"type": "small"}, and per src/options/logo.c a bare
-    # `--logo <path>` assigns options->source while never touching
-    # options->type. The pinned "small" would otherwise survive and fastfetch
-    # would draw its builtin logo while ignoring the file entirely.
-    if [ -n "$UBLUE_LOGO" ]; then
-        fastfetch --logo-type file --logo "$UBLUE_LOGO" >&2
-    else
-        fastfetch >&2
-    fi
-    unset UBLUE_LOGO_DIR UBLUE_LOGO
+    # The mascots are rendered ahead of time into ~/.config/fastfetch/logos and
+    # committed, rather than converted from a PNG on every shell start. See
+    # tools/render-ublue-logos.sh in the source repo for how and why -- including
+    # why fastfetch's own image path is not used, and why the render is sized to
+    # 11 rows.
+    fastfetch >&2
 fi

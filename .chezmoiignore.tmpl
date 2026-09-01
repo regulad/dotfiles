@@ -1,6 +1,7 @@
 README.md
 LICENSE.md
 Dockerfile*
+tools/  # maintenance scripts, run by hand from the source dir
 # general ignores
 .pycalc3/.venv/
 .config/nvim/lazy-lock.json
@@ -126,6 +127,35 @@ Library
 # them when this directory exists, so everywhere else keeps the builtin small
 # logo instead of shipping four files it will never read.
 .config/fastfetch/logos/
+{{-     end }}
+{{-     if stat "/run/ostree-booted" }}
+# Theos cannot be installed on an atomic host, and unlike the dnf/brew split
+# above there is no stand-in script to swap in.
+#
+# bin/install-theos begins with a privileged system-package transaction for its
+# build dependencies, and it picks that branch from what is on PATH, not from
+# the distro ID: apt, then pacman, then dnf, then zypper. Universal Blue images
+# ship dnf, so the redhat branch wins and runs `dnf group install c-development`
+# plus a dozen packages against a /usr that belongs to the bootc image and is
+# mounted read-only. That exits 3, and the preamble's `bash -e` turns that into
+# a failed apply. The installer has no notion of a prefix other than the system
+# one, so there is nothing to redirect at brew.
+#
+# ~/theos itself would be perfectly writable, so this stays recoverable by hand
+# on an atomic host that actually wants the toolchain: layer the dependencies
+# with rpm-ostree and run the hook manually, or do the whole install inside a
+# toolbox/distrobox. .commonprofile exports $THEOS unconditionally and only puts
+# it on PATH if the directory exists, so either route is picked up with no
+# further changes here.
+#
+# Keyed on /run/ostree-booted rather than the distro ID, matching IS_ATOMIC in
+# posix-preamble.sh: the file is written by ostree-prepare-root at boot and is
+# the canonical signal, whereas the ID varies per image (bluefin, aurora,
+# bazzite, silverblue, ...) and probing for the rpm-ostree binary would also
+# catch a package-mode Fedora that merely has it installed. It is deliberately
+# false inside the published container images -- those are built FROM ordinary
+# fedora/ubuntu, where the dnf and apt branches both work, so they keep Theos.
+.chezmoiscripts/00-linux/125-theos.sh
 {{-     end }}
 {{-     if or (ne (env "WSL_DISTRO_NAME") "") (eq (output "sh" "-c" "systemd-detect-virt --container --quiet && echo yes || echo no" | trim) "yes") }}
 # VSCode is installed on native GNU/Linux desktops only -- not in containers,
