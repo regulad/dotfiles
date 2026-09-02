@@ -46,11 +46,56 @@ uv tool install -q ruff # astral-backed
 uv tool install -q ty   # astral-backed
 
 uv tool install --python "pypy@3.11" -q --with "bgutil-ytdlp-pot-provider" "yt-dlp[pin,pin-curl-cffi,pin-secretstorage,pin-deno]"
-uv tool install --python cp310 -q frida-tools
 uv tool install --python cp314 -q keydive
 uv tool install --python cp313 -q pre-commit
 uv tool install --python cp313 -q "mangadex-downloader[optional]"
 uv tool install --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master"
+
+# NOTE: the frida python binding speaks a wire protocol to frida-server on the
+#       device, and the two only understand each other at the same version. A
+#       mismatch fails at connect time with an "unsupported version" and nothing
+#       more actionable, so the binding is what has to be pinned -- and it has to
+#       be pinned to whatever the device is actually running, not to whatever is
+#       newest.
+#
+#       That version is 16.7.0, and it is not a free choice in either direction:
+#
+#         roothide  https://miticollo.github.io/repos/roothide/Packages is the
+#                   repo carrying re.frida.server for roothide devices, and
+#                   16.7.0 is the newest build hosted there. The 17.x major
+#                   family has not been ported to roothide at all, so there is
+#                   no newer server to match even if this wanted one.
+#         16.7      is also the end of the line upstream. frida moves major and
+#                   minor together as a single unit rather than as semver's
+#                   major/minor pair -- 16.7 is its own family, not a
+#                   backwards-compatible step up from 16.6 -- and 16.7 is the
+#                   last such family before the 17.x break. 16.7.19 is the newest
+#                   patch within it, but patch is the only axis that could move
+#                   here without the server having to move in lockstep.
+#
+#       frida-tools asks for frida>=16.2.2,<17.0.0. That range is loose enough to
+#       resolve to 16.7.19 today and to drift again on any later install, so the
+#       --with intersects it down to the one version that matches the device.
+#       Both pins land in the tool receipt, which is what makes them survive the
+#       `uv tool upgrade --all` at the bottom of this script -- it reports
+#       nothing to upgrade rather than quietly re-resolving the binding out from
+#       under the device.
+#
+#       13.7.1 is the CLI generation that goes with that binding. It publishes an
+#       sdist only, so it is built locally, but it is pure python and builds
+#       anywhere. cp312 is therefore an ordinary known-good interpreter choice
+#       rather than a constraint: frida's own wheels are cp37 abi3, so the
+#       stable-ABI concern in the note above is the one case here it does not
+#       apply to.
+#
+#       The line this replaces -- an unpinned `--python cp310 -q frida-tools` --
+#       was already broken, and silently so. It resolved to frida-tools 14.10.4
+#       against frida 17.17.0, whose __init__ imports typing.NotRequired and so
+#       needs 3.11+; every frida CLI on the box then died at import with an
+#       ImportError under 3.10. That is the requires-python drift described in
+#       the note above actually happening, and pinning both halves is what stops
+#       it recurring.
+uv tool install --python cp312 -q --with "frida==16.7.0" "frida-tools==13.7.1"
 
 # NOTE: 2.3 onward are LLM slop, and 2.2 is the last version that didn't change
 #       the schema. cp313 because 2.2 wants pydantic-core 2.27.2, which has no

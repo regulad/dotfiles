@@ -12,10 +12,13 @@ makes a blocking urllib request to https://pypi.org/pypi/rendercv/json before
 any work starts, so every render pays a network round trip to be told to install
 the version this repo is deliberately pinned away from.
 
-This file is not on the default path. It is reached only because the `rendercv`
-shell wrapper in ~/.commonrc puts this directory on PYTHONPATH, and CPython
-imports `sitecustomize` from the path at startup. So it applies to RenderCV and
-to nothing else -- no other interpreter on the system sees it.
+This file is not on the default path. It is reached only because a `rendercv`
+wrapper puts this directory on PYTHONPATH, and CPython imports `sitecustomize`
+from the path at startup. So it applies to RenderCV and to nothing else -- no
+other interpreter on the system sees it. There are two such wrappers, one per
+shell family: the `rendercv` function in ~/.commonrc on Linux and macOS, and the
+`rendercv` doskey macro in ~/.doskey.mac on Windows. Both scope PYTHONPATH to
+the single invocation rather than exporting it.
 
 Everything is wrapped in a bare try/except on purpose: if a future version
 renames or moves these functions, the patch silently does nothing and the banner
