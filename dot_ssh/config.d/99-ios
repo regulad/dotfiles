@@ -1,4 +1,5 @@
-Host ipad-mini-gen-4
-    HostName ipad-mini-gen-4.tail11540.ts.net
+Host thylacine
+    # d3811636a7e2587d48a9cc3667760eb536d10e35
+    HostName thylacine.tail11540.ts.net
     User mobile
     Tag rsa3072
