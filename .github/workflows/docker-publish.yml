@@ -26,6 +26,36 @@ jobs:
   # tag-ubuntu-unsuffixed below needs needs.build-ubuntu.outputs.digest
   # unambiguously -- a matrixed job's outputs aren't reliably addressable
   # per-combination.
+  #
+  # Two consequences of that git-context checkout, both worth knowing before
+  # touching the Dockerfiles' COPY or the .dockerignore:
+  #
+  #   1. .dockerignore is NOT applied. BuildKit skips it entirely for remote git
+  #      contexts -- docker/cli#2827, docker/buildx#2353 -- so every path listed
+  #      in ours ships inside the image anyway. Verified against a live import of
+  #      the 2026-08-27 build: .github/, .gitattributes and .gitignore are all
+  #      present under ~/.local/share/chezmoi despite all three being listed,
+  #      while .claude/ (untracked locally) is absent -- which is itself the
+  #      proof that the context is the git tree and not a path. .dockerignore
+  #      only bites a local `docker build .`; nothing here may depend on it.
+  #
+  #   2. The .git directory does not survive: BuildKit strips it from a git
+  #      context unless BUILDKIT_CONTEXT_KEEP_GIT_DIR=1 is passed as a build-arg.
+  #      That flag is not the fix it looks like. What it keeps is BuildKit's own
+  #      clone -- a detached, shallow HEAD with no local branch and no upstream,
+  #      which is precisely the state `git pull --autostash --rebase` refuses
+  #      ("You are not currently on a branch"). That pull is what `chezmoi
+  #      update` runs, so the flag on its own still would not let an image pull
+  #      itself forward; it would need a repair step to create a branch and set
+  #      its upstream.
+  #
+  # What the images actually ship is an empty repo, not no repo: `chezmoi init`
+  # with no repo argument runs its own `git init` in the source directory ("If
+  # no repo is provided, chezmoi will initialize a new Git repository"), which
+  # leaves no remote, an unborn master and every file untracked. `chezmoi
+  # update` therefore cannot work in a shipped instance -- immaterial for
+  # livestock containers, a real limitation for pet WSL ones. Shelved, not
+  # forgotten.
   build-ubuntu:
     permissions:
       contents: read

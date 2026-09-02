@@ -42,6 +42,7 @@ REM apply there. cmd carries on regardless, so check each one explicitly.
 echo debug: installing cargo tooling
 call :cargoinstall cargo-disasm || goto :cargo_install_failed
 call :cargoinstall vtracer || goto :cargo_install_failed
+call :cargoinstall apple-codesign || goto :cargo_install_failed
 call :cargoinstall binwalk || goto :cargo_install_failed
 
 goto :eof

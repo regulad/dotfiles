@@ -1,0 +1,191 @@
+[Unit]
+Description=rclone FUSE mount of remote %I
+Documentation=https://rclone.org/commands/rclone_mount/
+Documentation=https://rclone.org/commands/rclone_config/
+
+# Shipped but NOT enabled, on the same reasoning as
+# tailscale-ephemeral.service: mounting a cloud remote is a side effect nobody
+# should acquire just by running an apply. 150-user-services.sh leaves this
+# alone. Bring one up by hand -- the instance name is the remote name as it
+# appears in `rclone listremotes`, minus the colon:
+#
+#   systemctl --user enable --now rclone@gdrive
+#   systemctl --user disable --now rclone@gdrive
+#
+# Remote names containing "/" or whitespace cannot be used: systemd's instance
+# escaping would mangle them on the way to `rclone mount %i:`. Every name
+# `rclone config` generates by default is fine.
+
+# =+= WHY THIS IS A FUSE MOUNT AND NOT AN HSM DAEMON
+#
+# The thing this unit *wants* to be is a hierarchical storage manager: leave
+# ordinary sparse files on the real filesystem, hydrate their contents from the
+# network on first access, and let everything else -- the page cache, mmap,
+# thumbnailers, and above all reading a file with the network down -- work
+# because the bytes are simply bytes on ext4. That is what Windows' Cloud Files
+# API and macOS' File Provider give their first-party clients, and it is why
+# neither of them needs a word like "offline mode": offline is just what happens
+# when the daemon is not running.
+#
+# Linux grew the primitive for this in 6.14 -- fanotify pre-content events,
+# FAN_PRE_ACCESS and FAN_PRE_MODIFY, which hand a userspace daemon a byte range
+# and let it fill the file in before the read is allowed to proceed. Our kernels
+# all have it. It is nevertheless unusable here, for four separate reasons, as
+# of the 2026 LSFMM+BPF status report (LWN.net/Articles/1075829):
+#
+#   - The page-fault hook was merged and then reverted. Mapping a file and using
+#     that mapping as the write buffer for another file faults inside the
+#     populate path and deadlocks against the daemon. Hydration now happens at
+#     mmap() time instead, which means the whole file lands whenever anything
+#     maps it -- which, on a desktop, is most document opens.
+#   - Pre-content events for directories are still unmerged, same class of
+#     deadlock. Without them a namespace cannot be populated lazily, so a client
+#     must materialise the entire tree of stub inodes up front.
+#   - Events fire on every read, including for ranges already populated. The fix
+#     (a BPF program tracking populated extents) is not implemented.
+#   - Mount and filesystem marks require CAP_SYS_ADMIN, so the daemon would have
+#     to be privileged. This unit is `systemctl --user` precisely so that it is
+#     not, and on an atomic host a root daemon is not something we can install
+#     anyway. Only btrfs/ext4/xfs carry FS_ALLOW_HSM, too.
+#
+# And rclone has no HSM backend regardless; the only production user of the API
+# is Meta, internally, for package fetching. So: FUSE, where the kernel routes
+# every read through a userspace handler and "not downloaded yet" is free,
+# metadata is answered from rclone's in-memory dir cache, and content is
+# whatever the VFS cache below happens to hold.
+#
+# Revisit when the directory events and the page-fault hook land AND something
+# other than rclone is worth mounting. Not before.
+
+# =+= WHY THIS BREAKS WHEN THE NETWORK IS DOWN
+#
+# Accepted, not overlooked. `--vfs-cache-mode full` keeps whole files on disk
+# under %C, so a network drop *while mounted* is survivable for anything already
+# cached, and queued writes are retried when the link returns. What does not
+# work is starting the mount offline: the dir cache lives in memory, not in the
+# cache directory, so there is nothing to serve a listing from, and the backend
+# cannot refresh its token. Upstream considers this out of scope -- "it's a
+# cloud based tool ... network connectivity is somewhat assumed"
+# (forum.rclone.org/t/29821). Restart=on-failure below is the whole mitigation:
+# a boot with no link fails, backs off, and succeeds once the link appears.
+#
+# If a set of files must genuinely survive being offline, they do not belong
+# behind this mount. Sync them to real local storage instead.
+
+Wants=network-online.target
+After=network-online.target
+
+# Ships inert until rclone has actually been configured. Without a config there
+# is no remote to mount and the unit would fail on every boot of a machine that
+# merely enabled it early. A failed Condition skips the unit and reports
+# success, which is the intent -- nothing configured means nothing to do.
+ConditionPathExists=%E/rclone/rclone.conf
+
+# "Only mount if the mountpoint is not already populated", as asked for.
+# `!` inverts, so this passes when the directory is empty or absent, and skips
+# when something is already there -- a live mount from a previous start, another
+# rclone driving the same path, or a stray directory somebody wrote into /run.
+#
+# A successful mount makes the directory non-empty, so this is also what makes
+# the unit idempotent: `systemctl --user start rclone@x` on an already-mounted
+# remote is a silent no-op rather than a second rclone stacking a mount on top
+# of the first.
+#
+# Note it is skip-and-succeed, not fail: `systemctl --user status` will say
+# "condition failed" and the unit stays inactive. That is the requested
+# behaviour, but it does mean a stale mount left by a crashed rclone (where the
+# directory reads ENOTCONN) will keep this inactive until ExecStopPost's lazy
+# unmount or a manual `fusermount3 -uz` clears it.
+ConditionDirectoryNotEmpty=!%t/rclone/%i
+
+[Service]
+# rclone signals sd_notify readiness once the mountpoint is actually usable, so
+# the unit does not reach "active" until a listing would succeed. Anything
+# ordered after this can rely on the mount being there.
+Type=notify
+
+# Deliberately NOT RuntimeDirectory=rclone/%i, which would be the idiomatic way
+# to get this directory. systemd removes a RuntimeDirectory on stop, and the one
+# thing that must never happen here is a recursive delete walking into a live
+# remote. systemd's rm_rf does not cross mount boundaries, so this is very
+# probably safe -- but "very probably" is the wrong confidence level when the
+# failure mode is deleting somebody's Drive. mkdir it ourselves and leave the
+# empty directory behind; %t is a tmpfs and it costs nothing until the next
+# reboot clears it.
+ExecStartPre=mkdir -p %t/rclone/%i
+
+# Clears a stale mount left by an rclone that died without unmounting. This
+# cannot fire against a *live* mount: the ConditionDirectoryNotEmpty above
+# already skipped the unit in that case, and conditions are evaluated before
+# ExecStartPre runs. On an ordinary empty directory fusermount3 just errors that
+# it is not mounted, which the "-" discards.
+#
+# mkdir and fusermount3 are deliberately bare where rclone below is not, and the
+# difference is not sloppiness. fusermount3 is a setuid helper that lands in
+# /usr/bin on Debian/Ubuntu and in /usr/sbin on distributions that have not
+# merged sbin -- both of which are on systemd's fixed search list, so a bare
+# name resolves either way and a hardcoded /usr/bin path would not. Brew's
+# prefix is on that list nowhere, which is why rclone gets the absolute path.
+ExecStartPre=-fusermount3 -uz %t/rclone/%i
+
+# The rclone path below is absolute, and it has to be. systemd does NOT resolve
+# a bare ExecStart command against the unit's own Environment=PATH -- it
+# searches a fixed list (/usr/local/sbin, /usr/local/bin, /usr/sbin, /usr/bin)
+# and nothing else. That is why tmux@.service gets away with a bare `tmux` and
+# this cannot: 030-brew-extras.sh installs rclone with brew, so the binary lives
+# in the Cellar and is symlinked into /home/linuxbrew/.linuxbrew/bin, which is
+# not on that list. Verified against systemd 259 -- a bare `rclone` with exactly
+# that prefix in Environment=PATH still fails with "Command rclone is not
+# executable: No such file or directory".
+#
+# The one host this does not cover is a rootless brew under ~/homebrew, which
+# posix-preamble.sh already warns about and calls unsupported. Point ExecStart
+# somewhere else with a drop-in there:
+#
+#   systemctl --user edit rclone@<remote>
+
+# Per-remote overrides, optional -- the "-" means a missing file is fine:
+#
+#   ~/.config/rclone/<remote>.env
+#
+# rclone maps every flag to an environment variable, so most tuning needs no
+# edit to this unit: RCLONE_VFS_CACHE_MAX_SIZE=100G, RCLONE_BWLIMIT=8M,
+# RCLONE_LOG_LEVEL=DEBUG. RCLONE_MOUNT_OPTS is for the rest; it is intentionally
+# unquoted below so systemd splits it into separate arguments.
+EnvironmentFile=-%E/rclone/%i.env
+Environment=RCLONE_MOUNT_OPTS=
+
+# --vfs-cache-mode full is not a tuning choice. Below it rclone can only write
+# sequentially and cannot seek on read, which breaks most applications that open
+# a file for anything other than a straight copy.
+#
+# --cache-dir is per-instance so two mounts cannot fight over one cache tree,
+# and lives under %C (~/.cache) rather than %t so it survives a reboot -- the
+# cache is the only part of this that is ever warm.
+#
+# --dir-cache-time is long because --poll-interval makes it self-correcting:
+# rclone polls the backend for changes and invalidates the affected entries, so
+# a long TTL costs staleness only for backends with no change-notify support.
+ExecStart=/home/linuxbrew/.linuxbrew/bin/rclone mount %i: %t/rclone/%i \
+    --vfs-cache-mode full \
+    --cache-dir %C/rclone/%i \
+    --vfs-cache-max-age 168h \
+    --vfs-cache-max-size 20G \
+    --dir-cache-time 72h \
+    --poll-interval 1m \
+    --umask 077 \
+    $RCLONE_MOUNT_OPTS
+
+# SIGTERM alone leaves the mountpoint behind often enough to be worth handling
+# explicitly. The lazy unmount in ExecStopPost is the backstop for a mount still
+# busy at stop time -- it detaches now and cleans up when the last user lets go.
+ExecStop=-fusermount3 -u %t/rclone/%i
+ExecStopPost=-fusermount3 -uz %t/rclone/%i
+
+# The offline mitigation described above: a boot with no link fails here, waits,
+# and comes up on its own once the network arrives.
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=default.target

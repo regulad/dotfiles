@@ -11,6 +11,14 @@ Host *
     User regulad
     PreferredAuthentications publickey   
     EnableEscapeCommandline yes
+    # Bitwarden's SSH agent signs RSA keys with SHA-512 no matter which
+    # algorithm the sign request asks for (bitwarden/clients#16681, still
+    # broken in Desktop 2026.8.0). Fedora's crypto-policies put rsa-sha2-256
+    # ahead of rsa-sha2-512, so ssh asks for -256, gets -512, and rejects it:
+    # "agent key RSA ... returned incorrect signature type". `^` just hoists
+    # rsa-sha2-512 to the front of whatever list is in effect -- the same
+    # order upstream OpenSSH ships, nothing added or removed.
+    PubkeyAcceptedAlgorithms ^rsa-sha2-512
 
 # General idea of the fallback:
 #    1. Try to get the agent's private key by the public key
