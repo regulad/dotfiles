@@ -1,5 +1,12 @@
 [Unit]
-Description=rclone FUSE mount of remote %I
+# %i, not %I: %I is "instance name with escaping undone", and systemd's
+# unescaping rule turns every "-" into a "/" -- that's what lets path-based
+# templates like a mount unit encode a filesystem path in a unit name. This
+# template has nothing to do with paths; a remote called "my-remote" is just a
+# name with a dash in it, and %I would print it here as "my/remote". %i is the
+# raw instance string, dash and all, which is also what ExecStart already uses
+# below in `rclone mount %i:` -- keep this line consistent with that.
+Description=rclone FUSE mount of remote %i
 Documentation=https://rclone.org/commands/rclone_mount/
 Documentation=https://rclone.org/commands/rclone_config/
 
@@ -175,6 +182,21 @@ ExecStart=/home/linuxbrew/.linuxbrew/bin/rclone mount %i: %t/rclone/%i \
     --poll-interval 1m \
     --umask 077 \
     $RCLONE_MOUNT_OPTS
+
+# Convenience symlink so the mount is reachable at ~/%i instead of the %t path
+# nobody wants to type. Runs as ExecStartPost rather than ExecStartPre because
+# Type=notify above means "started" already means "rclone said the mount is
+# usable" -- putting this any earlier would let someone follow the link before
+# there's anything behind it. `-n` stops ln from treating an existing symlink
+# at the destination as a directory to link inside of, which is what a plain
+# `ln -s` would do on a re-enable now that the link from last time is still
+# there. No `-f`: a restart shouldn't need to recreate a link that's already
+# correct, and the leading `-` on the whole line is what keeps ln's complaint
+# about an existing, already-correct link from failing the unit. Deliberately
+# never torn down in ExecStop/ExecStopPost -- it should point at an empty
+# directory between mounts, not vanish, so nothing that bookmarked ~/%i has to
+# re-learn the path after a restart.
+ExecStartPost=-ln -sn %t/rclone/%i %h/%i
 
 # SIGTERM alone leaves the mountpoint behind often enough to be worth handling
 # explicitly. The lazy unmount in ExecStopPost is the backstop for a mount still
