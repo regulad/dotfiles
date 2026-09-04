@@ -1,0 +1,34 @@
+# Knobs for the user-session OpenSSH server on Windows -- see
+# .chezmoiscripts/00-nt/run_onchange_after_035-sshd-user-session.ps1.tmpl for
+# what consumes these and why the whole arrangement exists.
+#
+# .chezmoidata/ rather than a [data.sshd] block in .chezmoi.toml.tmpl, where
+# [data.chassis] lives: .chezmoi.toml.tmpl is only re-rendered by `chezmoi
+# init`, so editing a port there would sit inert until the next init. Files
+# under .chezmoidata/ are read on every apply, which is what a knob like `port`
+# needs -- change it here and the next `chezmoi apply` re-renders sshd_config,
+# re-registers the task and replaces the firewall rule.
+#
+# This is the first .chezmoidata entry in the repository.
+
+[sshd]
+    # The stock sshd service is disabled by the 035 script, so 22 is free and
+    # Windows imposes no privileged-port restriction on unelevated processes.
+    # 2222 is chosen anyway, so that a Windows feature update quietly
+    # reinstating the stock service on 22 collides with nothing.
+    #
+    # Verified clear of the dynamic reservations Hyper-V/WSL take out (`netsh
+    # int ipv4 show excludedportrange protocol=tcp`); the script re-checks at
+    # apply time, since those ranges move.
+    port = 2222
+
+    # Windows InterfaceAlias of the adapter whose addresses sshd binds, in
+    # addition to loopback. OpenSSH has no interface-name form of
+    # ListenAddress on any platform -- it takes only host|addr[:port] -- so the
+    # launcher resolves this alias to addresses at start time instead. That is
+    # the closest equivalent to binding a `tailscale0`, and unlike a hardcoded
+    # 100.x address it survives the node being re-registered on the tailnet.
+    interface = "Tailscale"
+
+    # Task Scheduler task name. Also used to derive the firewall rule name.
+    taskName = "sshd-user-session"

@@ -1,0 +1,395 @@
+{{- $cfgTmpl := joinPath .chezmoi.sourceDir "dot_config" "sshd" "sshd_config.tmpl" -}}
+{{- $launcherTmpl := joinPath .chezmoi.sourceDir "dot_local" "bin" "sshd-user-session.ps1.tmpl" -}}
+# Runs sshd.exe inside the interactive desktop session, under a Task Scheduler
+# at-logon task, instead of as the stock SYSTEM service.
+#
+# The payoff is that mapped network drive letters and virtual filesystem
+# providers become visible over ssh and scp. The stock service cannot do this,
+# and the reason is structural rather than a missing setting. It runs as
+# NT AUTHORITY\SYSTEM in session 0, and per connection it mints a brand new
+# token -- S4U for public-key auth, LOGON32_LOGON_NETWORK_CLEARTEXT for
+# password auth -- then spawns the child with CreateProcessAsUserW and
+# lpDesktop = NULL. A freshly allocated LUID has an empty drive-letter view,
+# because drive mappings hang off the logon session; session 0 has no shell
+# namespace providers at all.
+#
+# Win32-OpenSSH short-circuits that whole path. In
+# contrib/win32/win32compat/win32_usertoken_utils.c:
+#
+#     if (!am_system()) {
+#             process_sid = get_sid(NULL);
+#             user_sid = get_sid(user);
+#             ...
+#             else if (EqualSid(process_sid, user_sid))
+#                     debug3("%s - i am running as %s, returning process token", ...);
+#             ...
+#             OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS_P, &t1);
+#
+# When sshd is not SYSTEM and the authenticating user's SID matches the process
+# SID, it skips token minting and hands the child its own process token. Launch
+# sshd from the interactive session and every SSH child inherits that session's
+# LUID, session ID and credential material. This is upstream-supported
+# behaviour, not a workaround.
+#
+# WHY NOT NSSM, which supervises other things in this repository: the SCM
+# starts every service in session 0 regardless of the configured run-as
+# account. An NSSM service running as this user would produce a
+# LOGON32_LOGON_SERVICE logon -- new LUID, session 0. The !am_system() branch
+# above would still fire, but the token handed out would be the *service* logon
+# session rather than the desktop one, and the drive letters would still be
+# missing. A scheduled task with an at-logon trigger and "run only when the
+# user is logged on" is the right supervisor here; it is the LaunchAgent to
+# NSSM's LaunchDaemon.
+#
+# run_onchange_ rather than run_once_: the task action, the firewall rule and
+# the port are all rendered into this script from .chezmoidata/sshd.toml, so
+# changing a knob there re-renders this file and re-applies everything. The two
+# digests below extend that to the files this script does not inline, so
+# editing either of them re-runs this as well.
+#
+#     dot_config/sshd/sshd_config.tmpl {{ include $cfgTmpl | sha256sum }}
+#     dot_local/bin/sshd-user-session.ps1.tmpl {{ include $launcherTmpl | sha256sum }}
+#
+# This script deliberately does NOT self-elevate the way 050-dev-drive.ps1 and
+# 700-out-of-band-appx.ps1 do. It follows 170-firefox-policies.ps1 instead:
+# stay unelevated, shell out to `sudo` for the three things that genuinely need
+# it, and verify each of those by reading state back. Two reasons. sudo is
+# pinned to Force New Window mode on this machine (see 030-w32time.cmd), which
+# does not propagate the child's exit code or return its stdout, so `if
+# ($LASTEXITCODE)` after a sudo call is dead code -- the read-backs are the
+# real error detection. And more importantly, registering the scheduled task
+# unelevated removes any chance of the task inheriting an elevated context,
+# which is the one failure in this whole arrangement that is completely silent.
+
+$Port = {{ .sshd.port }}
+$Iface = '{{ .sshd.interface }}'
+$TaskName = '{{ .sshd.taskName }}'
+$RuleName = '{{ .sshd.taskName }}-in-tcp'
+
+$SshDir = Join-Path $env:SystemRoot 'System32\OpenSSH'
+$Sshd = Join-Path $SshDir 'sshd.exe'
+$KeyGen = Join-Path $SshDir 'ssh-keygen.exe'
+$ConfDir = Join-Path $HOME '.config\sshd'
+$Conf = Join-Path $ConfDir 'sshd_config'
+$HostKey = Join-Path $ConfDir 'ssh_host_ed25519_key'
+$Launcher = Join-Path $HOME '.local\bin\sshd-user-session.ps1'
+
+# Every elevated action below is confirmed by polling for its effect rather
+# than by a single read-back taken the instant sudo returns. sudo is pinned to
+# Force New Window mode here (see 030-w32time.cmd), and besides not
+# propagating the child's exit code it returns *before* the elevated command
+# has necessarily finished -- an immediate read-back races it and reports a
+# false failure for work that then lands a moment later.
+function Wait-Until {
+    param([scriptblock]$Condition, [int]$TimeoutSeconds = 60)
+    $Deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ($true) {
+        if (& $Condition) { return $true }
+        if ((Get-Date) -gt $Deadline) { return $false }
+        Start-Sleep -Milliseconds 500
+    }
+}
+
+# ---------------------------------------------------------------------------
+# 1. The OpenSSH.Server Windows capability.
+# ---------------------------------------------------------------------------
+# Guarded on the presence of sshd.exe rather than on Get-WindowsCapability's
+# State field. Get-WindowsCapability -Online requires elevation ("The requested
+# operation requires elevation") and sudo cannot hand its output back, so the
+# capability state is simply not readable from here. The binary on disk is the
+# observable that actually matters anyway.
+#
+# Absolute path, never a bare `sshd.exe`: this directory is on PATH for 64-bit
+# processes but %SystemRoot%\System32 is subject to WOW64 filesystem
+# redirection, so a 32-bit host would be pointed at SysWOW64\OpenSSH instead.
+if (-not (Test-Path -LiteralPath $Sshd)) {
+    Write-Host 'debug: installing the OpenSSH.Server Windows capability'
+    # The capability name carries a version suffix, so it is queried with the
+    # OpenSSH.Server* wildcard rather than hardcoding ~~~~0.0.1.0, which will
+    # eventually be wrong.
+    & sudo powershell -NoProfile -NonInteractive -Command "`$c = Get-WindowsCapability -Online -Name 'OpenSSH.Server*' | Select-Object -First 1; if (`$c -and `$c.State -ne 'Installed') { Add-WindowsCapability -Online -Name `$c.Name | Out-Null }"
+
+    # On some builds the capability install is deferred until a reboot and the
+    # binaries do not appear. Fail here rather than going on to register a task
+    # whose action points at a file that does not exist -- that task would sit
+    # there failing silently at every logon.
+    if (-not (Test-Path -LiteralPath $Sshd)) {
+        Write-Error "OpenSSH.Server did not produce $Sshd. Either the elevation prompt was declined, or this build defers the capability install to a reboot -- reboot and re-apply."
+        exit 1
+    }
+}
+
+# ---------------------------------------------------------------------------
+# 2. Port sanity.
+# ---------------------------------------------------------------------------
+# Hyper-V and WSL take out dynamic port reservations, and a port inside one of
+# those ranges cannot be bound at all. The ranges move between boots, so this
+# is checked here rather than assumed once when the port was chosen.
+$Excluded = $false
+foreach ($Line in @(netsh int ipv4 show excludedportrange protocol=tcp)) {
+    if ($Line -match '^\s*(\d+)\s+(\d+)') {
+        if ([int]$Matches[1] -le $Port -and $Port -le [int]$Matches[2]) { $Excluded = $true }
+    }
+}
+if ($Excluded) {
+    Write-Error "port $Port falls inside a dynamic port exclusion range and cannot be bound. Pick another in .chezmoidata/sshd.toml (2222 and 22 are the usual candidates) and re-apply."
+    exit 1
+}
+
+# ---------------------------------------------------------------------------
+# 3. Disable the stock sshd service.
+# ---------------------------------------------------------------------------
+# It would otherwise hold the port and serve connections out of session 0,
+# which is exactly the behaviour being replaced.
+#
+# The brief for this called for disabling unconditionally, on the grounds that
+# re-running Add-WindowsCapability can re-enable the service. That is true, but
+# an unconditional `sudo` means a UAC prompt on every apply that touches this
+# file. Get-Service is readable unelevated, so the check is unconditional and
+# only the fix is elevated -- same coverage, no prompt on a machine that is
+# already in the right state. Same reasoning as the hash-compare-before-sudo in
+# 170-firefox-policies.ps1.
+#
+# ssh-agent is deliberately untouched. It is a separate service, it is still
+# wanted, and it has nothing to do with which session sshd runs in.
+$Svc = Get-Service -Name sshd -ErrorAction SilentlyContinue
+if ($Svc -and (($Svc.Status -ne 'Stopped') -or ($Svc.StartType -ne 'Disabled'))) {
+    Write-Host 'debug: stopping and disabling the stock sshd service'
+    & sudo powershell -NoProfile -NonInteractive -Command "Stop-Service -Name sshd -Force -ErrorAction SilentlyContinue; Set-Service -Name sshd -StartupType Disabled"
+
+    $Disabled = Wait-Until {
+        $s = Get-Service -Name sshd -ErrorAction SilentlyContinue
+        $s -and ($s.Status -eq 'Stopped') -and ($s.StartType -eq 'Disabled')
+    }
+    if (-not $Disabled) {
+        $Svc = Get-Service -Name sshd -ErrorAction SilentlyContinue
+        Write-Error "the stock sshd service is still $($Svc.Status)/$($Svc.StartType) -- was the elevation prompt declined? It will fight the user-session sshd for the port."
+        exit 1
+    }
+} else {
+    Write-Host 'note: stock sshd service already stopped and disabled'
+}
+
+# ---------------------------------------------------------------------------
+# 4. Host key.
+# ---------------------------------------------------------------------------
+# Generated per machine and never committed. A host key identifies *this* host;
+# sharing one across machines through the age-encrypted tree would defeat the
+# client's ability to tell them apart, which is the entire job of a host key.
+if (-not (Test-Path -LiteralPath $HostKey)) {
+    Write-Host "debug: generating host key at $HostKey"
+    if (-not (Test-Path -LiteralPath $ConfDir)) {
+        New-Item -ItemType Directory -Force -Path $ConfDir | Out-Null
+    }
+
+    # Invoked through ProcessStartInfo with an explicit argument *string*
+    # rather than as `& $KeyGen -N ''`, because passing an empty argument to a
+    # native executable from PowerShell is not portable and both failure modes
+    # are nasty:
+    #
+    #   - Under powershell.exe (5.1), which is what chezmoi runs .ps1 scripts
+    #     with, `-N ''` is dropped from the command line entirely; ssh-keygen
+    #     then reads the next argument as the passphrase and dies with "Too
+    #     many arguments".
+    #   - Under pwsh (7), `-N '""'` -- the usual workaround for the above --
+    #     passes two literal quote characters as the passphrase. That silently
+    #     succeeds, producing an encrypted key, and sshd later fails with
+    #     "incorrect passphrase supplied to decrypt private key" followed by
+    #     "no hostkeys available -- exiting".
+    #
+    # An explicit Arguments string goes verbatim to CreateProcess, so the C
+    # runtime parses `""` as the empty string in either host. Step 5 below
+    # catches it anyway if this ever regresses.
+    $Psi = New-Object System.Diagnostics.ProcessStartInfo
+    $Psi.FileName = $KeyGen
+    $Psi.Arguments = '-t ed25519 -q -N "" -C sshd-user-session -f "' + $HostKey + '"'
+    $Psi.UseShellExecute = $false
+    $Psi.RedirectStandardOutput = $true
+    $Psi.RedirectStandardError = $true
+    $Proc = [System.Diagnostics.Process]::Start($Psi)
+    $KeyGenOut = $Proc.StandardOutput.ReadToEnd() + $Proc.StandardError.ReadToEnd()
+    $Proc.WaitForExit()
+    if ($Proc.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $HostKey)) {
+        Write-Error "ssh-keygen failed (exit $($Proc.ExitCode)): $KeyGenOut"
+        exit 1
+    }
+} else {
+    Write-Host 'note: host key already present'
+}
+
+# ---------------------------------------------------------------------------
+# 5. Validate the configuration before anything is wired up.
+# ---------------------------------------------------------------------------
+# `sshd -t` parses the config and loads the host keys without binding
+# anything, so one call covers a bad path, a passphrase-protected host key, and
+# StrictModes complaints about the ACLs on the key or on
+# ~/.ssh/authorized_keys. Doing it here means a broken config fails the apply
+# rather than failing at the next logon with the output going nowhere.
+#
+# On StrictModes: Win32-OpenSSH ACL-checks both files and chezmoi's `private_`
+# attribute is close to a no-op on Windows. It passes as things stand, because
+# the profile grants only the owner, SYSTEM and Administrators, all of which
+# the strict-mode check accepts. If that ever changes, the fix is an icacls
+# step stripping the inherited grants down to the owner -- not `StrictModes no`.
+$TestOut = & $Sshd -t -f $Conf 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "sshd rejected $Conf (exit $LASTEXITCODE): $TestOut"
+    exit 1
+}
+
+# ---------------------------------------------------------------------------
+# 6. Register the scheduled task.
+# ---------------------------------------------------------------------------
+# Unelevated, which works for a task owned by the current user and keeps the
+# registration context clean. Torn down and rebuilt rather than patched in
+# place, so the registered task always matches this file exactly.
+if (Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue) {
+    Write-Host 'debug: stopping and unregistering the existing task'
+    Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+}
+
+# Stop-ScheduledTask is not enough on its own. The task's process tree is
+# conhost -> powershell -> sshd, and stopping the task was observed to leave
+# the sshd grandchild alive and still holding the port, which would then make
+# the freshly started task fail to bind. Only instances whose command line
+# names *our* config are touched, so the stock service or another user's sshd
+# is left alone. The launcher reaps stale instances too, for the case where it
+# is started by the trigger rather than from here.
+foreach ($Stale in @(Get-CimInstance Win32_Process -Filter "Name='sshd.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -and $_.CommandLine -like "*$Conf*" })) {
+    Write-Host "debug: reaping stale sshd (pid $($Stale.ProcessId))"
+    Stop-Process -Id $Stale.ProcessId -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host "debug: registering scheduled task '$TaskName'"
+
+# conhost --headless wraps the launcher in a pseudoconsole with no window.
+# Without it a console flashes on screen at every single logon, and
+# -WindowStyle Hidden alone does not prevent that -- the window is created and
+# then hidden.
+$Action = New-ScheduledTaskAction -Execute (Join-Path $env:SystemRoot 'System32\conhost.exe') `
+    -Argument "--headless powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -File `"$Launcher`""
+
+$Trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
+
+# The two settings here are the ones that matter, and both fail silently:
+#
+#   -RunLevel Limited. If the task runs elevated, sshd gets the full rather
+#   than the filtered half of the split token, and an elevated token has its
+#   own separate drive-letter view. Everything would appear to work and the
+#   mapped drives -- the entire point -- would still be missing. (If something
+#   else on the machine ever forces elevation here, EnableLinkedConnections=1
+#   under HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System
+#   reconciles the two views.)
+#
+#   -LogonType Interactive. Not S4U, not Password. Interactive is what binds
+#   the task to the real desktop logon session, which is the whole mechanism
+#   described at the top of this file.
+$Principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" `
+    -LogonType Interactive -RunLevel Limited
+
+# ExecutionTimeLimit of zero means no limit; the default would kill sshd after
+# 72 hours. The battery settings keep it alive on a laptop.
+$Settings = New-ScheduledTaskSettingsSet `
+    -AllowStartIfOnBatteries `
+    -DontStopIfGoingOnBatteries `
+    -ExecutionTimeLimit ([TimeSpan]::Zero) `
+    -RestartCount 3 `
+    -RestartInterval (New-TimeSpan -Minutes 1)
+
+Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger `
+    -Principal $Principal -Settings $Settings `
+    -Description 'OpenSSH server running in the interactive desktop session, so that SSH children inherit the desktop logon session (mapped drives, shell namespace providers). Managed by chezmoi.' `
+    -Force | Out-Null
+
+# Read back the two silent-failure settings rather than trusting that
+# Register-ScheduledTask honoured them.
+$Registered = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+if (-not $Registered) {
+    Write-Error "scheduled task '$TaskName' was not registered"
+    exit 1
+}
+if ("$($Registered.Principal.RunLevel)" -ne 'Limited') {
+    Write-Error "scheduled task '$TaskName' registered with RunLevel $($Registered.Principal.RunLevel), expected Limited. An elevated sshd sees a different set of drive letters and the whole arrangement is pointless."
+    exit 1
+}
+if ("$($Registered.Principal.LogonType)" -ne 'Interactive') {
+    Write-Error "scheduled task '$TaskName' registered with LogonType $($Registered.Principal.LogonType), expected Interactive. Only Interactive binds the task to the desktop logon session."
+    exit 1
+}
+
+# ---------------------------------------------------------------------------
+# 7. Firewall.
+# ---------------------------------------------------------------------------
+# Tailscale's own rules are program-scoped to tailscaled.exe, so they do not
+# cover sshd.exe and a rule of our own is still needed.
+#
+# Scoped to the interface rather than to a network profile: the Tailscale
+# adapter is on Private today, but a profile-scoped rule would silently stop
+# matching if that ever changed, whereas the interface is the actual thing the
+# traffic has to arrive on. Loopback needs no rule; Windows Firewall permits it
+# unconditionally.
+#
+# Removed by name and re-added rather than edited, so repeated applies cannot
+# accumulate near-duplicate rules.
+Write-Host "debug: replacing firewall rule '$RuleName' (TCP $Port on $Iface)"
+& sudo powershell -NoProfile -NonInteractive -Command "Remove-NetFirewallRule -Name '$RuleName' -ErrorAction SilentlyContinue; New-NetFirewallRule -Name '$RuleName' -DisplayName 'OpenSSH user-session server (sshd)' -Direction Inbound -Action Allow -Protocol TCP -LocalPort $Port -InterfaceAlias '$Iface' -Profile Any | Out-Null"
+
+# Firewall rules are readable unelevated, so the sudo above is verified the
+# same way as everything else here -- by polling, since sudo returns before the
+# elevated command has finished.
+#
+# The port is checked, not just the rule's existence. Checking only the name
+# would pass on a declined elevation prompt whenever a rule from an earlier run
+# happened to still be there, which is exactly when it is most likely to be
+# carrying the *previous* port -- observed while developing this.
+$RuleOk = Wait-Until {
+    $r = Get-NetFirewallRule -Name $RuleName -ErrorAction SilentlyContinue
+    $r -and (@($r | Get-NetFirewallPortFilter | Where-Object { "$($_.LocalPort)" -eq "$Port" }).Count -gt 0)
+}
+if (-not $RuleOk) {
+    $r = Get-NetFirewallRule -Name $RuleName -ErrorAction SilentlyContinue
+    if ($r) {
+        Write-Error "firewall rule '$RuleName' exists but does not allow TCP $Port (it has $(($r | Get-NetFirewallPortFilter).LocalPort)) -- was the elevation prompt declined? The port will not be reachable over $Iface."
+    } else {
+        Write-Error "firewall rule '$RuleName' was not created -- was the elevation prompt declined? The port will not be reachable over $Iface."
+    }
+    exit 1
+}
+
+# ---------------------------------------------------------------------------
+# 8. Start it now.
+# ---------------------------------------------------------------------------
+# The trigger is at-logon, so without this the daemon would not come up until
+# the next logon -- and a config change applied mid-session would appear to
+# have done nothing.
+Write-Host "debug: starting '$TaskName'"
+Start-ScheduledTask -TaskName $TaskName
+
+# The launcher waits for the interface to acquire an address before it execs
+# sshd, so poll rather than sleeping a fixed interval and guessing.
+if (-not (Wait-Until -TimeoutSeconds 30 -Condition { @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue).Count -gt 0 })) {
+    # Not fatal: on a host that is off the tailnet the launcher spends two
+    # minutes waiting for the interface before falling back to loopback, which
+    # is a legitimate outcome and longer than it is worth blocking an apply for.
+    Write-Host "note: nothing listening on port $Port yet -- the launcher may still be waiting for $Iface. Check $ConfDir\sshd.log"
+} else {
+    foreach ($L in @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue)) {
+        Write-Host "note: listening on $($L.LocalAddress):$($L.LocalPort)"
+    }
+    # Loopback alone means the interface had no address when sshd started, so
+    # the host is up but unreachable from the tailnet. Worth saying plainly --
+    # this is the failure that is otherwise completely silent.
+    $NonLoopback = @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue |
+        Where-Object { $_.LocalAddress -notin @('127.0.0.1', '::1') })
+    if ($NonLoopback.Count -eq 0) {
+        Write-Host "note: loopback only -- no address on $Iface at start. Re-run Start-ScheduledTask '$TaskName' once it is up."
+    }
+}
+
+# KNOWN ROUGH EDGE: a Windows feature update can reinstall the OpenSSH.Server
+# capability and re-enable the stock service behind our back. Step 3 puts it
+# back, but only when this script runs, which is on a config change or a forced
+# re-run -- not automatically. There is no clean hook for it; if ssh starts
+# landing in session 0, run `chezmoi apply --force` and check step 3's output.

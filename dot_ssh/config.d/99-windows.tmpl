@@ -1,0 +1,17 @@
+# Windows hosts running the user-session sshd -- see
+# .chezmoiscripts/00-nt/035-sshd-user-session and the README. That sshd runs
+# inside the interactive desktop session rather than as the stock SYSTEM
+# service, which is what makes mapped drive letters (B:, Y:, Z:) visible over
+# scp; the port is nonstandard because the stock service is disabled rather
+# than removed, so nothing has to be reconciled if a Windows feature update
+# quietly puts it back on 22.
+#
+# Templated purely so the port stays sourced from .chezmoidata/sshd.toml
+# instead of being duplicated here and silently drifting.
+#
+# User and identity come from the defaults in ../config: `Host *` sets
+# User regulad, which `Match User regulad` tags rsa3072.
+
+Host winlite
+    HostName winlite.tail11540.ts.net
+    Port {{ .sshd.port }}

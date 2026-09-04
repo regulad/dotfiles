@@ -123,6 +123,24 @@ Three things worth knowing:
 
 Remember to define the package in the correct hookscript under `.chezmoiscripts/00-posix/` or `.chezmoiscripts/00-nt/`
 
+### SSH server on Windows: user-session `sshd`
+
+`.chezmoiscripts/00-nt/035-sshd-user-session` disables the stock `sshd` service and runs `sshd.exe` inside the interactive desktop session instead, under a Task Scheduler at-logon task. Knobs (port, interface, task name) are in `.chezmoidata/sshd.toml`; the config is `~/.config/sshd/sshd_config` and the launcher is `~/.local/bin/sshd-user-session.ps1`.
+
+The point is that **mapped network drive letters and virtual filesystem providers are visible over `scp`**. The stock service can't do that, for structural reasons: it runs as SYSTEM in session 0 and mints a fresh token per connection, and drive mappings hang off the logon session, so a new LUID means an empty drive-letter view. Win32-OpenSSH skips the token minting entirely when sshd isn't SYSTEM and the authenticating user's SID matches the process SID — it hands the child its own process token instead — so an sshd launched from the desktop session passes that session's mappings straight through. Upstream-supported, not a hack.
+
+NSSM can't substitute for the scheduled task, despite supervising other things here. The SCM starts every service in session 0 whatever the run-as account, so an NSSM service running as the user would get a `LOGON32_LOGON_SERVICE` logon — new LUID, session 0, still no drive letters. The task is the LaunchAgent to NSSM's LaunchDaemon.
+
+Three things worth knowing:
+
+- **The task must run unelevated.** `-RunLevel Limited` and `-LogonType Interactive` are both load-bearing, and both fail *silently* — an elevated sshd gets the other half of the split token, which has its own separate drive-letter view, so everything looks fine and the mapped drives are still missing. The script asserts both back after registering. If something else on the machine ever forces elevation, `EnableLinkedConnections=1` under `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System` reconciles the two views.
+- **It binds loopback plus Tailscale only**, never the LAN. OpenSSH has no interface-name form of `ListenAddress` on any platform, so the launcher resolves the `Tailscale` adapter to addresses at start time and passes them as `-o ListenAddress=`. Bare addresses, never `-o Port=` — `Port` *accumulates* rather than overriding, so passing it on the command line binds every address on both ports. Loopback stays static in the config file so the daemon still comes up when Tailscale hasn't.
+- **A Windows feature update can undo it**, reinstalling the OpenSSH.Server capability and re-enabling the service. The script re-disables it, but only when it runs. If `ssh` starts landing in session 0, `chezmoi apply --force`.
+
+Host keys are generated per machine into `~/.config/sshd` and deliberately not committed — sharing a *host* key across machines defeats the client's ability to tell them apart. Auth is public-key only, against the `~/.ssh/authorized_keys` this repo already manages; the stock config's `Match Group administrators` block is deliberately dropped, since it redirects key lookup to `__PROGRAMDATA__/ssh/administrators_authorized_keys` and would defeat that.
+
+Debugging: `~/.config/sshd/sshd.log` is truncated per start, or run `sshd.exe -d -f ~/.config/sshd/sshd_config` in the foreground.
+
 ### WSL: `wsl-deploy` and `wsl-enter`
 
 Two Windows-side helpers in `~/.local/bin`, exposed to `cmd` by doskey macros in `.doskey.mac`. They invoke by full path on purpose: `~/.local/bin` is only put on `PATH` by `.commonprofile`, which is POSIX shells only.

@@ -1,0 +1,140 @@
+# THIS FILE IS MANAGED BY CHEZMOI!
+#
+# Launcher for the user-session OpenSSH server. This is what the
+# `{{ .sshd.taskName }}` scheduled task executes at logon; it is also runnable
+# by hand, which is the easiest way to watch the thing start.
+#
+# The task could execute sshd.exe directly. It does not, for three reasons that
+# all need code rather than a task argument:
+#
+#   1. sshd has to bind the {{ .sshd.interface }} interface's addresses, and
+#      OpenSSH has no interface-name form of ListenAddress on any platform --
+#      it takes only host|addr[:port]. So the alias has to be resolved to
+#      addresses at start time and passed as `-o ListenAddress=<addr>`.
+#      Hardcoding the addresses into sshd_config instead would rot the moment
+#      the node was re-registered on the tailnet.
+#   2. sshd -D writes to stderr, and the task runs it under a headless
+#      pseudoconsole, so that output goes nowhere. A non-service sshd gets no
+#      C:\ProgramData\ssh\logs either. Without the log below, a daemon that
+#      fails to start leaves no trace at all.
+#   3. Stopping the task does not reliably kill sshd -- observed: after
+#      Stop-ScheduledTask the sshd grandchild kept running and kept holding the
+#      port, so the next start had nothing to bind. Reaping a stale instance is
+#      part of starting cleanly.
+#
+# It stays in the foreground for the whole life of sshd: Task Scheduler tracks
+# the process it started, so returning early would make the task look finished
+# while sshd was still running.
+
+# Deliberately NOT 'Stop'. An earlier revision set it globally and a failed
+# log truncation -- the previous sshd still held the file open -- aborted the
+# launcher before it ever reached sshd, turning a cosmetic logging problem into
+# a daemon that silently never started. Nothing about writing a log file should
+# be able to prevent the server from coming up.
+$ErrorActionPreference = 'Continue'
+
+$SshDir = Join-Path $env:SystemRoot 'System32\OpenSSH'
+$Sshd = Join-Path $SshDir 'sshd.exe'
+$ConfDir = Join-Path $HOME '.config\sshd'
+$Conf = Join-Path $ConfDir 'sshd_config'
+$Log = Join-Path $ConfDir 'sshd.log'
+
+# The absolute path, never a bare `sshd.exe` off PATH. %SystemRoot%\System32 is
+# subject to WOW64 filesystem redirection, so a 32-bit host would be sent to
+# SysWOW64\OpenSSH, which does not exist.
+if (-not (Test-Path -LiteralPath $Sshd)) {
+    throw "sshd.exe not found at $Sshd -- is the OpenSSH.Server capability installed?"
+}
+if (-not (Test-Path -LiteralPath $Conf)) {
+    throw "sshd_config not found at $Conf -- has chezmoi applied?"
+}
+
+# Reap any sshd still running against this config before touching the log,
+# both because it holds the port and because it holds the log file open. Only
+# processes whose command line names *our* config are touched, so a stock
+# service instance or someone else's sshd is left alone.
+foreach ($Stale in @(Get-CimInstance Win32_Process -Filter "Name='sshd.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -and $_.CommandLine -like "*$Conf*" })) {
+    Stop-Process -Id $Stale.ProcessId -Force -ErrorAction SilentlyContinue
+}
+
+# Truncated per start rather than appended to, so the log is always the current
+# run and cannot grow without bound on a machine that logs in daily. Wrapped
+# because it is not worth failing the start over; if the file is wedged, the
+# launcher carries on and sshd simply logs nowhere.
+try { '' | Set-Content -LiteralPath $Log -Encoding ascii -ErrorAction Stop } catch { }
+
+# Everything the launcher decides goes to the log as well as to the console.
+# Under the task the console is a headless pseudoconsole and Write-Host output
+# is discarded, so console-only diagnostics are invisible exactly when they are
+# needed -- which is how an earlier loopback-only start went unexplained.
+function Write-Log {
+    param([string]$Message)
+    $Line = "{0} {1}" -f (Get-Date -Format 's'), $Message
+    Write-Host $Line
+    try { Add-Content -LiteralPath $Log -Value $Line -Encoding ascii -ErrorAction Stop } catch { }
+}
+
+# Wait, bounded, for the interface to acquire an address. At logon this races
+# the Tailscale service coming up, and the adapter is also torn down and
+# recreated when tailscaled restarts -- observed mid-development, with the
+# interface index changing under us -- so "no addresses yet" is a normal
+# transient rather than an error.
+#
+# PrefixOrigin -eq 'Manual' is the filter that separates the addresses
+# Tailscale assigns (100.64.0.0/10 CGNAT and the fd7a:115c:a1e0::/48 ULA, both
+# set explicitly by tailscaled) from the fe80:: link-local the stack adds by
+# itself, which there is no point binding.
+$Deadline = (Get-Date).AddSeconds(120)
+$Addrs = @()
+while ($true) {
+    $Addrs = @(Get-NetIPAddress -InterfaceAlias '{{ .sshd.interface }}' -ErrorAction SilentlyContinue |
+        Where-Object { $_.PrefixOrigin -eq 'Manual' } |
+        Select-Object -ExpandProperty IPAddress)
+    if ($Addrs.Count -gt 0) { break }
+    if ((Get-Date) -gt $Deadline) {
+        Write-Log "warning: no address on interface '{{ .sshd.interface }}' after 120s; starting on loopback only. This host will NOT be reachable over the tailnet until the task is restarted (Stop-ScheduledTask '{{ .sshd.taskName }}'; Start-ScheduledTask '{{ .sshd.taskName }}')."
+        break
+    }
+    Start-Sleep -Seconds 2
+}
+
+# Bare addresses only -- no :port suffix. sshd resolves a portless
+# ListenAddress against the configured Port at the end of parsing, so these
+# inherit `Port {{ .sshd.port }}` from sshd_config. Attaching the port here, or
+# passing `-o Port=`, would be actively wrong: Port accumulates rather than
+# overriding, so it would bind every address on the extra port as well.
+#
+# IPv6 literals need brackets; IPv4 must not have them.
+$ExtraArgs = @()
+foreach ($Addr in $Addrs) {
+    if ($Addr -match ':') {
+        $ExtraArgs += @('-o', "ListenAddress=[$Addr]")
+    } else {
+        $ExtraArgs += @('-o', "ListenAddress=$Addr")
+    }
+    Write-Log "binding $Addr"
+}
+
+Write-Log "exec sshd -f $Conf -D -e $($ExtraArgs -join ' ')"
+
+# -D keeps sshd in the foreground. -e sends its log to stderr, which is what
+# puts it in the file below: a non-service sshd gets no
+# C:\ProgramData\ssh\logs, so without -e the server's own output goes nowhere
+# and a rejected connection leaves no server-side trace at all. Verified --
+# before -e, a failed public-key auth produced an empty log.
+#
+# Piped into the log rather than run with Start-Process: this keeps sshd a
+# direct child of this script and keeps the script blocked for its lifetime,
+# which is what the scheduled task needs in order to track it.
+#
+# The ForEach-Object is not decoration. `2>&1` on a native command turns each
+# stderr line into an ErrorRecord, and PowerShell renders the first one as a
+# NativeCommandError complete with the call stack and source line -- so the
+# log's first real entry arrives buried in eight lines of PowerShell noise.
+# Casting each record to a string writes the message and nothing else.
+& $Sshd -f $Conf -D -e @ExtraArgs 2>&1 |
+    ForEach-Object { "$_" } |
+    Out-File -LiteralPath $Log -Encoding ascii -Append
+
+exit $LASTEXITCODE

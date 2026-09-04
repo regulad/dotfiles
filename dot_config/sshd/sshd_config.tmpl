@@ -1,0 +1,75 @@
+# THIS FILE IS MANAGED BY CHEZMOI!
+#
+# sshd_config for the *user-session* OpenSSH server -- an sshd running inside
+# the interactive desktop session under a Task Scheduler at-logon task, not the
+# stock SYSTEM service. Registered by
+# .chezmoiscripts/00-nt/run_onchange_after_035-sshd-user-session.ps1.tmpl,
+# launched by ~/.local/bin/sshd-user-session.ps1. Knobs live in
+# .chezmoidata/sshd.toml.
+#
+# Why it exists: the stock service runs as NT AUTHORITY\SYSTEM in session 0 and
+# mints a brand new token per connection (S4U for public-key auth), so every
+# SSH child gets a freshly allocated logon session -- which means an empty
+# drive-letter view and, being session 0, no shell namespace providers. Mapped
+# network drives are simply invisible over scp. Win32-OpenSSH short-circuits
+# that whole path when sshd is not SYSTEM and the authenticating user's SID
+# matches the process SID: it hands the child sshd's own process token instead.
+# Run sshd from the desktop session and the mapped drives are there.
+#
+# Forward slashes throughout. Win32-OpenSSH accepts them and they avoid having
+# to think about backslash escaping in the config parser. .chezmoi.homeDir is
+# already forward-slashed on Windows, so it interpolates directly -- and it is
+# derived per-machine rather than hardcoded, because the account name and the
+# home directory basename are not the same thing here.
+
+Port {{ .sshd.port }}
+
+# Only loopback is static. The {{ .sshd.interface }} interface's addresses are
+# appended at launch by the wrapper as `-o ListenAddress=<addr>` arguments,
+# because OpenSSH has no interface-name form of ListenAddress and a hardcoded
+# 100.x/fd7a: address would rot if the node were re-registered on the tailnet.
+#
+# Two things make that split work, both verified against sshd -T on this build:
+#
+#   1. ListenAddress entries from -o and from this file *accumulate*; they do
+#      not override each other.
+#   2. A ListenAddress with no port attached is resolved against the configured
+#      Port at the end of parsing, not at the point it is read. So the wrapper
+#      passes bare addresses and they land on the Port set above.
+#
+# The corollary is that Port must appear only here: `-o Port=` accumulates too,
+# so passing it on the command line would bind every address on *both* ports.
+#
+# Keeping loopback in the file rather than in the wrapper is deliberate. sshd
+# exits only when it cannot bind *any* listener, so a static loopback entry
+# guarantees the daemon still comes up -- reachable at least locally, and
+# visible in the log -- on a boot where Tailscale has not come up yet.
+ListenAddress 127.0.0.1
+ListenAddress ::1
+
+HostKey {{ .chezmoi.homeDir }}/.config/sshd/ssh_host_ed25519_key
+AuthorizedKeysFile {{ .chezmoi.homeDir }}/.ssh/authorized_keys
+PidFile {{ .chezmoi.homeDir }}/.config/sshd/sshd.pid
+
+# Public key only. This port is reachable from the tailnet, and a password
+# prompt here would be an online guessing oracle against the Windows account
+# password. ~/.ssh/authorized_keys is already managed by this repository
+# (dot_ssh/private_authorized_keys), so there is a key to let in.
+#
+# KbdInteractive is disabled explicitly rather than left at its default:
+# Win32-OpenSSH will otherwise happily fall back to it and prompt for the same
+# password that PasswordAuthentication just refused.
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+
+# Deliberately NOT carried over from the stock C:\ProgramData\ssh\sshd_config:
+#
+#     Match Group administrators
+#             AuthorizedKeysFile __PROGRAMDATA__/ssh/administrators_authorized_keys
+#
+# It redirects key lookup away from ~/.ssh/authorized_keys for any account in
+# the Administrators group, which this one is, and so would defeat the
+# AuthorizedKeysFile set above entirely.
+
+Subsystem sftp sftp-server.exe
