@@ -52,7 +52,7 @@
 #
 # This script deliberately does NOT self-elevate the way 050-dev-drive.ps1 and
 # 700-out-of-band-appx.ps1 do. It follows 170-firefox-policies.ps1 instead:
-# stay unelevated, shell out to `sudo` for the three things that genuinely need
+# stay unelevated, shell out to `sudo` for the four things that genuinely need
 # it, and verify each of those by reading state back. Two reasons. sudo is
 # pinned to Force New Window mode on this machine (see 030-w32time.cmd), which
 # does not propagate the child's exit code or return its stdout, so `if
@@ -120,7 +120,83 @@ if (-not (Test-Path -LiteralPath $Sshd)) {
 }
 
 # ---------------------------------------------------------------------------
-# 2. Port sanity.
+# 2. Redirection Guard on sshd.exe.
+# ---------------------------------------------------------------------------
+# The OpenSSH capability installer sets
+# PROCESS_CREATION_MITIGATION_POLICY3_REDIRECTION_TRUST_ALWAYS_ON in sshd.exe's
+# Image File Execution Options. Process mitigation policies are inherited, so
+# every process sshd spawns refuses to traverse any junction or symlink created
+# by a non-elevated process, failing with "The path cannot be traversed because
+# it contains an untrusted mount point".
+#
+# On this machine that breaks essentially all of scoop: every one of the ~63
+# scoop\apps\<app>\current junctions is unreadable over SSH, so each shim dies
+# with "Shim: Could not create process". `dir` works, the versioned directory
+# behind the junction works, the shim does not. This is stock Win32-OpenSSH
+# behaviour and the SYSTEM service does exactly the same thing -- running sshd
+# in the desktop session neither causes nor fixes it.
+#
+# Flipped to ALWAYS_OFF rather than deleting the value, so the intent is
+# explicit and a future capability install that re-asserts ALWAYS_ON is visibly
+# overridden rather than silently restored.
+#
+# The security cost is real and worth stating: Redirection Guard exists to stop
+# a low-privileged user planting a junction that a higher-privileged process is
+# then tricked into following. Scoped to sshd.exe alone, and on a single-user
+# machine where the SSH account is the same account that owns the junctions,
+# the exposure is small -- but it is a genuine reduction, not a free win.
+#
+# MitigationOptions is REG_BINARY, three little-endian QWORDs: bytes 0-7 are
+# policy 1, 8-15 policy 2, 16-23 policy 3. Redirection trust is bits 20-21 of
+# policy 3, i.e. the low nibble pair of byte 18 -- 0x10 is ALWAYS_ON, 0x20 is
+# ALWAYS_OFF. Only those two bits are touched, and the array is padded rather
+# than replaced, so any other mitigation the installer sets now or later
+# survives.
+$IfeoPath = 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sshd.exe'
+$RedirBytes = $null
+$RedirKey = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($IfeoPath)
+if ($RedirKey) {
+    $Existing = $RedirKey.GetValue('MitigationOptions')
+    $RedirKey.Close()
+    if ($null -ne $Existing) { $RedirBytes = [byte[]]$Existing }
+}
+
+# Pad to a full three QWORDs so byte 18 always exists; the installer writes a
+# 19-byte value, but nothing guarantees that length.
+$Wanted = [byte[]]::new(24)
+if ($RedirBytes) { [Array]::Copy($RedirBytes, $Wanted, [Math]::Min($RedirBytes.Length, 24)) }
+$Wanted[18] = ($Wanted[18] -band 0xCF) -bor 0x20
+
+$RedirCurrent = if ($RedirBytes -and $RedirBytes.Length -ge 19) { $RedirBytes[18] } else { 0 }
+if (($RedirCurrent -band 0x30) -ne 0x20) {
+    Write-Host 'debug: disabling Redirection Guard for sshd.exe so junctions traverse over SSH'
+    # Rendered as a hex string and rebuilt inside the elevated shell, because
+    # sudo takes a command line and a byte array does not survive one.
+    $Hex = ($Wanted | ForEach-Object { '{0:X2}' -f $_ }) -join ''
+    & sudo powershell -NoProfile -NonInteractive -Command "`$b = [byte[]]::new(24); for (`$i = 0; `$i -lt 24; `$i++) { `$b[`$i] = [Convert]::ToByte('$Hex'.Substring(`$i * 2, 2), 16) }; New-Item -Path 'HKLM:\$IfeoPath' -Force | Out-Null; Set-ItemProperty -Path 'HKLM:\$IfeoPath' -Name MitigationOptions -Value `$b -Type Binary"
+
+    # IFEO is readable unelevated, so this verifies the same way as everything
+    # else here -- by polling, since sudo returns before its child finishes.
+    $RedirOk = Wait-Until {
+        $k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($IfeoPath)
+        if (-not $k) { return $false }
+        $v = $k.GetValue('MitigationOptions')
+        $k.Close()
+        $v -and (([byte[]]$v).Length -ge 19) -and ((([byte[]]$v)[18] -band 0x30) -eq 0x20)
+    }
+    if (-not $RedirOk) {
+        Write-Error "could not clear Redirection Guard on sshd.exe -- was the elevation prompt declined? Junction traversal (all ~63 scoop shims) will fail over SSH."
+        exit 1
+    }
+    # IFEO is read at process creation, so the running sshd keeps the old
+    # policy until it is restarted. Step 7 tears the task down and back up
+    # unconditionally, which covers it.
+} else {
+    Write-Host 'note: Redirection Guard already disabled for sshd.exe'
+}
+
+# ---------------------------------------------------------------------------
+# 3. Port sanity.
 # ---------------------------------------------------------------------------
 # Hyper-V and WSL take out dynamic port reservations, and a port inside one of
 # those ranges cannot be bound at all. The ranges move between boots, so this
@@ -137,7 +213,7 @@ if ($Excluded) {
 }
 
 # ---------------------------------------------------------------------------
-# 3. Disable the stock sshd service.
+# 4. Disable the stock sshd service.
 # ---------------------------------------------------------------------------
 # It would otherwise hold the port and serve connections out of session 0,
 # which is exactly the behaviour being replaced.
@@ -171,7 +247,7 @@ if ($Svc -and (($Svc.Status -ne 'Stopped') -or ($Svc.StartType -ne 'Disabled')))
 }
 
 # ---------------------------------------------------------------------------
-# 4. Host key.
+# 5. Host key.
 # ---------------------------------------------------------------------------
 # Generated per machine and never committed. A host key identifies *this* host;
 # sharing one across machines through the age-encrypted tree would defeat the
@@ -218,7 +294,7 @@ if (-not (Test-Path -LiteralPath $HostKey)) {
 }
 
 # ---------------------------------------------------------------------------
-# 5. Validate the configuration before anything is wired up.
+# 6. Validate the configuration before anything is wired up.
 # ---------------------------------------------------------------------------
 # `sshd -t` parses the config and loads the host keys without binding
 # anything, so one call covers a bad path, a passphrase-protected host key, and
@@ -238,7 +314,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # ---------------------------------------------------------------------------
-# 6. Register the scheduled task.
+# 7. Register the scheduled task.
 # ---------------------------------------------------------------------------
 # Unelevated, which works for a task owned by the current user and keeps the
 # registration context clean. Torn down and rebuilt rather than patched in
@@ -320,7 +396,7 @@ if ("$($Registered.Principal.LogonType)" -ne 'Interactive') {
 }
 
 # ---------------------------------------------------------------------------
-# 7. Firewall.
+# 8. Firewall.
 # ---------------------------------------------------------------------------
 # Tailscale's own rules are program-scoped to tailscaled.exe, so they do not
 # cover sshd.exe and a rule of our own is still needed.
@@ -346,7 +422,13 @@ Write-Host "debug: replacing firewall rule '$RuleName' (TCP $Port on $Iface)"
 # carrying the *previous* port -- observed while developing this.
 $RuleOk = Wait-Until {
     $r = Get-NetFirewallRule -Name $RuleName -ErrorAction SilentlyContinue
-    $r -and (@($r | Get-NetFirewallPortFilter | Where-Object { "$($_.LocalPort)" -eq "$Port" }).Count -gt 0)
+    # SilentlyContinue on the port filter too, not just the rule. The elevated
+    # command removes and re-adds, so there is a window where the rule exists
+    # but its port filter does not yet -- polling through that window would
+    # otherwise spray a CimJobException across the console on the way to
+    # succeeding.
+    $r -and (@($r | Get-NetFirewallPortFilter -ErrorAction SilentlyContinue |
+        Where-Object { "$($_.LocalPort)" -eq "$Port" }).Count -gt 0)
 }
 if (-not $RuleOk) {
     $r = Get-NetFirewallRule -Name $RuleName -ErrorAction SilentlyContinue
@@ -359,7 +441,7 @@ if (-not $RuleOk) {
 }
 
 # ---------------------------------------------------------------------------
-# 8. Start it now.
+# 9. Start it now.
 # ---------------------------------------------------------------------------
 # The trigger is at-logon, so without this the daemon would not come up until
 # the next logon -- and a config change applied mid-session would appear to
