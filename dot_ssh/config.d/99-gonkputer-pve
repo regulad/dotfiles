@@ -113,3 +113,8 @@ Host vaultwarden # 128
     HostName vaultwarden.regulad.internal
     User root
     Tag rsa3072
+
+Host vkasm
+    HostName vkasm.regulad.internal
+    User kasm_admin
+    Tag rsa3072
