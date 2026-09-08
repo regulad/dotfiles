@@ -66,6 +66,7 @@ if errorlevel 1 (
 )
 
 set user_packages=^
+maven ^
 tesseract ^
 tesseract-languages ^
 cmake ^
