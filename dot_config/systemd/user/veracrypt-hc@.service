@@ -1,0 +1,28 @@
+[Unit]
+Description=Mount the VeraCrypt container matching removable drive %i's own label
+# %% escapes a literal % from systemd's own specifier syntax (%i, %h, etc
+# below) -- a bare %20 in the URL parses as specifier "%2" (invalid) plus a
+# literal "0", which is exactly the "Failed to resolve unit specifiers"
+# warning this line used to produce every time the unit loaded.
+Documentation=https://veracrypt.io/en/Mounting%%20VeraCrypt%%20Volumes.html
+# %i is a kernel device name (e.g. sda1), the same instance string the
+# 01-bluefin udev rule and root bridge unit pass along -- see
+# veracrypt-hc-mount for what actually happens on start/stop.
+#
+# BindsTo, not just After: this is what gives us unlock-on-insert AND
+# teardown-on-removal for free. systemd auto-generates dev-%i.device for
+# every device node udev creates, and tears it down the instant the node
+# disappears (drive unplugged). Binding to it means systemd stops *this* unit
+# at that exact moment too, running ExecStop -- no second udev "remove" rule
+# or manual state-tracking cron needed.
+After=dev-%i.device
+BindsTo=dev-%i.device
+
+[Service]
+Type=oneshot
+# RemainAfterExit: without it, a oneshot is "active" only while ExecStart is
+# running -- it would go straight back to inactive after mounting, and the
+# BindsTo teardown above would have nothing to stop when the drive is pulled.
+RemainAfterExit=yes
+ExecStart=%h/.local/bin/veracrypt-hc-mount start %i
+ExecStop=%h/.local/bin/veracrypt-hc-mount stop %i

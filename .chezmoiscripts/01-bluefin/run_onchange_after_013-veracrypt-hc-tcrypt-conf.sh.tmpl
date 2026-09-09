@@ -1,0 +1,36 @@
+{{ template "posix-preamble.sh" . }}
+# Enables udisks2's native VeraCrypt/TrueCrypt (TCRYPT) support, which exists
+# in this installed udisks2 (2.11.1, with libblockdev-crypto's TCRYPT plugin
+# confirmed present) but ships disabled by default -- it's gated behind the
+# mere existence of /etc/udisks2/tcrypt.conf, checked at daemon startup
+# (udisks_daemon_get_enable_tcrypt in /usr/libexec/udisks2/udisksd).
+#
+# This replaces an earlier, much more complicated design (raw `cryptsetup
+# --type tcrypt`, a root-owned pkexec helper, a custom polkit rule, and a
+# udev rule clearing HintSystem on the mapper and its backing loop device) --
+# all of that existed only because udisksctl unlock/mount kept failing for a
+# device it didn't create or recognize itself. With TCRYPT enabled here,
+# udisks2 does the whole thing natively: `udisksctl loop-setup` on a
+# VeraCrypt container file makes udisksd notice the loop device has
+# unidentified, statistically-random content, attach its own
+# org.freedesktop.UDisks2.Encrypted interface, and from there GNOME's
+# existing gvfs-udisks2-volume-monitor takes over exactly like it does for a
+# plain LUKS USB drive: its own native unlock dialog prompts for the
+# passphrase, and once unlocked, the cleartext volume auto-mounts under
+# /run/media/$USER -- correctly owned, no pkexec, no polkit rule, no custom
+# udev hints, because udisks2 itself has the provenance this time.
+#
+# veracrypt-hc-mount's only remaining job is the loop-setup call; see it for
+# what still needs udev/systemd wiring (finding the .hc file when a labeled
+# USB drive appears) versus what GNOME now handles on its own.
+require_sudo "enabling udisks2 TCRYPT support"
+
+CONF_PATH="/etc/udisks2/tcrypt.conf"
+
+sudo mkdir -p "$(dirname "$CONF_PATH")"
+sudo tee "$CONF_PATH" >/dev/null <<'EOF'
+EOF
+sudo chmod 644 "$CONF_PATH"
+sudo chown root:root "$CONF_PATH"
+
+sudo systemctl restart udisks2.service

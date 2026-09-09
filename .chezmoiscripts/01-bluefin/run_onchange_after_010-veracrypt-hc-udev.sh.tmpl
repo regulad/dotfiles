@@ -1,0 +1,47 @@
+{{ template "posix-preamble.sh" . }}
+# Installs the udev rule that kicks off the VeraCrypt-container autounlock
+# system for USB drives following the <LABEL>.hc-at-root convention (see
+# dot_local/bin/executable_veracrypt-hc-mount for the convention and the full
+# chain this triggers).
+#
+# run_onchange_, not run_once_: the rule's content is embedded below, so
+# editing it here re-renders this script and chezmoi re-runs it. run_once_
+# would key on this script ever having succeeded before and never look at the
+# rule content again.
+#
+# Scoped to /etc/udev/rules.d/*.rules, a root-only path chezmoi itself cannot
+# manage (it only ever writes under $HOME) -- sudo tee + reload is the same
+# shape every other root file in this repo goes through, e.g.
+# 010-pam-sudo-touchid.sh on macOS.
+require_sudo "installing the veracrypt-hc udev rule"
+
+RULE_PATH="/etc/udev/rules.d/99-veracrypt-hc.rules"
+
+# ENV{ID_BUS}=="usb": scoped to USB media on purpose, not every labeled
+# filesystem -- without it this would also fire for every internal partition
+# (including the LUKS-decrypted /var/home mapper) on every boot.
+#
+# %k is udev's kernel device name (e.g. sda1) for the device the rule
+# matched; it becomes the instance for veracrypt-hc-bridge@.service, and that
+# same string is threaded through to veracrypt-hc@.service and
+# veracrypt-hc-mount as the one identifier tying the whole chain together.
+#
+# That's the whole rule now. Earlier revisions also cleared udisks2's
+# HintSystem on the loop/mapper devices veracrypt-hc-mount set up, chasing an
+# authorization failure that turned out to be unrelated to hints entirely
+# (udisks2 not recognizing raw-cryptsetup-opened devices as its own). The
+# actual fix was enabling udisks2's native TCRYPT support instead -- see
+# 013-veracrypt-hc-tcrypt-conf.sh -- which removed the need for
+# veracrypt-hc-mount to touch cryptsetup, pkexec, or hints at all.
+sudo tee "$RULE_PATH" >/dev/null <<'EOF'
+ACTION=="add", SUBSYSTEM=="block", ENV{ID_BUS}=="usb", ENV{ID_FS_USAGE}=="filesystem", ENV{ID_FS_LABEL}!="", TAG+="systemd", ENV{SYSTEMD_WANTS}+="veracrypt-hc-bridge@%k.service"
+EOF
+sudo chmod 644 "$RULE_PATH"
+sudo chown root:root "$RULE_PATH"
+
+sudo udevadm control --reload-rules
+# Re-fires ACTION=="add" for every already-attached block device so a drive
+# plugged in before this apply (e.g. AIRGAP, mid-setup) is picked up without
+# a physical replug. Safe to re-run: veracrypt-hc-mount's own
+# `losetup -j "$HC_FILE"` check makes an already-looped container a no-op.
+sudo udevadm trigger --subsystem-match=block --action=add

@@ -1,5 +1,6 @@
 README.md
 LICENSE.md
+AGENTS.md
 Dockerfile*
 tools/  # maintenance scripts, run by hand from the source dir
 # general ignores
@@ -107,6 +108,7 @@ Library
 # Linux
 {{- if ne .chezmoi.os "linux" }}
 .chezmoiscripts/00-linux/*
+.chezmoiscripts/01-bluefin/*
 .config/systemd/
 {{- else }}
 # only one package manager's script applies per distro
@@ -134,6 +136,14 @@ Library
 # them when this directory exists, so everywhere else keeps the builtin small
 # logo instead of shipping four files it will never read.
 .config/fastfetch/logos/
+# The whole VeraCrypt-container autounlock system (udev rule + root bridge
+# unit + user template unit) leans on udisks2's allow_active=yes polkit
+# defaults for loop-setup/encrypted-unlock/filesystem-mount, which is a
+# desktop-session property every distro has -- the reason this is Bluefin-only
+# is narrower: it's where the AIRGAP-style USB drives actually get plugged in,
+# and keeping it scoped avoids standing up an unused udev rule + root service
+# on every other Linux box this repo targets.
+.chezmoiscripts/01-bluefin/*
 {{-     end }}
 {{-     if stat "/run/ostree-booted" }}
 # Theos cannot be installed on an atomic host, and unlike the dnf/brew split

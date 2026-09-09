@@ -1,0 +1,13 @@
+{{ template "posix-preamble.sh" . }}
+# dot_config/systemd/user/veracrypt-hc@.service is a normal chezmoi-managed
+# file under $HOME, so chezmoi already writes it -- the one thing it doesn't
+# do is tell the user systemd instance to re-read it. No sudo needed here;
+# `systemctl --user` talks to this user's own manager.
+#
+# run_onchange_, keyed on the unit file's own source digest below, so editing
+# the unit is what re-triggers this rather than this script's own content
+# (which has no reason to change in step with the unit).
+{{ $unitFile := joinPath .chezmoi.sourceDir "dot_config/systemd/user/veracrypt-hc@.service" -}}
+# source digest: {{ include $unitFile | sha256sum }}
+
+systemctl --user daemon-reload

@@ -1,0 +1,42 @@
+{{ template "posix-preamble.sh" . }}
+# Installs the root-side half of the veracrypt-hc chain: a system unit that
+# udev's SYSTEMD_WANTS (set by 010-veracrypt-hc-udev.sh's rule) can activate,
+# whose only job is forwarding the event into the logged-in user's own
+# systemd --user instance.
+#
+# This hop only exists because udev's SYSTEMD_WANTS can activate system units
+# only -- it has no route to a user manager directly. Everything that
+# actually matters (finding the .hc file and running `udisksctl loop-setup`
+# on it) happens on the far side of `systemctl --user --machine=`, in
+# veracrypt-hc@.service / veracrypt-hc-mount, running as this user rather
+# than root -- root here would bypass udisks2's own authorization checks
+# entirely, but a root-created loop device ends up owned and mounted by
+# root too, and losing that ownership boundary is not worth skipping a
+# `systemctl --machine=` hop.
+#
+# Hardcodes {{ .chezmoi.username }} rather than resolving the active
+# graphical session at run time (e.g. via loginctl): this machine is a single
+# -user laptop, and a loginctl lookup buys correctness for a shared-machine
+# case that does not exist here at the cost of a second moving part.
+require_sudo "installing the veracrypt-hc-bridge system unit"
+
+UNIT_PATH="/etc/systemd/system/veracrypt-hc-bridge@.service"
+
+sudo tee "$UNIT_PATH" >/dev/null <<EOF
+[Unit]
+Description=Forward a udev block-device add event for %i into {{ .chezmoi.username }}'s session
+After=dev-%i.device
+
+[Service]
+Type=oneshot
+# --machine=USER@ is systemd's supported way for root to reach a specific
+# user's manager instance without hand-assembling its D-Bus/XDG_RUNTIME_DIR
+# environment. Requires {{ .chezmoi.username }} to have an active session
+# (i.e. this is a no-op, not a failure, if the drive is plugged in before
+# login).
+ExecStart=/usr/bin/systemctl --user --machine={{ .chezmoi.username }}@ start veracrypt-hc@%i.service
+EOF
+sudo chmod 644 "$UNIT_PATH"
+sudo chown root:root "$UNIT_PATH"
+
+sudo systemctl daemon-reload

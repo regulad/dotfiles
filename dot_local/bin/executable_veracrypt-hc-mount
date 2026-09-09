@@ -1,0 +1,131 @@
+#!/bin/bash
+# veracrypt-hc-mount start|stop <kernel-device-name, e.g. sda1>
+#
+# Driven by dot_config/systemd/user/veracrypt-hc@.service, which is in turn
+# started by root's veracrypt-hc-bridge@.service (written by
+# .chezmoiscripts/01-bluefin), which udev activates on ACTION=="add" for any
+# USB block device that gets a labeled filesystem. See that unit and the
+# 01-bluefin scripts for why the chain has to hop through root at all
+# (SYSTEMD_WANTS from udev can only reach system units) and why teardown needs
+# no separate udev rule (BindsTo=dev-%i.device on the user unit).
+#
+# Convention this whole system is built around: a VeraCrypt container file
+# named "<LABEL>.hc" sitting at the root of a drive labeled <LABEL>. Any drive
+# insert that doesn't match -- no .hc file, or the outer mount never
+# materializes -- is a silent no-op, not an error, since the udev rule fires
+# for every labeled USB filesystem, not just VeraCrypt drives.
+#
+# This script's entire job is `udisksctl loop-setup` on the container file --
+# nothing else. Once 01-bluefin/013-veracrypt-hc-tcrypt-conf.sh has enabled
+# udisks2's native TCRYPT support, udisksd itself notices the new loop
+# device's content looks encrypted (a chi-squared randomness test, since
+# VeraCrypt/TrueCrypt containers have no on-disk signature to probe for) and
+# attaches org.freedesktop.UDisks2.Encrypted to it. From there GNOME's
+# existing gvfs-udisks2-volume-monitor takes over exactly as it does for a
+# plain LUKS USB drive: its own native dialog prompts for the passphrase, and
+# the cleartext volume auto-mounts under /run/media/$USER once unlocked.
+#
+# Earlier revisions of this script drove that whole unlock+mount sequence
+# themselves -- pinentry for the passphrase, raw `cryptsetup --type tcrypt`
+# via a root pkexec helper (udisksctl has no --type tcrypt escape hatch),
+# and a udev rule fighting udisks2's HintSystem property to get an
+# unprivileged mount authorized. All of it existed only to work around
+# udisks2 not recognizing a device it didn't unlock itself; enabling its
+# native TCRYPT support removed the need for any of it.
+#
+# lsblk/losetup are called by absolute /usr/bin path, not off PATH: Linuxbrew
+# links its own util-linux ahead of the system one for everything with a brew
+# dependency on it (systemd, podman, git, ...), and brew's copies aren't
+# wired into this host's live udev/blkid database the way the system ones
+# are -- `lsblk -no LABEL` on a device the kernel clearly has a label for
+# comes back empty through brew's copy. 00-linux/030-brew-extras.sh now
+# unlinks util-linux for the same reason it already unlinks libfuse, but this
+# script talks to the same live kernel state either way, so it pins the path
+# rather than trusting PATH order to stay that way.
+set -uo pipefail
+
+ACTION="${1:?usage: veracrypt-hc-mount start|stop <kdev>}"
+KDEV="${2:?usage: veracrypt-hc-mount start|stop <kdev>}"
+DEV="/dev/$KDEV"
+
+# id -un rather than $USER: this runs from a systemd --user unit, not a login
+# shell, and that environment is not guaranteed to have it set.
+SELF_USER="$(id -un)"
+
+STATE_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/veracrypt-hc"
+STATE_FILE="$STATE_DIR/$KDEV"
+mkdir -p "$STATE_DIR"
+
+log() { echo "veracrypt-hc-mount: $*" >&2; }
+
+case "$ACTION" in
+start)
+	LABEL="$(/usr/bin/lsblk -no LABEL "$DEV" 2>/dev/null | head -n1)"
+	if [ -z "$LABEL" ]; then
+		log "no filesystem label on $DEV, nothing to do"
+		exit 0
+	fi
+
+	MOUNT_DIR="/run/media/$SELF_USER/$LABEL"
+	HC_FILE="$MOUNT_DIR/$LABEL.hc"
+
+	# udev's "add" event and gvfs's automount of the outer filesystem are
+	# racing each other -- this unit can easily start before
+	# /run/media/$SELF_USER/$LABEL exists yet, so give it a few seconds.
+	for _ in $(seq 1 30); do
+		[ -d "$MOUNT_DIR" ] && break
+		sleep 0.5
+	done
+
+	if [ ! -f "$HC_FILE" ]; then
+		log "no $LABEL.hc at the root of $MOUNT_DIR, nothing to do"
+		exit 0
+	fi
+
+	# Idempotency check: a loop device already backed by this file means a
+	# previous run (or a restart of this same unit) already did the work.
+	if /usr/bin/losetup -j "$HC_FILE" 2>/dev/null | grep -q .; then
+		log "$HC_FILE is already looped, assuming already handled"
+		exit 0
+	fi
+
+	LOOP_DEV="$(udisksctl loop-setup -f "$HC_FILE" --no-user-interaction | grep -oP '/dev/loop\d+')"
+	if [ -z "$LOOP_DEV" ]; then
+		log "loop-setup for $HC_FILE did not report a loop device"
+		exit 1
+	fi
+
+	# Recorded for `stop` -- by the time the drive is pulled, $HC_FILE is
+	# gone and there is nothing left for `losetup -j` to find it by.
+	echo "$LOOP_DEV" >"$STATE_FILE"
+
+	log "set up $LOOP_DEV for $HC_FILE -- GNOME will prompt for the passphrase and mount it from here"
+	;;
+
+stop)
+	if [ ! -f "$STATE_FILE" ]; then
+		log "no state for $KDEV, nothing to tear down"
+		exit 0
+	fi
+
+	LOOP_DEV="$(cat "$STATE_FILE")"
+
+	# loop-delete on its own is enough: GNOME's automount handles
+	# unmounting/locking the cleartext volume the same way it handles any
+	# other drive being pulled out from under it. State is only cleared on
+	# success so a retried `stop` can find $LOOP_DEV again instead of
+	# losing track of it.
+	if udisksctl loop-delete -b "$LOOP_DEV" --no-user-interaction; then
+		rm -f "$STATE_FILE"
+		log "deleted $LOOP_DEV"
+	else
+		log "loop-delete of $LOOP_DEV failed -- state kept for retry"
+		exit 1
+	fi
+	;;
+
+*)
+	echo "usage: veracrypt-hc-mount start|stop <kdev>" >&2
+	exit 1
+	;;
+esac
