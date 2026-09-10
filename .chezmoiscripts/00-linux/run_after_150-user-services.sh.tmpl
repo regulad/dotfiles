@@ -4,6 +4,14 @@ if ! [ "$CONTAINERIZED" -eq 1 ]; then
 	if systemctl --user is-system-running &>/dev/null || systemctl --user status &>/dev/null; then
 		systemctl --user enable --now tmux@default.socket
 		systemctl --user enable --now podman.socket
+		# gpg-agent.service ships static (Requires=gpg-agent.socket,
+		# `--supervised` in its ExecStart), so systemd -- not gpg's own
+		# opportunistic autospawn-on-first-use -- owns its lifecycle from
+		# login onward once the socket is enabled. `enable` alone would just
+		# persist it for the next login; `--now` also creates the listening
+		# socket in this session immediately rather than waiting for the
+		# first gpg/ssh invocation to trigger gpg's own autospawn.
+		systemctl --user enable --now gpg-agent.socket
 		# NOTE: tailscale-ephemeral.service is deliberately NOT enabled here.
 		# It is shipped inside WSL as an option, not as a default: joining a
 		# tailnet is a side effect nobody should get merely from running an
