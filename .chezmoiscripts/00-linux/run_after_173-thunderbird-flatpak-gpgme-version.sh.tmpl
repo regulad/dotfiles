@@ -1,0 +1,84 @@
+{{ template "posix-preamble.sh" . }}
+# Thunderbird's Flatpak loads libgpgme.so.11 by default when talking to an
+# external GnuPG install -- the GPGME 1.x soname. This runtime ships GPGME
+# 2.x as libgpgme.so.45 (confirmed via `ldconfig -p` inside `flatpak run
+# --command=sh org.mozilla.thunderbird_esr`), so Thunderbird's loader finds
+# nothing and reports "invalid configuration, request to use external GnuPG
+# key, but GPGME isn't working" the moment a message is signed or encrypted.
+# mail.openpgp.load_untested_gpgme_version=45 is Thunderbird's own escape
+# hatch for this exact mismatch -- undocumented outside its release notes,
+# see https://etaoinwu.com/en/blog/gpgme-2-workaround-for-thunderbird/.
+#
+# There is no confirmed way to deliver this via policies.json the way
+# 170-firefox-policies.sh does: unlike Firefox
+# (org.mozilla.firefox.systemconfig), Thunderbird's Flatpak declares no
+# systemconfig-style extension point (checked via `flatpak info
+# --show-metadata org.mozilla.thunderbird_esr`), so a policy file has nowhere
+# sandboxed to land. user.js in the profile directory is the Mozilla
+# mechanism that does not depend on one: read on every startup, applied on
+# top of prefs.js, no distribution channel required.
+#
+# The profile directory name is a random per-install salt (e.g.
+# kx7vlbm5.default-esr) that cannot be hardcoded, so this resolves it the same
+# way Thunderbird itself does: profiles.ini's [InstallXXXXXXXXXXXXXXXX]
+# section names the profile actually in use and takes precedence over the
+# legacy Default=1 flag on a [ProfileN] section. Verified necessary on this
+# host, which has both a qj3gacvz.default profile with no prefs.js at all
+# (created but never launched) and the real kx7vlbm5.default-esr the Install
+# section actually points at -- trusting Default=1 alone would have landed
+# this in the wrong, inert profile.
+#
+# No sudo anywhere in this script -- the whole target tree is
+# $HOME/.var/app/<id>/.thunderbird, owned by this user -- so unlike the
+# firefox policy script (which avoids re-prompting for sudo on every apply)
+# this is a plain run_after_: re-running is free, and re-checking picks up a
+# profile that did not exist on a previous apply.
+if ! command -v flatpak &>/dev/null; then
+	exit 0
+fi
+
+USER_JS="$(mktemp)"
+trap 'rm -f "$USER_JS"' EXIT
+cat >"$USER_JS" <<'EOF'
+user_pref("mail.openpgp.allow_external_gnupg", true);
+user_pref("mail.openpgp.load_untested_gpgme_version", "45");
+EOF
+
+while IFS= read -r app_id; do
+	PROFILES_INI="$HOME/.var/app/$app_id/.thunderbird/profiles.ini"
+	[ -f "$PROFILES_INI" ] || continue
+
+	PROFILE_PATH="$(awk -F= '
+		/^\[Install/ {sect="install"; next}
+		/^\[/ {sect=""; next}
+		sect=="install" && $1=="Default" {print $2; exit}
+	' "$PROFILES_INI")"
+
+	if [ -z "$PROFILE_PATH" ]; then
+		PROFILE_PATH="$(awk -F= '
+			/^\[Profile/ {sect="profile"; path=""; isdef=0; next}
+			/^\[/ {sect=""; next}
+			sect=="profile" && $1=="Path" {path=$2}
+			sect=="profile" && $1=="Default" && $2=="1" {isdef=1}
+			sect=="profile" && isdef && path {print path}
+		' "$PROFILES_INI" | head -n1)"
+	fi
+
+	if [ -z "$PROFILE_PATH" ]; then
+		echo "warning: could not determine the active Thunderbird profile for $app_id, skipping" >&2
+		continue
+	fi
+
+	PROFILE_DIR="$HOME/.var/app/$app_id/.thunderbird/$PROFILE_PATH"
+	if [ ! -d "$PROFILE_DIR" ]; then
+		echo "warning: $PROFILE_DIR (from $PROFILES_INI) does not exist, skipping" >&2
+		continue
+	fi
+
+	DEST="$PROFILE_DIR/user.js"
+	if ! cmp -s "$USER_JS" "$DEST" 2>/dev/null; then
+		cp "$USER_JS" "$DEST"
+		chmod 0600 "$DEST"
+		echo "note: wrote $DEST" >&2
+	fi
+done < <(flatpak list --app --columns=application 2>/dev/null | grep -i '^org\.mozilla\.thunderbird')

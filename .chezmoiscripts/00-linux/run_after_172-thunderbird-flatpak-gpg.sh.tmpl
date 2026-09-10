@@ -1,0 +1,55 @@
+{{ template "posix-preamble.sh" . }}
+# Thunderbird's Flatpak is sandboxed away from the host's gpg-agent by
+# default. --socket=gpg-agent is Flatpak's own purpose-built permission for
+# this (not a raw --filesystem=xdg-run/gnupg grant): it exposes whatever
+# `gpgconf --list-dir agent-socket` reports, and in practice the whole of
+# $XDG_RUNTIME_DIR/gnupg -- S.keyboxd included, not just S.gpg-agent -- so
+# both the agent and gpg 2.4+'s keyboxd are reachable through this one grant.
+#
+# The agent alone only answers "sign/decrypt with this key ID"; resolving
+# *which* key belongs to a recipient means gpg reading GNUPGHOME directly, so
+# the keyring itself also needs to be visible. Granted read-write (:create),
+# matching how Kleopatra -- a full key-management GPG frontend, the closer
+# comparison here than an encrypt-only password manager -- is configured,
+# rather than read-only: Thunderbird's own OpenPGP key management (importing
+# keys, trust changes) writes to ~/.gnupg, not just reads it.
+#
+# This is necessary but not sufficient. As of Thunderbird 128esr+, GPGME
+# inside the Flatpak simply does not attempt to connect to the agent socket
+# even once it is reachable -- an open upstream bug, unconfirmed a year in:
+# https://bugzilla.mozilla.org/show_bug.cgi?id=1982257. `flatpak enter
+# org.mozilla.Thunderbird gpg --list-secret-keys` works fine from inside the
+# sandbox, so it is not a permissions problem on Flatpak's end, and nothing
+# scriptable here can fix Thunderbird's own GPGME call. The reported
+# workaround is priming the agent's passphrase cache from outside Thunderbird
+# first -- e.g. `gpg --local-user <keyid> -as - <<< test` -- since gpg-agent
+# then serves the cached session without a fresh pinentry round-trip. This
+# override is what makes that workaround reachable at all, and is also what
+# stops being a workaround the day upstream fixes the connection.
+#
+# --user rather than a system-wide override: the app itself installs system-
+# wide, but the override only needs to apply to this user's own sandbox
+# instance, and --user needs no sudo to write.
+#
+# `flatpak override` is idempotent -- re-applying the same grant is a no-op --
+# so this is a plain run_after_, not run_once_/run_onchange_.
+#
+# Matched by app ID prefix rather than a single hardcoded ID: Flathub ships
+# Thunderbird's stable and ESR channels under different IDs
+# (org.mozilla.Thunderbird vs org.mozilla.thunderbird_esr), and which one is
+# installed is a channel choice, not something this script should assume.
+# MOZ_ALLOW_GPGME_TEST=1 gates whether Thunderbird attempts to load GPGME at
+# all, separately from the mail.openpgp.allow_external_gnupg pref (a
+# Thunderbird config-editor setting this script does not touch -- it lives in
+# the profile, not the sandbox, and there is no confirmed Flatpak-reachable
+# equivalent of Firefox's org.mozilla.firefox.systemconfig extension to
+# deliver a policies.json into this app). Harmless to set even if a given
+# Thunderbird build no longer gates on it. See
+# https://bugzilla.mozilla.org/show_bug.cgi?id=1958968.
+if command -v flatpak &>/dev/null; then
+	while IFS= read -r app_id; do
+		flatpak override --user --socket=gpg-agent "$app_id"
+		flatpak override --user --filesystem=~/.gnupg:create "$app_id"
+		flatpak override --user --env=MOZ_ALLOW_GPGME_TEST=1 "$app_id"
+	done < <(flatpak list --app --columns=application 2>/dev/null | grep -i '^org\.mozilla\.thunderbird')
+fi
