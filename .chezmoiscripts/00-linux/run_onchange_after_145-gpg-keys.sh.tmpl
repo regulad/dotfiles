@@ -1,0 +1,43 @@
+{{ template "posix-preamble.sh" . }}
+{{- $publicAsc := joinPath .chezmoi.sourceDir "private_dot_gnupg" "encrypted_executable_public_regulad@regulad.xyz.asc.age" }}
+{{- $secretAsc := joinPath .chezmoi.sourceDir "private_dot_gnupg" "encrypted_executable_secret_regulad@regulad.xyz.asc.age" }}
+# Imports the GPG identity decrypted alongside this script (private_dot_gnupg's
+# encrypted_executable_{public,secret}_regulad@regulad.xyz.asc.age) into this
+# user's keychain. See .chezmoiignore for why both the keypair and this script
+# are masked together under useDummySecrets.
+#
+# run_onchange_ trigger: digests are of the age *ciphertext*, since `include`
+# does not decrypt -- no age identity is needed to render this script, and
+# rotating either half of the keypair re-runs it.
+#
+# GPG source digests:
+#     private_dot_gnupg/encrypted_executable_public_regulad@regulad.xyz.asc.age {{ include $publicAsc | sha256sum }}
+#     private_dot_gnupg/encrypted_executable_secret_regulad@regulad.xyz.asc.age {{ include $secretAsc | sha256sum }}
+if ! command -v gpg &>/dev/null; then
+	echo "error: gpg not available, can't import GPG keys" >&2
+	exit 1
+fi
+
+# gpg materializes pubring.kbx/trustdb.gpg on first use of any kind -- this
+# just makes that happen up front rather than as a side effect of the import
+# below, mirroring 141-client-cert.sh's explicit `certutil -N` for the NSS
+# database it imports into.
+if [ ! -f "$HOME/.gnupg/pubring.kbx" ]; then
+	gpg --batch --list-keys &>/dev/null
+fi
+
+# Re-importing an already-present public key is a documented GnuPG no-op
+# ("... not changed"), so no idempotency guard is needed here.
+gpg --batch --yes --import "$HOME/.gnupg/public_regulad@regulad.xyz.asc"
+
+# --pinentry-mode loopback --passphrase-fd 0 is the standard non-interactive
+# secret-key import incantation: gpg needs the *current* passphrase to unwrap
+# the incoming key before gpg-agent can re-protect it for storage, and without
+# loopback that unwrap would block on a pinentry dialog no one is watching.
+# Requires allow-loopback-pinentry in gpg-agent.conf (present) -- gpg-agent
+# refuses loopback mode outright otherwise. Same re-import-is-a-no-op behavior
+# applies here as for the public half above.
+gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+	--import "$HOME/.gnupg/secret_regulad@regulad.xyz.asc" <<'EOF'
+{{ (bitwarden "item" "f61fd2e0-3284-4c3b-8274-87cdeec73aa2").login.password }}
+EOF

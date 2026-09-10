@@ -50,6 +50,13 @@ key.txt
 .chezmoiscripts/00-nt/021-x509-client.cmd
 
 .x509/codesign/
+
+# Same shape of hazard as the client cert above: the dummy-secrets images
+# apply with `--exclude encrypted`, so the decrypted .asc keypair never lands
+# in ~/.gnupg there. The import script has to be masked alongside it, or
+# gpg --import fails hard against files that don't exist.
+.gnupg/*.asc
+.chezmoiscripts/00-linux/145-gpg-keys.sh
 {{- end }}
 
 # Head

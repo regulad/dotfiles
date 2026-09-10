@@ -1,8 +1,20 @@
 default-cache-ttl 600
 max-cache-ttl 7200
-{{- if eq .chezmoi.arch "arm64" }}
+# Lets a caller that explicitly passes --pinentry-mode loopback (the
+# 00-linux/145-gpg-keys.sh secret-key import, so it can hand gpg the Bitwarden
+# passphrase non-interactively) do so. It does not change normal interactive
+# gpg usage -- that still goes through pinentry-program above -- since gpg only
+# requests loopback when a caller asks for it.
+allow-loopback-pinentry
+{{- if eq .chezmoi.os "darwin" }}
+{{-   if eq .chezmoi.arch "arm64" }}
 pinentry-program /opt/homebrew/bin/pinentry-mac
-{{- else }}
+{{-   else }}
 pinentry-program /usr/local/bin/pinentry-mac
+{{-   end }}
+{{- else if eq .chezmoi.osRelease.id "bluefin" }}
+pinentry-program /usr/bin/pinentry-gnome3
 {{- end }}
+{{- if eq .chezmoi.os "linux" }}
 scdaemon-program /usr/libexec/scdaemon
+{{- end }}

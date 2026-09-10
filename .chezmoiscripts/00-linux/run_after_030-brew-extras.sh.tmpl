@@ -72,6 +72,20 @@ if [ "$HAS_BREW" = "true" ]; then
 		brew unlink util-linux
 	fi
 
+	# Same shape of problem again, discovered while setting up gpg-agent:
+	# gpgme (a podman dependency) pulls in gnupg transitively, and brew links
+	# its gpg/gpg-agent/gpgconf ahead of the system copies on PATH. The two
+	# builds aren't just cosmetically different -- this host had brew's gnupg
+	# 2.5.x installed against the system's 2.4.9 scdaemon/pinentry, a version
+	# pairing nobody tested. `gpg-connect-agent` silently autostarting brew's
+	# gpg-agent instead of the system one is exactly the kind of wrong-binary
+	# bug util-linux caused for lsblk, just with a bigger blast radius since
+	# gpg-agent.conf's pinentry-program/scdaemon-program choices assume the
+	# system agent is the one reading them.
+	if brew list --formula gnupg &>/dev/null; then
+		brew unlink gnupg
+	fi
+
 	# brew-gem global gems (like cargo/go/uv)
 	brew gem install ruby-lsp
 
