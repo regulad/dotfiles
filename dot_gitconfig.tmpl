@@ -32,7 +32,7 @@
 [gpg]
 	format = ssh
 {{- if and (eq .chezmoi.os "windows") (stat (joinPath .chezmoi.homeDir "scoop")) }}
-	program = "C:\\Program Files (x86)\\GnuPG\\bin\\gpg.exe"
+	program = "C:\\Program Files\\GnuPG\\bin\\gpg.exe"
 {{- end }}
 [gpg "ssh"]
 	allowedSignersFile = ~/.ssh/allowed_signers

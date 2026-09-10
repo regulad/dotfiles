@@ -12,7 +12,7 @@ pinentry-program /opt/homebrew/bin/pinentry-mac
 {{-   else }}
 pinentry-program /usr/local/bin/pinentry-mac
 {{-   end }}
-{{- else if eq .chezmoi.osRelease.id "bluefin" }}
+{{- else if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "bluefin") }}
 pinentry-program /usr/bin/pinentry-gnome3
 {{- end }}
 {{- if eq .chezmoi.os "linux" }}

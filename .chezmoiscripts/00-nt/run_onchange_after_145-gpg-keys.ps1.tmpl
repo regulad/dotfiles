@@ -1,0 +1,86 @@
+{{- $publicAsc := joinPath .chezmoi.sourceDir "private_dot_gnupg" "encrypted_executable_public_regulad@regulad.xyz.asc.age" -}}
+{{- $secretAsc := joinPath .chezmoi.sourceDir "private_dot_gnupg" "encrypted_executable_secret_regulad@regulad.xyz.asc.age" -}}
+# Windows counterpart to 00-linux/run_onchange_after_145-gpg-keys.sh.tmpl:
+# imports the GPG identity decrypted alongside this script (private_dot_gnupg's
+# encrypted_executable_{public,secret}_regulad@regulad.xyz.asc.age) into this
+# user's keychain. See .chezmoiignore for why both the keypair (.gnupg/*.asc)
+# and this script (.chezmoiscripts/00-nt/145-gpg-keys.ps1, the stripped name
+# this file's own attributes render down to) are masked together under
+# useDummySecrets, same as the Linux script's own entries there.
+#
+# run_onchange_ trigger: digests are of the age *ciphertext*, since `include`
+# does not decrypt -- no age identity is needed to render this script, and
+# rotating either half of the keypair re-runs it.
+#
+# GPG source digests:
+#     private_dot_gnupg/encrypted_executable_public_regulad@regulad.xyz.asc.age {{ include $publicAsc | sha256sum }}
+#     private_dot_gnupg/encrypted_executable_secret_regulad@regulad.xyz.asc.age {{ include $secretAsc | sha256sum }}
+{{- if .useDummySecrets }}
+#
+# Belt-and-suspenders alongside the .chezmoiignore entry, not a substitute for
+# it: whether .chezmoiignore actually suppresses run_ scripts (as opposed to
+# just regular files) is not clearly documented for this chezmoi version, and
+# a scoped `chezmoi apply -- <script>` / `chezmoi managed` probe on this
+# machine was inconclusive either way. The bitwarden template call further
+# down is template-evaluated at render time, before any of the script's own
+# runtime logic gets a chance to run -- so if the ignore entry alone turns out
+# not to stop this file from being rendered under dummy secrets, a runtime
+# guard inside the script body would be too late to stop that call from firing
+# and blocking on a real interactive master-password prompt. Putting the early
+# exit in its own template branch instead means Go's template engine never
+# evaluates the branch below -- and therefore never calls bitwarden -- when
+# useDummySecrets is set, regardless of what .chezmoiignore does.
+Write-Host 'debug: useDummySecrets is set, skipping GPG key import'
+exit 0
+{{- else }}
+# The two .asc files below live under $HOME\.gnupg because that is where
+# chezmoi's home-relative mapping for private_dot_gnupg always lands them, on
+# every OS -- it is just a staging location for this script's input, not
+# GNUPGHOME. GnuPG on Windows keeps that split by default (see `gpgconf
+# --list-dirs`): the real homedir is %APPDATA%\gnupg, so `gpg --import` below
+# still lands the keys in the right, actual keychain regardless of where the
+# source .asc files happen to sit.
+$PublicAsc = Join-Path $HOME '.gnupg' 'public_regulad@regulad.xyz.asc'
+$SecretAsc = Join-Path $HOME '.gnupg' 'secret_regulad@regulad.xyz.asc'
+
+if (-not (Get-Command gpg -ErrorAction SilentlyContinue)) {
+    Write-Error "gpg not on PATH, can't import GPG keys -- install Gpg4win first (run_after_100-winget.cmd.tmpl)"
+    exit 1
+}
+
+# Unlike the Linux script, this does not gate on a pubring.kbx existence check
+# first: that check mirrors $HOME/.gnupg being the real homedir on Linux, which
+# it is not here (see the note above), so the file it would look for is never
+# created there. `gpg --batch --list-keys` against the real homedir is cheap
+# enough to just always run.
+gpg --batch --list-keys *> $null
+
+# Re-importing an already-present public key is a documented GnuPG no-op
+# ("... not changed"), so no idempotency guard is needed here.
+gpg --batch --yes --import $PublicAsc
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "gpg --import $PublicAsc failed"
+    exit 1
+}
+
+# --pinentry-mode loopback --passphrase-fd 0 is the standard non-interactive
+# secret-key import incantation: gpg needs the *current* passphrase to unwrap
+# the incoming key before gpg-agent can re-protect it for storage, and without
+# loopback that unwrap would block on a pinentry dialog no one is watching.
+# Requires allow-loopback-pinentry in gpg-agent.conf
+# (private_dot_gnupg/private_gpg-agent.conf.tmpl) -- gpg-agent refuses loopback
+# mode outright otherwise. Same re-import-is-a-no-op behavior applies here as
+# for the public half above.
+#
+# Piped via PowerShell's pipeline rather than a batch `echo pw | gpg`: cmd.exe
+# implements a pipe by spawning a helper cmd.exe on each side, and that helper's
+# command line -- containing the plaintext passphrase -- is briefly visible to
+# anything enumerating processes. PowerShell instead writes piped input
+# straight to the child process's stdin handle, so the passphrase never becomes
+# a process argument.
+'{{ (bitwarden "item" "f61fd2e0-3284-4c3b-8274-87cdeec73aa2").login.password }}' | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --import $SecretAsc
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "gpg --import $SecretAsc (secret half) failed"
+    exit 1
+}
+{{- end }}
