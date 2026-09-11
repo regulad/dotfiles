@@ -122,6 +122,16 @@ file-system-maven-settings
       <username>{{- (bitwardenFields "item" "central.sonatype.com").chezmoiUsername.value -}}</username>
       <password>{{- (bitwardenFields "item" "central.sonatype.com").chezmoiPassword.value -}}</password>
     </server>
+    <server>
+      <id>regulad-releases</id>
+      <username>{{- (bitwarden "item" "repo.regulad.xyz").login.username -}}</username>
+      <password>{{- (bitwarden "item" "repo.regulad.xyz").login.password -}}</password>
+    </server>
+    <server>
+      <id>regulad-snapshots</id>
+      <username>{{- (bitwarden "item" "repo.regulad.xyz").login.username -}}</username>
+      <password>{{- (bitwarden "item" "repo.regulad.xyz").login.password -}}</password>
+    </server>
     {{- end }}
   </servers>
 
