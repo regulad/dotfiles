@@ -4,13 +4,17 @@ Host prodingus
     HostName prodingus.tail11540.ts.net
     User root
     Tag rsa3072
+    ForwardAgent yes
 
 Host turk
     HostName turk.tail11540.ts.net
+    ForwardAgent yes
 
 Host overture
     HostName overture.tail11540.ts.net
+    ForwardAgent yes
 
 # mobile
 Host longitude
     HostName longitude.tail11540.ts.net
+    ForwardAgent yes
