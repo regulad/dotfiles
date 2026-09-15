@@ -83,6 +83,17 @@ return {
         end,
 	cond = not vim.g.vscode
     }, {'lewis6991/gitsigns.nvim', cond = not vim.g.vscode},
+    {
+        -- Filetype detection for the chezmoi source dir (dot_vimrc -> vim,
+        -- *.sh.tmpl -> sh.chezmoitmpl). use_tmp_buffer is required under
+        -- lazy.nvim (its README says so): plugins load after nvim's filetype
+        -- detection is armed, and the option re-runs builtin detection in a
+        -- temporary buffer instead of demanding an early load slot. Must be
+        -- set in init, before the plugin's files are sourced.
+        'alker0/chezmoi.vim',
+        lazy = false,
+        init = function() vim.g['chezmoi#use_tmp_buffer'] = true end
+    },
     -- polyglot owns highlighting here; nvim-treesitter was removed on purpose.
     -- Its main branch installs nothing and starts nothing without explicit
     -- setup, so its only live effect was shadowing $VIMRUNTIME's queries for

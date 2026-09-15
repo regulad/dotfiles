@@ -35,6 +35,14 @@ if !has("nvim")
     " extensions) are placed by the vim-plugins bootstrap script instead;
     " Vundle leaves an already-populated bundle directory alone.
     Plugin 'neoclide/coc.nvim'
+    " Filetype detection for the chezmoi source dir (dot_vimrc -> vim,
+    " *.sh.tmpl -> sh.chezmoitmpl). Vundle only adds to the rtp, so the
+    " plugin's files source after this vimrc has already run `filetype plugin
+    " indent on` and `syntax on` -- outside the load-order window chezmoi.vim
+    " documents. use_tmp_buffer (set below, outside this vim-only block) is
+    " its documented escape hatch: re-run builtin detection in a temporary
+    " buffer so a late-loaded plugin still detects correctly.
+    Plugin 'alker0/chezmoi.vim'
     " All of your Plugins must be added before the following line
     call vundle#end()            " required
     filetype plugin indent on    " required
@@ -55,7 +63,12 @@ else
 end
 
 " Start my custom things
-    
+
+" chezmoi.vim: required under both managers here, since neither loads it
+" early enough for its restriction-free path. Harmlessly re-set in nvim,
+" where lazy.nvim's init hook already set it before plugin load.
+let g:chezmoi#use_tmp_buffer = 1
+
 " Overwrite some vi-backwards compat
 filetype plugin indent on
 set showcmd            " Show (partial) command in status line.
