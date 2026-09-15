@@ -56,6 +56,12 @@ APT_PACKAGES=(
 
 	# =+= DESKTOP
 	mpv
+	vlc
+	# Ships the goom/glspectrum/visual visualizers today, and is also the
+	# package where VLC's projectM plugin lives if Debian ever re-enables it
+	# (dropped when libprojectM 4 broke VLC's module). The vlcrc in
+	# dot_config/vlc points VLC at projectM regardless -- inert until then.
+	vlc-plugin-visualization
 
 	# =+= SERIAL
 	minicom

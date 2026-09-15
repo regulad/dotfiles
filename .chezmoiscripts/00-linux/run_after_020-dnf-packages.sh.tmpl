@@ -54,7 +54,10 @@ DNF_PACKAGES=(
 	ImageMagick
 
 	# =+= DESKTOP
-	mpv
+	# mpv and vlc are deliberately absent here: on the Fedora family GUI media
+	# apps are provided by flatpak (io.mpv.Mpv, org.videolan.VLC), installed by
+	# 01-fedora/020-flatpak-packages.sh, keeping exactly one install mechanism
+	# per app per platform.
 
 	# =+= SERIAL
 	minicom
@@ -128,11 +131,11 @@ sudo dnf install -q -y "${DNF_PACKAGES[@]}"
 #
 # Kept out of DNF_PACKAGES so --allowerasing applies to this one package only
 # and can't silently erase something else to satisfy the main transaction.
-# Verified on Fedora 44: mpv keeps working afterwards (ffmpeg-libs provides the
-# same sonames the libav*-free split packages did), and the libx264 / libx265 /
-# libfdk_aac encoders that ffmpeg-free lacks become available -- which is the
-# whole point of `brew unlink ffmpeg` in 050-linux-casks preferring the system
-# build "with codecs".
+# Verified on Fedora 44: ffmpeg-libs provides the same sonames the libav*-free
+# split packages did, so their consumers keep working, and the libx264 /
+# libx265 / libfdk_aac encoders that ffmpeg-free lacks become available --
+# which is the whole point of `brew unlink ffmpeg` in 050-linux-casks
+# preferring the system build "with codecs".
 sudo dnf install -q -y --allowerasing ffmpeg
 
 sudo dnf upgrade --refresh -y

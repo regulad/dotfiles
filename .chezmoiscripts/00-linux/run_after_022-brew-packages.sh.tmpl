@@ -151,7 +151,8 @@ BREW_SYSTEM_PACKAGES=(
 #     luarocks -- clobbers lpeg, which neovim needs; see the LUA section above
 #   deliberately host-owned:
 #     libva-utils, glx-utils -- the GPU stack belongs to the image, not brew
-#     mpv -- a GUI app, so it belongs in flatpak (io.mpv.Mpv) on this platform
+#     mpv, vlc -- GUI apps, so they come in as flatpaks (io.mpv.Mpv,
+#       org.videolan.VLC), installed by 01-fedora/020-flatpak-packages.sh
 #   n/a:
 #     development-tools group -- Bluefin ships gcc/gcc-c++/make already
 

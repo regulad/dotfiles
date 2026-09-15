@@ -116,7 +116,8 @@ Library
 # Linux
 {{- if ne .chezmoi.os "linux" }}
 .chezmoiscripts/00-linux/*
-.chezmoiscripts/01-bluefin/*
+.chezmoiscripts/01-fedora/*
+.chezmoiscripts/02-bluefin/*
 .config/systemd/
 {{- else }}
 # only one package manager's script applies per distro
@@ -135,6 +136,13 @@ Library
 .chezmoiscripts/00-linux/011-vscode-apt-repo.sh
 .chezmoiscripts/00-linux/021-apt-packages.sh
 {{-     end }}
+{{-     if not (or (eq .chezmoi.osRelease.id "fedora") (eq .chezmoi.osRelease.id "bluefin")) }}
+# The 01-fedora layer covers the whole Fedora family (mutable Fedora and the
+# Universal Blue images alike): flatpak is first-class there, so GUI apps come
+# from 01-fedora/020-flatpak-packages.sh instead of the system package lists.
+# Other distros install the same apps through their own package managers.
+.chezmoiscripts/01-fedora/*
+{{-     end }}
 {{-     if ne .chezmoi.osRelease.id "bluefin" }}
 # Universal Blue rewrites ID=fedora to ID=bluefin in the image, which is what
 # already keeps 020-dnf-packages.sh masked here -- there is no dnf transaction
@@ -151,7 +159,7 @@ Library
 # is narrower: it's where the AIRGAP-style USB drives actually get plugged in,
 # and keeping it scoped avoids standing up an unused udev rule + root service
 # on every other Linux box this repo targets.
-.chezmoiscripts/01-bluefin/*
+.chezmoiscripts/02-bluefin/*
 {{-     end }}
 {{-     if stat "/run/ostree-booted" }}
 # Theos cannot be installed on an atomic host, and unlike the dnf/brew split

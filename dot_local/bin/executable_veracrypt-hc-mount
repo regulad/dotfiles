@@ -3,9 +3,9 @@
 #
 # Driven by dot_config/systemd/user/veracrypt-hc@.service, which is in turn
 # started by root's veracrypt-hc-bridge@.service (written by
-# .chezmoiscripts/01-bluefin), which udev activates on ACTION=="add" for any
+# .chezmoiscripts/02-bluefin), which udev activates on ACTION=="add" for any
 # USB block device that gets a labeled filesystem. See that unit and the
-# 01-bluefin scripts for why the chain has to hop through root at all
+# 02-bluefin scripts for why the chain has to hop through root at all
 # (SYSTEMD_WANTS from udev can only reach system units) and why teardown needs
 # no separate udev rule (BindsTo=dev-%i.device on the user unit).
 #
@@ -16,7 +16,7 @@
 # for every labeled USB filesystem, not just VeraCrypt drives.
 #
 # This script's entire job is `udisksctl loop-setup` on the container file --
-# nothing else. Once 01-bluefin/013-veracrypt-hc-tcrypt-conf.sh has enabled
+# nothing else. Once 02-bluefin/013-veracrypt-hc-tcrypt-conf.sh has enabled
 # udisks2's native TCRYPT support, udisksd itself notices the new loop
 # device's content looks encrypted (a chi-squared randomness test, since
 # VeraCrypt/TrueCrypt containers have no on-disk signature to probe for) and

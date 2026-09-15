@@ -1,0 +1,44 @@
+{{ template "posix-preamble.sh" . }}
+
+# Wires the chezmoi-managed media configs into the sandboxes of the flatpaks
+# installed by 020-flatpak-packages.sh. Kept out of that script so it stays a
+# pure package runner (the winget-script shape).
+#
+# Flatpak apps read config from ~/.var/app/<id>/config/<app>, not ~/.config.
+# Rather than duplicating the configs there, each app's config dir becomes a
+# symlink to the canonical ~/.config copy, plus a `flatpak override` filesystem
+# grant so the sandbox may follow the link.
+
+if [ "$CONTAINERIZED" -eq 1 ]; then
+	echo "note: containerized, skipping flatpak media config" >&2
+	exit 0
+fi
+
+if ! command -v flatpak &>/dev/null; then
+	echo "error: flatpak not on PATH; it ships in every Fedora-family install" >&2
+	exit 1
+fi
+
+# $1 = canonical config dir, $2 = the in-sandbox config path to replace. A
+# pre-existing real directory there is regenerable app state that the managed
+# config is deliberately replacing, so it is removed rather than merged.
+wire_config() {
+	mkdir -p "$(dirname "$2")"
+	if [ -e "$2" ] && [ ! -L "$2" ]; then
+		rm -rf "$2"
+	fi
+	ln -sfn "$1" "$2"
+}
+
+# mpv: read-only -- mpv keeps its own writable state (watch_later etc.) in
+# ~/.local/state, so nothing legitimate writes to the config dir.
+wire_config "$HOME/.config/mpv" "$HOME/.var/app/io.mpv.Mpv/config/mpv"
+flatpak override --user --filesystem=xdg-config/mpv:ro io.mpv.Mpv
+
+# VLC: read-write, since VLC rewrites vlcrc wholesale whenever preferences are
+# saved in the GUI (the next apply restores the managed minimal vlcrc). The
+# projectM presets (cloned by 00-linux/run_once_after_055-projectm-presets.sh)
+# are exposed read-only because vlcrc points projectm-preset-path at them.
+wire_config "$HOME/.config/vlc" "$HOME/.var/app/org.videolan.VLC/config/vlc"
+flatpak override --user --filesystem=xdg-config/vlc org.videolan.VLC
+flatpak override --user --filesystem="$HOME/.local/share/projectM:ro" org.videolan.VLC

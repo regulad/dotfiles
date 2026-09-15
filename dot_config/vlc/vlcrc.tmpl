@@ -1,0 +1,35 @@
+# Managed by chezmoi, and minimal on purpose: VLC rewrites this file wholesale
+# whenever preferences are saved in the GUI, and the next apply restores this
+# version -- durable settings belong here, not in the GUI.
+#
+# The projectM presets are cloned by the projectm-presets postapply scripts.
+# Whether the visualization actually renders depends on the VLC build shipping
+# the projectm module: the official Windows build does, while Fedora and
+# Ubuntu/Debian builds dropped it when libprojectM 4 broke VLC's module.
+# Harmlessly inert where the module is absent.
+
+[core]
+audio-visual=projectm
+# Pairs with qt-privacy-ask below: this is the value the first-run privacy
+# splash writes when accepted.
+metadata-network-access=1
+
+[qt]
+# The two first-launch annoyances, pre-answered so they never come back after
+# an apply resets this file: the privacy/network-access splash, and the
+# preferences dialog opening in Simple mode instead of All.
+qt-privacy-ask=0
+qt-advanced-pref=1
+
+[projectm]
+# presets-flat, not presets: VLC bundles libprojectM 2.0.1, whose preset
+# loader is a single non-recursive readdir() pass, and the pack proper nests
+# everything in category subdirectories -- the postapply scripts hardlink
+# every .milk into this flat sibling. VLC on Windows also does not resolve forward slashes
+# here, so the path must use native separators, and .chezmoi.homeDir itself
+# comes forward-slashed even on Windows.
+{{- if eq .chezmoi.os "windows" }}
+projectm-preset-path={{ .chezmoi.homeDir | replace "/" "\\" }}\.local\share\projectM\presets-flat
+{{- else }}
+projectm-preset-path={{ .chezmoi.homeDir }}/.local/share/projectM/presets-flat
+{{- end }}

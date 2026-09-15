@@ -59,7 +59,7 @@ if [ "$HAS_BREW" = "true" ]; then
 	fi
 
 	# Same shape of problem as libfuse above, discovered via
-	# veracrypt-hc-mount (01-bluefin): util-linux comes in transitively as a
+	# veracrypt-hc-mount (02-bluefin): util-linux comes in transitively as a
 	# dependency of several formulae (systemd, podman, git, ...) and brew
 	# links its lsblk/losetup/blkid/etc. ahead of the system copies on PATH.
 	# Brew's build isn't wired into this host's live udev/blkid database the

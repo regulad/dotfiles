@@ -6,7 +6,7 @@ Description=Mount the VeraCrypt container matching removable drive %i's own labe
 # warning this line used to produce every time the unit loaded.
 Documentation=https://veracrypt.io/en/Mounting%%20VeraCrypt%%20Volumes.html
 # %i is a kernel device name (e.g. sda1), the same instance string the
-# 01-bluefin udev rule and root bridge unit pass along -- see
+# 02-bluefin udev rule and root bridge unit pass along -- see
 # veracrypt-hc-mount for what actually happens on start/stop.
 #
 # BindsTo, not just After: this is what gives us unlock-on-insert AND

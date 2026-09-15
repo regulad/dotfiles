@@ -1,0 +1,41 @@
+{{ template "posix-preamble.sh" . }}
+
+# Generic flatpak package runner for the Fedora family (fedora + bluefin --
+# this whole directory is masked to those IDs in .chezmoiignore.tmpl). Same
+# paradigm as 00-nt/run_after_100-winget.cmd.tmpl: a declared list of app IDs,
+# updated when already present and installed otherwise. No remote is named on
+# install -- flatpak resolves each ID against whatever remotes the system has
+# configured (Fedora ships fedora + flathub, Bluefin ships flathub), so the
+# source belongs to the system, not this script.
+
+# Flatpaks are session-scoped GUI apps; a container has no session to serve
+# and usually no flatpak/dbus/polkit stack to install through either.
+if [ "$CONTAINERIZED" -eq 1 ]; then
+	echo "note: containerized, skipping flatpak packages" >&2
+	exit 0
+fi
+
+if ! command -v flatpak &>/dev/null; then
+	echo "error: flatpak not on PATH; it ships in every Fedora-family install" >&2
+	exit 1
+fi
+
+FLATPAK_PACKAGES=(
+	# =+= DESKTOP
+	# mpv and vlc live here, not in 00-linux/020-dnf-packages.sh or
+	# 022-brew-packages.sh: GUI media apps on the Fedora family are flatpaks,
+	# and this is their single install mechanism. Their configs are wired into
+	# the sandboxes by 021-flatpak-media-config.sh.
+	io.mpv.Mpv
+	org.videolan.VLC
+)
+
+for app in "${FLATPAK_PACKAGES[@]}"; do
+	if flatpak info "$app" &>/dev/null; then
+		echo "debug: updating flatpak $app" >&2
+		flatpak update -y --noninteractive "$app"
+	else
+		echo "debug: installing flatpak $app" >&2
+		flatpak install -y --noninteractive "$app"
+	fi
+done
