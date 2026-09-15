@@ -40,7 +40,11 @@ else
     -- LSP
     -- https://github.com/neovim/nvim-lspconfig/blob/master/doc/configs.md
     vim.lsp.enable('jdtls')
-    vim.lsp.enable('kotlin_lsp')
+    -- kotlin_language_server (fwcd), not kotlin_lsp (JetBrains): the fwcd
+    -- server is what the platform package scripts actually install (brew
+    -- kotlin-language-server); kotlin_lsp's intellij-server binary is
+    -- installed nowhere, so enabling it was a dead config on every platform.
+    vim.lsp.enable('kotlin_language_server')
     vim.lsp.enable('ts_ls')
     vim.lsp.enable('ty')
     vim.lsp.enable('ruff')

@@ -107,6 +107,14 @@ telnet ^
 unzip ^
 vim ^
 neovim ^
+rust-analyzer ^
+harper ^
+jdtls ^
+lua ^
+luarocks ^
+perl ^
+ruby ^
+msys2 ^
 uv ^
 file ^
 dos2unix ^
