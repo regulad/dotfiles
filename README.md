@@ -178,7 +178,6 @@ It installs nothing and destroys nothing. Where the current directory is somethi
 - [x] Nvim: Fix nvim newline behaviour
 - [x] Nvim: Relative + absolute line numbers in nvim
 - [x] Nvim: Addl. language server configurations in nvim
-- [ ] Nvim: ensure that treesitter and vim-polyglot aren't clobbering each other
 - [x] Hook: Break java LTS and minimum fedora version into separate vars
 - [ ] Shell: direnv-style watcher script executor with script verification
 - [ ] WSL: IPv6 default route via a localhost-bound WireGuard server on the Windows side, with a host-deterministic ULA and NAT66. Mirrored networking was the only mode that gave WSL IPv6, and `.wslconfig` moved to NAT; NAT provides no routable IPv6 and there is no setting that adds it.

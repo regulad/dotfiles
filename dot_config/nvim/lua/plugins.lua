@@ -1,11 +1,5 @@
 return {
-    {
-        'nvim-treesitter/nvim-treesitter',
-        lazy = false,
-        branch = 'main',
-        build = ':TSUpdate',
-        cond = not vim.g.vscode
-    }, {'neovim/nvim-lspconfig', lazy = false, branch = 'master'}, {
+    {'neovim/nvim-lspconfig', lazy = false, branch = 'master'}, {
         'saghen/blink.cmp',
         -- optional: provides snippets for the snippet source
         dependencies = {'rafamadriz/friendly-snippets'},
@@ -89,5 +83,13 @@ return {
         end,
 	cond = not vim.g.vscode
     }, {'lewis6991/gitsigns.nvim', cond = not vim.g.vscode},
+    -- polyglot owns highlighting here; nvim-treesitter was removed on purpose.
+    -- Its main branch installs nothing and starts nothing without explicit
+    -- setup, so its only live effect was shadowing $VIMRUNTIME's queries for
+    -- the four filetypes core self-starts treesitter on (help, lua, markdown,
+    -- query) -- queries that only track the plugin's own parser revisions, a
+    -- "Query error: invalid node type" waiting to happen against nvim's
+    -- bundled parsers. Core still treesitter-highlights those four filetypes;
+    -- the ColorScheme links in init.lua keep them looking like the rest.
     {'sheerun/vim-polyglot'}
 }
