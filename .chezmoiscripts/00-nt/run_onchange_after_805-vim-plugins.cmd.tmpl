@@ -7,7 +7,8 @@ REM steps against the same paths.
 REM
 REM Vundle hardcodes $HOME/.vim/bundle on every platform (autoload/vundle.vim),
 REM so this is %USERPROFILE%\.vim, NOT the vimfiles tree Vim would otherwise use
-REM on Windows.
+REM on Windows. Ongoing updates are a separate every-apply pass,
+REM 806-vim-plugin-update.cmd.
 REM
 REM Re-run whenever the Plugin list or the coc extension list changes:
 REM {{ include "dot_vimrc" | sha256sum }}
@@ -119,7 +120,11 @@ if exist "%~2\.git" (
     git -C "%~2" remote set-url origin %~1
     git -C "%~2" remote set-branches origin %~3
     git -C "%~2" fetch -q origin %~3
-    git -C "%~2" checkout -q -B %~3 origin/%~3
+    REM -f: a checkout cloned under a different core.autocrlf shows every file
+    REM as locally modified, and a plain branch switch refuses to proceed over
+    REM that. These trees are manager-owned payloads nobody edits, so
+    REM discarding the phantom changes is always right.
+    git -C "%~2" checkout -q -f -B %~3 origin/%~3
 ) else (
     git clone -q --branch %~3 --single-branch %~1 "%~2"
 )

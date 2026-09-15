@@ -1,6 +1,7 @@
 # Vim plugin bootstrap, shared verbatim by the linux and macos hooks. The
 # Windows half is .chezmoiscripts/00-nt/run_onchange_after_805-vim-plugins.cmd,
-# which does the same three things and carries the same caveats.
+# which does the same three things and carries the same caveats. Ongoing
+# updates are a separate every-apply pass, vim-plugin-update.sh (166 / 806).
 #
 # Two separate reasons this cannot live inside ~/.vimrc:
 #
@@ -45,7 +46,11 @@ sync_repo() {
 		# fetching or origin/$branch never materialises for the checkout below.
 		git -C "$dir" remote set-branches origin "$branch"
 		git -C "$dir" fetch -q origin "$branch"
-		git -C "$dir" checkout -q -B "$branch" "origin/$branch"
+		# -f: a checkout cloned under a different core.autocrlf shows every
+		# file as locally modified, and a plain branch switch refuses to
+		# proceed over that. These trees are manager-owned payloads nobody
+		# edits, so discarding the phantom changes is always right.
+		git -C "$dir" checkout -q -f -B "$branch" "origin/$branch"
 	else
 		git clone -q --branch "$branch" --single-branch "$uri" "$dir"
 	fi
