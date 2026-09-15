@@ -1,19 +1,13 @@
+{{- /* The managed slice of ~/.config/Claude/claude_desktop_config.json.
+       preferences.epitaxyPrefs is deliberately absent: starred sessions and
+       pinned order are state the old full-file template blanked on every
+       apply. */ -}}
 {
   "preferences": {
     "coworkScheduledTasksEnabled": false,
     "ccdScheduledTasksEnabled": false,
     "coworkWebSearchEnabled": true,
-    "remoteToolsDeviceName": "{{ .chezmoi.hostname }}",
-    "epitaxyPrefs": {
-      "starred-local-code-sessions": [],
-      "starred-cowork-spaces": [],
-      "starred-session-groups": [],
-      "dframe-local-slice": {
-        "pinnedOrder": [],
-        "customGroupAssignments": {},
-        "customGroupOrder": {}
-      }
-    }
+    "remoteToolsDeviceName": "{{ .chezmoi.hostname }}"
   },
   "mcpServers": {
 {{- if not .useDummySecrets }}

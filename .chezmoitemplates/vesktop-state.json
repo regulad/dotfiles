@@ -1,0 +1,7 @@
+{{- /* The managed slice of ~/.config/vesktop/state.json. windowBounds is
+       deliberately absent: it is window geometry (state) the old full-file
+       template reset to 0,0 x 1281x721 on every apply. */ -}}
+{
+    "firstLaunch": false,
+    "vencordDir": "{{- if eq .chezmoi.os "windows" }}{{ .chezmoi.homeDir | replace "/" "\\\\" }}\\.vencord\\dist{{ else }}{{ .chezmoi.homeDir }}/.vencord/dist{{ end -}}"
+}

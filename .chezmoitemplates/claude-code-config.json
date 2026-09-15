@@ -1,0 +1,15 @@
+{{- /* The managed slice of ~/.claude.json -- mcpServers only. Claude Code
+       keeps ~70 keys of mutable state (oauth, machineID, per-repo history,
+       caches) in the same file; the modify_ stub merges this document over
+       it. Config that Claude Code itself treats as settings belongs in
+       ~/.claude/settings.json (claude-settings.json). */ -}}
+{
+  "mcpServers": {
+    "ddg-search": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["duckduckgo-mcp-server"],
+      "env": {}
+    }
+  }
+}

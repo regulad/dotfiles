@@ -1,0 +1,20 @@
+{{- /* The managed slice of ~/.claude/settings.json. permissions.allow is
+       deliberately absent: it is the per-machine accumulation of approved
+       commands (state), and the permissions map deep-merges so the live
+       allow list survives every apply. */ -}}
+{
+  "permissions": {
+    "deny": [
+      "Bash"
+    ],
+    "defaultMode": "auto"
+  },
+  "worktree": {
+    "baseRef": "fresh"
+  },
+  "theme": "auto",
+  "editorMode": "vim",
+  "autoCompactEnabled": true,
+  "agentPushNotifEnabled": true,
+  "model": "fable"
+}

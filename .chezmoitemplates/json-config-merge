@@ -1,0 +1,19 @@
+{{- /* Shared body for the modify_ JSON merge stubs: deep-merges a rendered
+       managed document (.managed) over the target's current contents
+       (.stdin), so apps that mix mutable state into their config files keep
+       that state across applies. Managed keys always win -- including false
+       and empty values (verified against this chezmoi build), which is why
+       state-like keys must be OMITTED from managed documents, never left in
+       as empty placeholders. Arrays replace wholesale; nested maps merge.
+       Removing a key from a managed doc does not remove it from live files
+       (install-only, the same contract as the package lists) -- removal is a
+       one-time manual edit per machine. The live side is parsed with
+       fromJsonc, not fromJson: VS Code and Windows Terminal treat their
+       settings files as JSONC and this repo's live copies carry trailing
+       commas in practice -- but comments do not survive a merge rewrite,
+       since the output is re-serialized as strict pretty JSON. */ -}}
+{{- $state := dict -}}
+{{- with trim .stdin -}}
+{{-   $state = fromJsonc . -}}
+{{- end -}}
+{{- mergeOverwrite $state .managed | toPrettyJson }}
