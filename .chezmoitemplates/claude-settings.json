@@ -1,11 +1,16 @@
 {{- /* The managed slice of ~/.claude/settings.json. permissions.allow is
        deliberately absent: it is the per-machine accumulation of approved
        commands (state), and the permissions map deep-merges so the live
-       allow list survives every apply. */ -}}
+       allow list survives every apply. deny IS managed: Bash only on
+       Windows, and the empty list elsewhere is deliberate -- arrays replace
+       wholesale on merge, so it scrubs a previously-applied Bash deny from
+       non-Windows machines. */ -}}
 {
   "permissions": {
     "deny": [
+{{- if eq .chezmoi.os "windows" }}
       "Bash"
+{{- end }}
     ],
     "defaultMode": "auto"
   },
