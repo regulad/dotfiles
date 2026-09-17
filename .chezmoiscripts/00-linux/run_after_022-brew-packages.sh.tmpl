@@ -62,6 +62,10 @@ BREW_SYSTEM_PACKAGES=(
 	shellcheck
 	ripgrep
 	imagemagick
+	# rsvg-convert, and imagemagick's SVG delegate. This only ever reached the
+	# prefix as a dependency of chafa, so 030-brew-extras.sh uninstalling
+	# chafa let `brew autoremove` take it too. Ask for it by name.
+	librsvg
 
 	# =+= SERIAL
 	minicom
