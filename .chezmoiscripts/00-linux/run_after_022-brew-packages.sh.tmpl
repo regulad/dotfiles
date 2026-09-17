@@ -32,6 +32,9 @@ BREW_SYSTEM_PACKAGES=(
 
 	# =+= CONTAINERIZATION
 	# podman itself is in Bluefin's image; only the compose shim is missing.
+	# The formula still drags brew's own podman in as a dependency, though,
+	# and brew links it ahead of the image's -- 030-brew-extras.sh unlinks it
+	# again on every apply, alongside libfuse/util-linux/gnupg.
 	podman-compose
 
 	# =+= BUILD TOOLS

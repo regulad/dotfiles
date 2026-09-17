@@ -86,6 +86,22 @@ if [ "$HAS_BREW" = "true" ]; then
 		brew unlink gnupg
 	fi
 
+	# Same shape of problem, one level up the same dependency chain: on
+	# atomic hosts 022-brew-packages.sh installs podman-compose, whose formula
+	# depends on brew's podman, and brew links that ahead of the podman that
+	# Bluefin ships in its image (/usr/bin/podman). The two are not the same
+	# release line -- this host had brew's 6.x linked over the image's 5.8 --
+	# and brew's build knows nothing about the image's containers.conf,
+	# helper directories, or the podman.socket unit that 150-user-services
+	# enables, which is the image's podman, not brew's. podman-compose only
+	# ever calls `podman` off PATH, so it is perfectly happy with the system
+	# copy once brew's is out of the way. Unconditional like libfuse: on dnf
+	# and apt hosts podman comes from the system package manager too, so there
+	# is no platform where brew's podman should be the one on PATH.
+	if brew list --formula podman &>/dev/null; then
+		brew unlink podman
+	fi
+
 	# brew-gem global gems (like cargo/go/uv)
 	brew gem install ruby-lsp
 	# neovim: the ruby provider bridge gem (:checkhealth vim.provider).
