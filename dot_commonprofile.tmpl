@@ -3,8 +3,10 @@
 
 export PATH="$HOME/.local/bin:$PATH"
 
-# brew made some security changes recently, these opt-out
-export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+# brew made some security changes recently, this opts out of the prompt.
+# (HOMEBREW_NO_REQUIRE_TAP_TRUST=1 used to sit here too; brew deprecated it
+# in favour of `brew trust`, which the hookscripts now run for each
+# non-official tap/formula they use.)
 export HOMEBREW_NO_ASK=1
 
 # WSL stubs
@@ -66,6 +68,15 @@ elif [ "$(uname -o)" = "GNU/Linux" ]; then
 
     export PATH="$(brew --prefix ruby)/bin:$PATH"
     export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"
+
+    # inetutils is kept unlinked by 00-linux/030-brew-extras.sh because its
+    # unprefixed ping6/traceroute shadow the host's capability-bearing ones
+    # and cannot open a raw socket. Its keg goes on the TAIL of PATH instead:
+    # telnet/ftp/rsh (which the host lacks) still resolve, and anything
+    # /usr/bin also has keeps winning.
+    if [ -d "$HOMEBREW_PREFIX/opt/inetutils/bin" ]; then
+        export PATH="$PATH:$HOMEBREW_PREFIX/opt/inetutils/bin"
+    fi
 
     export PKG_CONFIG_PATH="$(brew --prefix python3)/lib/pkgconfig:$PKG_CONFIG_PATH"
 

@@ -102,10 +102,82 @@ if [ "$HAS_BREW" = "true" ]; then
 		brew unlink podman
 	fi
 
+	# The fusermount3 problem again, this time in the formula 022 installs
+	# for telnet: inetutils links ping6 and traceroute unprefixed (its other
+	# tools get a `g`), and both need a raw socket. The image's copies carry
+	# CAP_NET_RAW; brew's cannot -- ping6 dies with "raw socket: Operation not
+	# permitted" and traceroute prints a row of stars for every hop. Unlink
+	# the whole keg; .commonprofile appends its bin to the *tail* of PATH so
+	# telnet/ftp/rsh stay reachable while /usr/bin wins for anything it has.
+	if brew list --formula inetutils &>/dev/null; then
+		brew unlink inetutils
+	fi
+
+	# Desktop-plumbing formulae that ride in as dependencies (glib via nearly
+	# everything, dbus via glib, p11-kit via gnutls/gnupg). Their libraries
+	# are fine -- every brew binary finds them through an opt/<formula> rpath,
+	# not the linked lib dir -- but their CLI tools are wired to brew's prefix
+	# instead of the host's:
+	#   gio        no gvfs modules, so `gio mount -l` sees nothing while the
+	#              host's lists every udisks drive; `gio mount smb://` is a
+	#              silent no-op
+	#   dbus-*     dbus-launch/dbus-run-session read brew's session.conf and
+	#              start a bus with none of the host's activatable services
+	#   trust      p11-kit's `trust list` reads brew's ca-certificates bundle:
+	#              153 anchors here against the host store's 395, and none of
+	#              the private CAs 140-ca-certs installs
+	# Unlinking also drops their pkg-config files from the prefix; a from-
+	# source build that wants brew's glib can point PKG_CONFIG_PATH at
+	# `brew --prefix glib`/lib/pkgconfig explicitly.
+	for _shadow in glib dbus p11-kit; do
+		if brew list --formula "$_shadow" &>/dev/null; then
+			brew unlink "$_shadow"
+		fi
+	done
+	unset _shadow
+
+	# git is the one where the answer depends on the host. On Bluefin the
+	# image's /usr/bin/git is the wanted one: it reads /etc/gitconfig, where
+	# the image registers the git-lfs filters, and it can see the libsecret
+	# credential helper in /usr/libexec/git-core. brew's git reads
+	# $HOMEBREW_PREFIX/etc/gitconfig instead and has neither -- and it only
+	# ever arrives transitively, via git-filter-repo, so nothing in this repo
+	# asked for it. Everywhere else brew's newer git is wanted on PATH, so
+	# ask for it by name rather than leaving that to a dependency edge that
+	# could vanish in a formula update. (git-filter-repo is a script that git
+	# finds on PATH, so it works under either git.)
+	if [ "$OS" = "bluefin" ]; then
+		if brew list --formula git &>/dev/null; then
+			brew unlink git
+		fi
+	else
+		brew install -q git
+	fi
+
+	# chafa was pulled in alongside fastfetch for runtime PNG-to-text logo
+	# conversion in the MOTD (see the OMITTED block in 022-brew-packages.sh);
+	# that path never worked and the logos are pre-rendered now. brew's
+	# fastfetch stays -- it is newer than the image's and harmless -- but
+	# chafa is a leaf with no remaining user.
+	if brew list --formula chafa &>/dev/null; then
+		brew uninstall -q chafa
+	fi
+
 	# brew-gem global gems (like cargo/go/uv)
+	#
+	# brew-gem writes each gem's formula into its own brew-gem/gems tap and
+	# installs it by fully-qualified name, which brew allows through without
+	# trust because the name is right there in argv. Every later load of the
+	# installed formula -- `brew upgrade`, `brew outdated`, Bluefin's
+	# brew-upgrade.timer -- has no such argv and refuses an untrusted tap
+	# formula. `brew trust` is idempotent and is the replacement brew names
+	# for the now-deprecated HOMEBREW_NO_REQUIRE_TAP_TRUST=1 this repo used
+	# to export from the preamble and .commonprofile.
+	brew trust --formula brew-gem/gems/gem-ruby-lsp
 	brew gem install ruby-lsp
 	# neovim: the ruby provider bridge gem (:checkhealth vim.provider).
 	# The Windows counterpart for both gems is 00-nt/580-ruby-tooling.cmd.
+	brew trust --formula brew-gem/gems/gem-neovim
 	brew gem install neovim
 
 	if ! [ "$CONTAINERIZED" -eq 1 ]; then

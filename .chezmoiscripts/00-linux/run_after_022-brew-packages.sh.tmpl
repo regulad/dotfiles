@@ -19,8 +19,11 @@ BREW_SYSTEM_PACKAGES=(
 	# =+= CORE
 	# brew's `telnet` formula is macOS-only, so inetutils is the Linux provider.
 	# It installs its GNU binaries under a `g` prefix EXCEPT for telnet, ftp,
-	# rcp, rexec, rlogin, rsh and dnsdomainname -- so unlike the apt-side
-	# inetutils-ping/iputils-ping collision it cannot shadow the system ping.
+	# rcp, rexec, rlogin, rsh, ping6 and traceroute. `ping` is safe, but the
+	# unprefixed ping6/traceroute DO shadow the image's and cannot open a raw
+	# socket without the capabilities the image's copies carry, so
+	# 030-brew-extras.sh keeps the keg unlinked and .commonprofile appends
+	# its bin to the tail of PATH: telnet/ftp resolve, /usr/bin wins the rest.
 	inetutils
 	retry
 	binwalk
@@ -137,6 +140,8 @@ BREW_SYSTEM_PACKAGES=(
 #   provided by the Silverblue base:
 #     bash, curl, git, perl, gawk, binutils, net-tools, iputils, openssh,
 #     python3, systemd
+#     (git still arrives from brew transitively via git-filter-repo; 030
+#      unlinks it on Bluefin so the image's /etc/gitconfig-aware copy wins.)
 #   already installed by a later hookscript:
 #     nu (nushell) and golang, both in 030-brew-extras
 #   no usable brew formula:

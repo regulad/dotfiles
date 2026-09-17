@@ -57,6 +57,14 @@ BREW_CASKS_MACOS=(
 )
 
 if [ "$HAS_BREW" = "true" ]; then
+	# Non-official taps in the list above must be trusted before brew will
+	# load anything from them -- the replacement for the deprecated
+	# HOMEBREW_NO_REQUIRE_TAP_TRUST=1 (see 00-linux/030-brew-extras.sh).
+	# Trusting by tap name works before the tap is installed and is
+	# idempotent, so it runs every apply.
+	brew trust --tap regulad/tap
+	brew trust --tap Gcenx/wine
+
 	for cask in "${BREW_CASKS_MACOS[@]}"; do
 		if ! brew list --cask "$cask" &>/dev/null; then
 			brew install --cask -q "$cask" -f

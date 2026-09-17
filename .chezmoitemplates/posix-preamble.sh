@@ -18,7 +18,9 @@ UBUNTU_MINIMUM_VERSION=26.04
 
 echo "note: entering hookscript" >&2
 export DEBIAN_FRONTEND=noninteractive
-export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+# HOMEBREW_NO_REQUIRE_TAP_TRUST=1 used to be exported here; brew deprecated
+# it. Scripts that touch a non-official tap now `brew trust` what they need
+# right before using it (030-brew-extras, 00-macos/040-macos-casks).
 export HOMEBREW_NO_ENV_HINTS=1
 trap 'echo "error: line $LINENO: Command was: $BASH_COMMAND" >&2' ERR
 
@@ -141,6 +143,19 @@ case "$OS" in
             echo "Error: Bluefin built on Fedora $REQUIRED or higher required (found $VERSION_ID)"
             exit 1
         fi
+        # Only the -dx images are supported. Universal Blue stamps the image
+        # flavour into IMAGE_ID (bluefin-dx, bluefin-dx-nvidia-open, ...);
+        # the plain images lack the developer package set that
+        # 022-brew-packages.sh and 030-brew-extras.sh assume is in /usr
+        # when they decide what to leave to the host (and what to unlink).
+        case "${IMAGE_ID:-${VARIANT_ID:-}}" in
+            *-dx|*-dx-*) ;;
+            *)
+                echo "Error: Bluefin -dx image required (found IMAGE_ID=${IMAGE_ID:-unset})"
+                echo "note: rebase with: sudo bootc switch ghcr.io/ublue-os/bluefin-dx:stable"
+                exit 1
+                ;;
+        esac
         ;;
     macos)
         REQUIRED="$MACOS_MINIMUM_VERSION"
