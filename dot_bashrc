@@ -119,12 +119,45 @@ fi
 source ~/.commonrc
 
 # overrides
+#
+# The prompt character is tinted by the previous command's exit status:
+# __prompt_char_color is set by __prompt_status_precmd below and holds a real
+# SGR sequence (or nothing). It is referenced, not interpolated, so that PS1
+# keeps its single quotes and the reference is expanded fresh at every prompt.
+# It sits inside the same \[...\] as the colour that precedes it so that the
+# zero-width accounting stays correct whether or not it is empty.
 
 if [ "$(uname -o)" = "Android" ]; then
-    PS1='\[\e[0;32m\]\w\[\e[0m\] \[\e[0;97m\]\$\[\e[0m\] '
+    PS1='\[\e[0;32m\]\w\[\e[0m\] \[\e[0;97m${__prompt_char_color}\]\$\[\e[0m\] '
 else
-    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m${__prompt_char_color}\]\$\[\033[00m\] '
 fi
+
+# Exit-status tint for the prompt character. Slight hues on purpose -- 256-colour
+# 108 is a muted green and 174 a muted red -- so the character reads as a hint
+# and not as an alarm.
+#
+# __prompt_status is the previous command's $?, or empty at the very first
+# prompt, where no command has run yet and there is nothing to report; the
+# character is then left in whatever colour the PS1 above gives it. Bash has no
+# preexec hook to detect "a command actually ran", so "first prompt" is
+# approximated as "first time this function is called".
+#
+# $? has to be the first thing read in PROMPT_COMMAND: every command that runs
+# in it, this function included, overwrites $?. Everything else that wants the
+# status reads __prompt_status instead.
+__prompt_status_precmd() {
+    __prompt_status=$?
+    if [ -z "${__prompt_status_ready-}" ]; then
+        __prompt_status=''
+        __prompt_status_ready=1
+    fi
+    case "$__prompt_status" in
+        '') __prompt_char_color='' ;;
+        0)  __prompt_char_color=$'\e[38;5;108m' ;;
+        *)  __prompt_char_color=$'\e[38;5;174m' ;;
+    esac
+}
 
 # Prepared using Anthropic Claude Sonnet 4.6
 # Adds support for the following OSC sequences:
@@ -132,7 +165,12 @@ fi
 # - https://iterm2.com/documentation-escape-codes.html#:~:text=of%20shell%20prompt.-,FTCS_COMMAND_START,-OSC%20133%20%3B%20B
 # - https://iterm2.com/documentation-escape-codes.html#:~:text=user%2Dentered%20command.-,FTCS_COMMAND_EXECUTED,-OSC%20133%20%3B%20C
 # - https://iterm2.com/documentation-escape-codes.html#:~:text=the%20empty%20string.-,FTCS_COMMAND_FINISHED,-OSC%20133%20%3B%20D
-__osc133_precmd() { printf '\e]133;D;%s\a' "$?"; printf '\e]133;A\a'; }
-PROMPT_COMMAND="__osc133_precmd${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+#
+# D carries the exit status. It comes from __prompt_status rather than $?
+# because __prompt_status_precmd runs first and has already consumed $?. At the
+# first prompt that is empty, and the spec's form for "no command finished" is
+# a bare D with no ";code" at all, hence the conditional separator.
+__osc133_precmd() { printf '\e]133;D%s\a' "${__prompt_status:+;$__prompt_status}"; printf '\e]133;A\a'; }
+PROMPT_COMMAND="__prompt_status_precmd; __osc133_precmd${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
 PS0='\[\e]133;C\a\]'"$PS0"
 PS1='\[\e]133;A\a\]'"$PS1"'\[\e]133;B\a\]'

@@ -26,14 +26,24 @@ source ~/.commonrc
 # loop at the bottom of this file sources once each, in numeric order. That
 # ordering is the whole mechanism -- 20 lands the git segment before the
 # terminator, 90 then appends the marker that has to come last.
+#
+# The prompt character is tinted by the previous command's exit status via
+# ${__prompt_char_color}, which ~/.config/zsh/30-prompt-status.zsh maintains
+# from a precmd hook (green for 0, red otherwise, empty when nothing has run
+# yet). The reference is left unexpanded by the quoted heredoc and resolved at
+# each redraw by PROMPT_SUBST. It appears in both branches of the %(#. . )
+# conditional, not once in front of it, because 20-git-prompt.zsh splices the
+# git segment in immediately before that conditional and the segment ends with
+# a full attribute reset -- anything set earlier would be gone by the time the
+# character is drawn. See 30-prompt-status.zsh for why it is not %(?. . ).
 PROMPT=$(cat << 'EOF'
-%{$fg_bold[green]%}%n@%m%{$reset_color%}:%{$reset_color%}%B%F{blue}%~%f%b%(#.#.$) 
+%{$fg_bold[green]%}%n@%m%{$reset_color%}:%{$reset_color%}%B%F{blue}%~%f%b%(#.${__prompt_char_color}#%f.${__prompt_char_color}$%f)
 EOF
 )
 
 # override with short prompt on Android
 if [ "$(uname -o)" = "Android" ]; then
-    PROMPT="%# "
+    PROMPT='${__prompt_char_color}%#%f '
     # 20-git-prompt.zsh runs after this and would happily splice the branch
     # into "%# ", which defeats the point of the override.
     ZSH_GIT_PROMPT_DISABLE=1
