@@ -134,8 +134,8 @@ else
 fi
 
 # Exit-status tint for the prompt character. Slight hues on purpose -- 256-colour
-# 108 is a muted green and 174 a muted red -- so the character reads as a hint
-# and not as an alarm.
+# 151 is a pale green and 181 a pale red, one step off white on the colour
+# cube -- so the character reads as a hint and not as an alarm.
 #
 # $? has to be the first thing read in PROMPT_COMMAND: every command that runs
 # in it, this function included, overwrites $?. It is captured into
@@ -143,9 +143,9 @@ fi
 __prompt_status_precmd() {
     __prompt_status=$?
     if [ "$__prompt_status" -eq 0 ]; then
-        __prompt_char_color=$'\e[38;5;108m'
+        __prompt_char_color=$'\e[38;5;151m'
     else
-        __prompt_char_color=$'\e[38;5;174m'
+        __prompt_char_color=$'\e[38;5;181m'
     fi
 }
 

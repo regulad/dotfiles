@@ -2,7 +2,8 @@
 #
 # Sets __prompt_char_color, which ~/.zshrc references from inside the prompt
 # terminator, to a %F{...} escape for the previous command's exit status:
-# muted green (256-colour 108) for 0, muted red (174) for anything else.
+# pale green (256-colour 151) for 0, pale red (181) for anything else -- one
+# step off white on the colour cube, so it reads as a hint and not an alarm.
 #
 # == Why a variable and a hook, not %(?.green.red) in the prompt itself
 #
@@ -23,9 +24,9 @@ autoload -Uz add-zsh-hook
 
 __prompt_status_precmd() {
   if (( $? == 0 )); then
-    __prompt_char_color='%F{108}'
+    __prompt_char_color='%F{151}'
   else
-    __prompt_char_color='%F{174}'
+    __prompt_char_color='%F{181}'
   fi
 }
 

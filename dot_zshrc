@@ -36,8 +36,12 @@ source ~/.commonrc
 # git segment in immediately before that conditional and the segment ends with
 # a full attribute reset -- anything set earlier would be gone by the time the
 # character is drawn. See 30-prompt-status.zsh for why it is not %(?. . ).
+#
+# The space after the character lives inside the conditional's branches rather
+# than at the end of the line: trailing whitespace is silently stripped by
+# editors and tools, and once was, which left the prompt with no space at all.
 PROMPT=$(cat << 'EOF'
-%{$fg_bold[green]%}%n@%m%{$reset_color%}:%{$reset_color%}%B%F{blue}%~%f%b%(#.${__prompt_char_color}#%f.${__prompt_char_color}$%f)
+%{$fg_bold[green]%}%n@%m%{$reset_color%}:%{$reset_color%}%B%F{blue}%~%f%b%(#.${__prompt_char_color}#%f .${__prompt_char_color}$%f )
 EOF
 )
 
