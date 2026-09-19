@@ -31,6 +31,12 @@ export HOMEBREW_NO_ENV_HINTS=1
 # a terminal opened before the profile changed, it hasn't. Set it here so the
 # scripts never depend on the login shell for it.
 export HOMEBREW_NO_ASK=1
+# `brew services` picks launchd's user/<uid> domain instead of gui/<uid> when
+# the apply runs over ssh and nobody is logged in at the Mac's console (it
+# checks /dev/console ownership), and warns about it. Every service this repo
+# starts is headless, so user/ is fine; brew probes both domains on later
+# stop/restart/status anyway. Just drop the noise.
+export HOMEBREW_SERVICES_NO_DOMAIN_WARNING=1
 trap 'echo "error: line $LINENO: Command was: $BASH_COMMAND" >&2' ERR
 
 # needed for Android native builds
@@ -272,31 +278,9 @@ elif command -v apt &>/dev/null && [[ -f /etc/debian_version ]]; then
 	MANAGER="apt"
 elif command -v brew &>/dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
 	MANAGER="brew"
-
-	# macOS brew-specific tap / dep setups
-	#
-	# kde-mac/kde is disabled until Homebrew fixes a 7.0 regression. Its
-	# tools/do-caveats.sh runs `brew services restart dbus`, and brew 7.0.x
-	# fails that with "Formula `dbus` has not implemented #plist, #service or
-	# provided a locatable service file": FormulaStruct.deserialize decides
-	# whether a formula has a service block from `service_args` alone, but
-	# serialize drops that key when empty, so a name-only `service do` block
-	# (dbus, netatalk, xinit) loads with service? == false and brew looks for
-	# sh.brew.dbus.plist instead of the org.freedesktop.dbus-session.plist the
-	# keg ships. Fix is a one-liner in Library/Homebrew/api/formula_struct.rb
-	# (also set service_present when service_run_args/service_name_args are
-	# present). Re-enable once `brew services info dbus --json` reports
-	# service_name org.freedesktop.dbus-session.
-	#brew tap kde-mac/kde https://invent.kde.org/packaging/homebrew-kde.git && "$(brew --repo kde-mac/kde)/tools/do-caveats.sh"
-	brew tap regulad/homebrew-tap
-	brew tap Gcenx/wine https://github.com/Gcenx/homebrew-wine
-
-	# software updates
-	if [ "$(arch)" = "arm64" ]; then
-		# despite being an sbin, this is usable by non-root users. til
-		/usr/sbin/softwareupdate --install-rosetta --agree-to-license
-	fi
-	xcode-select --install || true  # returns exit code 1 when tools are already installed
+	# The macOS one-offs that used to sit here (third-party taps, Rosetta,
+	# Xcode CLT) are in 00-macos/015-macos-prereqs now: every hookscript
+	# includes this preamble as its own process, so they ran ~20x per apply.
 else
 	MANAGER=""
 fi
