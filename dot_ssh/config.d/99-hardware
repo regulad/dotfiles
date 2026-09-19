@@ -10,9 +10,7 @@ Host turk
     HostName turk.tail11540.ts.net
     ForwardAgent yes
 
-Host overture
-    HostName overture.tail11540.ts.net
-    ForwardAgent yes
+# overture lives in 99-osx: it needs a RemoteCommand wrapper.
 
 # mobile
 Host longitude

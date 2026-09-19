@@ -1,0 +1,26 @@
+# macOS hosts.
+#
+# A plain ssh login on a Mac lands in a shell whose Mach bootstrap namespace is
+# the sshd's, not the console user's, so the pasteboard (pbcopy/pbpaste),
+# `open`, and anything else that talks to the user's WindowServer/launchd
+# session misbehaves. reattach-to-user-namespace (brew) fixes that by
+# re-parenting the process into the logged-in user's namespace -- the same
+# trick .tmux.conf uses for default-command.
+#
+# The scriptlet runs remotely through `$SHELL -c`, i.e. a non-login, non-
+# interactive zsh, which never sources .zprofile/.commonprofile and so has no
+# Homebrew on PATH. Hence the explicit /opt/homebrew/bin fallback; it degrades
+# to a normal login shell when the tool is missing. sshd sets $SHELL to the
+# account's login shell, and -l makes it a login shell so the usual profile
+# chain still runs.
+#
+# RemoteCommand applies to every connection, so `ssh overture <cmd>`, scp,
+# sftp and rsync fail with "Cannot execute command-line and remote command".
+# Escape hatch: `ssh -o RemoteCommand=none overture <cmd>` (and the same -o
+# through scp/rsync's -e).
+
+Host overture
+    HostName overture.tail11540.ts.net
+    ForwardAgent yes
+    RequestTTY yes
+    RemoteCommand r=$(command -v reattach-to-user-namespace || echo /opt/homebrew/bin/reattach-to-user-namespace); [ -x "$r" ] && exec "$r" "$SHELL" -l; exec "$SHELL" -l
