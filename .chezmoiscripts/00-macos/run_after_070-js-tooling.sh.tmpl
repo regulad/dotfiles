@@ -40,6 +40,15 @@ else
 	)
 fi
 
+# pnpm blocks dependency build scripts by default and prompts to approve them
+# interactively -- including for transitive deps (e.g. mermaid-cli's puppeteer)
+# -- which stalls an unattended apply. Opt out, but scoped to the global
+# install directory (pnpm reads its settings from there) so ordinary projects
+# keep the safe default. Matches the NT script.
+PNPM_GLOBAL_DIR="$(pnpm root -g)"
+mkdir -p "$PNPM_GLOBAL_DIR"
+pnpm -C "$PNPM_GLOBAL_DIR" config set --location project dangerouslyAllowAllBuilds true
+
 # go-ios' postinstall places its binary the way npm would, reading
 # npm_config_prefix to find the target directory. pnpm doesn't set that, so the
 # postinstall throws and fails the whole global install transaction -- leaving
