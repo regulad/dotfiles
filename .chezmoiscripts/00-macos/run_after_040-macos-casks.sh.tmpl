@@ -23,7 +23,7 @@ BREW_CASKS_MACOS=(
 	"tailscale-app"  # proprietary! ... kinda?
 	"appcleaner"  # no idea
 	"google-chrome"  # proprietary freeware (you can't make me use anything other than chrome)
-	"nextcloud-vfs"
+	"nextcloud"  # the -vfs cask is deprecated; File Provider ships in the main pkg since 33.0
 	"docker-desktop"  # proprietary trialware
 	"obs"
 	"utm"
@@ -64,6 +64,16 @@ if [ "$HAS_BREW" = "true" ]; then
 	# idempotent, so it runs every apply.
 	brew trust --tap regulad/tap
 	brew trust --tap Gcenx/wine
+
+	# Migration: nextcloud-vfs was deprecated 2026-04-01 (discontinued upstream).
+	# Since desktop client 33.0 the classic and VFS (File Provider) clients are one
+	# package, tracked by the plain `nextcloud` cask. The two casks conflict, so an
+	# older host has to drop the -vfs one before the loop below can install its
+	# replacement. Account config lives in ~/Library and survives the swap.
+	if brew list --cask nextcloud-vfs &>/dev/null; then
+		echo "debug: replacing deprecated nextcloud-vfs cask with nextcloud" >&2
+		brew uninstall --cask -q nextcloud-vfs
+	fi
 
 	for cask in "${BREW_CASKS_MACOS[@]}"; do
 		if ! brew list --cask "$cask" &>/dev/null; then

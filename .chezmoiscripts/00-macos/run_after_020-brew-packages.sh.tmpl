@@ -39,11 +39,6 @@ BREW_PACKAGES=(
 	libxml2
 	freetype
 	jpeg
-	## libolm is depreciated upstream but still needed to build the mautrix tools
-	libolm
-
-	# =+= MISC
-	nyx
 
 	# =+= EDITOR
 	neovim
@@ -104,6 +99,21 @@ BREW_PACKAGES=(
 	lua
 	luarocks
 )
+
+# OMITTED, and why. Everything here goes through a single `brew install`, so
+# one unknown formula aborts the whole list before anything installs -- keep
+# this current. The Linux counterpart is the block in 00-linux/022-brew-packages.
+#
+#   gone from homebrew-core:
+#     libolm -- deprecated upstream, formula removed (brew returns "No available
+#       formula"). It was only ever here to build the mautrix tools, and nothing
+#       in this repo builds those any more.
+#   deprecated in homebrew-core (still installs with a warning, but brew disables
+#   deprecated formulae after ~1 year and then deletes them):
+#     nyx -- deprecated 2026-03-29, upstream repo archived. Still in the dnf and
+#       apt lists, where distro packaging is unaffected.
+#     minio-mc -- deprecated 2026-07-17, MinIO archived the repo. Was in
+#       030-brew-extras; rclone, awscli and s3cmd cover the same S3 workflows.
 
 brew install -q "${BREW_PACKAGES[@]}"
 brew upgrade -q
