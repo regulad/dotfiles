@@ -22,6 +22,15 @@ export DEBIAN_FRONTEND=noninteractive
 # it. Scripts that touch a non-official tap now `brew trust` what they need
 # right before using it (030-brew-extras, 00-macos/040-macos-casks).
 export HOMEBREW_NO_ENV_HINTS=1
+# brew now defaults to "ask mode" on install/upgrade/reinstall: it prints the
+# plan and, when stdin is a TTY and the plan includes anything beyond the named
+# packages (i.e. any dependency at all), stops on
+#   ==> Do you want to proceed with the installation? [y/n]
+# .commonprofile exports this too, but a hookscript only inherits that from a
+# shell that has already sourced the *new* profile -- on a first apply, or from
+# a terminal opened before the profile changed, it hasn't. Set it here so the
+# scripts never depend on the login shell for it.
+export HOMEBREW_NO_ASK=1
 trap 'echo "error: line $LINENO: Command was: $BASH_COMMAND" >&2' ERR
 
 # needed for Android native builds
