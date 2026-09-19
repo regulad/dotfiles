@@ -59,7 +59,13 @@ BREW_PACKAGES=(
 	# macOS ships dig in the base system at /usr/bin/dig.
 	direnv
 	socat
-	inetutils
+	# telnet, not inetutils. brew's `telnet` formula is macOS-only, which is the
+	# only reason the Linux list carries inetutils instead. On macOS inetutils
+	# unprefixes just dnsdomainname/ftp/rcp/rexec/rlogin/rsh/telnet, declares
+	# conflicts_with telnet, and refuses to install while telnet is linked --
+	# which took the whole single-shot `brew install` below down with it.
+	# (macOS has shipped no ftp since 10.13; add `tnftp` if that is ever missed.)
+	telnet
 	binutils
 	perl
 	sshpass
@@ -114,6 +120,15 @@ BREW_PACKAGES=(
 #       apt lists, where distro packaging is unaffected.
 #     minio-mc -- deprecated 2026-07-17, MinIO archived the repo. Was in
 #       030-brew-extras; rclone, awscli and s3cmd cover the same S3 workflows.
+#   conflicts with a formula we want more:
+#     inetutils -- conflicts_with telnet; see the note in the UTILS section.
+
+# Migration for a host that got inetutils before the list switched to telnet:
+# the conflict is symmetric, so `brew install telnet` would fail the same way.
+if brew list --formula inetutils &>/dev/null; then
+	echo "debug: replacing inetutils with telnet (conflicting formulae)" >&2
+	brew uninstall -q inetutils
+fi
 
 brew install -q "${BREW_PACKAGES[@]}"
 brew upgrade -q
