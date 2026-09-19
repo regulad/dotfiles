@@ -75,7 +75,22 @@ if [ "$HAS_BREW" = "true" ]; then
 		brew uninstall --cask -q nextcloud-vfs
 	fi
 
+	# Tailscale ships two macOS builds that cannot coexist: the App Store app
+	# (id 1475387142, bundle io.tailscale.ipn.macos, network extension) and the
+	# standalone .app the tailscale-app cask installs (system extension). A host
+	# that already has the App Store build keeps it; only install the cask when
+	# mas doesn't list it. mas comes from 020-brew-packages, so it is on PATH here.
+	if mas list 2>/dev/null | grep -q '^1475387142 '; then
+		echo "debug: tailscale present from the App Store; skipping the tailscale-app cask" >&2
+		TAILSCALE_FROM_MAS=1
+	else
+		TAILSCALE_FROM_MAS=0
+	fi
+
 	for cask in "${BREW_CASKS_MACOS[@]}"; do
+		if [ "$cask" = "tailscale-app" ] && [ "$TAILSCALE_FROM_MAS" -eq 1 ]; then
+			continue
+		fi
 		if ! brew list --cask "$cask" &>/dev/null; then
 			brew install --cask -q "$cask" -f
 		fi
