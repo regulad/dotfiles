@@ -1,5 +1,12 @@
 {{ template "posix-preamble.sh" . }}
 ## Mac App Store applications
+
+# Xcode is never touched by this script. Beyond mas not installing it cleanly,
+# the installed version is deliberately left alone: Xcode is often pinned to a
+# specific release for toolchain/SDK compatibility, and a blanket `mas update`
+# would silently bump it along with everything else.
+XCODE_APP_ID="497799835"
+
 MAS_APP_IDS=(
 	"937984704"   # Amphetamine
 	"1352778147"  # Bitwarden
@@ -10,14 +17,26 @@ MAS_APP_IDS=(
 	"6745342698"  # uBlock Origin Lite
 	"1472432422"  # Wayback Machine
 	"1295203466"  # Windows App
-#	"497799835"   # Xcode  # xcode doesn't work right through mas
+#	"$XCODE_APP_ID"   # Xcode  # xcode doesn't work right through mas
 )
 
 if [ "$HAS_BREW" = "true" ]; then
 	# mas is distributed via brew
-  mas update
+	#
+	# `mas update` with no arguments upgrades every outdated App Store app,
+	# Xcode included, so build the list ourselves and leave Xcode out.
+	# `mas outdated` prints one "<id> <name> (<installed> -> <available>)" per
+	# line; the first field is the numeric app id. `mas update <id>...` then
+	# upgrades only the named apps.
+	outdated_ids=$(mas outdated | awk -v xcode="$XCODE_APP_ID" '$1 ~ /^[0-9]+$/ && $1 != xcode { print $1 }')
+	if [ -n "$outdated_ids" ]; then
+		# shellcheck disable=SC2086  # one numeric id per word; splitting is the point
+		mas update $outdated_ids
+	else
+		echo "note: no App Store apps to update (Xcode is excluded on purpose)" >&2
+	fi
 	for mas_id in "${MAS_APP_IDS[@]}"; do
-		mas install $mas_id
+		mas install "$mas_id"
 	done
 fi
 
