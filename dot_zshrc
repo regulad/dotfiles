@@ -29,8 +29,8 @@ source ~/.commonrc
 #
 # The prompt character is tinted by the previous command's exit status via
 # ${__prompt_char_color}, which ~/.config/zsh/30-prompt-status.zsh maintains
-# from a precmd hook (green for 0, red otherwise, empty when nothing has run
-# yet). The reference is left unexpanded by the quoted heredoc and resolved at
+# from a precmd hook (green for 0, red otherwise). The reference is left
+# unexpanded by the quoted heredoc and resolved at
 # each redraw by PROMPT_SUBST. It appears in both branches of the %(#. . )
 # conditional, not once in front of it, because 20-git-prompt.zsh splices the
 # git segment in immediately before that conditional and the segment ends with
