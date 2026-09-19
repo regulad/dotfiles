@@ -274,7 +274,20 @@ elif command -v brew &>/dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
 	MANAGER="brew"
 
 	# macOS brew-specific tap / dep setups
-	brew tap kde-mac/kde https://invent.kde.org/packaging/homebrew-kde.git && "$(brew --repo kde-mac/kde)/tools/do-caveats.sh"
+	#
+	# kde-mac/kde is disabled until Homebrew fixes a 7.0 regression. Its
+	# tools/do-caveats.sh runs `brew services restart dbus`, and brew 7.0.x
+	# fails that with "Formula `dbus` has not implemented #plist, #service or
+	# provided a locatable service file": FormulaStruct.deserialize decides
+	# whether a formula has a service block from `service_args` alone, but
+	# serialize drops that key when empty, so a name-only `service do` block
+	# (dbus, netatalk, xinit) loads with service? == false and brew looks for
+	# sh.brew.dbus.plist instead of the org.freedesktop.dbus-session.plist the
+	# keg ships. Fix is a one-liner in Library/Homebrew/api/formula_struct.rb
+	# (also set service_present when service_run_args/service_name_args are
+	# present). Re-enable once `brew services info dbus --json` reports
+	# service_name org.freedesktop.dbus-session.
+	#brew tap kde-mac/kde https://invent.kde.org/packaging/homebrew-kde.git && "$(brew --repo kde-mac/kde)/tools/do-caveats.sh"
 	brew tap regulad/homebrew-tap
 	brew tap Gcenx/wine https://github.com/Gcenx/homebrew-wine
 
