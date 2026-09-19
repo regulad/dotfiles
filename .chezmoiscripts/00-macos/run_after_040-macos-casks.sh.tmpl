@@ -77,18 +77,25 @@ if [ "$HAS_BREW" = "true" ]; then
 
 	# Tailscale ships two macOS builds that cannot coexist: the App Store app
 	# (id 1475387142, bundle io.tailscale.ipn.macos, network extension) and the
-	# standalone .app the tailscale-app cask installs (system extension). A host
-	# that already has the App Store build keeps it; only install the cask when
-	# mas doesn't list it. mas comes from 020-brew-packages, so it is on PATH here.
+	# standalone pkg (bundle io.tailscale.ipn.macsys, system extension) -- the
+	# same pkg the tailscale-app cask installs, and the one that drops the CLI at
+	# /usr/local/bin/tailscale. Either may already be on a host without brew
+	# knowing: the App Store one never is, and the standalone one isn't when it
+	# was installed by hand. Skip the cask in both cases rather than letting
+	# `brew install --cask -f` re-run the pkg installer (and prompt for sudo)
+	# over a working install. mas comes from 020-brew-packages, so it is on PATH.
 	if mas list 2>/dev/null | grep -q '^1475387142 '; then
 		echo "debug: tailscale present from the App Store; skipping the tailscale-app cask" >&2
-		TAILSCALE_FROM_MAS=1
+		TAILSCALE_PRESENT=1
+	elif pkgutil --pkg-info com.tailscale.ipn.macsys &>/dev/null; then
+		echo "debug: standalone tailscale pkg already installed; skipping the tailscale-app cask" >&2
+		TAILSCALE_PRESENT=1
 	else
-		TAILSCALE_FROM_MAS=0
+		TAILSCALE_PRESENT=0
 	fi
 
 	for cask in "${BREW_CASKS_MACOS[@]}"; do
-		if [ "$cask" = "tailscale-app" ] && [ "$TAILSCALE_FROM_MAS" -eq 1 ]; then
+		if [ "$cask" = "tailscale-app" ] && [ "$TAILSCALE_PRESENT" -eq 1 ]; then
 			continue
 		fi
 		if ! brew list --cask "$cask" &>/dev/null; then
