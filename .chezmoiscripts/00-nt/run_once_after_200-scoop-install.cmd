@@ -198,20 +198,11 @@ REM 210-scoop-update.cmd.
 echo debug: setting autorun
 call clink autorun set %USERPROFILE%\autorun.cmd >nul 2>&1
 
-REM service setup
-call sc query LanguageTool >nul 2>&1
-if !errorLevel! neq 0 (
-    echo Registering LanguageTool service...
-    set LT_PATH=%USERPROFILE%\scoop\apps\languagetool-java\current
-    call sudo nssm install LanguageTool "%JAVA_HOME%bin\java.exe"
-    call sudo nssm set LanguageTool AppParameters "-cp \"!LT_PATH!\languagetool-server.jar\" org.languagetool.server.HTTPServer --port 8081 --allow-origin \"*\""
-    call sudo nssm set LanguageTool AppDirectory "!LT_PATH!"
-    call sudo nssm set LanguageTool Start SERVICE_AUTO_START
-    call sudo nssm start LanguageTool
-    echo LanguageTool service registered and started.
-) else (
-    echo LanguageTool service already registered, skipping.
-)
+REM The LanguageTool NSSM service used to be registered here, once, pointed at
+REM the java.exe of the moment. It moved to 215-languagetool-service.ps1, which
+REM re-converges the service on every change: the winget JDK moves to a new
+REM versioned directory on each upgrade and the one-shot registration here
+REM could not follow it. nssm and languagetool-java stay in the list above.
 
 goto :eof
 

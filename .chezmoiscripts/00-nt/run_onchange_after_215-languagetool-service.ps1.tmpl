@@ -1,0 +1,256 @@
+{{- $launcherSrc := joinPath .chezmoi.sourceDir "dot_local" "bin" "languagetool-server.ps1" -}}
+# Registers the NSSM-supervised `LanguageTool` Windows service, and keeps its
+# configuration matching this file.
+#
+# The service runs ~/.local/bin/languagetool-server.ps1, which resolves a
+# java.exe at every start and execs the LanguageTool HTTP server on port 8081
+# (loopback only). See the launcher for why it is not simply java.exe: the JDK
+# is a winget package that moves to a new versioned directory on every upgrade,
+# and pinning NSSM to one of those killed the service twice before this
+# existed.
+#
+# This used to be a one-shot block at the bottom of 200-scoop-install.cmd,
+# guarded on `sc query` so it never touched an existing service -- which is
+# precisely why the dead one stayed dead. run_onchange_ instead: every value
+# below is compared against what is actually registered, and the digest of the
+# launcher extends that to the file this script does not inline, so editing
+# either re-runs this and re-converges the service.
+#
+#     dot_local/bin/languagetool-server.ps1 {{ include $launcherSrc | sha256sum }}
+#
+# Stays unelevated, following 035-sshd-user-session.ps1 and 170-firefox-
+# policies.ps1: the comparison is done here against the registry, only the fix
+# goes through `sudo`, and the fix is verified by reading state back. sudo is
+# pinned to Force New Window mode on this machine (see 030-w32time.cmd), which
+# neither propagates the child's exit code nor waits for it, so the read-back
+# polling below is the only error detection there is. It also means a machine
+# already in the right state gets no UAC prompt at all.
+
+$ServiceName = 'LanguageTool'
+$Port = 8081
+
+$ScoopRoot = if ($env:SCOOP) { $env:SCOOP } else { Join-Path $HOME 'scoop' }
+$Nssm = Join-Path $ScoopRoot 'apps\nssm\current\nssm.exe'
+$LtDir = Join-Path $ScoopRoot 'apps\languagetool-java\current'
+$Jar = Join-Path $LtDir 'languagetool-server.jar'
+$Launcher = Join-Path $HOME '.local\bin\languagetool-server.ps1'
+# Windows PowerShell rather than pwsh: it is always at this path, and the
+# launcher is written for it. Absolute, because the service runs as LocalSystem
+# with the machine PATH only.
+$PowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+$LogDir = Join-Path $HOME '.local\state\languagetool'
+$Log = Join-Path $LogDir 'service.log'
+
+# Same shape as 035-sshd-user-session.ps1: every elevated action is confirmed
+# by polling for its effect, because sudo returns before the elevated command
+# has necessarily finished.
+function Wait-Until {
+    param([scriptblock]$Condition, [int]$TimeoutSeconds = 60)
+    $Deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ($true) {
+        if (& $Condition) { return $true }
+        if ((Get-Date) -gt $Deadline) { return $false }
+        Start-Sleep -Milliseconds 500
+    }
+}
+
+# ---------------------------------------------------------------------------
+# 1. Preconditions. All three are installed by earlier scripts, so a miss here
+#    is a broken apply, not something to paper over.
+# ---------------------------------------------------------------------------
+if (-not (Test-Path -LiteralPath $Nssm)) {
+    Write-Error "nssm.exe not found at $Nssm -- did 200-scoop-install run?"
+    exit 1
+}
+if (-not (Test-Path -LiteralPath $Jar)) {
+    Write-Error "languagetool-server.jar not found at $Jar -- did 200-scoop-install run?"
+    exit 1
+}
+if (-not (Test-Path -LiteralPath $Launcher)) {
+    Write-Error "launcher not found at $Launcher -- has chezmoi applied .local/bin?"
+    exit 1
+}
+
+# The log's directory has to exist before NSSM opens the file; NSSM creates the
+# file but not its parents. Unelevated -- it is in this user's profile, and
+# LocalSystem can write there regardless.
+if (-not (Test-Path -LiteralPath $LogDir)) {
+    New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+}
+
+# ---------------------------------------------------------------------------
+# 2. What the service should look like.
+# ---------------------------------------------------------------------------
+# Keys are NSSM parameter names, values are what `nssm get` would print. The
+# whole launcher command line is in AppParameters; AppDirectory is where the
+# jar lives, so LanguageTool's relative lookups (its rule files sit next to
+# the jar) resolve.
+#
+# stdout and stderr go to one file, truncated at every service start
+# (CreationDisposition 2 is CREATE_ALWAYS) and never rotated -- the same
+# shape as the sshd launcher's log: it is always the current run, and it
+# cannot pile up. NSSM's own rotation was tried first and rejected twice
+# over, on 2026-09-19:
+#
+#   - AppRotateOnline=1 makes NSSM read the child's output through a pipe on
+#     a logging thread instead of handing the child the file, and every stop
+#     of a service configured that way hung in StopPending (three for three):
+#     nssm.exe killed the launcher, logged it, and never reported stopped;
+#     only killing nssm.exe itself cleared it. With it off, a stop took a
+#     second.
+#   - AppRotateFiles=1 with only AppRotateBytes set rotated a 1 KB file at
+#     every single start, so it was a file per boot forever.
+#
+# LanguageTool logs a few lines per request, so this grows by well under a
+# megabyte per thousand checks between reboots. Fine.
+$Desired = [ordered]@{
+    Application                  = $PowerShell
+    AppParameters                = "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$Launcher`" -Jar `"$Jar`" -Port $Port"
+    AppDirectory                 = $LtDir
+    AppStdout                    = $Log
+    AppStderr                    = $Log
+    AppStdoutCreationDisposition = '2'
+    AppStderrCreationDisposition = '2'
+    AppRotateFiles               = '0'
+}
+
+# ---------------------------------------------------------------------------
+# 3. What it looks like now.
+# ---------------------------------------------------------------------------
+# Read from the registry rather than via `nssm get`: NSSM stores everything
+# under the service's Parameters key as plain values, the key is readable
+# unelevated, and nssm.exe's console output is UTF-16 that Windows PowerShell
+# does not always decode cleanly.
+$ParamsKey = "HKLM:\SYSTEM\CurrentControlSet\Services\$ServiceName\Parameters"
+function Get-Registered {
+    $Actual = @{}
+    $Item = Get-ItemProperty -Path $ParamsKey -ErrorAction SilentlyContinue
+    if ($Item) {
+        foreach ($Key in $Desired.Keys) {
+            $Value = $Item.PSObject.Properties[$Key]
+            if ($Value) { $Actual[$Key] = "$($Value.Value)" }
+        }
+    }
+    return $Actual
+}
+
+function Get-Drift {
+    $Actual = Get-Registered
+    $Drift = @()
+    foreach ($Key in $Desired.Keys) {
+        if ($Actual[$Key] -ne $Desired[$Key]) {
+            $Drift += "{0}: '{1}' -> '{2}'" -f $Key, $Actual[$Key], $Desired[$Key]
+        }
+    }
+    return $Drift
+}
+
+$Svc = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+# ImagePath via WMI rather than $Svc.BinaryPathName: that property exists on
+# ServiceController only from PowerShell 6 on, and under Windows PowerShell
+# 5.1 it reads as empty -- which this check then took for "not ours".
+$ImagePath = (Get-CimInstance Win32_Service -Filter "Name='$ServiceName'" -ErrorAction SilentlyContinue).PathName
+if ($Svc -and ($ImagePath -notlike '*nssm.exe*')) {
+    Write-Error "a '$ServiceName' service exists but is not NSSM-managed (ImagePath: $ImagePath). Remove it by hand before re-applying."
+    exit 1
+}
+
+$Drift = @(Get-Drift)
+$Reasons = @()
+if (-not $Svc) { $Reasons += 'service not registered' }
+if ($Drift.Count -gt 0) { $Reasons += $Drift }
+if ($Svc -and ($Svc.StartType -ne 'Automatic')) { $Reasons += "StartType: '$($Svc.StartType)' -> 'Automatic'" }
+if ($Svc -and ($Svc.Status -ne 'Running')) { $Reasons += "Status: '$($Svc.Status)' -> 'Running'" }
+
+# ---------------------------------------------------------------------------
+# 4. Converge, if anything is off.
+# ---------------------------------------------------------------------------
+if ($Reasons.Count -gt 0) {
+    Write-Host "debug: (re)configuring the $ServiceName service:"
+    foreach ($Reason in $Reasons) { Write-Host "debug:   $Reason" }
+
+    # The elevated half is a whole script, handed to sudo as -EncodedCommand.
+    # The alternative, `sudo powershell -Command "..."`, would need the launcher
+    # command line -- which itself contains quoted paths -- escaped through
+    # three shells, and every `nssm set` would be a separate UAC prompt.
+    #
+    # `--%` on the AppParameters line hands the rest of the line to nssm.exe
+    # verbatim -- and the embedded quotes are escaped as \" on top of that,
+    # because nssm.exe parses its own argv with the C runtime, which strips
+    # bare quotes, and then re-joins the tokens with spaces. Observed on the
+    # first run of this script: the value landed as `-File C:\...ps1` and the
+    # read-back below never matched. \" survives the CRT as a literal quote,
+    # which is exactly what the old cmd registration relied on. Every other
+    # value is a single token and goes through PowerShell's normal quoting.
+    #
+    # Stop-then-Start rather than `nssm restart`: nssm's restart stops first
+    # and the service is usually stopped when this runs, and a restart that
+    # refuses to start a stopped service would leave the failure the whole
+    # script exists to fix.
+    #
+    # A supervisor wedged in StopPending is killed first. Observed twice on
+    # 2026-09-19 with AppRotateOnline=1: nssm killed the launcher's process
+    # tree, logged it, and then never reported SERVICE_STOPPED -- nssm.exe sat
+    # there with no child, Stop-Service blocked on it indefinitely, and only
+    # killing nssm.exe cleared it. A supervisor with nothing left to supervise
+    # is safe to kill, and without this the Stop-Service below would hang the
+    # apply on the very state it is trying to repair.
+    function Quote-Literal { param([string]$Value) return "'" + $Value.Replace("'", "''") + "'" }
+    $Elevated = @(
+        "`$ErrorActionPreference = 'Stop'"
+        "`$Nssm = $(Quote-Literal $Nssm)"
+        "if (-not (Get-Service -Name '$ServiceName' -ErrorAction SilentlyContinue)) { & `$Nssm install '$ServiceName' $(Quote-Literal $PowerShell) }"
+        "& `$Nssm set '$ServiceName' Application $(Quote-Literal $Desired.Application)"
+        "& `$Nssm set '$ServiceName' AppParameters --% $($Desired.AppParameters.Replace('"', '\"'))"
+        "& `$Nssm set '$ServiceName' AppDirectory $(Quote-Literal $Desired.AppDirectory)"
+        "& `$Nssm set '$ServiceName' AppStdout $(Quote-Literal $Desired.AppStdout)"
+        "& `$Nssm set '$ServiceName' AppStderr $(Quote-Literal $Desired.AppStderr)"
+        "& `$Nssm set '$ServiceName' AppStdoutCreationDisposition $($Desired.AppStdoutCreationDisposition)"
+        "& `$Nssm set '$ServiceName' AppStderrCreationDisposition $($Desired.AppStderrCreationDisposition)"
+        "& `$Nssm set '$ServiceName' AppRotateFiles $($Desired.AppRotateFiles)"
+        # Leftovers from the rotation experiments above; harmless with
+        # AppRotateFiles off, removed so `nssm dump` tells the truth.
+        "& `$Nssm reset '$ServiceName' AppRotateOnline"
+        "& `$Nssm reset '$ServiceName' AppRotateBytes"
+        "& `$Nssm set '$ServiceName' Start SERVICE_AUTO_START"
+        "`$Wedged = Get-CimInstance Win32_Service -Filter `"Name='$ServiceName'`" | Where-Object { `$_.State -eq 'Stop Pending' -and `$_.ProcessId }"
+        "if (`$Wedged) { Stop-Process -Id `$Wedged.ProcessId -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 2 }"
+        "Stop-Service -Name '$ServiceName' -Force -ErrorAction SilentlyContinue"
+        "Start-Service -Name '$ServiceName'"
+    ) -join "`r`n"
+    $Encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Elevated))
+
+    & sudo powershell -NoProfile -NonInteractive -EncodedCommand $Encoded
+
+    $Converged = Wait-Until -TimeoutSeconds 90 -Condition {
+        $s = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+        $s -and ($s.StartType -eq 'Automatic') -and ($s.Status -eq 'Running') -and (@(Get-Drift).Count -eq 0)
+    }
+    if (-not $Converged) {
+        $s = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+        $Still = @(Get-Drift)
+        if (-not $s) {
+            Write-Error "the $ServiceName service was not registered -- was the elevation prompt declined?"
+        } elseif ($Still.Count -gt 0) {
+            Write-Error "the $ServiceName service configuration did not converge -- was the elevation prompt declined? Still off: $($Still -join '; ')"
+        } else {
+            Write-Error "the $ServiceName service is $($s.Status) -- check $Log and the Application event log (source nssm)"
+        }
+        exit 1
+    }
+} else {
+    Write-Host "note: $ServiceName service already configured and running"
+}
+
+# ---------------------------------------------------------------------------
+# 5. Prove it is serving, not just that NSSM has a child.
+# ---------------------------------------------------------------------------
+# NSSM reports Running as soon as the launcher process is alive; the JVM then
+# takes a few seconds to load the rule files before it binds. A service that is
+# "Running" with nothing on the port is exactly the silent failure this script
+# is for, so it is an error, not a note.
+if (-not (Wait-Until -TimeoutSeconds 90 -Condition { @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue).Count -gt 0 })) {
+    Write-Error "nothing is listening on port $Port after 90s -- check $Log"
+    exit 1
+}
+Write-Host "note: LanguageTool listening on port $Port"

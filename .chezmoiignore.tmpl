@@ -94,6 +94,10 @@ autorun.cmd
 # one sitting in ~/.config.
 .config/sshd
 .local/bin/sshd-user-session.ps1
+# The LanguageTool server is an NSSM service on Windows only (see
+# .chezmoiscripts/00-nt/215-languagetool-service); brew services owns it on
+# macOS and Linux, so this launcher has nothing to launch anywhere else.
+.local/bin/languagetool-server.ps1
 AppData
 Winaero Tweaker.ini
 repositories  # symlink
