@@ -7,5 +7,9 @@ Host thylacine
 Host crappletv
     HostName 10.137.237.63
     User root
-    HostKeyAlgorithms ssh-rsa,ssh-dss
+    HostKeyAlgorithms ssh-rsa
+    PubkeyAcceptedAlgorithms ssh-rsa 
+    PasswordAuthentication yes
+    KbdInteractiveAuthentication yes
+    PreferredAuthentications password,keyboard-interactive
     Tag rsa3072
