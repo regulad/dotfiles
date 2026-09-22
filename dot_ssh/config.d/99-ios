@@ -11,5 +11,5 @@ Host crappletv
     PubkeyAcceptedAlgorithms ssh-rsa 
     PasswordAuthentication yes
     KbdInteractiveAuthentication yes
-    PreferredAuthentications password,keyboard-interactive
+    PreferredAuthentications publickey,password,keyboard-interactive
     Tag rsa3072
