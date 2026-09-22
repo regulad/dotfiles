@@ -3,3 +3,8 @@ Host thylacine
     HostName thylacine.tail11540.ts.net
     User mobile
     Tag rsa3072
+
+Host crappletv
+    HostName 10.137.237.63
+    User root
+    Tag rsa3072
