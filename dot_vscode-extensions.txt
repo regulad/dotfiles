@@ -20,7 +20,11 @@ ms-python.vscode-python-envs
 ms-vscode-remote.remote-containers
 ms-vscode-remote.remote-ssh
 ms-vscode-remote.remote-wsl
+ms-vscode.cmake-tools
+ms-vscode.cpp-devtools
 ms-vscode.cpptools
+ms-vscode.cpptools-extension-pack
+ms-vscode.cpptools-themes
 platformio.platformio-ide
 streetsidesoftware.code-spell-checker
 unifiedjs.vscode-mdx
