@@ -50,6 +50,28 @@ Supported shells:
 
 I have no intent to support PowerShell: I don't want to spend half of the time in my shell wrestling with different eras of features and aliases that do not have the same signature as the builtins they shadow.
 
+### C/C++ language support
+
+Vim installs `coc-clangd` from `dot_coc-extensions.txt` through the plugin
+bootstrap. Neovim enables `clangd` through its native LSP client and
+`nvim-lspconfig`. Both use the `clangd` executable on `PATH`.
+
+| Host | Provisioned package |
+| --- | --- |
+| Windows | Scoop `clangd` |
+| Ubuntu/Debian | apt `clangd` |
+| Fedora | dnf `clang-tools-extra` |
+| Bluefin | Homebrew `llvm` |
+| macOS | Homebrew `llvm`; `.commonprofile` appends its keg-only `bin` directory to `PATH` |
+
+CoC also needs Node.js, which is already provisioned on every supported host.
+clangd provides completion, diagnostics, navigation, and formatting; a separate
+`clang-format` executable is not required for LSP formatting. Building code still
+requires the project's compiler and SDK/headers. For project-aware analysis,
+generate `compile_commands.json` (for example, configure CMake with
+`-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` using Ninja or Makefiles). For a small project,
+`compile_flags.txt` can supply include paths and compiler flags instead.
+
 ### Hookscripts
 
 POSIX-like platforms will automatically install required dependencies thanks to the hookscripts in `.chezmoiscripts/00-posix/`.

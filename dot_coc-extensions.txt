@@ -1,4 +1,5 @@
 coc-json
+coc-clangd
 coc-tsserver
 coc-pyright
 coc-rust-analyzer

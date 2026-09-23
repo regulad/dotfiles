@@ -107,6 +107,7 @@ telnet ^
 unzip ^
 vim ^
 neovim ^
+clangd ^
 rust-analyzer ^
 harper ^
 jdtls ^

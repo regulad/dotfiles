@@ -20,6 +20,10 @@ if [ "$(uname -o)" = "Darwin" ]; then
     fi    
     export PATH="/Applications/Ghostty.app/Contents/MacOS/:$PATH"
 
+    # LLVM is keg-only on macOS. Expose clangd without overriding Apple's
+    # compiler tools (or an existing clangd supplied by Xcode).
+    export PATH="$PATH:$HOMEBREW_PREFIX/opt/llvm/bin"
+
     export PATH="$(brew --prefix ruby)/bin:$PATH"
     export PATH="$(brew --prefix rustup)/bin:$PATH"
     export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"

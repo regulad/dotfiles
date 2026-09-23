@@ -39,6 +39,7 @@ else
 
     -- LSP
     -- https://github.com/neovim/nvim-lspconfig/blob/master/doc/configs.md
+    vim.lsp.enable('clangd')
     vim.lsp.enable('jdtls')
     -- kotlin_language_server (fwcd), not kotlin_lsp (JetBrains): the fwcd
     -- server is what the platform package scripts actually install (brew
