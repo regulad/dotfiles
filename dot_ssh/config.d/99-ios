@@ -4,8 +4,14 @@ Host thylacine
     User mobile
     Tag rsa3072
 
+Host purinina
+    # 00008020-001254801420802E
+    HostName purinina.tail1540.ts.net
+    User mobile
+    Tag rsa3072
+
 Host crappletv
-    HostName 10.137.237.63
+    HostName crappletv.tail11540.ts.net
     User root
     HostKeyAlgorithms ssh-rsa
     PubkeyAcceptedAlgorithms ssh-rsa 
