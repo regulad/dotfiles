@@ -24,7 +24,7 @@ call claude plugin marketplace update || echo warning: marketplace update failed
 REM Kept in step with the bootstrap's declared plugins. `claude plugin update`
 REM needs an explicit name (there is no update-all), and the guard skips any a
 REM given machine has not installed.
-for %%P in (claude-code-wakatime ralph-loop) do call :update_plugin %%P
+for %%P in (claude-code-wakatime ralph-loop codex) do call :update_plugin %%P
 
 endlocal
 exit /b 0

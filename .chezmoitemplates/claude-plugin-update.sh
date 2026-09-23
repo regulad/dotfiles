@@ -16,7 +16,7 @@ claude plugin marketplace update || echo "warning: marketplace update failed" >&
 # Kept in step with the bootstrap's PLUGINS list. `claude plugin update` needs
 # an explicit plugin name (there is no update-all), and the guard skips any that
 # a given machine has not installed.
-for plugin in claude-code-wakatime ralph-loop; do
+for plugin in claude-code-wakatime ralph-loop codex; do
 	if claude plugin list 2>/dev/null | grep -qF -- "$plugin"; then
 		echo "note: updating plugin $plugin" >&2
 		claude plugin update "$plugin" || echo "warning: failed to update $plugin" >&2

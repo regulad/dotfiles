@@ -22,9 +22,11 @@ if errorlevel 1 (
 
 call :add_marketplace wakatime wakatime/claude-code-wakatime
 call :add_marketplace claude-plugins-official anthropics/claude-plugins-official
+call :add_marketplace openai-codex openai/codex-plugin-cc
 
 call :install_plugin claude-code-wakatime wakatime
 call :install_plugin ralph-loop claude-plugins-official
+call :install_plugin codex openai-codex
 
 endlocal
 exit /b 0
@@ -51,6 +53,6 @@ if not errorlevel 1 (
 )
 echo note: installing plugin %~1@%~2 1>&2
 REM -y is required off-TTY and auto-accepts any marketplace-declared install
-REM command; both sources here are plain git repos.
+REM command; all sources here are plain git repos.
 call claude plugin install %~1@%~2 -y || echo warning: failed to install %~1@%~2 1>&2
 goto :eof

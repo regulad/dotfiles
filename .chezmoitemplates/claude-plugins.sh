@@ -34,10 +34,12 @@ fi
 MARKETPLACES=(
 	"wakatime|wakatime/claude-code-wakatime"
 	"claude-plugins-official|anthropics/claude-plugins-official"
+	"openai-codex|openai/codex-plugin-cc"
 )
 PLUGINS=(
 	"claude-code-wakatime|wakatime"
 	"ralph-loop|claude-plugins-official"
+	"codex|openai-codex"
 )
 
 for entry in "${MARKETPLACES[@]}"; do
@@ -59,7 +61,7 @@ for entry in "${PLUGINS[@]}"; do
 	else
 		echo "note: installing plugin $plugin@$marketplace" >&2
 		# -y is required off-TTY and auto-accepts any marketplace-declared
-		# install command; both sources here are plain git repos.
+		# install command; all sources here are plain git repos.
 		claude plugin install "$plugin@$marketplace" -y || echo "warning: failed to install $plugin@$marketplace" >&2
 	fi
 done
