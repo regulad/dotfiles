@@ -345,11 +345,11 @@ try {
         '--from-file', $tarball.FullName
         '--name', $distroName
         '--location', $installPath
+        '--no-launch'
     )
-    # Without --no-launch, wsl opens an interactive shell right here, which is
-    # what triggers oobe.command. OOBE does not fire for a non-interactive
-    # `wsl -d <name> -- <cmd>`.
-    if ($NoLaunch) { $installArgs += '--no-launch' }
+    # Finish installing before opening an interactive shell. Otherwise the
+    # provenance write waits for that shell to exit and is lost if the deploy
+    # process is interrupted or its terminal is closed during the session.
 
     wsl.exe @installArgs
     Assert-NativeSuccess 'wsl --install --from-file'
@@ -431,6 +431,13 @@ if ($currentDefault -eq $distroName) {
 }
 
 # --- what happens next -----------------------------------------------------
+
+if (-not $NoLaunch) {
+    Write-Step "starting '$distroName'"
+    # Launch without a command so WSL runs the image's first-run OOBE.
+    wsl.exe -d $distroName
+    Assert-NativeSuccess "wsl -d $distroName"
+}
 
 Write-Host ""
 if ($NoLaunch) {
