@@ -12,6 +12,13 @@ on:
   push:
     branches: ["master"]
 
+# Serialize the entire pipeline across push, scheduled, and manual runs.
+# Each new run cancels the active run and replaces any pending run.
+concurrency:
+  group: docker-publish
+  cancel-in-progress: true
+  queue: single
+
 jobs:
   # docker/github-builder handles checkout (via BuildKit git-context), buildx,
   # registry login, metadata, native per-platform builds (dispatching arm64 to
