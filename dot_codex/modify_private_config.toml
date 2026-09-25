@@ -1,0 +1,7 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /* Merge into CLI-owned state, preserving other settings and plugins. */ -}}
+{{- $config := dict -}}
+{{- if .chezmoi.stdin | trim -}}
+{{- $config = fromToml .chezmoi.stdin -}}
+{{- end -}}
+{{- $config | setValueAtPath "tui.vim_mode_default" true | toToml -}}

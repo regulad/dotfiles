@@ -50,6 +50,17 @@ Supported shells:
 
 I have no intent to support PowerShell: I don't want to spend half of the time in my shell wrestling with different eras of features and aliases that do not have the same signature as the builtins they shadow.
 
+### Codex WakaTime tracking
+
+The Linux, macOS, and Windows apply scripts install WakaTime's official
+[Codex CLI plugin](https://github.com/wakatime/codex-cli-wakatime), alongside
+the existing Claude Code plugin setup. They register its marketplace and install
+`codex-cli-wakatime@wakatime` only when missing, retrying on subsequent applies.
+Codex must support `codex plugin add`; older versions emit an upgrade reminder.
+The plugin uses the repository's existing `~/.wakatime.cfg`. On the next
+interactive Codex start, review and trust its hooks if prompted. Installation
+does not verify that activity has reached the WakaTime dashboard.
+
 ### C/C++ language support
 
 Vim installs `coc-clangd` from `dot_coc-extensions.txt` through the plugin
