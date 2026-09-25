@@ -12,4 +12,11 @@ case "$target" in
 	*) target="$(wslpath -w "$target")" ;;
 esac
 
-explorer.exe "$target" || true
+# Windows PATH inheritance is disabled by default in our WSL images.
+explorer="$(command -v explorer.exe || true)"
+explorer="${explorer:-/mnt/c/Windows/explorer.exe}"
+if [ ! -x "$explorer" ]; then
+	echo "error: explorer.exe not found at $explorer" >&2
+	exit 1
+fi
+"$explorer" "$target" || true

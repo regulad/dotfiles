@@ -1,8 +1,7 @@
 #!/bin/bash -e
 # {{ include "dot_vscode-extensions.txt" | sha256sum }}
-# code's own WSL-kernel detection otherwise prompts interactively (like the
-# chezmoiignore WSL check, it treats any WSL2-flavored uname -r as real WSL,
-# even on a container whose host merely happens to be WSL2-backed).
+# code's own WSL-kernel detection otherwise prompts interactively in WSL
+# and in Docker containers whose host happens to be WSL2-backed.
 export DONT_PROMPT_WSL_INSTALL=1
 if command -v code &>/dev/null; then
     # Install all extensions in a single `code` invocation. Spawning one `code`
