@@ -41,8 +41,8 @@
 # mode -- Homebrew's own is unsupported, and it used to be a source of
 # half-working hosts here.
 
-if [ "$(uname -o)" != "Darwin" ] && [ "$(uname -o)" != "GNU/Linux" ]; then
-	echo "note: not Darwin or GNU/Linux, nothing to install" >&2
+if [ "$(uname -s)" != "Darwin" ] && [ "$(uname -s)" != "Linux" ]; then
+	echo "note: not Darwin or Linux, nothing to install" >&2
 	exit 0
 fi
 
@@ -61,7 +61,7 @@ fi
 # a brew invocation is not always possible (a stray `brew update` on a 10.x
 # host leaves a checkout that refuses to start there).
 brew_repo_path() {
-	if [ "$(uname -o)" = "Darwin" ] && [ "$(uname -m)" = "arm64" ]; then
+	if [ "$(uname -s)" = "Darwin" ] && [ "$(uname -m)" = "arm64" ]; then
 		printf '%s\n' "$CHEZMOI_HOMEBREW_PREFIX"
 	else
 		printf '%s\n' "$CHEZMOI_HOMEBREW_PREFIX/Homebrew"
@@ -189,7 +189,7 @@ require_sudo "005-homebrew (installing brew)"
 echo "note: installing brew into $CHEZMOI_HOMEBREW_PREFIX" >&2
 
 if [ "$BREW_ERA_PINNED" -eq 1 ]; then
-	if [ "$(uname -o)" != "Darwin" ]; then
+	if [ "$(uname -s)" != "Darwin" ]; then
 		echo "error: era pins are macOS-only, but this Linux host has one" >&2
 		exit 1
 	fi
@@ -201,7 +201,7 @@ else
 	NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
-if [ "$(uname -o)" = "Darwin" ]; then
+if [ "$(uname -s)" = "Darwin" ]; then
 	# launchd-started processes (GUI apps, `brew services`) don't read the
 	# shell profile; give them the prefix on PATH. /usr/local/bin is in the
 	# default already, so this only adds anything on Apple Silicon, but

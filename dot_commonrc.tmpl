@@ -110,7 +110,7 @@ rendercv() {
     PYTHONPATH="$HOME/.config/rendercv/quiet${PYTHONPATH:+:$PYTHONPATH}" command rendercv "$@"
 }
 
-if [ "$(uname -o)" = "GNU/Linux" ]; then
+if [ "$(uname -s)" = "Linux" ]; then
   # given a PID show all files that PID has open
   filewatch() {
     local pid=$1

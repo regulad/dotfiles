@@ -48,8 +48,10 @@ export HOMEBREW_NO_ASK=1
 export HOMEBREW_SERVICES_NO_DOMAIN_WARNING=1
 trap 'echo "error: line $LINENO: Command was: $BASH_COMMAND" >&2' ERR
 
-# needed for Android native builds
-if [ "$(uname -o)" = "Android" ]; then
+# needed for Android native builds. `uname -o` is the one place it is
+# needed (Android is only distinguishable there); BSD uname lacks -o before
+# macOS 13, hence the silenced error -- everywhere else use `uname -s`.
+if [ "$(uname -o 2>/dev/null)" = "Android" ]; then
   export ANDROID_API_LEVEL="$(getprop ro.build.version.sdk 2>/dev/null || true)"
 fi
 

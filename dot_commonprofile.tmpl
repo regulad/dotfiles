@@ -20,7 +20,10 @@ export DONT_PROMPT_WSL_INSTALL=1
 {{- if eq .chezmoi.os "darwin" }}
 {{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
 {{- end }}
-if [ "$(uname -o)" = "Darwin" ]; then
+{{- /* uname -s, never -o: BSD uname only grew -o in macOS 13, and on older
+       releases "$(uname -o)" is empty, which silently skipped this whole
+       block (and brew with it). */}}
+if [ "$(uname -s)" = "Darwin" ]; then
     # Prefix decided by chezmoi at init (.homebrewPrefix): /opt/homebrew on
     # Apple Silicon, /usr/local on Intel.
     eval "$({{ .homebrewPrefix }}/bin/brew shellenv)"
@@ -67,7 +70,7 @@ if [ "$(uname -o)" = "Darwin" ]; then
     export PNPM_HOME="$HOME/Library/pnpm"
 
     fpath=("$HOME/.docker/completions" $fpath)
-elif [ "$(uname -o)" = "GNU/Linux" ]; then
+elif [ "$(uname -s)" = "Linux" ]; then
     eval "$({{ .homebrewPrefix }}/bin/brew shellenv)"
 
     # Make brew's TLS clients trust the OS store.
@@ -178,7 +181,7 @@ export THEOS="$HOME/theos"
 
 # ssh daemon
 unset _bw_sock
-case "$(uname -o)" in
+case "$(uname -s)" in
   Darwin)
     for _agent_sock in \
       "$HOME/.bitwarden-ssh-agent.sock" \
@@ -187,7 +190,7 @@ case "$(uname -o)" in
       [ -S "$_agent_sock" ] && export SSH_AUTH_SOCK="$_agent_sock" && break
     done
     ;;
-  GNU/Linux)
+  Linux)
     # .wsl-ssh-agent.sock is relayed from the Windows openssh-ssh-agent named pipe
     # by ssh-agent-relay.service (see .chezmoiscripts/00-linux/007-ssh-agent-relay.sh);
     # it's agent-agnostic on the Windows side (Bitwarden, native OpenSSH, 1Password, ...

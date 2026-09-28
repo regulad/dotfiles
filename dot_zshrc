@@ -46,7 +46,7 @@ EOF
 )
 
 # override with short prompt on Android
-if [ "$(uname -o)" = "Android" ]; then
+if [ "$(uname -o 2>/dev/null)" = "Android" ]; then  # BSD uname lacks -o before macOS 13
     PROMPT='${__prompt_char_color}%#%f '
     # 20-git-prompt.zsh runs after this and would happily splice the branch
     # into "%# ", which defeats the point of the override.
