@@ -1,0 +1,61 @@
+{{ template "posix-preamble.sh" . }}
+# Xcode Command Line Tools, before anything that needs a compiler or git:
+# 005-homebrew (its git checkout, and on Intel every bottle install needs the
+# developer tools), 016-macports, and the source builds further down.
+#
+# Installed the way Homebrew's own installer does it, without the GUI prompt:
+# a placeholder file makes `softwareupdate` list the Command Line Tools
+# package, which is then installed by label. The upstream brew installer
+# still does the same for itself on a Tier 1 host, and finds it already done.
+# If softwareupdate lists nothing, `xcode-select --install` opens Apple's
+# own prompt as the fallback; the apply carries on and whatever needs a
+# compiler fails until that finishes.
+#
+# Rosetta 2 lives here too, on Apple Silicon: the other Apple-shipped
+# prerequisite that comes through softwareupdate, needed before any Intel-only
+# cask or binary is run.
+#
+# Idempotent and sudo-free once both are there: an active developer directory
+# (the CLT, or a full Xcode.app) and a working `arch -x86_64` mean there is
+# nothing to do. Runs every apply so a macOS upgrade that removes the CLT
+# gets them back.
+
+if [ -d "$(xcode-select -p 2>/dev/null)" ]; then
+	echo "note: developer tools present at $(xcode-select -p)" >&2
+else
+	require_sudo "003-macos-prereqs"
+	echo "note: installing the Xcode Command Line Tools via softwareupdate" >&2
+
+	placeholder=/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+	sudo touch "$placeholder"
+	# Both label formats softwareupdate has used: "* Label: Command Line
+	# Tools for Xcode-15.0" and "   * Command Line Tools (macOS Mojave version
+	# 10.14) for Xcode-10.3". Newest wins when several are listed.
+	label="$(softwareupdate -l 2>/dev/null \
+		| grep -B 1 -E 'Command Line Tools' \
+		| awk -F'*' '/^ *\*/ {print $2}' \
+		| sed -e 's/^ *Label: //' -e 's/^ *//' \
+		| sort -V | tail -n1)"
+	if [ -n "$label" ]; then
+		sudo softwareupdate -i "$label"
+		sudo xcode-select --switch /Library/Developer/CommandLineTools
+	fi
+	sudo rm -f "$placeholder"
+
+	if [ -d "$(xcode-select -p 2>/dev/null)" ]; then
+		echo "note: developer tools ready at $(xcode-select -p)" >&2
+	else
+		echo "warning: softwareupdate offered no Command Line Tools package; opening Apple's own installer prompt instead. brew/MacPorts work that needs a compiler will fail until it finishes." >&2
+		xcode-select --install || true  # exits 1 if a prompt is already up
+	fi
+fi
+
+if [ "$(uname -m)" = "arm64" ]; then
+	if arch -x86_64 /usr/bin/true 2>/dev/null; then
+		echo "note: Rosetta 2 present" >&2
+	else
+		# despite being an sbin, this is usable by non-root users. til
+		echo "note: installing Rosetta 2" >&2
+		/usr/sbin/softwareupdate --install-rosetta --agree-to-license
+	fi
+fi

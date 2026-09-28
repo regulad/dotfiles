@@ -12,12 +12,10 @@
   "mcpServers": {
 {{- if not .useDummySecrets }}
     "nextcloud-caldav": {
-{{- if eq .chezmoi.os "darwin" }}
-      "command": "/opt/homebrew/bin/pnpx",
-{{- else if eq .chezmoi.os "windows" }}
+{{- if eq .chezmoi.os "windows" }}
       "command": "{{ env "USERPROFILE" | replace "\\" "\\\\" }}\\scoop\\shims\\pnpx.EXE",
 {{- else }}
-      "command": "/home/linuxbrew/.linuxbrew/bin/pnpx",
+      "command": "{{ .homebrewPrefix }}/bin/pnpx",
 {{- end }}
       "args": ["caldav-mcp"],
       "env": {

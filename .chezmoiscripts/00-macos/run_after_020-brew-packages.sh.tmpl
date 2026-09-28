@@ -1,4 +1,18 @@
-{{ template "posix-preamble.sh" . }}
+{{ template "posix-preamble-brew.sh" . }}
+{{- /* Era-pinned host (see .chezmoidata/brew-tiers.toml)? A few entries
+       below pick the name the same formula had at that checkout, or are
+       left out because it did not exist there yet, inline and keyed on the
+       era name. $brewEra is "" on a Tier 1 host. */ -}}
+{{- $brewEra := "" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $p := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
+{{- end }}
+{{- /* eras whose tap checkout predates the given year */ -}}
+{{- $pre2022 := has $brewEra (list "mojave") }}
+{{- $pre2024 := has $brewEra (list "mojave" "catalina" "bigsur") }}
+{{- $pre2025 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey") }}
+{{- $pre2026 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey" "ventura") }}
 # system-level binary dependencies for macOS hosts (brew).
 # these are typically very stable applications that MUST be provided by a
 # package manager; they are not particularly version-sensitive and are all f(l)oss.
@@ -7,8 +21,12 @@ BREW_PACKAGES=(
 	bash
 	nushell
 	tmux
-	fastfetch
-	retry
+{{- if not $pre2022 }}
+	fastfetch  # not in homebrew-core until 2023; MacPorts supplies it on Mojave (017)
+{{- end }}
+{{- if not $pre2024 }}
+	retry  # not in homebrew-core until 2024; MacPorts supplies it on the older eras (017)
+{{- end }}
 	zsh
 	binwalk
 	ncdu
@@ -20,13 +38,19 @@ BREW_PACKAGES=(
 
 	# =+= CONTAINERIZATION
 	podman
-	podman-compose
+{{- if not $pre2022 }}
+	podman-compose  # not in homebrew-core until 2022
+{{- end }}
 
 	# =+= macOS-SPECIFIC
 	reattach-to-user-namespace
-	mas
+{{- if not $pre2022 }}
+	mas  # its bottles start at Catalina; 060-mac-app-store skips when mas is absent
+{{- end }}
 	smartmontools
-	pam-reattach
+{{- if not $pre2022 }}
+	pam-reattach  # not in homebrew-core until 2022; MacPorts supplies it on Mojave (017)
+{{- end }}
 	pinentry-mac
 
 	# =+= BUILD TOOLS
@@ -45,7 +69,11 @@ BREW_PACKAGES=(
 	neovim
 	vim
 	shellcheck
+{{- if $pre2025 }}
+	tree-sitter  # the CLI was split out as tree-sitter-cli in 2025; before that it shipped in tree-sitter
+{{- else }}
 	tree-sitter-cli
+{{- end }}
 	ripgrep
 	imagemagick
 
@@ -69,7 +97,9 @@ BREW_PACKAGES=(
 	telnet
 	binutils
 	perl
-	sshpass
+{{- if not $pre2024 }}
+	sshpass  # not in homebrew-core until 2024; MacPorts supplies it on the older eras (017)
+{{- end }}
 	git
 	git-lfs
 	git-filter-repo
@@ -100,7 +130,11 @@ BREW_PACKAGES=(
 	go
 
 	# =+= RUBY
+{{- if $pre2026 }}
+	ruby  # ruby@4 is an alias of ruby.rb only since 2026; before that the current ruby was plain `ruby`
+{{- else }}
 	ruby@4
+{{- end }}
 
 	# =+= LUA
 	lua

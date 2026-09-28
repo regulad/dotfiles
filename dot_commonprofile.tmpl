@@ -12,13 +12,44 @@ export HOMEBREW_NO_ASK=1
 # WSL stubs
 export DONT_PROMPT_WSL_INSTALL=1
 
+{{- /* Era pin, mirrored from posix-preamble.sh: a macOS that mainline brew
+       no longer bottles for runs a brew pinned by 005-homebrew, and every
+       brew invocation -- interactive ones included -- must carry these two
+       or brew updates itself out from under the pin / reads the API. */}}
+{{- $brewPin := dict }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{- end }}
 if [ "$(uname -o)" = "Darwin" ]; then
-    if [ "$(arch)" = "arm64" ]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-    else
-        eval "$(/usr/local/bin/brew shellenv)"
-    fi    
+    # Prefix decided by chezmoi at init (.homebrewPrefix): /opt/homebrew on
+    # Apple Silicon, /usr/local on Intel.
+    eval "$({{ .homebrewPrefix }}/bin/brew shellenv)"
+{{- if $brewPin }}
+    # macOS {{ .macos.series }}/{{ .chezmoi.arch }} is era-pinned to brew {{ $brewPin.brew_tag }}
+    # (see .chezmoidata/brew-tiers.toml); keep it there. The env stops the
+    # implicit update; the wrapper stops the explicit one, since `brew update`
+    # would move brew and both taps off the era and, on 10.x, leave a brew
+    # that will not start. `brew!` is the unwrapped binary for when you mean
+    # it (the next `chezmoi apply` re-pins). Functions and aliases only exist
+    # in interactive shells; the hookscripts never run `brew update`.
+    export HOMEBREW_NO_AUTO_UPDATE=1
+    export HOMEBREW_NO_INSTALL_FROM_API=1
+    brew() {
+        if [ "$1" = "update" ]; then
+            echo "WARNING: this brew is pinned! run \`brew! update\` to update anyway" >&2
+            return 1
+        fi
+        command brew "$@"
+    }
+    alias brew!='command brew'
+{{- end }}
     export PATH="/Applications/Ghostty.app/Contents/MacOS/:$PATH"
+
+    # MacPorts (016-macports): CLI only, no ports installed by this repo.
+    # Ahead of brew on PATH, so a port that IS installed wins the collision.
+    if [ -d /opt/local/bin ]; then
+        export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
+    fi
 
     # LLVM is keg-only on macOS. Expose clangd without overriding Apple's
     # compiler tools (or an existing clangd supplied by Xcode).
@@ -37,7 +68,7 @@ if [ "$(uname -o)" = "Darwin" ]; then
 
     fpath=("$HOME/.docker/completions" $fpath)
 elif [ "$(uname -o)" = "GNU/Linux" ]; then
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+    eval "$({{ .homebrewPrefix }}/bin/brew shellenv)"
 
     # Make brew's TLS clients trust the OS store.
     #

@@ -13,10 +13,21 @@
 # after, forever. Exported, set_theos() is a no-op. The durable half of the
 # same setting is in .commonprofile.
 #
-# NOTE: this needs the full Xcode, not the Command Line Tools the preamble
+# NOTE: this needs the full Xcode, not the Command Line Tools 003-macos-prereqs
 # installs -- Theos builds against the iOS/tvOS platform toolchains only
 # Xcode.app ships, and install-theos exits 3 without it. Nothing here can
 # install Xcode: there is no cask, and mas cannot drive it (see
 # 060-mac-app-store).
 export THEOS="$HOME/theos"
+
+# Without Xcode.app install-theos exits 3, which under `bash -e` would end the
+# whole apply here and skip every later hookscript. Skip instead: a Mac that
+# has not (yet) got Xcode simply does not get Theos on this apply. The check
+# is what install-theos itself does: an active developer dir that is an Xcode
+# bundle, not the Command Line Tools directory.
+if ! xcode-select -p 2>/dev/null | grep -q '\.app/Contents/Developer$'; then
+	echo "note: Xcode.app is not the active developer directory; skipping Theos (Command Line Tools are not enough for it)" >&2
+	exit 0
+fi
+
 bash -c "$(curl -fsSL https://github.com/roothide/theos/raw/refs/heads/master/bin/install-theos)"

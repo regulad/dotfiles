@@ -7,11 +7,7 @@ max-cache-ttl 7200
 # requests loopback when a caller asks for it.
 allow-loopback-pinentry
 {{- if eq .chezmoi.os "darwin" }}
-{{-   if eq .chezmoi.arch "arm64" }}
-pinentry-program /opt/homebrew/bin/pinentry-mac
-{{-   else }}
-pinentry-program /usr/local/bin/pinentry-mac
-{{-   end }}
+pinentry-program {{ .homebrewPrefix }}/bin/pinentry-mac
 {{- else if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "bluefin") }}
 pinentry-program /usr/bin/pinentry-gnome3
 {{- end }}

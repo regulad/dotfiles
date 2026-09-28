@@ -143,11 +143,9 @@ ExecStartPre=-fusermount3 -uz %t/rclone/%i
 # in the Cellar and is symlinked into /home/linuxbrew/.linuxbrew/bin, which is
 # not on that list. Verified against systemd 259 -- a bare `rclone` with exactly
 # that prefix in Environment=PATH still fails with "Command rclone is not
-# executable: No such file or directory".
-#
-# The one host this does not cover is a rootless brew under ~/homebrew, which
-# posix-preamble.sh already warns about and calls unsupported. Point ExecStart
-# somewhere else with a drop-in there:
+# executable: No such file or directory". Brew is always at that prefix on
+# Linux here (005-homebrew installs it there and nowhere else), so the path
+# is safe to hardcode; a different location would need a drop-in:
 #
 #   systemctl --user edit rclone@<remote>
 

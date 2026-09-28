@@ -1,40 +1,91 @@
-{{ template "posix-preamble.sh" . }}
+{{ template "posix-preamble-brew.sh" . }}
+{{- /* Era-pinned host (see .chezmoidata/brew-tiers.toml)? Entries below pick
+       the name the same cask had at that checkout, or are left out because
+       the cask did not exist there yet or declares a macOS floor / arch the
+       host cannot meet, inline and keyed on the era name. $brewEra is "" on
+       a Tier 1 host. */ -}}
+{{- $brewEra := "" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $p := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
+{{- end }}
+{{- /* eras whose tap checkout predates the given year */ -}}
+{{- $pre2022 := has $brewEra (list "mojave") }}
+{{- $pre2023 := has $brewEra (list "mojave" "catalina") }}
+{{- $pre2024 := has $brewEra (list "mojave" "catalina" "bigsur") }}
+{{- $pre2025 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey") }}
+{{- $pre2026 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey" "ventura") }}
+{{- $preApp := $pre2025 }}
 ## addl. brew things packaged as casks
 BREW_CASKS_MACOS=(
-	"retroarch-metal@nightly"
+{{- if not $pre2024 }}
+	"retroarch-metal@nightly"  # cask added 2024
+{{- end }}
 	"airserver"  # proprietary paid
-	"nx-studio"  # proprietary freeware
+{{- if not $pre2024 }}
+	"nx-studio"  # proprietary freeware; cask added 2024
+{{- end }}
 	"thetimemachinemechanic"
-	"lulu"
-	"ghostty"
+{{- if not $pre2022 }}
+	"lulu"  # the 2021 cask required Catalina
+{{- end }}
+{{- if not $pre2025 }}
+	"ghostty"  # needs Ventura
+{{- end }}
 	"prusaslicer"
-	"wakatime"  # proprietary freeware
+{{- if not $pre2024 }}
+	"wakatime"  # proprietary freeware; cask added 2024
+{{- end }}
 	"zoom"  # proprietary trialware
 	"firefox"  # for extension dev; i hate firefox for regular browsing
 	"xquartz"  # for X server forwarding
 	"suspicious-package"  # proprietary freeware
 	"adobe-digital-editions"  # proprietary freeware
+{{- if $preApp }}
+	"handbrake"  # the -app renames of handbrake/docker/tailscale/syncthing landed in 2025
+{{- else }}
 	"handbrake-app"
+{{- end }}
 	"grandperspective"
-	"claude-code"  # proprietary freeware
-	"codex"
-	"chatgpt"  # proprietary freeware
+{{- if not $pre2025 }}
+	"claude-code"  # proprietary freeware; cask added 2025
+{{- end }}
+{{- if not $pre2026 }}
+	"codex"  # cask added 2026
+	"chatgpt"  # proprietary freeware; the cask required Sonoma + Apple Silicon until 2026
+{{- end }}
 	"jetbrains-toolbox"  # proprietary freeware
 	"gimp"
 	"signal"
+{{- if $pre2022 }}
+{{- /* no tailscale cask yet in 2021 */ -}}
+{{- else if $preApp }}
+	"tailscale"  # proprietary! ... kinda?
+{{- else }}
 	"tailscale-app"  # proprietary! ... kinda?
+{{- end }}
 	"appcleaner"  # no idea
 	"google-chrome"  # proprietary freeware (you can't make me use anything other than chrome)
 	"nextcloud"  # the -vfs cask is deprecated; File Provider ships in the main pkg since 33.0
+{{- if $preApp }}
+	"docker"  # proprietary trialware
+{{- else }}
 	"docker-desktop"  # proprietary trialware
+{{- end }}
 	"obs"
 	"utm"
 	"bartender" # proprietary trialware # i have a license
 	"stats"
-	"claude"
+{{- if not $pre2025 }}
+	"claude"  # cask added 2025
+{{- end }}
 	"element"
-	"forklift"
-	"prismlauncher"
+{{- if ne $brewEra "ventura" }}
+	"forklift"  # the 2025 cask requires Sonoma; the 2024 one did not, and the current one runs on Sonoma+
+{{- end }}
+{{- if not $pre2023 }}
+	"prismlauncher"  # cask added late 2022
+{{- end }}
 	"spotify"
 	"steam"
 	"vagrant"
@@ -44,18 +95,38 @@ BREW_CASKS_MACOS=(
 	"hex-fiend"
 	"google-drive"  # proprietary trialware
 	"visual-studio-code"  # partially proprietary
-	"autodesk-fusion"  # proprietary trialware # i have a license
-	"thunderbird@esr"
+{{- if not $pre2024 }}
+	"autodesk-fusion"  # proprietary trialware # i have a license # cask added 2024
+{{- end }}
+{{- if not $pre2025 }}
+	"thunderbird@esr"  # cask added 2025 (never in cask-versions either)
+{{- end }}
 	"safe-exam-browser"  # partially proprietary
+{{- if eq $brewEra "sonoma" }}
+	"kde-connect"  # arm64-only upstream and needs Ventura; cask added 2026
+{{- else if eq $brewEra "" }}
 	"kde-connect"
+{{- end }}
 	"android-platform-tools"
 	"android-commandlinetools"
+{{- if $preApp }}
+	"syncthing"
+{{- else }}
 	"syncthing-app"
-	"vesktop"
+{{- end }}
+{{- if not $pre2025 }}
+	"vesktop"  # cask added 2025
+{{- end }}
 	"macfuse" # we finally have `-o backend=fskit`! no kext!
-	"regulad/tap/epson-et8500" # super proprietary 😈
-	"regulad/tap/cricut-design-space" # super proprietary 😈
-	"Gcenx/wine/game-porting-toolkit"
+{{- if not $pre2022 }}
+	"regulad/tap/epson-et8500" # super proprietary 😈 # Epson lists the package for 10.7 through 27; only the Mojave era's brew 3.2.17 cannot parse its requires_rosetta caveat
+{{- end }}
+{{- if not $pre2024 }}
+	"regulad/tap/cricut-design-space" # super proprietary 😈 # Cricut's own requirement is macOS 12 or later; the cask declares no floor
+{{- end }}
+{{- if or (eq $brewEra "") (has $brewEra (list "current" "sonoma")) }}
+	"Gcenx/wine/game-porting-toolkit"  # the cask requires Sonoma
+{{- end }}
 )
 
 if [ "$HAS_BREW" = "true" ]; then
@@ -63,9 +134,10 @@ if [ "$HAS_BREW" = "true" ]; then
 	# load anything from them -- the replacement for the deprecated
 	# HOMEBREW_NO_REQUIRE_TAP_TRUST=1 (see 00-linux/030-brew-extras.sh).
 	# Trusting by tap name works before the tap is installed and is
-	# idempotent, so it runs every apply.
-	brew trust --tap regulad/tap
-	brew trust --tap Gcenx/wine
+	# idempotent, so it runs every apply. brew_trust (preamble) is a no-op on
+	# an era-pinned brew old enough to have no `trust` subcommand.
+	brew_trust --tap regulad/tap
+	brew_trust --tap Gcenx/wine
 
 	# Migration: nextcloud-vfs was deprecated 2026-04-01 (discontinued upstream).
 	# Since desktop client 33.0 the classic and VFS (File Provider) clients are one
@@ -96,10 +168,13 @@ if [ "$HAS_BREW" = "true" ]; then
 		TAILSCALE_PRESENT=0
 	fi
 
+	# tailscale-app is `tailscale` on the pre-2025 eras, hence the two spellings.
 	for cask in "${BREW_CASKS_MACOS[@]}"; do
-		if [ "$cask" = "tailscale-app" ] && [ "$TAILSCALE_PRESENT" -eq 1 ]; then
-			continue
-		fi
+		case "$cask" in
+			tailscale-app | tailscale)
+				[ "$TAILSCALE_PRESENT" -eq 1 ] && continue
+				;;
+		esac
 		if ! brew list --cask "$cask" &>/dev/null; then
 			brew install --cask -q "$cask" -f
 		fi

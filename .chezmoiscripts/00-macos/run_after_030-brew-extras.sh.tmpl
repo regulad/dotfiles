@@ -1,4 +1,18 @@
-{{ template "posix-preamble.sh" . }}
+{{ template "posix-preamble-brew.sh" . }}
+{{- /* Era-pinned host (see .chezmoidata/brew-tiers.toml)? Entries below pick
+       the name the same formula had at that checkout, or are left out
+       because it did not exist there yet, inline and keyed on the era name.
+       $brewEra is "" on a Tier 1 host. */ -}}
+{{- $brewEra := "" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $p := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
+{{- end }}
+{{- /* eras whose tap checkout predates the given year */ -}}
+{{- $pre2022 := has $brewEra (list "mojave") }}
+{{- $pre2023 := has $brewEra (list "mojave" "catalina") }}
+{{- $pre2025 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey") }}
+{{- $pre2026 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey" "ventura") }}
 # user-level binary dependencies
 # these dependencies aren't provided by the system package manager, for whatever reason
 # these packages do NOT require compilation and are distributed as binaries.
@@ -9,19 +23,29 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"awscli"
 	"go"  # needed for newer versions of toolchain
 	"languagetool"
-	"cloudflared"
+{{- if not $pre2022 }}
+	"cloudflared"  # not in homebrew-core until 2022
+{{- end }}
 	"wakatime-cli"
 	"tokei"
 	# minio-mc dropped: formula deprecated 2026-07-17 (repo archived); see the
 	# OMITTED block in 020-brew-packages. rclone/awscli/s3cmd cover S3.
 	"s3cmd"
-	"wasm-tools"
+{{- if not $pre2022 }}
+	"wasm-tools"  # not in homebrew-core until 2022; MacPorts supplies it on Mojave (017)
+{{- end }}
 	"kotlin"
 	"kotlin-language-server"
-	"fernflower"
-	"jdtls"
+{{- if not $pre2026 }}
+	"fernflower"  # not in homebrew-core until 2026
+{{- end }}
+{{- if not $pre2022 }}
+	"jdtls"  # not in homebrew-core until 2022
+{{- end }}
 	"emscripten"
-	"harper"
+{{- if not $pre2025 }}
+	"harper"  # not in homebrew-core until 2025
+{{- end }}
 	# NOTE: lima was dropped here and on GNU/Linux. Its 87 MB of binaries drag in an
 	# exclusive 4.29 GB dependency subtree (llvm, qemu, mesa, gtk+3, z3, libclc,
 	# spirv-*) -- 37% of the brew Cellar in the published container images, for a
@@ -34,8 +58,16 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"tesseract"
 	"ocrmypdf"
 	"rclone"
-	"git-xet"
+{{- if not $pre2026 }}
+	"git-xet"  # not in homebrew-core until 2026
+{{- end }}
+{{- if $pre2023 }}
+{{- /* huggingface-cli itself only reached homebrew-core in 2023 */ -}}
+{{- else if $pre2026 }}
+	"huggingface-cli"  # renamed to hf upstream in 2026
+{{- else }}
 	"hf"
+{{- end }}
 	"brew-gem"
 	"bash-completion@2"
   "nushell"  # not available on ubuntu
@@ -51,11 +83,11 @@ if [ "$HAS_BREW" = "true" ]; then
 	# `brew trust` first: the install itself passes on argv, but every later
 	# load of the tap formula (upgrade/outdated) refuses untrusted taps. See
 	# the longer note in 00-linux/030-brew-extras.sh.
-	brew trust --formula brew-gem/gems/gem-ruby-lsp
+	brew_trust --formula brew-gem/gems/gem-ruby-lsp
 	brew gem install ruby-lsp
 	# neovim: the ruby provider bridge gem (:checkhealth vim.provider).
 	# The Windows counterpart for both gems is 00-nt/580-ruby-tooling.cmd.
-	brew trust --formula brew-gem/gems/gem-neovim
+	brew_trust --formula brew-gem/gems/gem-neovim
 	brew gem install neovim
 
 	if ! [ "$CONTAINERIZED" -eq 1 ]; then

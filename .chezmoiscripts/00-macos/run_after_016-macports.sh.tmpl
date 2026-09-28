@@ -1,0 +1,68 @@
+{{ template "posix-preamble.sh" . }}
+# MacPorts: the `port` CLI only, from the official installer package. No
+# ports are installed here -- brew stays the package manager on macOS; this
+# is for the odd thing only MacPorts carries (and, on Intel, for the day brew
+# stops running there, which upstream has scheduled for September 2027).
+#
+# The package is per macOS release, named MacPorts-<ver>-<series>-<Name>.pkg
+# under the GitHub release (one for every release back to Leopard, so every
+# era this repo supports has one). It installs to /opt/local, needs sudo, and
+# its postinstall syncs the ports tree itself; if `port` ever complains that
+# the tree is missing, `sudo port selfupdate` fixes it. The installer also
+# appends PATH lines to ~/.zprofile and ~/.bash_profile if they exist; both
+# are chezmoi-managed here, so the next apply puts them back, and the PATH
+# entry lives in .commonprofile instead (ahead of brew's: an installed port
+# wins the collision).
+#
+# Needs the Xcode Command Line Tools for anything beyond `port` itself, which
+# 003-macos-prereqs installs. Idempotent: an existing /opt/local/bin/port is
+# left alone (it updates itself with `sudo port selfupdate`).
+
+if [ -x /opt/local/bin/port ]; then
+	echo "note: MacPorts already installed ($(/opt/local/bin/port version 2>/dev/null | tr -d '\n'))" >&2
+	exit 0
+fi
+
+require_sudo "016-macports"
+
+# The preamble's VERSION_ID is the release as Homebrew and MacPorts name it:
+# "10.14".."10.15", "11".."27". Map it to the package's codename.
+case "$VERSION_ID" in
+	10.14) MACPORTS_OS_NAME=Mojave ;;
+	10.15) MACPORTS_OS_NAME=Catalina ;;
+	11) MACPORTS_OS_NAME=BigSur ;;
+	12) MACPORTS_OS_NAME=Monterey ;;
+	13) MACPORTS_OS_NAME=Ventura ;;
+	14) MACPORTS_OS_NAME=Sonoma ;;
+	15) MACPORTS_OS_NAME=Sequoia ;;
+	26) MACPORTS_OS_NAME=Tahoe ;;
+	27) MACPORTS_OS_NAME=GoldenGate ;;
+	*)
+		echo "error: no MacPorts package name known for macOS $VERSION_ID; add it to the case in 016-macports" >&2
+		exit 1
+		;;
+esac
+
+# Latest release tag from the GitHub API, without jq (not on a fresh Mac).
+MACPORTS_TAG="$(curl -fsSL https://api.github.com/repos/macports/macports-base/releases/latest \
+	| sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+MACPORTS_VERSION="${MACPORTS_TAG#v}"
+if [ -z "$MACPORTS_VERSION" ]; then
+	echo "error: could not determine the latest MacPorts release from the GitHub API" >&2
+	exit 1
+fi
+
+MACPORTS_PKG="MacPorts-$MACPORTS_VERSION-$VERSION_ID-$MACPORTS_OS_NAME.pkg"
+MACPORTS_URL="https://github.com/macports/macports-base/releases/download/$MACPORTS_TAG/$MACPORTS_PKG"
+tmp="$(mktemp -d)"
+echo "note: installing MacPorts $MACPORTS_VERSION for macOS $VERSION_ID ($MACPORTS_OS_NAME)" >&2
+curl -fsSL -o "$tmp/$MACPORTS_PKG" "$MACPORTS_URL"
+sudo installer -pkg "$tmp/$MACPORTS_PKG" -target /
+rm -rf "$tmp"
+
+if [ -x /opt/local/bin/port ]; then
+	echo "note: MacPorts ready: $(/opt/local/bin/port version | tr -d '\n')" >&2
+else
+	echo "error: installer finished but /opt/local/bin/port is missing" >&2
+	exit 1
+fi

@@ -2,18 +2,27 @@
 
 # =+= START CONFIGURATION =+=
 FEDORA_MINIMUM_VERSION=44
-MACOS_MINIMUM_VERSION=14  # tested on 14 and 26
+MACOS_MINIMUM_VERSION=10.14  # Mojave. tested on 14 and 26; older hosts get era-pinned brew (see .chezmoidata/brew-tiers.toml)
 UBUNTU_MINIMUM_VERSION=26.04
 # =+= END CONFIGURATION =+=
 
-# Shared preamble included by every .chezmoiscripts/00-posix/run_after_* script
-# via `{{ "{{" }} template "posix-preamble.sh" . {{ "}}" }}`. Guards against unsupported
-# platforms, loads/installs Homebrew, and picks a system package manager.
+# Shared preamble included by every .chezmoiscripts/00-{linux,macos}/run_*
+# script via `{{ "{{" }} template "posix-preamble.sh" . {{ "}}" }}`. Guards against
+# unsupported platforms, loads Homebrew if it is present, and picks a system
+# package manager.
 # Exports: CONTAINERIZED, IS_WSL, IS_ATOMIC, HAS_BREW, MANAGER.
-# Defines: can_sudo, require_sudo, load_brew.
+# Defines: can_sudo, require_sudo, load_brew, require_brew, brew_trust.
 #
-# Sudo is NOT captured here -- it is acquired lazily by can_sudo, so that the
-# scripts which never run a privileged command never trigger a password prompt.
+# Two things are deliberately NOT done here:
+#
+#  - Sudo is not captured. It is acquired lazily by can_sudo, so the scripts
+#    which never run a privileged command never trigger a password prompt.
+#  - Brew is not installed. That is the job of the 005-homebrew hookscript,
+#    which runs before anything that needs brew. A script whose whole job is
+#    brew work includes posix-preamble-brew.sh instead of this file: that is
+#    this preamble plus `require_brew`, the brew analogue of require_sudo,
+#    which fails fast when brew is missing and exports HOMEBREW_PREFIX and the
+#    era-pin environment for the rest of the script.
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
 
 echo "note: entering hookscript" >&2
@@ -130,7 +139,12 @@ if [ -f /etc/os-release ]; then
     VERSION_ID=${VERSION_ID:-0}
 elif [ "$(uname)" = "Darwin" ]; then
     OS="macos"
+    # The release as Homebrew names it: "11".."27", or "10.14"/"10.15" --
+    # the major alone cannot tell Mojave from Catalina.
     VERSION_ID=$(sw_vers -productVersion | cut -d. -f1)
+    if [ "$VERSION_ID" = "10" ]; then
+        VERSION_ID=$(sw_vers -productVersion | cut -d. -f1-2)
+    fi
 else
     echo "Error: Unable to detect operating system"
     exit 1
@@ -174,7 +188,15 @@ case "$OS" in
         ;;
     macos)
         REQUIRED="$MACOS_MINIMUM_VERSION"
-        if [ "$VERSION_ID" -lt "$REQUIRED" ]; then
+        # Numeric major.minor compare in bash: 10.14 < 10.15 < 11 < 26.
+        # (Not `sort -V`: BSD sort's support for it varies by macOS release.)
+        macos_version_ge() {
+            local a_major="${1%%.*}" a_minor="${1#*.}" b_major="${2%%.*}" b_minor="${2#*.}"
+            [ "$a_minor" = "$1" ] && a_minor=0
+            [ "$b_minor" = "$2" ] && b_minor=0
+            [ "$a_major" -gt "$b_major" ] || { [ "$a_major" -eq "$b_major" ] && [ "$a_minor" -ge "$b_minor" ]; }
+        }
+        if ! macos_version_ge "$VERSION_ID" "$REQUIRED"; then
             echo "Error: macOS $REQUIRED or higher required (found $VERSION_ID)"
             exit 1
         fi
@@ -193,6 +215,53 @@ case "$OS" in
 esac
 # END CLAUDE
 
+# =+= Homebrew =+=
+#
+# The prefix chezmoi decided on at init time (see .chezmoi.toml.tmpl). It is
+# the arch rule -- /opt/homebrew on Apple Silicon, /usr/local on Intel,
+# /home/linuxbrew/.linuxbrew on Linux. Static config files render the same
+# value, so what the hookscripts install against and what tmux/gpg/pam point
+# at can never disagree.
+CHEZMOI_HOMEBREW_PREFIX="{{ .homebrewPrefix }}"
+
+# Era pin. A macOS release that mainline Homebrew no longer ships bottles for
+# is served by a pinned brew (a release tag) + homebrew/core + homebrew/cask
+# (one commit per tap per era, the newest at which every listed formula still
+# has this host's bottle; the bottles themselves are still on ghcr.io). The
+# table is .chezmoidata/brew-tiers.toml; the 005-homebrew hookscript lays
+# brew down by hand and does the checkouts; every brew invocation afterwards
+# must carry these two variables or brew will `brew update` itself back to a
+# HEAD that doesn't know this OS, and/or read formulae from the JSON API,
+# which only describes current bottles. .commonprofile exports the same pair
+# for interactive shells.
+{{- $brewPin := dict }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{- end }}
+{{- $era := dict }}
+{{- if $brewPin }}
+{{-   $era = index .brewTiers.eras $brewPin.era }}
+BREW_ERA_PINNED=1
+BREW_ERA_NAME="{{ $brewPin.era }}"
+BREW_PIN_TAG="{{ $brewPin.brew_tag }}"
+BREW_ERA_CORE_COMMIT="{{ $era.core_commit }}"
+BREW_ERA_CASK_COMMIT="{{ $era.cask_commit }}"
+export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_INSTALL_FROM_API=1
+{{- else }}
+BREW_ERA_PINNED=0
+BREW_ERA_NAME=
+BREW_PIN_TAG=
+BREW_ERA_CORE_COMMIT=
+BREW_ERA_CASK_COMMIT=
+{{- end }}
+
+# The package lists adapt themselves to the era: each of 020-brew-packages,
+# 030-brew-extras and 040-macos-casks resolves the era name the same way
+# this file does and, inline next to the entry, uses the name a package had
+# at that checkout or leaves out one that did not exist yet or that the host
+# cannot satisfy. See the comments in .chezmoidata/brew-tiers.toml.
+
 # Try to load homebrew if it is installed.
 #
 # Loading an already-installed brew needs no privileges whatsoever, so none of
@@ -204,62 +273,71 @@ esac
 # Probing for the brew binary rather than its prefix directory is also the more
 # honest check: a prefix survives a half-finished uninstall, and /usr/local
 # exists on practically every Intel Mac whether or not brew is under it.
+# The chezmoi-decided prefix is tried first; the rest are fallbacks for a host
+# whose brew moved since the last `chezmoi init`.
 load_brew() {
 	local candidate
 	for candidate in \
+		"$CHEZMOI_HOMEBREW_PREFIX/bin/brew" \
 		/opt/homebrew/bin/brew \
 		/usr/local/bin/brew \
-		/home/linuxbrew/.linuxbrew/bin/brew \
-		"$HOME/homebrew/bin/brew"; do
+		/home/linuxbrew/.linuxbrew/bin/brew; do
 		[ -x "$candidate" ] || continue
-		if [ "$candidate" = "$HOME/homebrew/bin/brew" ]; then
-			echo "warning: loading rootless brew. this often works but is unsupported." >&2
-		fi
 		eval "$("$candidate" shellenv)"
 		return 0
 	done
 	return 1
 }
 
-load_brew || true
-
-# brew is a nother binary dependency but ONLY on linux for addl. userspace packages
-# don't think any of the addl. userpsace packages need to be installed by this script
-if ! command -v brew &>/dev/null && [[ "$(uname -o)" == "Darwin" || "$(uname -o)" == "GNU/Linux" ]]; then
-	echo "note: installing brew" >&2
-	# One of the few places that legitimately asks: the official installer puts
-	# brew under /opt/homebrew or /home/linuxbrew, both of which need root to
-	# create. Only reached when brew is genuinely absent.
-	if can_sudo; then
-		NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-		if [ "$(uname -o)" = "Darwin" ] && [ "$(arch)" = "arm64" ]; then
-			sudo launchctl config user path /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
-			sudo launchctl config system path /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
-		elif [ "$(uname -o)" = "Darwin" ] && [ "$(arch)" = "x86_64" ]; then
-			sudo launchctl config user path /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
-			sudo launchctl config system path /usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
-		fi
-	else
-		echo "warning: can't do default brew install w/o sudo; installing rootlessly" >&2
-		# Explicitly $HOME/homebrew: this used to be a bare `mkdir homebrew`,
-		# which lands wherever the apply happens to be running from, while
-		# every detection branch looks under $HOME. They coincide only because
-		# chezmoi usually runs scripts from the destination dir.
-		mkdir -p "$HOME/homebrew" && curl -L https://github.com/Homebrew/brew/tarball/main | tar xz --strip-components 1 -C "$HOME/homebrew"
-
-		eval "$("$HOME/homebrew/bin/brew" shellenv)"
-		brew update --force --quiet
-		chmod -R go-w "$(brew --prefix)/share/zsh"
+# For scripts whose entire job is brew work. The brew analogue of
+# require_sudo: there is no degraded mode worth running without it, so say so
+# and stop. Also the one place that guarantees HOMEBREW_PREFIX is set (brew
+# shellenv exports it) -- scripts that include posix-preamble-brew.sh may use
+# $HOMEBREW_PREFIX freely; scripts on the plain preamble may not.
+require_brew() {
+	if ! load_brew; then
+		echo "error: ${1:-this script} requires brew but it isn't installed (expected under $CHEZMOI_HOMEBREW_PREFIX; 005-homebrew installs it)" >&2
+		exit 1
 	fi
+	if [ -z "${HOMEBREW_PREFIX:-}" ]; then
+		echo "error: brew shellenv did not export HOMEBREW_PREFIX" >&2
+		exit 1
+	fi
+	# The repo is the prefix itself on Apple Silicon but $prefix/Homebrew on
+	# Intel and Linux; located without asking brew, which on a 10.x host would
+	# refuse to start if the pin had been lost.
+	local brew_repo="$HOMEBREW_PREFIX"
+	[ -d "$HOMEBREW_PREFIX/Homebrew/.git" ] && brew_repo="$HOMEBREW_PREFIX/Homebrew"
+	if [ "$BREW_ERA_PINNED" -eq 1 ] && [ "$(git -C "$brew_repo" describe --tags --exact-match 2>/dev/null)" != "$BREW_PIN_TAG" ]; then
+		echo "warning: brew at $HOMEBREW_PREFIX is not at pinned tag $BREW_PIN_TAG; re-run 005-homebrew (chezmoi apply --force)" >&2
+	fi
+}
 
-	# After Homebrew installation, detect and load it
-	load_brew || true
-fi
+# `brew trust` (tap/formula trust, 2026) does not exist in an era-pinned brew,
+# and an old brew never demanded it. Scripts call this instead of `brew trust`
+# so the same list works on both.
+brew_trust() {
+	if [ -z "${_BREW_HAS_TRUST:-}" ]; then
+		if brew commands --quiet 2>/dev/null | grep -qx trust; then
+			_BREW_HAS_TRUST=1
+		else
+			_BREW_HAS_TRUST=0
+		fi
+	fi
+	if [ "$_BREW_HAS_TRUST" -eq 1 ]; then
+		brew trust "$@"
+	fi
+}
+_BREW_HAS_TRUST=
+
+load_brew || true
 
 # every split script runs as its own process, so re-derive PATH/env that earlier
 # scripts (e.g. rustup, go) would have set up rather than assuming it carried over
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:$PATH"
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+# MacPorts (00-macos/016), ahead of brew as in .commonprofile.
+[ -d /opt/local/bin ] && export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
 
 command -v brew &>/dev/null && HAS_BREW=true || HAS_BREW=false
 
@@ -276,11 +354,16 @@ elif command -v dnf &>/dev/null && [[ -f /etc/redhat-release ]]; then
 	MANAGER="dnf"
 elif command -v apt &>/dev/null && [[ -f /etc/debian_version ]]; then
 	MANAGER="apt"
-elif command -v brew &>/dev/null && [[ "$OSTYPE" == "darwin"* ]]; then
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+	# brew is the manager on macOS whether or not it is installed yet: the
+	# 005-homebrew hookscript itself includes this preamble, and it has to
+	# get past this point to do the installing. Scripts that need brew to
+	# exist say so with require_brew.
 	MANAGER="brew"
-	# The macOS one-offs that used to sit here (third-party taps, Rosetta,
-	# Xcode CLT) are in 00-macos/015-macos-prereqs now: every hookscript
-	# includes this preamble as its own process, so they ran ~20x per apply.
+	# The macOS one-offs that used to sit here are 00-macos/003-macos-prereqs
+	# (Xcode CLT, Rosetta) and 015-brew-taps (third-party taps) now: every
+	# hookscript includes this preamble as its own process, so they ran ~20x
+	# per apply.
 else
 	MANAGER=""
 fi

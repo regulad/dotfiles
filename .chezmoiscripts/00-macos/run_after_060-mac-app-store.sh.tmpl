@@ -1,5 +1,5 @@
-{{ template "posix-preamble.sh" . }}
-## Mac App Store applications
+{{ template "posix-preamble-brew.sh" . }}
+## Mac App Store applications (mas comes from brew, hence the brew preamble)
 
 # Xcode is never touched by this script. Beyond mas not installing it cleanly,
 # the installed version is deliberately left alone: Xcode is often pinned to a
@@ -20,7 +20,11 @@ MAS_APP_IDS=(
 #	"$XCODE_APP_ID"   # Xcode  # xcode doesn't work right through mas
 )
 
-if [ "$HAS_BREW" = "true" ]; then
+if ! command -v mas &>/dev/null; then
+	# mas comes from 020-brew-packages, which leaves it out on the Mojave era:
+	# its bottles start at Catalina. No mas, no App Store installs.
+	echo "note: mas is not installed on this host; skipping App Store apps" >&2
+elif [ "$HAS_BREW" = "true" ]; then
 	# mas is distributed via brew
 	#
 	# `mas update` with no arguments upgrades every outdated App Store app,

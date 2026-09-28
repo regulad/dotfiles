@@ -1,4 +1,15 @@
 {{ template "posix-preamble.sh" . }}
+{{- /* Era-pinned host (see .chezmoidata/brew-tiers.toml)? The language
+       servers below were not in homebrew-core on the oldest eras; they go
+       through pnpm there instead, which is what the no-brew branch already
+       does. $brewEra is "" on a Tier 1 host. */ -}}
+{{- $brewEra := "" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $p := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
+{{- end }}
+{{- $pre2022 := has $brewEra (list "mojave") }}
+{{- $pre2023 := has $brewEra (list "mojave" "catalina") }}
 # pnpm
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q pnpm
@@ -26,10 +37,19 @@ PNPM_CLI_PACKAGES=(
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q \
 		bitwarden-cli \
-		typescript \
-		typescript-language-server \
+		typescript
+{{- if not $pre2023 }} \
+		typescript-language-server
+{{- else }}
+	PNPM_CLI_PACKAGES+=("typescript-language-server@latest")  # not in homebrew-core until 2023
+{{- end }}
+{{- if not $pre2022 }}
+	brew install -q \
 		bash-language-server \
 		yaml-language-server
+{{- else }}
+	PNPM_CLI_PACKAGES+=("bash-language-server@latest" "yaml-language-server@latest")  # not in homebrew-core until 2022
+{{- end }}
 else
 	PNPM_CLI_PACKAGES+=(
 		"@bitwarden/cli@latest"

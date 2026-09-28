@@ -1,4 +1,4 @@
-{{ template "posix-preamble.sh" . }}
+{{ template "posix-preamble-brew.sh" . }}
 # user-level binary dependencies
 # these dependencies aren't provided by the system package manager, for whatever reason
 # these packages do NOT require compilation and are distributed as binaries.
@@ -174,11 +174,11 @@ if [ "$HAS_BREW" = "true" ]; then
 	# formula. `brew trust` is idempotent and is the replacement brew names
 	# for the now-deprecated HOMEBREW_NO_REQUIRE_TAP_TRUST=1 this repo used
 	# to export from the preamble and .commonprofile.
-	brew trust --formula brew-gem/gems/gem-ruby-lsp
+	brew_trust --formula brew-gem/gems/gem-ruby-lsp
 	brew gem install ruby-lsp
 	# neovim: the ruby provider bridge gem (:checkhealth vim.provider).
 	# The Windows counterpart for both gems is 00-nt/580-ruby-tooling.cmd.
-	brew trust --formula brew-gem/gems/gem-neovim
+	brew_trust --formula brew-gem/gems/gem-neovim
 	brew gem install neovim
 
 	if ! [ "$CONTAINERIZED" -eq 1 ]; then

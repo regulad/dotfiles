@@ -19,13 +19,13 @@ The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/
 
 Supported environments:
 
-- macOS latest (w/ `brew`)
+- macOS 10.14 (Mojave) and newer, Apple Silicon and Intel (w/ `brew`; releases Homebrew no longer bottles for get an era-pinned brew that still installs bottles, see [Homebrew on older macOS](#homebrew-on-older-macos))
 - Bluefin (Universal Blue's atomic Fedora desktop)
 - Ubuntu GNU/Linux >= 25.10
 - Fedora GNU/Linux >= 44
 - Windows 11 `cmd`
 
-Brew will be installed on macOS and Linux if it is not already installed. Rootless installs are supported but a warning will be emitted since I can't test every edge case.
+Brew will be installed on macOS and Linux if it is not already installed. This needs sudo: brew goes to its standard prefix, and the rootless install mode Homebrew itself does not support is not offered here.
 
 Linux environments are preferred in the following order:
 
@@ -49,17 +49,6 @@ Supported shells:
 - `cmd` (NT-only)
 
 I have no intent to support PowerShell: I don't want to spend half of the time in my shell wrestling with different eras of features and aliases that do not have the same signature as the builtins they shadow.
-
-### Codex WakaTime tracking
-
-The Linux, macOS, and Windows apply scripts install WakaTime's official
-[Codex CLI plugin](https://github.com/wakatime/codex-cli-wakatime), alongside
-the existing Claude Code plugin setup. They register its marketplace and install
-`codex-cli-wakatime@wakatime` only when missing, retrying on subsequent applies.
-Codex must support `codex plugin add`; older versions emit an upgrade reminder.
-The plugin uses the repository's existing `~/.wakatime.cfg`. On the next
-interactive Codex start, review and trust its hooks if prompted. Installation
-does not verify that activity has reached the WakaTime dashboard.
 
 ### C/C++ language support
 
@@ -85,9 +74,35 @@ generate `compile_commands.json` (for example, configure CMake with
 
 ### Hookscripts
 
-POSIX-like platforms will automatically install required dependencies thanks to the hookscripts in `.chezmoiscripts/00-posix/`.
+POSIX-like platforms will automatically install required dependencies thanks to the hookscripts in `.chezmoiscripts/00-macos/` and `.chezmoiscripts/00-linux/` (plus `01-fedora/` and `02-bluefin/` layers on Linux).
 
 Similarly NT platforms use the hookscripts in `.chezmoiscripts/00-nt/` for dependency installation.
+
+Every POSIX hookscript opens with one of two shared preambles from `.chezmoitemplates/`:
+
+- `posix-preamble.sh` -- platform guards, lazy `can_sudo`/`require_sudo`, `load_brew` (loads brew if present, sets `HAS_BREW`), and `MANAGER`. For scripts that merely prefer brew and have a fallback.
+- `posix-preamble-brew.sh` -- the above plus `require_brew`, the brew counterpart of `require_sudo`: fails fast if brew is missing and guarantees `$HOMEBREW_PREFIX` is set. For scripts whose whole job is brew work (package lists, casks, taps, anything that reads `$HOMEBREW_PREFIX`).
+
+On macOS, `003-macos-prereqs` runs first and installs the Apple-shipped prerequisites on every Mac: the Xcode Command Line Tools through `softwareupdate`, non-interactively (Apple's own `xcode-select --install` prompt only as the fallback), and Rosetta 2 on Apple Silicon. So both are in place before brew, MacPorts or any source build. `015-brew-taps` then adds the third-party brew taps; everything installed from them is written as `user/repo/name`. Brew itself is installed by `005-homebrew` on both platforms, from `.chezmoitemplates/homebrew-install.sh`, before anything that needs it. It is a `run_after_`, so a host whose brew was removed gets it back on the next apply.
+
+The brew prefix is decided once, at `chezmoi init`, as `.homebrewPrefix` (`/opt/homebrew` on Apple Silicon, `/usr/local` on Intel, `/home/linuxbrew/.linuxbrew` on Linux) and rendered into every static file that has to name a brew binary: tmux, gpg-agent, the Touch ID PAM lines, the Chrome gpgme manifest, `.bootstrap.sh`. Hookscripts get the same answer at runtime from `brew shellenv`. **After pulling a version of this repo that introduced `.homebrewPrefix` or `.macos.series`, run `chezmoi init` once** -- `.chezmoi.toml.tmpl` is only re-rendered by init, and templates reference both keys.
+
+### Homebrew on older macOS
+
+Mainline Homebrew only ships bottles (prebuilt binaries) for the macOS releases it calls Tier 1 -- as of September 2026 that is Sequoia 15, Tahoe 26 and Golden Gate 27, on Apple Silicon only. Everything older, and every Intel Mac, is Tier 3: brew still runs, but each `brew install` is a from-source build with no guarantee it succeeds. Intel is scheduled to stop running brew at all in or after September 2027. The bottles built while a release *was* Tier 1 are still on ghcr.io, though, so an old Mac -- the kind kept around for work newer macOS can't do, like USB sniffing -- is served by brew from that era instead:
+
+- `.chezmoidata/brew-tiers.toml` maps each `(macOS series, arch)` tuple that is no longer Tier 1 (the series is the release as Homebrew names it: `11` and up, or `10.14`/`10.15`) to the last `Homebrew/brew` release tag whose docs still listed it as fully supported, and an era. Each era names one commit per tap, `core_commit` and `cask_commit`: the newest commit at which every formula in the lists still has that host's bottle, which can be weeks or months before the docs demotion, because bottles stop being built for an OS formula by formula. Each entry cites the upstream commit it came from. A tuple absent from the table is Tier 1 and gets mainline brew.
+- `005-homebrew` does not use the upstream installer on such a host: no version of it pins a ref, every version ends with `brew update`, current ones refuse Intel and old releases, and older ones clone homebrew-core from a branch that no longer exists. Instead it reproduces the small, stable part of what the installer does -- the prefix directories with their `user:admin` ownership, a git checkout of Homebrew/brew at the era tag, the Intel `bin/brew` symlink -- then taps `homebrew/core` and `homebrew/cask` in full through that brew (the JSON API only describes current bottles, so the taps have to be real git checkouts) and checks each out at its era commit. Every apply re-verifies the pin, repo first with git alone, then the taps.
+- `posix-preamble.sh` and `.commonprofile` export `HOMEBREW_NO_AUTO_UPDATE=1` and `HOMEBREW_NO_INSTALL_FROM_API=1` on such a host, so neither a hookscript nor an interactive shell can move brew off the pin or make it read the API.
+- `brew_trust` in the preamble wraps `brew trust`, which a 2023-era brew doesn't have; the tap and formula lists work unchanged on both.
+
+The package lists are written against current homebrew-core and homebrew-cask, and adapt themselves to the era inline: each list resolves the era name at the top, and an entry that had a different name at that checkout (`ruby@4` was `ruby`, `handbrake-app` was `handbrake`) or that did not exist there yet (retry and sshpass before 2024, fernflower and git-xet before 2026, a dozen casks such as claude and codex) or whose cask declares a floor or arch the host fails (chatgpt and forklift on Ventura, kde-connect anywhere but Apple Silicon Sonoma) is a template conditional next to the current entry, so the list still reads as one list and nothing is fetched from anywhere but the pinned taps. Everything left is installed from the era's tap commits with bottles. The evidence behind each conditional is the per-era tap audit of 2026-09-28, summarised in the data file's comments. (The deleted homebrew-cask-versions tap was audited through its surviving fork network; GitHub keeps a deleted repository's forks, and a commit SHA identifies the content regardless of which fork serves it.)
+
+The floor is Mojave (10.14), and it is set by bottle hosting, not by brew. Homebrew moved bottles from Bintray to ghcr.io in April 2021 and copied only the bottle live in each formula at that moment; Mojave and Catalina were demoted after that, so every formula in these lists at their era commits still has a bottle on ghcr.io today (checked blob by blob). High Sierra and older were demoted before it: their era brews only know the dead Bintray URL scheme, and of 30 sampled formulae at their era commits, 6, 1 and 1 still have a bottle on ghcr.io. A newer brew that still runs there has nothing left to fetch. Mojave in particular loses more of the lists than the later eras, since much of what is in them did not exist in 2021, and it has no `mas` bottle at all, so the App Store script skips itself there. The same era conditionals reach the tooling scripts: `uv` comes from MacPorts before 2024, `hatch` and two language servers are absent on Mojave (the language servers go through pnpm instead), and `typescript-language-server` likewise on Catalina. Expect `uv`'s managed Python downloads to be the weakest link on Mojave; python-build-standalone's macOS floor is not verified here.
+
+`brew update` is the one command that undoes all of this: it moves brew and both taps to upstream HEAD, and on 10.x leaves a brew that will not start. So on an era-pinned host it never runs. The env above stops the implicit one, nothing in this repo runs the explicit one (the upstream installer, which does, is not used on such a host), and `.commonprofile` wraps `brew` so that `brew update` prints a warning and does nothing; `brew! update` is the real binary for when you mean it. If it does get run, the next `chezmoi apply` re-pins: `005-homebrew` resets the brew repo with git alone, by path, before the first `brew` invocation, then the taps.
+
+Other caveats: pre-Sonoma hosts have no `/etc/pam.d/sudo_local`, so `010-pam-sudo-touchid` edits `/etc/pam.d/sudo` directly there and has to be re-run after an OS update (`chezmoi state delete-bucket --bucket=scriptState && chezmoi apply`). When upstream demotes another tuple (next expected: Sequoia 15 on Apple Silicon, September 2027 or later), add it to the table with a new era block; the comments in `brew-tiers.toml` say what to record.
 
 ### *nix Install
 
@@ -112,6 +127,13 @@ chezmoi init
 chezmoi apply ~/key.txt  # bootstraps age
 chezmoi apply
 ```
+
+#### Bootstrapping a Mojave or Catalina host
+
+Two of the bootstrap tools are Go and Node programs whose current builds no longer run on 10.x, so the first two lines of the *nix install differ there:
+
+- **chezmoi**: Go 1.23 (August 2024) requires macOS 11, and Go 1.21 (August 2023) requires 10.15. Install a release built before the relevant cutoff with the tag option of the install script: `sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.52.0` on Catalina, `-t v2.37.0` on Mojave (the last releases before those Go versions shipped; the exact toolchain each binary was built with is not recorded in the release, so treat these as the first thing to confirm on the machine). Once brew is up, the era's pinned `chezmoi` formula is the durable replacement.
+- **bw** (Bitwarden CLI, Node): Node 18 and newer require 10.15, so Mojave cannot run a current `bw` and has to stay on `CHEZMOI_USE_DUMMY=1`, or have the secrets applied from another machine. Catalina is fine.
 
 ### NT Install
 
@@ -151,6 +173,10 @@ Three things worth knowing:
 - **Atomic hosts don't get it.** `install-theos` opens with a privileged system-package transaction, chosen by what's on `PATH` rather than by distro ID — and since Universal Blue images ship `dnf`, it takes the redhat branch and tries to install a dozen build dependencies into a read-only `/usr`. That exits 3 and fails the apply, so `.chezmoiignore` masks the Linux hook whenever `/run/ostree-booted` exists. There's no brew stand-in the way `022-brew-packages.sh` stands in for `020-dnf-packages.sh`; the installer has no notion of a prefix other than the system one. `~/theos` is still writable, so a host that wants the toolchain can layer the dependencies with `rpm-ostree` and run the hook by hand, or install into a toolbox/distrobox — `.commonprofile` only adds `$THEOS/bin` to `PATH` when the directory exists, so either works with no further changes. The published container images are built `FROM` ordinary fedora/ubuntu and are not ostree-booted, so they keep Theos.
 - **macOS needs the full Xcode**, not the Command Line Tools — Theos builds against the iOS/tvOS platform toolchains that only Xcode.app ships, and `install-theos` exits 3 without it. Nothing here can install it: there is no cask, and `mas` cannot drive it.
 - **The Linux toolchain is the Swift one.** The installer asks interactively; the hook can't answer, because an unattended apply has no terminal and the `read` would kill the install, so it sets `$CI` to skip the prompt and `sed`s the hardcoded default from no to yes. That gets the larger kabiroberai `swift-toolchain-linux` build rather than the smaller L1ghtmann `iOSToolchain`. For the non-Swift one, remove `$THEOS/toolchain/linux/iphone` and re-run the hook without that `sed`.
+
+### MacPorts
+
+`.chezmoiscripts/00-macos/016-macports` installs the MacPorts CLI (`port`) from the official per-release installer package, latest version, into `/opt/local`. Brew remains the package manager; MacPorts is the fallback for Intel Macs once brew stops running on them (scheduled for September 2027), and on the era-pinned hosts `017-macports-packages` installs the few ports that stand in for formulae the era's homebrew-core checkout does not have and that have a prebuilt MacPorts archive for that Darwin version: retry and sshpass on Big Sur and older, and fastfetch, pam-reattach and wasm-tools on Mojave. On a Tier 1 host that list is empty. The same inline era conditionals in the brew lists say which entries MacPorts covers. `.commonprofile` puts `/opt/local/bin` and `/opt/local/sbin` ahead of brew's directories on `PATH`, so an installed port wins a collision. The installer's own edits to `~/.zprofile` and `~/.bash_profile` are undone by the next apply, since both files are managed here. MacPorts updates itself with `sudo port selfupdate`.
 
 ### Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever
 
@@ -207,7 +233,7 @@ It installs nothing and destroys nothing. Where the current directory is somethi
 
 - [x] Nt: Write NT self-bootstrapping script
 - [x] Doc: Emit warnings in vim and bash
-- [x] Brew: Brew on permissionless systems w/ gentoo-style custom prefixes
+- [x] ~~Brew: Brew on permissionless systems w/ gentoo-style custom prefixes~~ (removed 2026-09: the rootless path was only ever quasi-supported; brew now requires sudo and its standard prefix)
 - [x] Nvim: Fix nvim newline behaviour
 - [x] Nvim: Relative + absolute line numbers in nvim
 - [x] Nvim: Addl. language server configurations in nvim

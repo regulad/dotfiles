@@ -28,6 +28,41 @@
 {{-   $cpuThreads = (output "pwsh.exe" "-NoProfile" "-NonInteractive" "-Command" "(Get-CimInstance -ClassName 'Win32_Processor').NumberOfLogicalProcessors") | trim | atoi }}
 {{- end }}
 
+# Where brew lives. Static config files (pam, tmux, gpg-agent, the Chrome
+# native-messaging manifest) need the prefix as a literal string and cannot
+# run `brew shellenv`, so it is decided once here and shared as .homebrewPrefix.
+# Hookscripts get the same answer at runtime from posix-preamble-brew.sh.
+#
+# macOS: /opt/homebrew on Apple Silicon, /usr/local on Intel -- this is
+# Homebrew's own rule, not a preference. Linux: /home/linuxbrew/.linuxbrew.
+{{- $homebrewPrefix := "" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   if eq .chezmoi.arch "arm64" }}
+{{-     $homebrewPrefix = "/opt/homebrew" }}
+{{-   else }}
+{{-     $homebrewPrefix = "/usr/local" }}
+{{-   end }}
+{{- else if eq .chezmoi.os "linux" }}
+{{-   $homebrewPrefix = "/home/linuxbrew/.linuxbrew" }}
+{{- end }}
+
+# macOS version, as Homebrew names releases: "11" and up for Big Sur onward,
+# "10.14"/"10.15" for Mojave/Catalina, where the major alone would collapse
+# every 10.x release into one. ("" elsewhere.) Consumed with .chezmoi.arch as
+# the "<series>-<arch>" key into .chezmoidata/brew-tiers.toml, which decides
+# whether this host gets mainline brew or an era-pinned one.
+{{- $macosSeries := "" }}
+{{- $macosMajor := 0 }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $parts := output "sw_vers" "-productVersion" | trim | splitList "." }}
+{{-   $macosMajor = index $parts 0 | atoi }}
+{{-   if eq $macosMajor 10 }}
+{{-     $macosSeries = printf "10.%s" (index $parts 1) }}
+{{-   else }}
+{{-     $macosSeries = index $parts 0 }}
+{{-   end }}
+{{- end }}
+
 encryption = "age"
 [age]
     identity = "{{ .chezmoi.homeDir }}/key.txt"
@@ -41,6 +76,10 @@ encryption = "age"
 [data]
     useDummySecrets = {{ env "CHEZMOI_USE_DUMMY" | not | not }}
     useHeadless = {{ env "CHEZMOI_USE_HEADLESS" | not | not }}
+    homebrewPrefix = "{{ $homebrewPrefix }}"
+[data.macos]
+    major = {{ $macosMajor }}
+    series = "{{ $macosSeries }}"
 [data.chassis]
     type = "{{ $chassisType }}"
     cores = {{ $cpuCores }}

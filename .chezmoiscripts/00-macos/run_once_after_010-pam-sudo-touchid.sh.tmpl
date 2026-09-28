@@ -1,0 +1,56 @@
+{{ template "posix-preamble-brew.sh" . }}
+# Touch ID for sudo, with pam_reattach so it also works inside tmux.
+#
+# pam_reattach.so comes from the pam-reattach formula (020-brew-packages), so
+# the module path is under $HOMEBREW_PREFIX -- /opt/homebrew on Apple Silicon,
+# /usr/local on Intel -- which is why this needs the brew preamble rather than
+# a bare shebang. The line is `optional`, so a host where the formula hasn't
+# landed yet just skips it; pam_tid.so is Apple's and always present.
+#
+# Where the lines go depends on the OS:
+#  - Sonoma (14) and newer: /etc/pam.d/sudo ends with `include sudo_local`,
+#    and /etc/pam.d/sudo_local survives OS updates. Write that.
+#  - Big Sur (11) through Ventura (13): no sudo_local mechanism; the lines
+#    have to go into /etc/pam.d/sudo itself, after the header comment. Every
+#    OS update rewrites that file, so on those hosts re-run this after one:
+#      chezmoi state delete-bucket --bucket=scriptState && chezmoi apply
+#    (run_once_ keys on the script's content hash, so it won't re-run by
+#    itself; the edit is idempotent either way.)
+require_sudo "010-pam-sudo-touchid"
+
+# On the Mojave era pam-reattach is not in brew's checkout and comes from
+# MacPorts instead (017-macports-packages), so the module lives under
+# /opt/local. Either way the line is `optional`, so it is harmless before the
+# package lands.
+if [ "$BREW_ERA_NAME" = "mojave" ]; then
+	PAM_REATTACH="/opt/local/lib/pam/pam_reattach.so"
+else
+	PAM_REATTACH="$HOMEBREW_PREFIX/lib/pam/pam_reattach.so"
+fi
+PAM_LINES="auth       optional       $PAM_REATTACH ignore_ssh
+auth       sufficient     pam_tid.so"
+
+if grep -q 'sudo_local' /etc/pam.d/sudo; then
+	sudo tee /etc/pam.d/sudo_local >/dev/null <<EOF
+# sudo_local: local config file which survives system update and is included for sudo
+# uncomment following line to enable Touch ID for sudo
+$PAM_LINES
+EOF
+	sudo chmod 444 /etc/pam.d/sudo_local
+	sudo chown root:wheel /etc/pam.d/sudo_local
+elif grep -q 'pam_tid.so' /etc/pam.d/sudo; then
+	echo "note: /etc/pam.d/sudo already has pam_tid.so; leaving it alone" >&2
+else
+	# Splice after line 1 ("# sudo: auth account password session"). Built in
+	# a temp file and copied over as root: cp onto the existing file keeps its
+	# root:wheel 444, and a half-written /etc/pam.d/sudo would lock sudo out.
+	tmp="$(mktemp)"
+	{
+		head -n 1 /etc/pam.d/sudo
+		printf '%s\n' "$PAM_LINES"
+		tail -n +2 /etc/pam.d/sudo
+	} >"$tmp"
+	sudo cp "$tmp" /etc/pam.d/sudo
+	rm -f "$tmp"
+	echo "note: added Touch ID lines to /etc/pam.d/sudo (pre-Sonoma; redo after OS updates)" >&2
+fi

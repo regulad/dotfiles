@@ -1,0 +1,43 @@
+{{ template "posix-preamble.sh" . }}
+{{- /* Ports that stand in for formulae the era's homebrew-core checkout does
+       not have (see the matching conditionals in 020-brew-packages and
+       030-brew-extras). Only ports with a prebuilt archive on
+       packages.macports.org for that Darwin version are listed -- a source
+       build on an old host is what the era pins exist to avoid. Checked
+       2026-09-28: all six have archives down to darwin_18 (Mojave), and uv
+       also for arm64 from darwin_20 (Big Sur).
+       $brewEra is "" on a Tier 1 host, and the array is then empty. */ -}}
+{{- $brewEra := "" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $p := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
+{{- end }}
+{{- $pre2022 := has $brewEra (list "mojave") }}
+{{- $pre2024 := has $brewEra (list "mojave" "catalina" "bigsur") }}
+# MacPorts packages: only what brew cannot provide on this era, nothing else.
+MACPORTS_PACKAGES=(
+{{- if $pre2024 }}
+	retry    # not in homebrew-core until 2024
+	sshpass  # not in homebrew-core until 2024
+	uv       # not in homebrew-core until 2024; 100-python-tooling relies on this one
+{{- end }}
+{{- if $pre2022 }}
+	fastfetch     # not in homebrew-core until 2023
+	pam-reattach  # not in homebrew-core until 2022; 010-pam-sudo-touchid points at /opt/local/lib/pam on this era
+	wasm-tools    # not in homebrew-core until 2022
+{{- end }}
+)
+
+if [ "${#MACPORTS_PACKAGES[@]}" -eq 0 ]; then
+	echo "note: brew covers everything on this host; no MacPorts packages" >&2
+	exit 0
+fi
+
+if [ ! -x /opt/local/bin/port ]; then
+	echo "error: MacPorts is not installed (016-macports should have run)" >&2
+	exit 1
+fi
+
+require_sudo "017-macports-packages"
+# -N: non-interactive. Already-installed ports are a no-op.
+sudo /opt/local/bin/port -q -N install "${MACPORTS_PACKAGES[@]}"

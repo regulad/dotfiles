@@ -1,0 +1,215 @@
+# Homebrew support tiers per (macOS major, CPU architecture). Read by
+# .chezmoitemplates/posix-preamble.sh (env exports), homebrew-install.sh
+# (the checkouts), the 00-macos package lists (inline conditionals keyed on
+# the era name) and dot_commonprofile.tmpl (interactive shells).
+#
+# Mainline Homebrew only ships bottles -- prebuilt binaries -- for the macOS
+# versions it calls Tier 1 (https://docs.brew.sh/Installation, "macOS
+# Requirements"). Older versions still *run* brew, but every install becomes a
+# from-source build with no guarantee it succeeds, which is useless on the old
+# Intel machines this repo keeps around for USB sniffing and similar work that
+# newer macOS can't do. The bottles that were built while an OS was Tier 1 are
+# still on ghcr.io, so an old host is served by brew + homebrew/core +
+# homebrew/cask from that era instead.
+#
+# Any tuple absent from [brewTiers.legacy] is treated as Tier 1 and gets
+# mainline brew. Keys are "<macOS series>-<chezmoi arch>": the series is the
+# release as Homebrew names it -- "11".."27", or "10.14"/"10.15" for Mojave
+# and Catalina, where the major alone would not tell them apart -- and
+# chezmoi's arch is Go's: arm64 for Apple Silicon, amd64 for Intel.
+#
+# Per tuple:
+#   brew_tag       -- Homebrew/brew release tag to check the brew repo out at:
+#                     the last release whose docs listed this tuple as fully
+#                     supported. Its docs/Installation.md is the evidence.
+#   era            -- name of the [brewTiers.eras.<era>] block: one commit
+#                     per tap (below). The package lists key their inline
+#                     conditionals on this name.
+#
+# Sources (verified 2026-09-28 against Homebrew/brew docs/Installation.md and
+# docs/Support-Tiers.md history, the release tags, and Homebrew/install
+# install.sh history):
+#
+#   Mojave 10.14  demoted by c8752c9 "Mark macOS Monterey as supported" 2021-10-19, first in 3.3.0
+#   Catalina 10.15 demoted by e16afb3 "Mark macOS Ventura as supported" 2022-10-19, first in 3.6.7
+#   Big Sur 11    demoted by c3a2c40 "Make Sonoma supported"       2023-09-24, first in 4.1.13
+#   Monterey 12   demoted by 4ab19e0 "Make Sequoia supported"      2024-09-11, first in 4.3.21
+#   Ventura 13    demoted by e63c885 "Support Tahoe, drop Mojave"  2025-09-12, first in 4.6.11
+#   Intel, all    demoted by c0c92cc "Reduce Intel macOS to Tier 3" 2026-08-31, first in 6.0.21
+#                 ("Homebrew has stopped building new bottles for Intel systems")
+#   Sonoma 14/arm demoted by 85ceb6a "Promote macOS Golden Gate 27" 2026-09-10, first in 7.0.0
+#
+#   No Homebrew/install commit is pinned: on an era host 005-homebrew lays
+#   brew down itself (prefix layout, git checkout of brew_tag, Intel symlink;
+#   003-macos-prereqs has the Command Line Tools), because no upstream installer pins a ref, all of
+#   them end with `brew update`, current ones refuse Intel and old releases,
+#   and the older ones clone homebrew-core from a branch that no longer
+#   exists.
+#
+# Tier 1 today, i.e. deliberately absent: Sequoia 15, Tahoe 26 and Golden
+# Gate 27 on arm64. Upstream's stated next step is September 2027 or later:
+# Big Sur off entirely, Intel off entirely, and 15 on arm64 to Tier 3 -- add
+# "15-arm64" here (tag 7.0.x and a new era block) when that lands.
+#
+# Why the floor is Mojave. Homebrew moved bottles from Bintray to ghcr.io in
+# April 2021 (brew a2251a1, first in 3.1.0) and copied only the bottle that
+# was live in each formula at that moment. Mojave and Catalina were demoted
+# after that, so their era brews fetch from ghcr natively and their bottles
+# were built onto it: a HEAD on the blob digest of every formula in these
+# lists at the two era commits returns 200 today. High Sierra (demoted
+# 2020-11-20, brew 2.5.11), Sierra and El Capitan were demoted before it:
+# their brews only know the dead Bintray scheme, and of 30 sampled formulae
+# at their era commits, 6, 1 and 1 still have a bottle on ghcr (audit of
+# 2026-09-28). A newer brew that still runs there (4.6.10 does) has nothing
+# left to fetch, so nothing older than 10.14 can work.
+#
+# Keep MACOS_MINIMUM_VERSION in posix-preamble.sh (10.14, Mojave) in step
+# with the oldest key here. Nothing is pinned for Linux: linuxbrew has one
+# tier.
+
+[brewTiers]
+
+[brewTiers.legacy."10.14-amd64"]
+brew_tag = "3.2.17"
+era = "mojave"
+
+[brewTiers.legacy."10.15-amd64"]
+brew_tag = "3.6.6"
+era = "catalina"
+
+[brewTiers.legacy."11-arm64"]
+brew_tag = "4.1.12"
+era = "bigsur"
+
+[brewTiers.legacy."11-amd64"]
+brew_tag = "4.1.12"
+era = "bigsur"
+
+[brewTiers.legacy."12-arm64"]
+brew_tag = "4.3.20"
+era = "monterey"
+
+[brewTiers.legacy."12-amd64"]
+brew_tag = "4.3.20"
+era = "monterey"
+
+[brewTiers.legacy."13-arm64"]
+brew_tag = "4.6.10"
+era = "ventura"
+
+[brewTiers.legacy."13-amd64"]
+brew_tag = "4.6.10"
+era = "ventura"
+
+[brewTiers.legacy."14-arm64"]
+brew_tag = "6.0.22"
+era = "sonoma"
+
+[brewTiers.legacy."14-amd64"]
+brew_tag = "6.0.20"
+era = "current"
+
+[brewTiers.legacy."15-amd64"]
+brew_tag = "6.0.20"
+era = "current"
+
+[brewTiers.legacy."26-amd64"]
+brew_tag = "6.0.20"
+era = "current"
+
+# =+= Eras: one commit per tap =+=
+#
+# core_commit / cask_commit -- the commit each tap is checked out at, global
+# to the tap. Chosen as the newest commit on main at which EVERY formula in
+# the lists still has this host's bottle (and no cask in the lists gained an
+# arch or macOS floor the host fails): the docs demotion date is only the
+# upper bound, because bottles stop being built for an OS formula by formula
+# in the weeks before it. Verified per formula against the bottle blocks at
+# these commits (audit of 2026-09-28; the Intel loss was bisected with the
+# GitHub commits API and then confirmed at the chosen commit for all fifteen
+# affected formulae).
+#
+# The package lists in 00-macos/020-brew-packages, 030-brew-extras and
+# 040-macos-casks are written against current homebrew-core/cask. Each list
+# resolves the era name and, inline next to the entry, either uses the name
+# the package had at that checkout (ruby@4 was ruby, tree-sitter-cli was
+# tree-sitter, hf was huggingface-cli, the four -app casks lacked the suffix)
+# or leaves the entry out on the eras where it did not exist yet or where its
+# cask declares a floor or arch the host fails. Aliases already cover
+# npm->node, python3->python@3.x, rustup->rustup-init, and the ghidra formula
+# (2026) falls through to the ghidra cask on every earlier era. Nothing is
+# sourced from anywhere but the pinned taps.
+#
+# The pre-2024 versioned-cask tap (homebrew-cask-versions) was checked too,
+# through a synced fork, since GitHub no longer serves the original (its last
+# commit is 057d1202c4ac9d4059909260af8d13e20fbf8cab, the 2024-05-02
+# deprecation merge): nothing in these lists ever lived there.
+
+# Mojave (10.14), Intel only. Taps at their last commit before the docs
+# demotion (2021-10-19). Every formula in the lists that existed then has a
+# mojave bottle on ghcr, except mas (its bottle block already started at
+# Catalina), so mas and the App Store script are skipped there. Twelve
+# formulae and fifteen casks in the lists did not exist yet, and lulu's cask
+# requires Catalina; the lists leave those out inline. MacPorts (00-macos/017)
+# backfills retry, sshpass, fastfetch, pam-reattach and wasm-tools from its
+# prebuilt darwin_18 archives.
+[brewTiers.eras.mojave]
+core_commit = "8a1d5a3435c77bd08fddf6e7f8b6625ecc2171d2"  # 2021-10-19
+cask_commit = "170ef24a73c3d10cefd37decc1eb22b6f83826da"  # 2021-10-19
+
+# Catalina (10.15), Intel only. Taps at their last commit before the docs
+# demotion (2022-10-19). Every formula in the lists that existed then has a
+# catalina bottle on ghcr; six formulae and thirteen casks did not exist yet.
+# MacPorts (00-macos/017) backfills retry and sshpass.
+[brewTiers.eras.catalina]
+core_commit = "705f76b55ef3dda7ab67ff5c40af9dea317f613c"  # 2022-10-19
+cask_commit = "9715f867afe21df8b715f29b7900f81e16078dad"  # 2022-10-19
+
+# Big Sur (11), both arches. Taps at their last commit before the docs
+# demotion (2023-09-24); nothing in the lists had lost a Big Sur bottle by
+# then. MacPorts (00-macos/017) backfills retry and sshpass.
+[brewTiers.eras.bigsur]
+core_commit = "4e225176c8fa32a751221c286e6049a798109ca2"  # 2023-09-24
+cask_commit = "4c4503acafb05fa9199b52e581cb6250912e9991"  # 2023-09-24
+
+# Monterey (12), both arches. Docs demotion 2024-09-11, but podman gained
+# `depends_on macos: :ventura` (and lost its Monterey bottle) right after
+# 2024-03-20, and podman-compose (2024-06-26) and deno (2024-09-10) lost theirs
+# later that year, so core is pinned at podman's last good commit, where all
+# three still have monterey/arm64_monterey bottles (verified). Costs the
+# Monterey tier about six months of formula updates.
+[brewTiers.eras.monterey]
+core_commit = "9b01491dae13a3efcc4d226d0cbc5445432dd50a"  # 2024-03-20
+cask_commit = "f33cfb48e64e03234e9e4ac5da680c8e19046bf2"  # 2024-09-11
+
+# Ventura (13), both arches. Taps at their last commit before the docs
+# demotion (2025-09-12); nothing in the lists had lost a Ventura bottle by
+# then.
+[brewTiers.eras.ventura]
+core_commit = "dcad194da5134001c43d481ac2cf6b2d2e041989"  # 2025-09-12
+cask_commit = "da656913dcf612518b36764d70c9ff6268ce0af0"  # 2025-09-12
+
+# "current": every Intel Mac on Sonoma through Tahoe. Docs demotion
+# 2026-08-31, but Intel bottles stopped being built formula by formula from
+# mid-June 2026: by 2026-08-31 fifteen formulae in the lists (age, podman,
+# neovim, tree-sitter-cli, mpv, git-lfs, gpgme, node, awscli, cloudflared,
+# wakatime-cli, harper, shfmt, ocrmypdf, hf) had none. podman's last Intel
+# commit, 2026-06-14, is the earliest boundary (its next bump also added
+# `depends_on arch: :arm64`), and at that commit all fifteen still carry the
+# `sonoma` tag, which brew accepts on Sonoma, Sequoia and Tahoe alike
+# (verified). Costs the Intel tier about eleven weeks of formula updates.
+# Nothing in the cask list is affected, so casks stay at the demotion date.
+[brewTiers.eras.current]
+core_commit = "c27b8f86ec86cf1a7dd2fd326a9f62d951675f8b"  # 2026-06-14
+cask_commit = "58eb67eaecfb8b8ef63c547e41129acdd8df3fac"  # 2026-08-31
+
+# "sonoma": Apple Silicon on Sonoma. Core at its last commit before the docs
+# demotion (2026-09-10); nothing in the lists had lost an arm64_sonoma bottle.
+# Two casks gained `depends_on arch: :x86_64` shortly before -- zoom on
+# 2026-09-08, android-platform-tools between 2026-08-01 and 2026-08-14 -- so
+# the cask tap is pinned at android-platform-tools' last good commit, where
+# both are unrestricted. Casks have no bottles, so an older cask tap costs
+# nothing but slightly older pinned app versions.
+[brewTiers.eras.sonoma]
+core_commit = "13bfd4aa906969caa70116f5618cdb20c58a0f0c"  # 2026-09-10
+cask_commit = "2c260110e51e945fb97bf7ec263db3c1d9a6d6ae"  # 2026-08-01

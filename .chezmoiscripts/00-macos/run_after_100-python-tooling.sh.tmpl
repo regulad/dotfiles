@@ -1,8 +1,27 @@
 {{ template "posix-preamble.sh" . }}
+{{- /* Era-pinned host (see .chezmoidata/brew-tiers.toml)? uv only reached
+       homebrew-core in 2024 and hatch in 2022; on the eras before that uv
+       comes from MacPorts (017-macports-packages, prebuilt down to Mojave)
+       and hatch is left out. $brewEra is "" on a Tier 1 host. */ -}}
+{{- $brewEra := "" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $p := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
+{{- end }}
+{{- $pre2022 := has $brewEra (list "mojave") }}
+{{- $pre2024 := has $brewEra (list "mojave" "catalina" "bigsur") }}
 # poetry and uv are both always brew-installed here: MANAGER is guaranteed to be
 # "brew" on macOS by posix-preamble.sh, since dnf/apt require Linux-only files.
 brew install -q poetry
+{{- if $pre2024 }}
+# uv is a MacPorts package on this era (017); make sure it is there.
+if ! command -v uv &>/dev/null; then
+	echo "error: uv is missing; 017-macports-packages should have installed it" >&2
+	exit 1
+fi
+{{- else }}
 brew install -q uv
+{{- end }}
 
 # NOTE: poetry is for legacy workflows.
 # NOTE: `uv tool install` replaces pipx
@@ -63,7 +82,9 @@ uv tool install --python cp314 -q claude-swap
 
 # like in the JS ecosystem, some python tools are available as tools/bottles from brew
 brew install -q \
+{{- if not $pre2022 }}
 	hatch \
+{{- end }}
 	autopep8
 
 uv tool upgrade --quiet --all
