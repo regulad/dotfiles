@@ -19,7 +19,7 @@ The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/
 
 Supported environments:
 
-- macOS 10.14 (Mojave) and newer, Apple Silicon and Intel (w/ `brew`; releases Homebrew no longer bottles for get an era-pinned brew that still installs bottles, see [Homebrew on older macOS](#homebrew-on-older-macos))
+- macOS 10.14 (Mojave) and newer, Apple Silicon and Intel (w/ `brew`; releases Homebrew no longer bottles for get an era-pinned brew that still installs bottles, see [docs/homebrew-older-macos.md](docs/homebrew-older-macos.md))
 - Bluefin (Universal Blue's atomic Fedora desktop)
 - Ubuntu GNU/Linux >= 25.10
 - Fedora GNU/Linux >= 44
@@ -50,60 +50,6 @@ Supported shells:
 
 I have no intent to support PowerShell: I don't want to spend half of the time in my shell wrestling with different eras of features and aliases that do not have the same signature as the builtins they shadow.
 
-### C/C++ language support
-
-Vim installs `coc-clangd` from `dot_coc-extensions.txt` through the plugin
-bootstrap. Neovim enables `clangd` through its native LSP client and
-`nvim-lspconfig`. Both use the `clangd` executable on `PATH`.
-
-| Host | Provisioned package |
-| --- | --- |
-| Windows | Scoop `clangd` |
-| Ubuntu/Debian | apt `clangd` |
-| Fedora | dnf `clang-tools-extra` |
-| Bluefin | Homebrew `llvm` |
-| macOS | Homebrew `llvm`; `.commonprofile` appends its keg-only `bin` directory to `PATH` |
-
-CoC also needs Node.js, which is already provisioned on every supported host.
-clangd provides completion, diagnostics, navigation, and formatting; a separate
-`clang-format` executable is not required for LSP formatting. Building code still
-requires the project's compiler and SDK/headers. For project-aware analysis,
-generate `compile_commands.json` (for example, configure CMake with
-`-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` using Ninja or Makefiles). For a small project,
-`compile_flags.txt` can supply include paths and compiler flags instead.
-
-### Hookscripts
-
-POSIX-like platforms will automatically install required dependencies thanks to the hookscripts in `.chezmoiscripts/00-macos/` and `.chezmoiscripts/00-linux/` (plus `01-fedora/` and `02-bluefin/` layers on Linux).
-
-Similarly NT platforms use the hookscripts in `.chezmoiscripts/00-nt/` for dependency installation.
-
-Every POSIX hookscript opens with one of two shared preambles from `.chezmoitemplates/`:
-
-- `posix-preamble.sh` -- platform guards, lazy `can_sudo`/`require_sudo`, `load_brew` (loads brew if present, sets `HAS_BREW`), and `MANAGER`. For scripts that merely prefer brew and have a fallback.
-- `posix-preamble-brew.sh` -- the above plus `require_brew`, the brew counterpart of `require_sudo`: fails fast if brew is missing and guarantees `$HOMEBREW_PREFIX` is set. For scripts whose whole job is brew work (package lists, casks, taps, anything that reads `$HOMEBREW_PREFIX`).
-
-On macOS, `003-macos-prereqs` runs first and installs the Apple-shipped prerequisites on every Mac: the Xcode Command Line Tools through `softwareupdate`, non-interactively (Apple's own `xcode-select --install` prompt only as the fallback), and Rosetta 2 on Apple Silicon. So both are in place before brew, MacPorts or any source build. `015-brew-taps` then adds the third-party brew taps; everything installed from them is written as `user/repo/name`. Brew itself is installed by `005-homebrew` on both platforms, from `.chezmoitemplates/homebrew-install.sh`, before anything that needs it. It is a `run_after_`, so a host whose brew was removed gets it back on the next apply.
-
-The brew prefix is decided once, at `chezmoi init`, as `.homebrewPrefix` (`/opt/homebrew` on Apple Silicon, `/usr/local` on Intel, `/home/linuxbrew/.linuxbrew` on Linux) and rendered into every static file that has to name a brew binary: tmux, gpg-agent, the Touch ID PAM lines, the Chrome gpgme manifest, `.bootstrap.sh`. Hookscripts get the same answer at runtime from `brew shellenv`. **After pulling a version of this repo that introduced `.homebrewPrefix` or `.macos.series`, run `chezmoi init` once** -- `.chezmoi.toml.tmpl` is only re-rendered by init, and templates reference both keys.
-
-### Homebrew on older macOS
-
-Mainline Homebrew only ships bottles (prebuilt binaries) for the macOS releases it calls Tier 1 -- as of September 2026 that is Sequoia 15, Tahoe 26 and Golden Gate 27, on Apple Silicon only. Everything older, and every Intel Mac, is Tier 3: brew still runs, but each `brew install` is a from-source build with no guarantee it succeeds. Intel is scheduled to stop running brew at all in or after September 2027. The bottles built while a release *was* Tier 1 are still on ghcr.io, though, so an old Mac -- the kind kept around for work newer macOS can't do, like USB sniffing -- is served by brew from that era instead:
-
-- `.chezmoidata/brew-tiers.toml` maps each `(macOS series, arch)` tuple that is no longer Tier 1 (the series is the release as Homebrew names it: `11` and up, or `10.14`/`10.15`) to the last `Homebrew/brew` release tag whose docs still listed it as fully supported, and an era. Each era names one commit per tap, `core_commit` and `cask_commit`: the newest commit at which every formula in the lists still has that host's bottle, which can be weeks or months before the docs demotion, because bottles stop being built for an OS formula by formula. Each entry cites the upstream commit it came from. A tuple absent from the table is Tier 1 and gets mainline brew.
-- `005-homebrew` does not use the upstream installer on such a host: no version of it pins a ref, every version ends with `brew update`, current ones refuse Intel and old releases, and older ones clone homebrew-core from a branch that no longer exists. Instead it reproduces the small, stable part of what the installer does -- the prefix directories with their `user:admin` ownership, a git checkout of Homebrew/brew at the era tag, the Intel `bin/brew` symlink -- then taps `homebrew/core` and `homebrew/cask` in full through that brew (the JSON API only describes current bottles, so the taps have to be real git checkouts) and checks each out at its era commit. Every apply re-verifies the pin, repo first with git alone, then the taps.
-- `posix-preamble.sh` and `.commonprofile` export `HOMEBREW_NO_AUTO_UPDATE=1` and `HOMEBREW_NO_INSTALL_FROM_API=1` on such a host, so neither a hookscript nor an interactive shell can move brew off the pin or make it read the API.
-- `brew_trust` in the preamble wraps `brew trust`, which a 2023-era brew doesn't have; the tap and formula lists work unchanged on both.
-
-The package lists are written against current homebrew-core and homebrew-cask, and adapt themselves to the era inline: each list resolves the era name at the top, and an entry that had a different name at that checkout (`ruby@4` was `ruby`, `handbrake-app` was `handbrake`) or that did not exist there yet (retry and sshpass before 2024, fernflower and git-xet before 2026, a dozen casks such as claude and codex) or whose cask declares a floor or arch the host fails (chatgpt and forklift on Ventura, kde-connect anywhere but Apple Silicon Sonoma) is a template conditional next to the current entry, so the list still reads as one list and nothing is fetched from anywhere but the pinned taps. Everything left is installed from the era's tap commits with bottles. The evidence behind each conditional is the per-era tap audit of 2026-09-28, summarised in the data file's comments. (The deleted homebrew-cask-versions tap was audited through its surviving fork network; GitHub keeps a deleted repository's forks, and a commit SHA identifies the content regardless of which fork serves it.)
-
-The floor is Mojave (10.14), and it is set by bottle hosting, not by brew. Homebrew moved bottles from Bintray to ghcr.io in April 2021 and copied only the bottle live in each formula at that moment; Mojave and Catalina were demoted after that, so every formula in these lists at their era commits still has a bottle on ghcr.io today (checked blob by blob). High Sierra and older were demoted before it: their era brews only know the dead Bintray URL scheme, and of 30 sampled formulae at their era commits, 6, 1 and 1 still have a bottle on ghcr.io. A newer brew that still runs there has nothing left to fetch. Mojave in particular loses more of the lists than the later eras, since much of what is in them did not exist in 2021, and it has no `mas` bottle at all, so the App Store script skips itself there. The same era conditionals reach the tooling scripts: `uv` comes from MacPorts before 2024, `hatch` and two language servers are absent on Mojave (the language servers go through pnpm instead), and `typescript-language-server` likewise on Catalina. Expect `uv`'s managed Python downloads to be the weakest link on Mojave; python-build-standalone's macOS floor is not verified here.
-
-`brew update` is the one command that undoes all of this: it moves brew and both taps to upstream HEAD, and on 10.x leaves a brew that will not start. So on an era-pinned host it never runs. The env above stops the implicit one, nothing in this repo runs the explicit one (the upstream installer, which does, is not used on such a host), and `.commonprofile` wraps `brew` so that `brew update` prints a warning and does nothing; `brew! update` is the real binary for when you mean it. If it does get run, the next `chezmoi apply` re-pins: `005-homebrew` resets the brew repo with git alone, by path, before the first `brew` invocation, then the taps.
-
-Other caveats: pre-Sonoma hosts have no `/etc/pam.d/sudo_local`, so `010-pam-sudo-touchid` edits `/etc/pam.d/sudo` directly there and has to be re-run after an OS update (`chezmoi state delete-bucket --bucket=scriptState && chezmoi apply`). When upstream demotes another tuple (next expected: Sequoia 15 on Apple Silicon, September 2027 or later), add it to the table with a new era block; the comments in `brew-tiers.toml` say what to record.
-
 ### *nix Install
 
 ```bash
@@ -112,6 +58,10 @@ apt/pkg/dnf/brew install chezmoi
 # Alternative: install to .local/bin
 sh -c "$(curl -fsLS get.chezmoi.io/lb)"
 export PATH="$PATH:$HOME/.local/bin"
+# run this instead on macOS 10.15 Catalina: current chezmoi builds need macOS 11
+# sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.52.0
+# run this instead on macOS 10.14 Mojave: builds after mid-2023 need 10.15
+# sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.37.0
 
 # Initalize & run first-time dependency install
 CHEZMOI_USE_DUMMY=1 chezmoi init regulad
@@ -119,6 +69,7 @@ CHEZMOI_USE_DUMMY=1 chezmoi init regulad
 chezmoi apply --exclude encrypted
 
 # Configure bw for templating
+# skip the rest on macOS 10.14 Mojave: bw needs macOS 10.15, so that host stays on dummy secrets
 bw config server https://vw.regulad.xyz  # this is my server, obviously. replace w/ yours
 bw login --apikey  # stdio needed
 
@@ -127,13 +78,6 @@ chezmoi init
 chezmoi apply ~/key.txt  # bootstraps age
 chezmoi apply
 ```
-
-#### Bootstrapping a Mojave or Catalina host
-
-Two of the bootstrap tools are Go and Node programs whose current builds no longer run on 10.x, so the first two lines of the *nix install differ there:
-
-- **chezmoi**: Go 1.23 (August 2024) requires macOS 11, and Go 1.21 (August 2023) requires 10.15. Install a release built before the relevant cutoff with the tag option of the install script: `sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.52.0` on Catalina, `-t v2.37.0` on Mojave (the last releases before those Go versions shipped; the exact toolchain each binary was built with is not recorded in the release, so treat these as the first thing to confirm on the machine). Once brew is up, the era's pinned `chezmoi` formula is the durable replacement.
-- **bw** (Bitwarden CLI, Node): Node 18 and newer require 10.15, so Mojave cannot run a current `bw` and has to stay on `CHEZMOI_USE_DUMMY=1`, or have the secrets applied from another machine. Catalina is fine.
 
 ### NT Install
 
@@ -164,70 +108,19 @@ The `autorun.cmd` will automatically set up Clink and doskey macros (`pipx`, `vi
 
 Make sure you add any extensions you'd like to download to `vscode-extensions.txt`. The newest version of every extension listed in the file is installed on each apply, and any installed extension not listed in the file is uninstalled.
 
-### Theos
+### Packages
 
-`.chezmoiscripts/00-{linux,macos}/125-theos.sh` install [Theos](https://theos.dev) into `~/theos`, from the [roothide](https://github.com/roothide/theos) fork rather than base Theos. Each is a stub around that fork's `bin/install-theos`, which is the entire install story and the only supported entry point — it owns the dependency lists, the fakeroot alternative, the toolchain tarball URLs and the SDK fetch, all of which move independently of the docs. `.commonprofile` exports `$THEOS` and puts `$THEOS/bin` on `PATH`.
+Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`. How the hookscripts fit together is in [docs/hookscripts.md](docs/hookscripts.md).
 
-Three things worth knowing:
+## Docs
 
-- **Atomic hosts don't get it.** `install-theos` opens with a privileged system-package transaction, chosen by what's on `PATH` rather than by distro ID — and since Universal Blue images ship `dnf`, it takes the redhat branch and tries to install a dozen build dependencies into a read-only `/usr`. That exits 3 and fails the apply, so `.chezmoiignore` masks the Linux hook whenever `/run/ostree-booted` exists. There's no brew stand-in the way `022-brew-packages.sh` stands in for `020-dnf-packages.sh`; the installer has no notion of a prefix other than the system one. `~/theos` is still writable, so a host that wants the toolchain can layer the dependencies with `rpm-ostree` and run the hook by hand, or install into a toolbox/distrobox — `.commonprofile` only adds `$THEOS/bin` to `PATH` when the directory exists, so either works with no further changes. The published container images are built `FROM` ordinary fedora/ubuntu and are not ostree-booted, so they keep Theos.
-- **macOS needs the full Xcode**, not the Command Line Tools — Theos builds against the iOS/tvOS platform toolchains that only Xcode.app ships, and `install-theos` exits 3 without it. Nothing here can install it: there is no cask, and `mas` cannot drive it.
-- **The Linux toolchain is the Swift one.** The installer asks interactively; the hook can't answer, because an unattended apply has no terminal and the `read` would kill the install, so it sets `$CI` to skip the prompt and `sed`s the hardcoded default from no to yes. That gets the larger kabiroberai `swift-toolchain-linux` build rather than the smaller L1ghtmann `iOSToolchain`. For the non-Swift one, remove `$THEOS/toolchain/linux/iphone` and re-run the hook without that `sed`.
+Longer write-ups live in `docs/` (not deployed to `$HOME`):
 
-### MacPorts
-
-`.chezmoiscripts/00-macos/016-macports` installs the MacPorts CLI (`port`) from the official per-release installer package, latest version, into `/opt/local`. Brew remains the package manager; MacPorts is the fallback for Intel Macs once brew stops running on them (scheduled for September 2027), and on the era-pinned hosts `017-macports-packages` installs the few ports that stand in for formulae the era's homebrew-core checkout does not have and that have a prebuilt MacPorts archive for that Darwin version: retry and sshpass on Big Sur and older, and fastfetch, pam-reattach and wasm-tools on Mojave. On a Tier 1 host that list is empty. The same inline era conditionals in the brew lists say which entries MacPorts covers. `.commonprofile` puts `/opt/local/bin` and `/opt/local/sbin` ahead of brew's directories on `PATH`, so an installed port wins a collision. The installer's own edits to `~/.zprofile` and `~/.bash_profile` are undone by the next apply, since both files are managed here. MacPorts updates itself with `sudo port selfupdate`.
-
-### Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever
-
-Remember to define the package in the correct hookscript under `.chezmoiscripts/00-posix/` or `.chezmoiscripts/00-nt/`
-
-### SSH server on Windows: user-session `sshd`
-
-`.chezmoiscripts/00-nt/035-sshd-user-session` disables the stock `sshd` service and runs `sshd.exe` inside the interactive desktop session instead, under a Task Scheduler at-logon task. Knobs (port, interface, task name) are in `.chezmoidata/sshd.toml`; the config is `~/.config/sshd/sshd_config` and the launcher is `~/.local/bin/sshd-user-session.ps1`.
-
-The point is that **mapped network drive letters and virtual filesystem providers are visible over `scp`**. The stock service can't do that, for structural reasons: it runs as SYSTEM in session 0 and mints a fresh token per connection, and drive mappings hang off the logon session, so a new LUID means an empty drive-letter view. Win32-OpenSSH skips the token minting entirely when sshd isn't SYSTEM and the authenticating user's SID matches the process SID — it hands the child its own process token instead — so an sshd launched from the desktop session passes that session's mappings straight through. Upstream-supported, not a hack.
-
-NSSM can't substitute for the scheduled task, despite supervising other things here. The SCM starts every service in session 0 whatever the run-as account, so an NSSM service running as the user would get a `LOGON32_LOGON_SERVICE` logon — new LUID, session 0, still no drive letters. The task is the LaunchAgent to NSSM's LaunchDaemon.
-
-Three things worth knowing:
-
-- **The task must run unelevated.** `-RunLevel Limited` and `-LogonType Interactive` are both load-bearing, and both fail *silently* — an elevated sshd gets the other half of the split token, which has its own separate drive-letter view, so everything looks fine and the mapped drives are still missing. The script asserts both back after registering. If something else on the machine ever forces elevation, `EnableLinkedConnections=1` under `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System` reconciles the two views.
-- **It binds loopback plus Tailscale only**, never the LAN. OpenSSH has no interface-name form of `ListenAddress` on any platform, so the launcher resolves the `Tailscale` adapter to addresses at start time and passes them as `-o ListenAddress=`. Bare addresses, never `-o Port=` — `Port` *accumulates* rather than overriding, so passing it on the command line binds every address on both ports. Loopback stays static in the config file so the daemon still comes up when Tailscale hasn't.
-- **A Windows feature update can undo it**, reinstalling the OpenSSH.Server capability and re-enabling the service. The script re-disables it, but only when it runs. If `ssh` starts landing in session 0, `chezmoi apply --force`.
-- **Redirection Guard is turned off for `sshd.exe`.** The OpenSSH installer sets `REDIRECTION_TRUST_ALWAYS_ON` in that image's IFEO `MitigationOptions`; mitigations are inherited, so every process sshd spawns refuses to cross a junction created by a non-elevated process — `The path cannot be traversed because it contains an untrusted mount point`. That breaks all ~63 `scoop\apps\*\current` junctions, so every scoop shim dies with `Shim: Could not create process`. The script flips bits 20-21 of policy QWORD 3 (byte 18: `0x10` → `0x20`) to `ALWAYS_OFF`. This is stock Win32-OpenSSH behaviour — the SYSTEM service does the same thing, so it's neither caused nor fixed by running in the desktop session. It is a real mitigation being given up: it exists to stop a low-privileged user planting a junction that a higher-privileged process then follows. Scoped to `sshd.exe` alone, on a single-user box where the SSH account owns the junctions, that exposure is small but not zero.
-
-Host keys are generated per machine into `~/.config/sshd` and deliberately not committed — sharing a *host* key across machines defeats the client's ability to tell them apart. Auth is public-key only, against the `~/.ssh/authorized_keys` this repo already manages; the stock config's `Match Group administrators` block is deliberately dropped, since it redirects key lookup to `__PROGRAMDATA__/ssh/administrators_authorized_keys` and would defeat that.
-
-Debugging: `~/.config/sshd/sshd.log` is truncated per start, or run `sshd.exe -d -f ~/.config/sshd/sshd_config` in the foreground.
-
-### WSL: `wsl-deploy` and `wsl-enter`
-
-Two Windows-side helpers in `~/.local/bin`, exposed to `cmd` by doskey macros in `.doskey.mac`. They invoke by full path on purpose: `~/.local/bin` is only put on `PATH` by `.commonprofile`, which is POSIX shells only.
-
-`wsl-deploy [fedora|ubuntu]` installs the newest built image as `regulad-<flavor>`:
-
-```console
-wsl-deploy                    # newest ubuntu image for this architecture
-wsl-deploy fedora
-wsl-deploy.ps1 -SetDefault    # and make it what a bare `wsl` starts
-```
-
-It finds the newest unexpired `wsl-<flavor>-<arch>` artifact, downloads it with a progress readout, and imports it to `%LOCALAPPDATA%\wsl\regulad-<flavor>`. Notable behaviour:
-
-- **It is destructive.** If `regulad-<flavor>` already exists, continuing *unregisters* it — the VHD and everything in it is gone, with no undo. It prompts first; `-Force` skips the prompt.
-- Each import records its provenance in `deployed-from.json` next to the VHD before opening the interactive shell, so later runs can tell you whether the installed instance is already the newest build or is behind one. Nothing in WSL tracks this on its own. The file lives in the install directory precisely so `wsl --unregister` takes it with the instance rather than leaving a stale claim behind.
-- Afterwards it offers, y/N, to make the instance the default distribution — worth taking, since the default is otherwise whatever was installed first, frequently `docker-desktop`.
-- Images are published as Actions artifacts rather than release assets because they are ~5 GB against a 2 GB release-asset cap. Artifacts expire after 14 days, so if none is found, push to `master` or re-run the Docker workflow.
-- Unless `-NoLaunch` is passed, the import opens a shell, which is what triggers `/etc/oobe.sh`. That reads the Bitwarden API credentials from the Windows host's own `%USERPROFILE%\.secrets\.bwrc` over DrvFs and runs the privileged apply; it will ask for the vault master password. To re-run it later: `wsl -d regulad-<flavor> -u root -- /etc/oobe.sh`.
-
-`wsl-enter [fedora|ubuntu]` opens a shell in an already-deployed instance, in the directory you called it from:
-
-```console
-D:\repositories\foo> wsl-enter        # lands in /mnt/d/repositories/foo
-```
-
-It installs nothing and destroys nothing. Where the current directory is something WSL cannot see — a UNC path, a mapped network drive, or a non-filesystem PowerShell provider like `HKLM:` — it starts at `$HOME` and says so, rather than failing the launch and leaving you with no shell. `-NoCd` always starts at `$HOME`.
+- [Hookscripts](docs/hookscripts.md) -- the preambles, script order, the brew prefix, C/C++ language support.
+- [Homebrew on older macOS](docs/homebrew-older-macos.md) -- era-pinned brew for releases Homebrew no longer bottles for, the Mojave floor, `brew update`, MacPorts, bootstrapping 10.x.
+- [Theos](docs/theos.md)
+- [SSH server on Windows](docs/windows-sshd.md) -- the user-session `sshd`.
+- [WSL](docs/wsl.md) -- `wsl-deploy` and `wsl-enter`.
 
 ## TODOs
 
