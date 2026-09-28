@@ -58,18 +58,21 @@ apt/pkg/dnf/brew install chezmoi
 # Alternative: install to .local/bin
 sh -c "$(curl -fsLS get.chezmoi.io/lb)"
 export PATH="$PATH:$HOME/.local/bin"
-# run this instead on macOS 10.15 Catalina: current chezmoi builds need macOS 11
-# sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.52.0
-# run this instead on macOS 10.14 Mojave: builds after mid-2023 need 10.15
-# sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.37.0
+# run this instead on a macOS release older than 13 Ventura: chezmoi is a Go
+# program, and each Go release drops old macOS (the symptom is dyld dying on a
+# missing Security.framework symbol). Last chezmoi built before each cutoff:
+# sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.72.0   # macOS 12 Monterey
+# sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.64.0   # macOS 11 Big Sur
+# sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.52.0   # macOS 10.15 Catalina
+# sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.37.0   # macOS 10.14 Mojave
 
 # Initalize & run first-time dependency install
 CHEZMOI_USE_DUMMY=1 chezmoi init regulad
 # CHEZMOI_USE_DUMMY instructs chezmoi to not attempt to apply any secrets.
 chezmoi apply --exclude encrypted
 
-# Configure bw for templating
-# skip the rest on macOS 10.14 Mojave: bw needs macOS 10.15, so that host stays on dummy secrets
+# Configure bw for templating (bw is brew's bitwarden-cli, installed by the apply above;
+# on an era-pinned macOS it is that era's version)
 bw config server https://vw.regulad.xyz  # this is my server, obviously. replace w/ yours
 bw login --apikey  # stdio needed
 

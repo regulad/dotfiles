@@ -23,12 +23,20 @@ The floor is Mojave (10.14), and it is set by bottle hosting, not by brew. Homeb
 
 Pre-Sonoma hosts have no `/etc/pam.d/sudo_local`, so `010-pam-sudo-touchid` edits `/etc/pam.d/sudo` directly there and has to be re-run after an OS update (`chezmoi state delete-bucket --bucket=scriptState && chezmoi apply`). When upstream demotes another tuple (next expected: Sequoia 15 on Apple Silicon, September 2027 or later), add it to the table with a new era block; the comments in `brew-tiers.toml` say what to record.
 
-## Bootstrapping a Mojave or Catalina host
+## Bootstrapping a host older than Ventura
 
-Two of the bootstrap tools are Go and Node programs whose current builds no longer run on 10.x, so the first two lines of the *nix install differ there:
+chezmoi is a Go program, and every August a Go release drops the oldest macOS it supports. A chezmoi built with a too-new Go does not start on the older release: the dynamic linker dies on a Security.framework symbol the OS does not have (on Big Sur, `_SecTrustCopyCertificateChain`, which is macOS 12 API). The `get.chezmoi.io` script installs the newest release by default, so on these hosts pass the tag of the last release built before the relevant Go cutoff:
 
-- **chezmoi**: Go 1.23 (August 2024) requires macOS 11, and Go 1.21 (August 2023) requires 10.15. Install a release built before the relevant cutoff with the tag option of the install script: `sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.52.0` on Catalina, `-t v2.37.0` on Mojave (the last releases before those Go versions shipped; the exact toolchain each binary was built with is not recorded in the release, so treat these as the first thing to confirm on the machine). Once brew is up, the era's pinned `chezmoi` formula is the durable replacement.
-- **bw** (Bitwarden CLI, Node): Node 18 and newer require 10.15, so Mojave cannot run a current `bw` and has to stay on `CHEZMOI_USE_DUMMY=1`, or have the secrets applied from another machine. Catalina is fine.
+| macOS | Go cutoff | chezmoi tag |
+| --- | --- | --- |
+| 12 Monterey | Go 1.27 (August 2026) requires 13 | `-t v2.72.0` |
+| 11 Big Sur | Go 1.25 (August 2025) requires 12 | `-t v2.64.0` |
+| 10.15 Catalina | Go 1.23 (August 2024) requires 11 | `-t v2.52.0` |
+| 10.14 Mojave | Go 1.21 (August 2023) requires 10.15 | `-t v2.37.0` |
+
+These are the last releases before each Go version shipped. The toolchain a given binary was built with is not recorded in the release, so if one still fails to start, step back one more release. Once brew is up, the era's pinned `chezmoi` formula is the durable replacement, since its bottle was built for that OS.
+
+`bw` needs no special handling: it is brew's `bitwarden-cli`, installed by the first apply from the era's core checkout, so it is whatever version that era had (a 2021 build on Mojave). Whether a very old client still talks to the current server is not verified here.
 
 ## MacPorts
 
