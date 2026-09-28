@@ -21,6 +21,8 @@ The floor is Mojave (10.14), and it is set by bottle hosting, not by brew. Homeb
 
 ## Other caveats
 
+Apple's git on Big Sur and older (2.30) predates SSH commit signing, and `gpg.format = ssh` is a value it rejects fatally for every git command, chezmoi's included. `.gitconfig` therefore checks the version of the git first on PATH when it renders: 2.34 and newer get SSH signing as usual; older gets GPG signing through gpg-agent with the managed key, but only once that key's secret half is in the keyring (`145-gpg-keys`, now on macOS too), and signing off otherwise. It re-renders every apply, so once brew's git shadows Apple's the SSH branch returns on its own. Anything that still calls `/usr/bin/git` directly on such a host is on its own.
+
 Pre-Sonoma hosts have no `/etc/pam.d/sudo_local`, so `010-pam-sudo-touchid` edits `/etc/pam.d/sudo` directly there and has to be re-run after an OS update (`chezmoi state delete-bucket --bucket=scriptState && chezmoi apply`). When upstream demotes another tuple (next expected: Sequoia 15 on Apple Silicon, September 2027 or later), add it to the table with a new era block; the comments in `brew-tiers.toml` say what to record.
 
 ## Bootstrapping a host older than Ventura
