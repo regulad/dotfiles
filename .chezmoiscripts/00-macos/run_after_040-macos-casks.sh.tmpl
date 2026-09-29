@@ -97,7 +97,9 @@ BREW_CASKS_MACOS=(
 	"vlc"
 	"calibre"
 	"hex-fiend"
-	"google-drive"  # proprietary trialware
+{{- if not $pre2025 }}
+	"google-drive"  # proprietary trialware # needs macOS 13.0; the pinned casks lack a depends_on macos line, so this gate stands in for it
+{{- end }}
 	"visual-studio-code"  # partially proprietary
 {{- if not $pre2024 }}
 	"autodesk-fusion"  # proprietary trialware # i have a license # cask added 2024
