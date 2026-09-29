@@ -125,8 +125,9 @@ Library
 # and pnpm global packages are specialised tooling, not part of the general
 # environment an old Mac is brought up for, and each entry carries a
 # Python/node version story of its own. 070-js-tooling and 100-python-tooling
-# skip those parts themselves; vencord is nothing but a pnpm build, so it
-# goes here.
+# skip those parts themselves, as do 110-rust-tooling (cargo) and
+# 120-go-tooling (go) for their from-source installs; vencord is nothing but
+# a pnpm build, so it goes here.
 .chezmoiscripts/00-macos/080-vencord.sh
 {{-   end }}
 {{-   if lt .macos.major 14 }}
