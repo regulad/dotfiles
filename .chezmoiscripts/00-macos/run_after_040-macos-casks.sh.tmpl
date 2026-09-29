@@ -80,18 +80,20 @@ BREW_CASKS_MACOS=(
 	"claude"  # cask added 2025
 {{- end }}
 	"element"
-{{- if ne $brewEra "ventura" }}
-	"forklift"  # the 2025 cask requires Sonoma; the 2024 one did not, and the current one runs on Sonoma+
+{{- if not (has $brewEra (list "bigsur" "ventura")) }}
+	"forklift"  # the 2025 cask requires Sonoma; the 2024 one did not, and the current one runs on Sonoma+. The 2023 pin checksums an unversioned ForkLift4.zip that the vendor has since replaced (sha256 mismatch, checksum audit 2026-09-28)
 {{- end }}
-{{- if not $pre2023 }}
-	"prismlauncher"  # cask added late 2022
+{{- if and (not $pre2023) (ne $brewEra "bigsur") }}
+	"prismlauncher"  # cask added late 2022. The 7.2 release asset the 2023 pin checksums was re-uploaded upstream (sha256 mismatch, checksum audit 2026-09-28)
 {{- end }}
 	"spotify"
 	"steam"
 	"vagrant"
 	"raspberry-pi-imager"
 	"vlc"
-	"calibre"
+{{- if ne $brewEra "bigsur" }}
+	"calibre"  # the 6.27.0 dmg the 2023 pin checksums was re-uploaded upstream (sha256 mismatch, checksum audit 2026-09-28)
+{{- end }}
 	"hex-fiend"
 	"google-drive"  # proprietary trialware
 	"visual-studio-code"  # partially proprietary
