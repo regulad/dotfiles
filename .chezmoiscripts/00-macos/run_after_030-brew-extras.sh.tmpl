@@ -100,6 +100,9 @@ if [ "$HAS_BREW" = "true" ]; then
 	brew_trust --formula brew-gem/gems/gem-neovim
 	brew gem install neovim
 
+	# `brew services` is built into brew from 4.6; the older era brews get
+	# the homebrew/services tap pinned by 005-homebrew (services_commit in
+	# brew-tiers.toml), so this works on every era.
 	if ! [ "$CONTAINERIZED" -eq 1 ]; then
 		echo "debug: installing brew services" >&2
 		brew services start languagetool

@@ -248,6 +248,7 @@ BREW_ERA_NAME="{{ $brewPin.era }}"
 BREW_PIN_TAG="{{ $brewPin.brew_tag }}"
 BREW_ERA_CORE_COMMIT="{{ $era.core_commit }}"
 BREW_ERA_CASK_COMMIT="{{ $era.cask_commit }}"
+BREW_ERA_SERVICES_COMMIT="{{ index $era "services_commit" | default "" }}"
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALL_FROM_API=1
 {{- else }}
@@ -256,6 +257,7 @@ BREW_ERA_NAME=
 BREW_PIN_TAG=
 BREW_ERA_CORE_COMMIT=
 BREW_ERA_CASK_COMMIT=
+BREW_ERA_SERVICES_COMMIT=
 {{- end }}
 
 # The package lists adapt themselves to the era: each of 020-brew-packages,

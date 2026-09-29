@@ -120,7 +120,13 @@ era = "current"
 # =+= Eras: one commit per tap =+=
 #
 # core_commit / cask_commit -- the commit each tap is checked out at, global
-# to the tap. Chosen as the newest commit on main at which EVERY formula in
+# to the tap.
+# services_commit -- only for eras whose brew predates 4.6, where `brew
+# services` was still the external homebrew/services tap. That tap has been
+# emptied down to a README since the command moved into brew, so an old brew
+# auto-tapping it gets nothing; instead it is laid down like the other taps,
+# at its last commit before the era's demotion date, i.e. the code written
+# for that brew. Chosen as the newest commit on main at which EVERY formula in
 # the lists still has this host's bottle (and no cask in the lists gained an
 # arch or macOS floor the host fails): the docs demotion date is only the
 # upper bound, because bottles stop being built for an OS formula by formula
@@ -156,6 +162,7 @@ era = "current"
 [brewTiers.eras.mojave]
 core_commit = "8a1d5a3435c77bd08fddf6e7f8b6625ecc2171d2"  # 2021-10-19
 cask_commit = "170ef24a73c3d10cefd37decc1eb22b6f83826da"  # 2021-10-19
+services_commit = "c3f98cb20c1d7d9141ce51dfca72c3b989c76ecb"  # 2021-10-13
 
 # Catalina (10.15), Intel only. Taps at their last commit before the docs
 # demotion (2022-10-19). Every formula in the lists that existed then has a
@@ -164,6 +171,7 @@ cask_commit = "170ef24a73c3d10cefd37decc1eb22b6f83826da"  # 2021-10-19
 [brewTiers.eras.catalina]
 core_commit = "705f76b55ef3dda7ab67ff5c40af9dea317f613c"  # 2022-10-19
 cask_commit = "9715f867afe21df8b715f29b7900f81e16078dad"  # 2022-10-19
+services_commit = "c5ea0113ed94d804ef8da76d1e1b1fe5d40b8e01"  # 2022-10-18
 
 # Big Sur (11), both arches. Taps at their last commit before the docs
 # demotion (2023-09-24); nothing in the lists had lost a Big Sur bottle by
@@ -171,6 +179,7 @@ cask_commit = "9715f867afe21df8b715f29b7900f81e16078dad"  # 2022-10-19
 [brewTiers.eras.bigsur]
 core_commit = "4e225176c8fa32a751221c286e6049a798109ca2"  # 2023-09-24
 cask_commit = "4c4503acafb05fa9199b52e581cb6250912e9991"  # 2023-09-24
+services_commit = "0fbeedc38194ed608b9925a524a70de216fa53a9"  # 2023-09-15
 
 # Monterey (12), both arches. Docs demotion 2024-09-11, but podman gained
 # `depends_on macos: :ventura` (and lost its Monterey bottle) right after
@@ -181,6 +190,7 @@ cask_commit = "4c4503acafb05fa9199b52e581cb6250912e9991"  # 2023-09-24
 [brewTiers.eras.monterey]
 core_commit = "9b01491dae13a3efcc4d226d0cbc5445432dd50a"  # 2024-03-20
 cask_commit = "f33cfb48e64e03234e9e4ac5da680c8e19046bf2"  # 2024-09-11
+services_commit = "b51a12730378ab4fcc8012bec8eb07d94f98e228"  # 2024-09-09, matches brew 4.3.20's date, not the earlier core pin
 
 # Ventura (13), both arches. Taps at their last commit before the docs
 # demotion (2025-09-12); nothing in the lists had lost a Ventura bottle by

@@ -97,6 +97,12 @@ pin_brew_taps() {
 	# down here rather than by `brew tap`, which would clone the full history.
 	pin_tap homebrew/core "$BREW_ERA_CORE_COMMIT"
 	pin_tap homebrew/cask "$BREW_ERA_CASK_COMMIT"
+	# Eras whose brew predates 4.6 also get homebrew/services, the tap that
+	# `brew services` lived in before it moved into brew: its upstream HEAD is
+	# now only a README, so auto-tapping it would yield no command.
+	if [ -n "$BREW_ERA_SERVICES_COMMIT" ]; then
+		pin_tap homebrew/services "$BREW_ERA_SERVICES_COMMIT"
+	fi
 }
 
 pin_tap() {
