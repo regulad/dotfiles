@@ -55,7 +55,11 @@ BREW_PACKAGES=(
 
 	# =+= BUILD TOOLS
 	ninja
-	pkgconf
+{{- if $pre2025 }}
+	pkg-config  # freedesktop pkg-config; at these pins pkgconf is a separate, conflicting formula that installs no pkg-config binary
+{{- else }}
+	pkgconf  # pkg-config is an alias of it since 2025 and it links bin/pkg-config
+{{- end }}
 	cmake
 
 	# =+= DEPENDENCIES
@@ -164,6 +168,16 @@ if brew list --formula inetutils &>/dev/null; then
 	echo "debug: replacing inetutils with telnet (conflicting formulae)" >&2
 	brew uninstall -q inetutils
 fi
+{{- if $pre2025 }}
+
+# Migration for an era host that got pkgconf before the list switched to
+# pkg-config: at these pins the two are separate formulae that conflict over
+# pkg.m4, so pkgconf has to go first or the install below fails.
+if brew list --formula pkgconf &>/dev/null; then
+	echo "debug: replacing pkgconf with pkg-config (conflicting formulae at this era)" >&2
+	brew uninstall -q --ignore-dependencies pkgconf
+fi
+{{- end }}
 
 {{- if $pre2025 }}
 # Apple's trust store on this release predates roots that today's download
