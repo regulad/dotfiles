@@ -19,7 +19,7 @@ MACPORTS_PACKAGES=(
 {{- if $pre2024 }}
 	retry    # not in homebrew-core until 2024
 	sshpass  # not in homebrew-core until 2024
-	uv       # not in homebrew-core until 2024; 100-python-tooling relies on this one
+	uv       # not in homebrew-core until 2024; installed for the shell, 100-python-tooling installs nothing through it on a pinned era
 {{- end }}
 {{- if $pre2022 }}
 	fastfetch     # not in homebrew-core until 2023

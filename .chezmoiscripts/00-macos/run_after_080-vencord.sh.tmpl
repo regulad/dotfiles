@@ -1,4 +1,15 @@
 {{ template "posix-preamble.sh" . }}
+{{- /* Era-pinned host? This is a pnpm build and nothing else, and the pnpm
+       tooling is skipped there entirely. .chezmoiignore.tmpl masks the script
+       on such hosts; this guard is for a by-hand run. */ -}}
+{{- $brewPin := dict }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{- end }}
+{{- if $brewPin }}
+echo "note: era-pinned brew ({{ $brewPin.era }}); vencord (a pnpm build) is skipped on this host" >&2
+exit 0
+{{- end }}
 CHEZMOI_USE_DUMMY={{ if .useDummySecrets }}1{{ else }}0{{ end }}
 
 VENCORD_DIR="$HOME/.vencord"

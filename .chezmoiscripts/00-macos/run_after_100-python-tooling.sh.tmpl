@@ -1,13 +1,18 @@
 {{ template "posix-preamble.sh" . }}
-{{- /* Era-pinned host (see .chezmoidata/brew-tiers.toml)? uv only reached
-       homebrew-core in 2024 and hatch in 2022; on the eras before that uv
-       comes from MacPorts (017-macports-packages, prebuilt down to Mojave)
-       and hatch is left out. $brewEra is "" on a Tier 1 host. */ -}}
+{{- /* Era-pinned host (see .chezmoidata/brew-tiers.toml)? uv itself is still
+       installed -- from brew, or from MacPorts (017-macports-packages) on the
+       eras before it reached homebrew-core in 2024 -- but nothing is
+       installed *through* it there: the `uv tool install` set below is
+       specialised tooling, not part of the general environment an old Mac
+       is brought up for, and every entry carries its own Python-version
+       story. hatch (homebrew-core 2022) is left out on Mojave. $brewEra is
+       "" on a Tier 1 host. */ -}}
 {{- $brewEra := "" }}
 {{- if eq .chezmoi.os "darwin" }}
 {{-   $p := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
 {{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
 {{- end }}
+{{- $pinned := ne $brewEra "" }}
 {{- $pre2022 := has $brewEra (list "mojave") }}
 {{- $pre2024 := has $brewEra (list "mojave" "catalina" "bigsur") }}
 # poetry and uv are both always brew-installed here: MANAGER is guaranteed to be
@@ -22,6 +27,9 @@ fi
 {{- else }}
 brew install -q uv
 {{- end }}
+{{- if $pinned }}
+echo "note: era-pinned brew ({{ $brewEra }}); uv is installed but no tools are installed through it on this host" >&2
+{{- else }}
 
 # NOTE: poetry is for legacy workflows.
 # NOTE: `uv tool install` replaces pipx
@@ -79,6 +87,7 @@ uv tool install --python cp313 -q \
 
 uv tool install --python cp314 -q pymobiledevice3
 uv tool install --python cp314 -q claude-swap
+{{- end }}
 
 # like in the JS ecosystem, some python tools are available as tools/bottles from brew
 brew install -q \
@@ -86,5 +95,7 @@ brew install -q \
 	hatch \
 {{- end }}
 	autopep8
+{{- if not $pinned }}
 
 uv tool upgrade --quiet --all
+{{- end }}
