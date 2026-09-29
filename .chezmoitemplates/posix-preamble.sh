@@ -237,8 +237,8 @@ CHEZMOI_HOMEBREW_PREFIX="{{ .homebrewPrefix }}"
 # which only describes current bottles. What follows them (brew-era-env.sh)
 # sends the bottle downloads through the Nexus proxy of ghcr.io and, on the
 # releases whose Apple trust store is too old for today's download hosts,
-# makes brew verify TLS against its own CA bundle. .commonprofile exports
-# the same set for interactive shells.
+# makes brew download through its own curl. .commonprofile exports the same
+# set for interactive shells.
 {{- $brewPin := dict }}
 {{- if eq .chezmoi.os "darwin" }}
 {{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}

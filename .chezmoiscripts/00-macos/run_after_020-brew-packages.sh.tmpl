@@ -182,12 +182,19 @@ fi
 {{- if $pre2025 }}
 # Apple's trust store on this release predates roots that today's download
 # hosts chain to (emSign, via InCommon, since July 2026: ftp.osuosl.org,
-# where get.videolan.org sends the vlc cask, for one). The preamble sets
-# HOMEBREW_FORCE_BREWED_CA_CERTIFICATES, which only takes effect once this
-# file exists, so it goes in first, on its own, before anything below or in
-# the cask list has to fetch from such a host. (curl below would pull it in
-# as a dependency anyway; this just makes the order explicit.)
-brew install -q --formula ca-certificates
+# where get.videolan.org sends the vlc cask, for one), and on 10.15/11 that
+# curl's LibreSSL 2.8.3 backend speaks TLS 1.2 at most, which the bottle
+# mirror refuses. The preamble therefore sets
+# HOMEBREW_FORCE_BREWED_CURL, which only takes effect once brew's own curl
+# exists, so it goes in first, on its own, before anything below or in the
+# cask list has to fetch from such a host. (curl is in the list below anyway;
+# this just makes the order explicit.) This one install is the only brew
+# download that may still run through the system curl, so it bypasses the
+# mirror: the TLS 1.2 ceiling that rules out the mirror does not apply to
+# ghcr.io, and its DigiCert chain is in Apple's store. No-op once brew's curl
+# exists, since then brew is already using it.
+env -u HOMEBREW_ARTIFACT_DOMAIN -u HOMEBREW_DOCKER_REGISTRY_BASIC_AUTH_TOKEN \
+	brew install -q --formula curl
 {{- end }}
 
 # --formula: several names here (cmake, mpv, syncthing) are also casks -- the
