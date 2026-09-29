@@ -5,7 +5,7 @@
 # retires them, and repeat installs come off the LAN-side cache.
 #
 # Rendered into HOMEBREW_ARTIFACT_DOMAIN and, joined by ":" and base64d,
-# HOMEBREW_DOCKER_REGISTRY_BASIC_AUTH_TOKEN by .chezmoitemplates/brew-mirror-env.sh,
+# HOMEBREW_DOCKER_REGISTRY_BASIC_AUTH_TOKEN by .chezmoitemplates/brew-era-env.sh,
 # which posix-preamble.sh and dot_commonprofile.tmpl include on every
 # era-pinned host except Mojave (its brew 3.2.17 cannot use a mirror safely).
 #

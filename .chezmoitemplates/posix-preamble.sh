@@ -234,10 +234,11 @@ CHEZMOI_HOMEBREW_PREFIX="{{ .homebrewPrefix }}"
 # brew down by hand and does the checkouts; every brew invocation afterwards
 # must carry these two variables or brew will `brew update` itself back to a
 # HEAD that doesn't know this OS, and/or read formulae from the JSON API,
-# which only describes current bottles. The bottle-mirror pair that follows
-# them (brew-mirror-env.sh) sends the bottle downloads through the Nexus
-# proxy of ghcr.io. .commonprofile exports the same set for interactive
-# shells.
+# which only describes current bottles. What follows them (brew-era-env.sh)
+# sends the bottle downloads through the Nexus proxy of ghcr.io and, on the
+# releases whose Apple trust store is too old for today's download hosts,
+# makes brew verify TLS against its own CA bundle. .commonprofile exports
+# the same set for interactive shells.
 {{- $brewPin := dict }}
 {{- if eq .chezmoi.os "darwin" }}
 {{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
@@ -253,7 +254,7 @@ BREW_ERA_CASK_COMMIT="{{ $era.cask_commit }}"
 BREW_ERA_SERVICES_COMMIT="{{ index $era "services_commit" | default "" }}"
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALL_FROM_API=1
-{{ template "brew-mirror-env.sh" (dict "era" $brewPin.era "mirror" .brewMirror) }}
+{{ template "brew-era-env.sh" (dict "era" $brewPin.era "mirror" .brewMirror) }}
 {{- else }}
 BREW_ERA_PINNED=0
 BREW_ERA_NAME=

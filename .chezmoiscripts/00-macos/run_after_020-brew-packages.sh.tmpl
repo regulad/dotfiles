@@ -165,6 +165,17 @@ if brew list --formula inetutils &>/dev/null; then
 	brew uninstall -q inetutils
 fi
 
+{{- if $pre2025 }}
+# Apple's trust store on this release predates roots that today's download
+# hosts chain to (emSign, via InCommon, since July 2026: ftp.osuosl.org,
+# where get.videolan.org sends the vlc cask, for one). The preamble sets
+# HOMEBREW_FORCE_BREWED_CA_CERTIFICATES, which only takes effect once this
+# file exists, so it goes in first, on its own, before anything below or in
+# the cask list has to fetch from such a host. (curl below would pull it in
+# as a dependency anyway; this just makes the order explicit.)
+brew install -q --formula ca-certificates
+{{- end }}
+
 # --formula: several names here (cmake, mpv, syncthing) are also casks -- the
 # GUI apps -- and without it brew guesses formula with a warning each time.
 brew install -q --formula "${BREW_PACKAGES[@]}"
