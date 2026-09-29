@@ -21,9 +21,8 @@ BREW_CASKS_MACOS=(
 {{- if not $pre2024 }}
 	"retroarch-metal@nightly"  # cask added 2024
 {{- end }}
-	"airserver"  # proprietary paid
-{{- if not $pre2024 }}
-	"nx-studio"  # proprietary freeware; cask added 2024
+{{- if not $pre2026 }}
+	"nx-studio"  # proprietary freeware; cask added 2024, and Nikon has since removed the archive URLs the Monterey and Ventura pins point at (URL audit 2026-09-28)
 {{- end }}
 	"thetimemachinemechanic"
 {{- if not $pre2022 }}
@@ -39,7 +38,9 @@ BREW_CASKS_MACOS=(
 	"zoom"  # proprietary trialware
 	"firefox"  # for extension dev; i hate firefox for regular browsing
 	"xquartz"  # for X server forwarding
-	"suspicious-package"  # proprietary freeware
+{{- if not $pre2026 }}
+	"suspicious-package"  # proprietary freeware # needs macOS 14.0; the cask is improperly missing a depends_on macos line, so this gate stands in for it
+{{- end }}
 	"adobe-digital-editions"  # proprietary freeware
 {{- if $preApp }}
 	"handbrake"  # the -app renames of handbrake/docker/tailscale/syncthing landed in 2025
@@ -65,16 +66,15 @@ BREW_CASKS_MACOS=(
 	"tailscale-app"  # proprietary! ... kinda?
 {{- end }}
 	"appcleaner"  # no idea
-	"google-chrome"  # proprietary freeware (you can't make me use anything other than chrome)
-	"nextcloud"  # the -vfs cask is deprecated; File Provider ships in the main pkg since 33.0
-{{- if $preApp }}
-	"docker"  # proprietary trialware
-{{- else }}
-	"docker-desktop"  # proprietary trialware
+{{- if not $pre2025 }}
+	"google-chrome"  # proprietary freeware (you can't make me use anything other than chrome) # needs macOS 13.0; the cask is improperly missing a depends_on macos line, so this gate stands in for it
 {{- end }}
+	"nextcloud"  # the -vfs cask is deprecated; File Provider ships in the main pkg since 33.0
 	"obs"
 	"utm"
-	"bartender" # proprietary trialware # i have a license
+{{- if not $pre2026 }}
+	"bartender" # proprietary trialware # i have a license # every pin before 2026 points at macbartender.com/B2/updates, which is gone (404); only the 2026 pins have the live downloads.macbartender.com URL (URL audit 2026-09-28)
+{{- end }}
 	"stats"
 {{- if not $pre2025 }}
 	"claude"  # cask added 2025
@@ -101,7 +101,9 @@ BREW_CASKS_MACOS=(
 {{- if not $pre2025 }}
 	"thunderbird@esr"  # cask added 2025 (never in cask-versions either)
 {{- end }}
-	"safe-exam-browser"  # partially proprietary
+{{- if not $pre2026 }}
+	"safe-exam-browser"  # partially proprietary # the GitHub release assets for the 3.x versions every pre-2026 pin references have been deleted (URL audit 2026-09-28)
+{{- end }}
 {{- if eq $brewEra "sonoma" }}
 	"kde-connect"  # arm64-only upstream and needs Ventura; cask added 2026
 {{- else if eq $brewEra "" }}
