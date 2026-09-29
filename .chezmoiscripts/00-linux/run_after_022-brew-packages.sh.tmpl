@@ -182,7 +182,7 @@ if [ "$HAS_BREW" != "true" ]; then
 	exit 1
 fi
 
-brew install -q "${BREW_SYSTEM_PACKAGES[@]}"
+brew install -q --formula "${BREW_SYSTEM_PACKAGES[@]}"
 
 # NOTE: no `brew upgrade` here, deliberately. Bluefin drives upgrades itself on
 # a schedule via brew-update.timer and brew-upgrade.timer; racing those from an

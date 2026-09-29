@@ -46,7 +46,7 @@ if [ "$HAS_BREW" = "true" ]; then
 	export PATH="$(brew --prefix ruby)/bin:$PATH"
 	export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"
 
-	brew install -q "${SECONDARY_BINARY_DEPENDENCIES[@]}"
+	brew install -q --formula "${SECONDARY_BINARY_DEPENDENCIES[@]}"
 
 	# rclone above pulls in libfuse as a Linux dependency, and brew links it
 	# unless told otherwise. Its fusermount3 is not setuid -- brew never marks

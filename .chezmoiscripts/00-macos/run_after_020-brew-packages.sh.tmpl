@@ -165,7 +165,9 @@ if brew list --formula inetutils &>/dev/null; then
 	brew uninstall -q inetutils
 fi
 
-brew install -q "${BREW_PACKAGES[@]}"
+# --formula: several names here (cmake, mpv, syncthing) are also casks -- the
+# GUI apps -- and without it brew guesses formula with a warning each time.
+brew install -q --formula "${BREW_PACKAGES[@]}"
 brew upgrade -q
 
 # Setup Rust toolchain if needed
