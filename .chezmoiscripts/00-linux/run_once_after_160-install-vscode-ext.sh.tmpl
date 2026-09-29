@@ -12,7 +12,12 @@ if command -v code &>/dev/null; then
     # strip \r: dot_vscode-extensions.txt gets CRLF line endings on Windows
     # checkouts (core.autocrlf), and a trailing \r turns every extension ID
     # into one the marketplace has never heard of, failing every install.
-    mapfile -t extensions < <(tr -d '\r' < ~/.vscode-extensions.txt)
+    # (read loop, not mapfile: kept identical to the macOS twin, whose
+    # /bin/bash is 3.2, see AGENTS.md.)
+    extensions=()
+    while IFS= read -r line; do
+        [ -n "$line" ] && extensions+=("$line")
+    done < <(tr -d '\r' < ~/.vscode-extensions.txt)
     flags=()
     for extension in "${extensions[@]}"; do
         flags+=(--install-extension "$extension")
@@ -24,14 +29,20 @@ if command -v code &>/dev/null; then
     retry -t 5 -d 2 -m 60 -- code "${flags[@]}" --force || echo "warning: some extensions failed to install (see above)" >&2
 
     # Uninstall anything installed that isn't in dot_vscode-extensions.txt.
+    # Extension IDs compare case-insensitively; tr, since bash 3.2 has no ${var,,}.
+    lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
     is_wanted() {
-        local candidate="${1,,}" w
+        local candidate w
+        candidate="$(lower "$1")"
         for w in "${extensions[@]}"; do
-            [[ "${w,,}" == "$candidate" ]] && return 0
+            [ "$(lower "$w")" = "$candidate" ] && return 0
         done
         return 1
     }
-    mapfile -t installed < <(code --list-extensions)
+    installed=()
+    while IFS= read -r line; do
+        [ -n "$line" ] && installed+=("$line")
+    done < <(code --list-extensions)
     uninstall_flags=()
     for extension in "${installed[@]}"; do
         is_wanted "$extension" || uninstall_flags+=(--uninstall-extension "$extension")

@@ -1,5 +1,18 @@
 #!/bin/bash -e
 # {{ include "dot_vscode-extensions.txt" | sha256sum }}
+{{- /* Era-pinned host (see .chezmoidata/brew-tiers.toml)? The extension set is
+       specialised tooling on top of an editor whose marketplace has moved on
+       from what runs there; skipped, the same policy as the uv/pnpm/cargo/go
+       tooling. .chezmoiignore.tmpl masks the script on such hosts; this guard
+       is for a by-hand run. $brewPin is empty on a Tier 1 host. */ -}}
+{{- $brewPin := dict }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{- end }}
+{{- if $brewPin }}
+echo "note: era-pinned brew ({{ $brewPin.era }}); VS Code extensions are not installed on this host" >&2
+exit 0
+{{- end }}
 if command -v code &>/dev/null; then
     # Install all extensions in a single `code` invocation. Spawning one `code`
     # process per extension (e.g. via `xargs -I {} code --install-extension {}`)
@@ -9,7 +22,11 @@ if command -v code &>/dev/null; then
     # strip \r: dot_vscode-extensions.txt gets CRLF line endings on Windows
     # checkouts (core.autocrlf), and a trailing \r turns every extension ID
     # into one the marketplace has never heard of, failing every install.
-    mapfile -t extensions < <(tr -d '\r' < ~/.vscode-extensions.txt)
+    # (read loop, not mapfile: macOS /bin/bash is 3.2, see AGENTS.md.)
+    extensions=()
+    while IFS= read -r line; do
+        [ -n "$line" ] && extensions+=("$line")
+    done < <(tr -d '\r' < ~/.vscode-extensions.txt)
     flags=()
     for extension in "${extensions[@]}"; do
         flags+=(--install-extension "$extension")
@@ -21,14 +38,20 @@ if command -v code &>/dev/null; then
     retry -t 5 -d 2 -m 60 -- code "${flags[@]}" --force || echo "warning: some extensions failed to install (see above)" >&2
 
     # Uninstall anything installed that isn't in dot_vscode-extensions.txt.
+    # Extension IDs compare case-insensitively; tr, since bash 3.2 has no ${var,,}.
+    lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
     is_wanted() {
-        local candidate="${1,,}" w
+        local candidate w
+        candidate="$(lower "$1")"
         for w in "${extensions[@]}"; do
-            [[ "${w,,}" == "$candidate" ]] && return 0
+            [ "$(lower "$w")" = "$candidate" ] && return 0
         done
         return 1
     }
-    mapfile -t installed < <(code --list-extensions)
+    installed=()
+    while IFS= read -r line; do
+        [ -n "$line" ] && installed+=("$line")
+    done < <(code --list-extensions)
     uninstall_flags=()
     for extension in "${installed[@]}"; do
         is_wanted "$extension" || uninstall_flags+=(--uninstall-extension "$extension")

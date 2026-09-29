@@ -127,8 +127,10 @@ Library
 # Python/node version story of its own. 070-js-tooling and 100-python-tooling
 # skip those parts themselves, as do 110-rust-tooling (cargo) and
 # 120-go-tooling (go) for their from-source installs; vencord is nothing but
-# a pnpm build, so it goes here.
+# a pnpm build, and the VS Code extension set is the same kind of thing on
+# top of the editor, so those two go here.
 .chezmoiscripts/00-macos/080-vencord.sh
+.chezmoiscripts/00-macos/160-install-vscode-ext.sh
 {{-   end }}
 {{-   if lt .macos.major 14 }}
 # Touch ID for sudo needs /etc/pam.d/sudo_local, which exists from Sonoma on.
