@@ -24,8 +24,9 @@ qt-advanced-pref=1
 [projectm]
 # presets-flat, not presets: VLC bundles libprojectM 2.0.1, whose preset
 # loader is a single non-recursive readdir() pass, and the pack proper nests
-# everything in category subdirectories -- the postapply scripts hardlink
-# every .milk into this flat sibling. VLC on Windows also does not resolve forward slashes
+# everything in category subdirectories -- the postapply scripts put every
+# .milk into this flat sibling (APFS/reflink clones on macOS and Linux,
+# hardlinks on Windows). VLC on Windows also does not resolve forward slashes
 # here, so the path must use native separators, and .chezmoi.homeDir itself
 # comes forward-slashed even on Windows.
 {{- if eq .chezmoi.os "windows" }}

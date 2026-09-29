@@ -5,8 +5,10 @@
 # landed upstream in projectM-visualizer/projectm#385, in a major VLC never
 # adopted -- and the pack nests every preset in category subdirectories.
 # presets-flat is what
-# dot_config/vlc/vlcrc points projectm-preset-path at -- hardlinks, so it
-# costs no space, and the pack has no name collisions or texture files to
+# dot_config/vlc/vlcrc points projectm-preset-path at -- copy-on-write
+# clones where the filesystem has them (APFS on macOS, btrfs/xfs/bcachefs on
+# Linux), so it costs no space yet stays independent of the git checkout, and
+# a plain copy elsewhere; the pack has no name collisions or texture files to
 # worry about (verified: 9,795 uniquely-named .milk files, nothing else).
 #
 # run_once_ + the exists guards: the pack is static content, so there is
@@ -30,10 +32,20 @@ if [ ! -d "$FLAT_DIR" ]; then
 	FLAT_TMP="$FLAT_DIR.tmp"
 	rm -rf "$FLAT_TMP"
 	mkdir -p "$FLAT_TMP"
-	# ln into a directory, batched through sh -c so BSD ln (macOS) works too;
-	# the _ placeholder is $0 inside the inner shell.
-	FLAT_TMP="$FLAT_TMP" find "$PRESET_DIR" -name '*.milk' \
-		-exec sh -c 'ln -f "$@" "$FLAT_TMP"' _ {} +
+	# Clone rather than hardlink. macOS: `cp -c` is clonefile(2), a zero-cost
+	# APFS clone, and Apple's cp falls back to a regular copy by itself when
+	# the volume cannot clone (EXDEV/ENOTSUP); the flag exists from Mojave's
+	# file_cmds on, i.e. every release this repo supports. Linux: GNU cp's
+	# --reflink=auto is the same idea (btrfs, xfs, bcachefs) with the same
+	# built-in fallback. Batched through sh -c with many sources per cp; the
+	# _ placeholder is $0 inside the inner shell, and $COPY is left unquoted
+	# there on purpose so it splits into the command and its flag.
+	case "$(uname -s)" in
+		Darwin) COPY="cp -c" ;;
+		*) COPY="cp --reflink=auto" ;;
+	esac
+	COPY="$COPY" FLAT_TMP="$FLAT_TMP" find "$PRESET_DIR" -name '*.milk' \
+		-exec sh -c '$COPY "$@" "$FLAT_TMP"' _ {} +
 	mv "$FLAT_TMP" "$FLAT_DIR"
 else
 	echo "note: flattened presets already present, skipping" >&2
