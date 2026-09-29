@@ -18,15 +18,15 @@ PRESET_DIR="$HOME/.local/share/projectM/presets"
 FLAT_DIR="$HOME/.local/share/projectM/presets-flat"
 
 if [ ! -d "$PRESET_DIR/.git" ]; then
-	echo "note: cloning projectM presets into $PRESET_DIR" >&2
+	echo "debug: cloning projectM presets into $PRESET_DIR" >&2
 	mkdir -p "$(dirname "$PRESET_DIR")"
 	git clone --depth 1 https://github.com/projectM-visualizer/presets-cream-of-the-crop "$PRESET_DIR"
 else
-	echo "note: projectM presets already present, skipping clone" >&2
+	echo "debug: projectM presets already present, skipping clone" >&2
 fi
 
 if [ ! -d "$FLAT_DIR" ]; then
-	echo "note: flattening presets into $FLAT_DIR" >&2
+	echo "debug: flattening presets into $FLAT_DIR" >&2
 	# Build in a temp dir and rename into place, so a half-built flat dir from
 	# an interrupted run can never satisfy the exists-guard above.
 	FLAT_TMP="$FLAT_DIR.tmp"
@@ -48,5 +48,5 @@ if [ ! -d "$FLAT_DIR" ]; then
 		-exec sh -c '$COPY "$@" "$FLAT_TMP"' _ {} +
 	mv "$FLAT_TMP" "$FLAT_DIR"
 else
-	echo "note: flattened presets already present, skipping" >&2
+	echo "debug: flattened presets already present, skipping" >&2
 fi

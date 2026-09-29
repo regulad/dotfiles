@@ -190,7 +190,7 @@ if [ -n "\$BWRC" ] && [ -r "\$BWRC" ]; then
     . "\$BWRC"
     if [ -n "\${BW_CLIENTID:-}" ] && [ -n "\${BW_CLIENTSECRET:-}" ]; then
         export BW_CLIENTID BW_CLIENTSECRET
-        echo "note: API credentials loaded from \$BWRC" >&2
+        echo "debug: API credentials loaded from \$BWRC" >&2
     else
         echo "warning: \$BWRC did not define BW_CLIENTID/BW_CLIENTSECRET; will prompt" >&2
     fi
@@ -199,7 +199,7 @@ fi
 bw config server "${BW_SERVER}" || exit 1
 
 if bw login --check >/dev/null 2>&1; then
-    echo "note: already logged in to Bitwarden" >&2
+    echo "debug: already logged in to Bitwarden" >&2
 else
     bw login --apikey || exit 1
 fi

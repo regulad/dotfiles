@@ -22,6 +22,10 @@ Operational conventions for any agent working in this chezmoi source directory. 
 
   Other Claude models follow the same shape with their own name (`Claude Opus 5`, `Claude Sonnet 5`, ...). `git commit --trailer '<the line>'` adds it without hand-editing the message. Commits are GPG-signed by the user's config; do not bypass that. A commit that went in without the trailer is rewritten with `git commit --amend --no-edit --trailer ...` (and cherry-pick plus amend for anything below the tip) and force-pushed with `--force-with-lease`, never a bare `--force`.
 
+## Hookscript messages
+
+- Every line a hookscript prints to the user carries one of four prefixes, on every platform (`echo ... >&2`, `echo ... 1>&2`, `Write-Host`): `debug:` for progress and idempotency chatter (installing X, already present, up to date, entering the script); `notice:` for a decision or a result the user should register (skipping something and why, wrote or deployed a file, the shell was changed, a follow-up they must do); `warning:` for something that is off but not fatal (a fallback taken, a service not up yet, a missing profile); `error:` right before a non-zero exit. There is no `note:`.
+
 ## Portability of shell code
 
 - Everything under `.chezmoiscripts/00-{macos,linux}`, `.chezmoitemplates/*.sh` and the dotfiles sourced by shells runs on macOS `/bin/bash` 3.2 and BSD userland as far back as macOS 10.14, as well as GNU. Detect the platform with `uname -s` (`Darwin`/`Linux`), never `uname -o` (BSD only grew it in macOS 13; before that the substitution is empty and the test silently fails). `uname -o 2>/dev/null` is acceptable only for the Android check. No bash 4 features (`declare -A`, `${var,,}`, `mapfile`/`readarray` -- use a `while IFS= read -r` loop, `|&`), no `sed -i` without an argument, no `readlink -f`, `date -d`, `stat -c` or `sort -V` outside Linux-only branches.

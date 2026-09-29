@@ -60,7 +60,7 @@ for PROFILE_ROOT in \
 done
 
 if [ "${#PROFILE_DIRS[@]}" -eq 0 ]; then
-	echo "note: no firefox profiles found; launch firefox once, then re-apply" >&2
+	echo "warning: no firefox profiles found; launch firefox once, then re-apply" >&2
 	exit 0
 fi
 
@@ -68,5 +68,5 @@ for PROFILE_DIR in "${PROFILE_DIRS[@]}"; do
 	# Re-importing a cert+key already in the database is a verified no-op
 	# (exit 0, no output), the same property 141-client-cert relies on.
 	pk12util -d "sql:$PROFILE_DIR" -i "$CLIENT_P12" -W ""
-	echo "note: imported client certificate into $PROFILE_DIR" >&2
+	echo "notice: imported client certificate into $PROFILE_DIR" >&2
 done

@@ -24,7 +24,7 @@
 # as the inlined :sync lines in the vim bootstrap.
 
 if ! command -v claude &>/dev/null; then
-	echo "note: claude is not installed, skipping Claude Code plugin bootstrap" >&2
+	echo "notice: claude is not installed, skipping Claude Code plugin bootstrap" >&2
 	exit 0
 fi
 
@@ -46,9 +46,9 @@ for entry in "${MARKETPLACES[@]}"; do
 	name="${entry%%|*}"
 	src="${entry#*|}"
 	if claude plugin marketplace list 2>/dev/null | grep -qF -- "$name"; then
-		echo "note: marketplace $name already configured" >&2
+		echo "debug: marketplace $name already configured" >&2
 	else
-		echo "note: adding marketplace $name from $src" >&2
+		echo "debug: adding marketplace $name from $src" >&2
 		claude plugin marketplace add "$src" || echo "warning: failed to add marketplace $name" >&2
 	fi
 done
@@ -57,9 +57,9 @@ for entry in "${PLUGINS[@]}"; do
 	plugin="${entry%%|*}"
 	marketplace="${entry#*|}"
 	if claude plugin list 2>/dev/null | grep -qF -- "$plugin"; then
-		echo "note: plugin $plugin already installed" >&2
+		echo "debug: plugin $plugin already installed" >&2
 	else
-		echo "note: installing plugin $plugin@$marketplace" >&2
+		echo "debug: installing plugin $plugin@$marketplace" >&2
 		# -y is required off-TTY and auto-accepts any marketplace-declared
 		# install command; all sources here are plain git repos.
 		claude plugin install "$plugin@$marketplace" -y || echo "warning: failed to install $plugin@$marketplace" >&2

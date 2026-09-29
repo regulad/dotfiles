@@ -31,7 +31,7 @@ if ! command -v tailscale >/dev/null 2>&1; then
 fi
 
 if ! command -v tailscale >/dev/null 2>&1; then
-	echo "note: no tailscale binary; nothing further to do" >&2
+	echo "notice: no tailscale binary; nothing further to do" >&2
 	exit 0
 fi
 
@@ -48,7 +48,7 @@ fi
 # build, where there is no PID 1 to talk to; the first apply inside a running
 # instance picks it up.
 if ! systemctl is-active --quiet tailscaled.service 2>/dev/null; then
-	echo "note: tailscaled is not running; skipping operator setup" >&2
+	echo "warning: tailscaled is not running; skipping operator setup" >&2
 	exit 0
 fi
 
@@ -81,4 +81,4 @@ if ! sudo -n true 2>/dev/null && ! [ -t 0 ]; then
 fi
 
 sudo tailscale set --operator="$ME"
-echo "note: tailscale operator set to $ME" >&2
+echo "notice: tailscale operator set to $ME" >&2

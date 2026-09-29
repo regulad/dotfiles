@@ -28,7 +28,7 @@ fi
 brew install -q uv
 {{- end }}
 {{- if $pinned }}
-echo "note: era-pinned brew ({{ $brewEra }}); uv is installed but no tools are installed through it on this host" >&2
+echo "notice: era-pinned brew ({{ $brewEra }}); uv is installed but no tools are installed through it on this host" >&2
 {{- else }}
 
 # NOTE: poetry is for legacy workflows.

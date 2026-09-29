@@ -7,7 +7,7 @@
 {{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
 {{- end }}
 {{- if $brewPin }}
-echo "note: era-pinned brew ({{ $brewPin.era }}); vencord (a pnpm build) is skipped on this host" >&2
+echo "notice: era-pinned brew ({{ $brewPin.era }}); vencord (a pnpm build) is skipped on this host" >&2
 exit 0
 {{- end }}
 CHEZMOI_USE_DUMMY={{ if .useDummySecrets }}1{{ else }}0{{ end }}

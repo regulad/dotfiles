@@ -25,7 +25,7 @@ UBUNTU_MINIMUM_VERSION=26.04
 #    era-pin environment for the rest of the script.
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
 
-echo "note: entering hookscript" >&2
+echo "debug: entering hookscript" >&2
 export DEBIAN_FRONTEND=noninteractive
 # HOMEBREW_NO_REQUIRE_TAP_TRUST=1 used to be exported here; brew deprecated
 # it. Scripts that touch a non-official tap now `brew trust` what they need
@@ -83,7 +83,7 @@ can_sudo() {
 	if [ -z "$_CAN_SUDO" ]; then
 		if sudo -l &>/dev/null; then
 			_CAN_SUDO=true
-			echo "note: successfully captured sudo, will use it" >&2
+			echo "debug: successfully captured sudo, will use it" >&2
 		else
 			_CAN_SUDO=false
 			echo "warning: can't sudo, will not attempt things that need it" >&2
@@ -183,7 +183,7 @@ case "$OS" in
             *-dx|*-dx-*) ;;
             *)
                 echo "Error: Bluefin -dx image required (found IMAGE_ID=${IMAGE_ID:-unset})"
-                echo "note: rebase with: sudo bootc switch ghcr.io/ublue-os/bluefin-dx:stable"
+                echo "notice: rebase with: sudo bootc switch ghcr.io/ublue-os/bluefin-dx:stable"
                 exit 1
                 ;;
         esac

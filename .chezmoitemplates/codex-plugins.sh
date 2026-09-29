@@ -4,7 +4,7 @@
 # Run on every apply so a missing/older Codex can be retried on the next apply.
 # Append-only: leave other plugins and the CLI-owned configuration alone.
 if ! command -v codex &>/dev/null; then
-	echo "note: codex is not installed, skipping Codex plugin bootstrap" >&2
+	echo "notice: codex is not installed, skipping Codex plugin bootstrap" >&2
 	exit 0
 fi
 if ! codex plugin add --help >/dev/null 2>&1; then

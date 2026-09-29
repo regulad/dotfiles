@@ -11,7 +11,7 @@
 # Flatpaks are session-scoped GUI apps; a container has no session to serve
 # and usually no flatpak/dbus/polkit stack to install through either.
 if [ "$CONTAINERIZED" -eq 1 ]; then
-	echo "note: containerized, skipping flatpak packages" >&2
+	echo "notice: containerized, skipping flatpak packages" >&2
 	exit 0
 fi
 

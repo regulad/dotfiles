@@ -50,4 +50,4 @@ if ($AlreadyPresent) {
 
 $NewPath = ($Entries + $GpgmeDir) -join ';'
 [Environment]::SetEnvironmentVariable('Path', $NewPath, 'User')
-Write-Host "note: added $GpgmeDir to the user PATH -- restart apps that need to pick it up (Thunderbird included)"
+Write-Host "notice: added $GpgmeDir to the user PATH -- restart apps that need to pick it up (Thunderbird included)"

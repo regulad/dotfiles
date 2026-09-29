@@ -10,7 +10,7 @@
 {{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
 {{- end }}
 {{- if $brewPin }}
-echo "note: era-pinned brew ({{ $brewPin.era }}); VS Code extensions are not installed on this host" >&2
+echo "notice: era-pinned brew ({{ $brewPin.era }}); VS Code extensions are not installed on this host" >&2
 exit 0
 {{- end }}
 if command -v code &>/dev/null; then

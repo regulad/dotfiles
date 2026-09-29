@@ -29,7 +29,7 @@ foreach ($Candidate in @("$env:ProgramFiles\Mozilla Firefox", "${env:ProgramFile
     if (Test-Path -LiteralPath (Join-Path $Candidate 'firefox.exe')) { $FirefoxDir = $Candidate }
 }
 if (-not $FirefoxDir) {
-    Write-Host 'note: firefox not found under Program Files, skipping policy deployment'
+    Write-Host 'notice: firefox not found under Program Files, skipping policy deployment'
     exit 0
 }
 
@@ -50,7 +50,7 @@ try {
     $Current = if (Test-Path -LiteralPath $Dest) { (Get-FileHash -LiteralPath $Dest -Algorithm SHA256).Hash } else { '' }
     $Wanted = (Get-FileHash -LiteralPath $Tmp -Algorithm SHA256).Hash
     if ($Current -eq $Wanted) {
-        Write-Host 'note: firefox policies already up to date'
+        Write-Host 'debug: firefox policies already up to date'
         exit 0
     }
 

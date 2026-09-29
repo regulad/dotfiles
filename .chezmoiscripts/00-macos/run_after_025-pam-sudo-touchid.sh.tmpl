@@ -27,7 +27,7 @@
 # alone, and sudo there is password-only.
 
 if ! grep -q 'sudo_local' /etc/pam.d/sudo; then
-	echo "note: this macOS has no /etc/pam.d/sudo_local (pre-Sonoma); leaving /etc/pam.d/sudo alone, no Touch ID for sudo" >&2
+	echo "notice: this macOS has no /etc/pam.d/sudo_local (pre-Sonoma); leaving /etc/pam.d/sudo alone, no Touch ID for sudo" >&2
 	exit 0
 fi
 
@@ -43,7 +43,7 @@ PAM_TID="$(ls /usr/lib/pam/pam_tid.so* 2>/dev/null | head -n1)"
 for module in "$PAM_REATTACH" "$PAM_TID"; do
 	if [ -z "$module" ] || [ ! -f "$module" ]; then
 		echo "error: PAM module missing (${module:-/usr/lib/pam/pam_tid.so}); refusing to write a sudo policy that would break sudo" >&2
-		echo "note: pam_reattach comes from 020-brew-packages (brew) or 017-macports-packages (MacPorts, Mojave era)" >&2
+		echo "notice: pam_reattach comes from 020-brew-packages (brew) or 017-macports-packages (MacPorts, Mojave era)" >&2
 		exit 1
 	fi
 done
@@ -61,7 +61,7 @@ wanted="$(
 
 current="$(cat "$target" 2>/dev/null || true)"
 if [ "$wanted" = "$current" ]; then
-	echo "note: $target is up to date" >&2
+	echo "debug: $target is up to date" >&2
 	exit 0
 fi
 
@@ -74,4 +74,4 @@ sudo cp "$tmp" "$target"
 sudo chown root:wheel "$target"
 sudo chmod 444 "$target"
 rm -f "$tmp"
-echo "note: wrote $target" >&2
+echo "notice: wrote $target" >&2

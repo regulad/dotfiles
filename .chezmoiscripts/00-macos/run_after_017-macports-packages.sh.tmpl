@@ -29,7 +29,7 @@ MACPORTS_PACKAGES=(
 )
 
 if [ "${#MACPORTS_PACKAGES[@]}" -eq 0 ]; then
-	echo "note: brew covers everything on this host; no MacPorts packages" >&2
+	echo "debug: brew covers everything on this host; no MacPorts packages" >&2
 	exit 0
 fi
 

@@ -5,7 +5,7 @@ REM Retry each apply; do not remove other plugins or overwrite Codex config.
 setlocal
 where codex >nul 2>nul
 if errorlevel 1 (
-    echo note: codex is not installed, skipping Codex plugin bootstrap 1>&2
+    echo notice: codex is not installed, skipping Codex plugin bootstrap 1>&2
     exit /b 0
 )
 call codex plugin add --help >nul 2>nul

@@ -23,7 +23,7 @@ MAS_APP_IDS=(
 if ! command -v mas &>/dev/null; then
 	# mas comes from 020-brew-packages, which leaves it out on the Mojave era:
 	# its bottles start at Catalina. No mas, no App Store installs.
-	echo "note: mas is not installed on this host; skipping App Store apps" >&2
+	echo "notice: mas is not installed on this host; skipping App Store apps" >&2
 elif [ "$HAS_BREW" = "true" ]; then
 	# mas is distributed via brew
 	#
@@ -37,7 +37,7 @@ elif [ "$HAS_BREW" = "true" ]; then
 		# shellcheck disable=SC2086  # one numeric id per word; splitting is the point
 		mas update $outdated_ids
 	else
-		echo "note: no App Store apps to update (Xcode is excluded on purpose)" >&2
+		echo "debug: no App Store apps to update (Xcode is excluded on purpose)" >&2
 	fi
 	# `mas install` only re-downloads apps that are already in the signed-in
 	# Apple Account's purchase history: it sends the store a redownload
@@ -65,7 +65,7 @@ elif [ "$HAS_BREW" = "true" ]; then
 		if mas install "$mas_id"; then
 			continue
 		fi
-		echo "note: mas install $mas_id failed; trying to get it as a free purchase with the signed-in Apple Account" >&2
+		echo "notice: mas install $mas_id failed; trying to get it as a free purchase with the signed-in Apple Account" >&2
 		if ! mas purchase "$mas_id"; then
 			echo "warning: could not get app $mas_id; if it is free, click Get on https://apps.apple.com/app/id$mas_id in the App Store and re-run this script" >&2
 		fi

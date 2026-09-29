@@ -56,7 +56,7 @@ if command -v chsh &>/dev/null; then
 		else
 			chsh -s "$SHELL_PATH"
 		fi
-		echo "note: shell was changed" >&2
+		echo "notice: shell was changed" >&2
 	fi
 else
 	echo "error: chsh not found, could not autoset shell" >&2

@@ -11,7 +11,7 @@
 {{- end }}
 # rust
 {{- if $brewPin }}
-echo "note: era-pinned brew ({{ $brewPin.era }}); cargo is installed but no tools are installed through it on this host" >&2
+echo "notice: era-pinned brew ({{ $brewPin.era }}); cargo is installed but no tools are installed through it on this host" >&2
 {{- else }}
 cargo install cargo-disasm
 cargo install vtracer

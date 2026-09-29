@@ -33,5 +33,5 @@ REM Enabling the optional Windows features needs a restart before wsl can
 REM actually run anything. There is no reliable way to detect from here
 REM whether they were already on, so say so unconditionally rather than let a
 REM later script fail confusingly.
-echo note: if WSL's optional Windows components were just enabled, restart 1>&2
-echo note: Windows before using wsl. 115-wsl-update.cmd will fail until then. 1>&2
+echo warning: if WSL's optional Windows components were just enabled, restart 1>&2
+echo warning: Windows before using wsl. 115-wsl-update.cmd will fail until then. 1>&2

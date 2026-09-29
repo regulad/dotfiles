@@ -16,7 +16,7 @@ setlocal
 
 where claude >nul 2>nul
 if errorlevel 1 (
-    echo note: claude is not installed, skipping Claude Code plugin bootstrap 1>&2
+    echo notice: claude is not installed, skipping Claude Code plugin bootstrap 1>&2
     exit /b 0
 )
 
@@ -37,10 +37,10 @@ REM returns there without needing `call`.
 :add_marketplace
 claude plugin marketplace list 2>nul | findstr /I /C:"%~1" >nul 2>nul
 if not errorlevel 1 (
-    echo note: marketplace %~1 already configured 1>&2
+    echo debug: marketplace %~1 already configured 1>&2
     goto :eof
 )
-echo note: adding marketplace %~1 from %~2 1>&2
+echo debug: adding marketplace %~1 from %~2 1>&2
 call claude plugin marketplace add %~2 || echo warning: failed to add marketplace %~1 1>&2
 goto :eof
 
@@ -48,10 +48,10 @@ REM Install plugin %~1 from marketplace %~2 if it is not already installed.
 :install_plugin
 claude plugin list 2>nul | findstr /I /C:"%~1" >nul 2>nul
 if not errorlevel 1 (
-    echo note: plugin %~1 already installed 1>&2
+    echo debug: plugin %~1 already installed 1>&2
     goto :eof
 )
-echo note: installing plugin %~1@%~2 1>&2
+echo debug: installing plugin %~1@%~2 1>&2
 REM -y is required off-TTY and auto-accepts any marketplace-declared install
 REM command; all sources here are plain git repos.
 call claude plugin install %~1@%~2 -y || echo warning: failed to install %~1@%~2 1>&2

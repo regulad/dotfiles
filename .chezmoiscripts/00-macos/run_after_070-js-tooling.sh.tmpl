@@ -37,7 +37,7 @@ esac
 mkdir -p "$PNPM_HOME"
 {{- if $pinned }}
 
-echo "note: era-pinned brew ({{ $brewEra }}); pnpm is installed but no global packages are installed through it on this host" >&2
+echo "notice: era-pinned brew ({{ $brewEra }}); pnpm is installed but no global packages are installed through it on this host" >&2
 {{- else }}
 
 PNPM_CLI_PACKAGES=(

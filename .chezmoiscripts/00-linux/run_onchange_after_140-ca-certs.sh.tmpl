@@ -41,7 +41,7 @@ for CERT_PATH in "${CERT_PATHS[@]}"; do
 done
 
 if [ "${#UNTRUSTED_CERTS[@]}" -eq 0 ]; then
-	echo "note: all CA certificates already in the system trust store" >&2
+	echo "debug: all CA certificates already in the system trust store" >&2
 elif ! can_sudo; then
 	echo "warning: sudo required to install system certificate on Linux, skipping" >&2
 else

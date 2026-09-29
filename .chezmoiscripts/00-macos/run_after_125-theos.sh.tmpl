@@ -23,11 +23,28 @@ export THEOS="$HOME/theos"
 # Without Xcode.app install-theos exits 3, which under `bash -e` would end the
 # whole apply here and skip every later hookscript. Skip instead: a Mac that
 # has not (yet) got Xcode simply does not get Theos on this apply. The check
-# is what install-theos itself does: an active developer dir that is an Xcode
-# bundle, not the Command Line Tools directory.
-if ! xcode-select -p 2>/dev/null | grep -q '\.app/Contents/Developer$'; then
-	echo "note: Xcode.app is not the active developer directory; skipping Theos (Command Line Tools are not enough for it)" >&2
-	exit 0
-fi
+# mirrors install-theos's own: the active developer directory must be an
+# Xcode bundle, and if it is the Command Line Tools directory while
+# /Applications/Xcode.app exists (the usual state here, since
+# 003-macos-prereqs switches to the CLT when it installs them), install-theos
+# would `sudo xcode-select -s` to Xcode itself. Do that switch here instead,
+# with require_sudo, so it is not a silent prompt from inside a piped
+# installer -- and it has to be the system-wide switch, not DEVELOPER_DIR for
+# this one run, because every later `make` in a Theos project needs Xcode's
+# platform toolchains the same way.
+active_dev_dir="$(xcode-select -p 2>/dev/null || true)"
+case "$active_dev_dir" in
+	*.app/Contents/Developer) ;;
+	*)
+		if [ -d /Applications/Xcode.app/Contents/Developer ]; then
+			require_sudo "125-theos"
+			echo "notice: active developer directory is ${active_dev_dir:-unset}; switching it to /Applications/Xcode.app for Theos" >&2
+			sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+		else
+			echo "notice: no Xcode.app in /Applications and none active; skipping Theos (Command Line Tools are not enough for it)" >&2
+			exit 0
+		fi
+		;;
+esac
 
 bash -c "$(curl -fsSL https://github.com/roothide/theos/raw/refs/heads/master/bin/install-theos)"

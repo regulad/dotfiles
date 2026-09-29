@@ -14,11 +14,11 @@ setlocal
 
 where claude >nul 2>nul
 if errorlevel 1 (
-    echo note: claude is not installed, skipping Claude Code plugin update 1>&2
+    echo notice: claude is not installed, skipping Claude Code plugin update 1>&2
     exit /b 0
 )
 
-echo note: updating Claude Code marketplaces 1>&2
+echo debug: updating Claude Code marketplaces 1>&2
 call claude plugin marketplace update || echo warning: marketplace update failed 1>&2
 
 REM Kept in step with the bootstrap's declared plugins. `claude plugin update`
@@ -32,6 +32,6 @@ exit /b 0
 :update_plugin
 claude plugin list 2>nul | findstr /I /C:"%~1" >nul 2>nul
 if errorlevel 1 goto :eof
-echo note: updating plugin %~1 1>&2
+echo debug: updating plugin %~1 1>&2
 call claude plugin update %~1 || echo warning: failed to update %~1 1>&2
 goto :eof

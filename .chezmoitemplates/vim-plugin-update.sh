@@ -12,10 +12,10 @@ if command -v vim &>/dev/null && [ -d "$HOME/.vim/bundle/Vundle.vim" ]; then
 	# because a normal-mode headless vim stops on the startup "Press ENTER"
 	# prompt and never reaches the queued commands, and Vundle exits non-zero
 	# from ex mode even on success, so the exit code means nothing here.
-	echo "note: updating vim plugins with Vundle" >&2
+	echo "debug: updating vim plugins with Vundle" >&2
 	vim -E -s -N -u "$HOME/.vimrc" -c 'PluginUpdate' -c 'qall!' </dev/null >/dev/null || true
 else
-	echo "note: vim or Vundle not present, skipping Vundle update" >&2
+	echo "notice: vim or Vundle not present, skipping Vundle update" >&2
 fi
 
 if command -v nvim &>/dev/null; then
@@ -26,8 +26,8 @@ if command -v nvim &>/dev/null; then
 	# headless nvim block until the tasks finish instead of quitting
 	# mid-flight, and a fresh machine's first run also bootstraps lazy.nvim
 	# itself via config.lazy.
-	echo "note: syncing nvim plugins with lazy.nvim" >&2
+	echo "debug: syncing nvim plugins with lazy.nvim" >&2
 	nvim --headless '+Lazy! sync' +qa </dev/null
 else
-	echo "note: nvim is not installed, skipping lazy.nvim sync" >&2
+	echo "notice: nvim is not installed, skipping lazy.nvim sync" >&2
 fi

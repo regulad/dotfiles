@@ -192,7 +192,7 @@ if (($RedirCurrent -band 0x30) -ne 0x20) {
     # policy until it is restarted. Step 7 tears the task down and back up
     # unconditionally, which covers it.
 } else {
-    Write-Host 'note: Redirection Guard already disabled for sshd.exe'
+    Write-Host 'debug: Redirection Guard already disabled for sshd.exe'
 }
 
 # ---------------------------------------------------------------------------
@@ -243,7 +243,7 @@ if ($Svc -and (($Svc.Status -ne 'Stopped') -or ($Svc.StartType -ne 'Disabled')))
         exit 1
     }
 } else {
-    Write-Host 'note: stock sshd service already stopped and disabled'
+    Write-Host 'debug: stock sshd service already stopped and disabled'
 }
 
 # ---------------------------------------------------------------------------
@@ -290,7 +290,7 @@ if (-not (Test-Path -LiteralPath $HostKey)) {
         exit 1
     }
 } else {
-    Write-Host 'note: host key already present'
+    Write-Host 'debug: host key already present'
 }
 
 # ---------------------------------------------------------------------------
@@ -455,10 +455,10 @@ if (-not (Wait-Until -TimeoutSeconds 30 -Condition { @(Get-NetTCPConnection -Sta
     # Not fatal: on a host that is off the tailnet the launcher spends two
     # minutes waiting for the interface before falling back to loopback, which
     # is a legitimate outcome and longer than it is worth blocking an apply for.
-    Write-Host "note: nothing listening on port $Port yet -- the launcher may still be waiting for $Iface. Check $ConfDir\sshd.log"
+    Write-Host "warning: nothing listening on port $Port yet -- the launcher may still be waiting for $Iface. Check $ConfDir\sshd.log"
 } else {
     foreach ($L in @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue)) {
-        Write-Host "note: listening on $($L.LocalAddress):$($L.LocalPort)"
+        Write-Host "notice: listening on $($L.LocalAddress):$($L.LocalPort)"
     }
     # Loopback alone means the interface had no address when sshd started, so
     # the host is up but unreachable from the tailnet. Worth saying plainly --
@@ -466,7 +466,7 @@ if (-not (Wait-Until -TimeoutSeconds 30 -Condition { @(Get-NetTCPConnection -Sta
     $NonLoopback = @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue |
         Where-Object { $_.LocalAddress -notin @('127.0.0.1', '::1') })
     if ($NonLoopback.Count -eq 0) {
-        Write-Host "note: loopback only -- no address on $Iface at start. Re-run Start-ScheduledTask '$TaskName' once it is up."
+        Write-Host "warning: loopback only -- no address on $Iface at start. Re-run Start-ScheduledTask '$TaskName' once it is up."
     }
 }
 

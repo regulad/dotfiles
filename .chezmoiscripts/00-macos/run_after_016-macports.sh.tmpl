@@ -19,7 +19,7 @@
 # left alone (it updates itself with `sudo port selfupdate`).
 
 if [ -x /opt/local/bin/port ]; then
-	echo "note: MacPorts already installed ($(/opt/local/bin/port version 2>/dev/null | tr -d '\n'))" >&2
+	echo "debug: MacPorts already installed ($(/opt/local/bin/port version 2>/dev/null | tr -d '\n'))" >&2
 	exit 0
 fi
 
@@ -55,13 +55,13 @@ fi
 MACPORTS_PKG="MacPorts-$MACPORTS_VERSION-$VERSION_ID-$MACPORTS_OS_NAME.pkg"
 MACPORTS_URL="https://github.com/macports/macports-base/releases/download/$MACPORTS_TAG/$MACPORTS_PKG"
 tmp="$(mktemp -d)"
-echo "note: installing MacPorts $MACPORTS_VERSION for macOS $VERSION_ID ($MACPORTS_OS_NAME)" >&2
+echo "debug: installing MacPorts $MACPORTS_VERSION for macOS $VERSION_ID ($MACPORTS_OS_NAME)" >&2
 curl -fsSL -o "$tmp/$MACPORTS_PKG" "$MACPORTS_URL"
 sudo installer -pkg "$tmp/$MACPORTS_PKG" -target /
 rm -rf "$tmp"
 
 if [ -x /opt/local/bin/port ]; then
-	echo "note: MacPorts ready: $(/opt/local/bin/port version | tr -d '\n')" >&2
+	echo "notice: MacPorts ready: $(/opt/local/bin/port version | tr -d '\n')" >&2
 else
 	echo "error: installer finished but /opt/local/bin/port is missing" >&2
 	exit 1

@@ -79,6 +79,6 @@ while IFS= read -r app_id; do
 	if ! cmp -s "$USER_JS" "$DEST" 2>/dev/null; then
 		cp "$USER_JS" "$DEST"
 		chmod 0600 "$DEST"
-		echo "note: wrote $DEST" >&2
+		echo "notice: wrote $DEST" >&2
 	fi
 done < <(flatpak list --app --columns=application 2>/dev/null | grep -i '^org\.mozilla\.thunderbird')

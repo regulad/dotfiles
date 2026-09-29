@@ -26,12 +26,12 @@ FIREFOX_APP="/Applications/Firefox.app"
 DEST="$FIREFOX_APP/Contents/Resources/distribution/policies.json"
 
 if [ ! -d "$FIREFOX_APP" ]; then
-	echo "note: $FIREFOX_APP not found, skipping policy deployment" >&2
+	echo "notice: $FIREFOX_APP not found, skipping policy deployment" >&2
 elif cmp -s "$POLICY_JSON" "$DEST"; then
 	# Answered before sudo is touched: on a machine that has been applied to
 	# before this is already true, and the old ordering prompted for a password
 	# just to discover there was nothing to do.
-	echo "note: firefox policies already up to date" >&2
+	echo "debug: firefox policies already up to date" >&2
 elif can_sudo; then
 	# `install -D` is a GNU extension that BSD install does not have, so the
 	# directory is created separately rather than by the copy itself.
@@ -42,7 +42,7 @@ elif can_sudo; then
 	sudo mkdir -p "$(dirname "$DEST")"
 	sudo cp "$POLICY_JSON" "$DEST"
 	sudo chmod 0644 "$DEST"
-	echo "note: deployed firefox policies to $DEST" >&2
+	echo "notice: deployed firefox policies to $DEST" >&2
 else
 	# Exiting non-zero is the point: chezmoi keys a run_onchange_ script on its
 	# rendered contents, and those do not change just because sudo happened to

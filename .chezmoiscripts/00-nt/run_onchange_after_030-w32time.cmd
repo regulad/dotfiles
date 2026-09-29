@@ -171,5 +171,5 @@ if errorlevel 1 (
 
 sc.exe query w32time | findstr /c:"RUNNING" >nul 2>&1
 if errorlevel 1 (
-    echo note: w32time is not running yet; it is set to start automatically 1>&2
+    echo notice: w32time is not running yet; it is set to start automatically 1>&2
 )

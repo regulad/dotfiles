@@ -21,10 +21,10 @@
 # gets them back.
 
 if [ -d "$(xcode-select -p 2>/dev/null)" ]; then
-	echo "note: developer tools present at $(xcode-select -p)" >&2
+	echo "debug: developer tools present at $(xcode-select -p)" >&2
 else
 	require_sudo "003-macos-prereqs"
-	echo "note: installing the Xcode Command Line Tools via softwareupdate" >&2
+	echo "debug: installing the Xcode Command Line Tools via softwareupdate" >&2
 
 	placeholder=/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
 	sudo touch "$placeholder"
@@ -43,7 +43,7 @@ else
 	sudo rm -f "$placeholder"
 
 	if [ -d "$(xcode-select -p 2>/dev/null)" ]; then
-		echo "note: developer tools ready at $(xcode-select -p)" >&2
+		echo "notice: developer tools ready at $(xcode-select -p)" >&2
 	else
 		echo "warning: softwareupdate offered no Command Line Tools package; opening Apple's own installer prompt instead. brew/MacPorts work that needs a compiler will fail until it finishes." >&2
 		xcode-select --install || true  # exits 1 if a prompt is already up
@@ -52,10 +52,10 @@ fi
 
 if [ "$(uname -m)" = "arm64" ]; then
 	if arch -x86_64 /usr/bin/true 2>/dev/null; then
-		echo "note: Rosetta 2 present" >&2
+		echo "debug: Rosetta 2 present" >&2
 	else
 		# despite being an sbin, this is usable by non-root users. til
-		echo "note: installing Rosetta 2" >&2
+		echo "debug: installing Rosetta 2" >&2
 		/usr/sbin/softwareupdate --install-rosetta --agree-to-license
 	fi
 fi

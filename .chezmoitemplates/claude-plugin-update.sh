@@ -6,11 +6,11 @@
 # to apply", which is expected here and applies on the next Claude Code start.
 
 if ! command -v claude &>/dev/null; then
-	echo "note: claude is not installed, skipping Claude Code plugin update" >&2
+	echo "notice: claude is not installed, skipping Claude Code plugin update" >&2
 	exit 0
 fi
 
-echo "note: updating Claude Code marketplaces" >&2
+echo "debug: updating Claude Code marketplaces" >&2
 claude plugin marketplace update || echo "warning: marketplace update failed" >&2
 
 # Kept in step with the bootstrap's PLUGINS list. `claude plugin update` needs
@@ -18,7 +18,7 @@ claude plugin marketplace update || echo "warning: marketplace update failed" >&
 # a given machine has not installed.
 for plugin in claude-code-wakatime ralph-loop codex; do
 	if claude plugin list 2>/dev/null | grep -qF -- "$plugin"; then
-		echo "note: updating plugin $plugin" >&2
+		echo "debug: updating plugin $plugin" >&2
 		claude plugin update "$plugin" || echo "warning: failed to update $plugin" >&2
 	fi
 done

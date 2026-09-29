@@ -9,7 +9,7 @@
 # genuine distro -- so that check made this entire script a permanent no-op and
 # ssh-agent-relay.service was never actually enabled.
 if [ -z "${WSL_DISTRO_NAME:-}" ]; then
-	echo "note: not a WSL session, skipping ssh-agent-relay.service" >&2
+	echo "notice: not a WSL session, skipping ssh-agent-relay.service" >&2
 	exit 0
 fi
 

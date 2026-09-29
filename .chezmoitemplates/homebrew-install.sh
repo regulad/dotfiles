@@ -42,7 +42,7 @@
 # half-working hosts here.
 
 if [ "$(uname -s)" != "Darwin" ] && [ "$(uname -s)" != "Linux" ]; then
-	echo "note: not Darwin or Linux, nothing to install" >&2
+	echo "notice: not Darwin or Linux, nothing to install" >&2
 	exit 0
 fi
 
@@ -52,7 +52,7 @@ if [ "$IS_ATOMIC" -eq 1 ] && ! load_brew; then
 	# Running the installer here would race that unit. 022-brew-packages.sh
 	# refuses with a pointer to `systemctl status brew-setup.service` if it
 	# still hasn't landed by the time packages are due.
-	echo "note: atomic host, leaving brew to brew-setup.service" >&2
+	echo "notice: atomic host, leaving brew to brew-setup.service" >&2
 	exit 0
 fi
 
@@ -85,7 +85,7 @@ pin_brew_repo() {
 	repo="$(brew_repo_path)"
 	have="$(git -C "$repo" describe --tags --exact-match 2>/dev/null || true)"
 	if [ "$have" != "$BREW_PIN_TAG" ]; then
-		echo "note: pinning brew to $BREW_PIN_TAG (was ${have:-untagged})" >&2
+		echo "debug: pinning brew to $BREW_PIN_TAG (was ${have:-untagged})" >&2
 		git -C "$repo" fetch --quiet --depth 1 origin "refs/tags/$BREW_PIN_TAG:refs/tags/$BREW_PIN_TAG"
 		git -C "$repo" checkout --quiet "$BREW_PIN_TAG"
 	fi
@@ -111,7 +111,7 @@ pin_tap() {
 	# repo is github.com/Homebrew/homebrew-<name>.
 	tap="$(brew --repository "$tapname")"
 	if [ ! -d "$tap/.git" ]; then
-		echo "note: fetching $tapname at ${want:0:8} (era $BREW_ERA_NAME, single commit)" >&2
+		echo "debug: fetching $tapname at ${want:0:8} (era $BREW_ERA_NAME, single commit)" >&2
 		mkdir -p "$tap"
 		git -C "$tap" init --quiet
 		git -C "$tap" config remote.origin.url "https://github.com/Homebrew/homebrew-${tapname#homebrew/}"
@@ -122,7 +122,7 @@ pin_tap() {
 		git -C "$tap" fetch --quiet --depth 1 origin "$want"
 	fi
 	if [ "$(git -C "$tap" rev-parse HEAD 2>/dev/null)" != "$want" ]; then
-		echo "note: pinning $tapname to ${want:0:8} (era $BREW_ERA_NAME)" >&2
+		echo "debug: pinning $tapname to ${want:0:8} (era $BREW_ERA_NAME)" >&2
 		git -C "$tap" checkout --quiet "$want"
 	fi
 }
@@ -146,7 +146,7 @@ install_brew_pinned() {
 		share/man/man4 share/man/man5 share/man/man6 share/man/man7
 		share/man/man8 var/log var/homebrew var/homebrew/linked
 		Cellar Caskroom"
-	echo "note: creating $prefix layout (owner $user:admin)" >&2
+	echo "debug: creating $prefix layout (owner $user:admin)" >&2
 	sudo mkdir -p "$prefix"
 	if [ "$repo" = "$prefix" ]; then
 		# Apple Silicon: the whole of /opt/homebrew is the repo and is ours.
@@ -172,7 +172,7 @@ install_brew_pinned() {
 	# directory is the prefix and already has entries in it. Only the era tag
 	# is fetched, at depth 1 (see pin_brew_repo, which does the fetch).
 	if [ ! -d "$repo/.git" ]; then
-		echo "note: fetching Homebrew/brew $BREW_PIN_TAG into $repo" >&2
+		echo "debug: fetching Homebrew/brew $BREW_PIN_TAG into $repo" >&2
 		sudo mkdir -p "$repo"
 		sudo chown "$user:admin" "$repo"
 		git -C "$repo" init --quiet
@@ -197,13 +197,13 @@ if [ -x "$(brew_repo_path)/bin/brew" ]; then
 		echo "error: brew is present under $CHEZMOI_HOMEBREW_PREFIX but 'brew shellenv' failed" >&2
 		exit 1
 	fi
-	echo "note: brew already installed at $HOMEBREW_PREFIX" >&2
+	echo "debug: brew already installed at $HOMEBREW_PREFIX" >&2
 	pin_brew_taps
 	exit 0
 fi
 
 require_sudo "005-homebrew (installing brew)"
-echo "note: installing brew into $CHEZMOI_HOMEBREW_PREFIX" >&2
+echo "debug: installing brew into $CHEZMOI_HOMEBREW_PREFIX" >&2
 
 if [ "$BREW_ERA_PINNED" -eq 1 ]; then
 	if [ "$(uname -s)" != "Darwin" ]; then
@@ -237,4 +237,4 @@ if ! load_brew; then
 	exit 1
 fi
 pin_brew_taps
-echo "note: brew $(brew --version | head -n1) ready at $HOMEBREW_PREFIX" >&2
+echo "notice: brew $(brew --version | head -n1) ready at $HOMEBREW_PREFIX" >&2

@@ -239,7 +239,7 @@ if ($Reasons.Count -gt 0) {
         exit 1
     }
 } else {
-    Write-Host "note: $ServiceName service already configured and running"
+    Write-Host "debug: $ServiceName service already configured and running"
 }
 
 # ---------------------------------------------------------------------------
@@ -253,4 +253,4 @@ if (-not (Wait-Until -TimeoutSeconds 90 -Condition { @(Get-NetTCPConnection -Sta
     Write-Error "nothing is listening on port $Port after 90s -- check $Log"
     exit 1
 }
-Write-Host "note: LanguageTool listening on port $Port"
+Write-Host "notice: LanguageTool listening on port $Port"

@@ -71,7 +71,7 @@ if [ "$CURRENT_SHELL" != "$SHELL_PATH" ]; then
 		else
 			chsh -s "$SHELL_PATH"
 		fi
-		echo "note: shell was changed to $SHELL_PATH" >&2
+		echo "notice: shell was changed to $SHELL_PATH" >&2
 	elif command -v usermod &>/dev/null && can_sudo; then
 		# Atomic hosts have no chsh. It lives in util-linux-user, which isn't in
 		# the Silverblue base, and Universal Blue leaves it out on purpose: you
@@ -83,7 +83,7 @@ if [ "$CURRENT_SHELL" != "$SHELL_PATH" ]; then
 		# an entry in /etc/shells above -- i.e. to a shell the image itself
 		# provides, never a brew-installed one that a rollback could take away.
 		sudo usermod --shell "$SHELL_PATH" "$(id -un)"
-		echo "note: shell was changed to $SHELL_PATH" >&2
+		echo "notice: shell was changed to $SHELL_PATH" >&2
 	else
 		# Deliberately not fatal. This used to `exit 1` when chsh was missing,
 		# which on an atomic host aborted the whole apply at this point and took

@@ -10,7 +10,7 @@
 {{- end }}
 # go
 {{- if $brewPin }}
-echo "note: era-pinned brew ({{ $brewPin.era }}); go is installed but no tools are installed through it on this host" >&2
+echo "notice: era-pinned brew ({{ $brewPin.era }}); go is installed but no tools are installed through it on this host" >&2
 {{- else }}
 # auto lets Go fetch a newer toolchain on demand if a tool (like gopls) needs one
 export GOTOOLCHAIN=auto

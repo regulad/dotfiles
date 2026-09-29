@@ -28,7 +28,7 @@ set preset_dir=%USERPROFILE%\.local\share\projectM\presets
 set flat_dir=%USERPROFILE%\.local\share\projectM\presets-flat
 
 if exist "%preset_dir%\.git" (
-    echo note: projectM presets already present, skipping clone
+    echo debug: projectM presets already present, skipping clone
 ) else (
     echo debug: cloning projectM presets
     git clone --depth 1 https://github.com/projectM-visualizer/presets-cream-of-the-crop "%preset_dir%"
@@ -39,7 +39,7 @@ if exist "%preset_dir%\.git" (
 )
 
 if exist "%flat_dir%" (
-    echo note: flattened presets already present, skipping
+    echo debug: flattened presets already present, skipping
     exit /b 0
 )
 

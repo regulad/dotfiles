@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo note: installing python tooling
+echo debug: installing python tooling
 REM matches unix script. run_once keys on the script contents, so adding a tool
 REM below changes the hash and this re-runs -- the list stays self-healing
 REM without reinstalling everything on every apply. Upgrading what is already

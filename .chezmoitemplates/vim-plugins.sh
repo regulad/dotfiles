@@ -30,7 +30,7 @@ BUNDLE_DIR="$HOME/.vim/bundle"
 COC_EXTENSIONS_FILE="$HOME/.coc-extensions.txt"
 
 if ! command -v vim &>/dev/null; then
-	echo "note: vim is not installed, skipping vim plugin bootstrap" >&2
+	echo "notice: vim is not installed, skipping vim plugin bootstrap" >&2
 	exit 0
 fi
 
@@ -70,7 +70,7 @@ sync_repo "$COC_URI" "$BUNDLE_DIR/coc.nvim" release
 # prompt swallows the queued -c commands and nothing at all gets installed.
 # Vundle exits non-zero out of ex mode even when every clone succeeded, so the
 # result is judged by what landed on disk rather than by $?.
-echo "note: installing vim plugins with Vundle" >&2
+echo "debug: installing vim plugins with Vundle" >&2
 vim -E -s -N -u "$HOME/.vimrc" -c 'PluginInstall' -c 'qall!' </dev/null >/dev/null || true
 
 for required in Vundle.vim coc.nvim darcula; do
@@ -105,7 +105,7 @@ done < <(tr -d '\r' <"$COC_EXTENSIONS_FILE" | sed '/^[[:space:]]*$/d')
 if [ "${#wanted[@]}" -gt 0 ]; then
 	# -sync so the download completes before Vim exits; :CocInstall is
 	# otherwise fire-and-forget and qall! would kill it mid-flight.
-	echo "note: installing coc extensions: ${wanted[*]}" >&2
+	echo "debug: installing coc extensions: ${wanted[*]}" >&2
 	vim -E -s -N -u "$HOME/.vimrc" -c "CocInstall -sync ${wanted[*]}" -c 'qall!' </dev/null >/dev/null
 fi
 
@@ -153,7 +153,7 @@ if [ -f "$COC_PKG" ]; then
 		is_wanted "$extension" || unwanted+=("$extension")
 	done
 	if [ "${#unwanted[@]}" -gt 0 ]; then
-		echo "note: removing unlisted coc extensions: ${unwanted[*]}" >&2
+		echo "notice: removing unlisted coc extensions: ${unwanted[*]}" >&2
 		for extension in "${unwanted[@]}"; do
 			rm -rf "$COC_DATA_HOME/extensions/node_modules/$extension"
 		done

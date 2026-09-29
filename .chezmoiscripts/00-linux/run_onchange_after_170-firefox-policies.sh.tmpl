@@ -51,7 +51,7 @@ if command -v flatpak &>/dev/null; then
 fi
 
 if [ "${#POLICY_PATHS[@]}" -eq 0 ]; then
-	echo "note: no firefox installation found, skipping policy deployment" >&2
+	echo "notice: no firefox installation found, skipping policy deployment" >&2
 	exit 0
 fi
 
@@ -65,7 +65,7 @@ for POLICY_PATH in "${POLICY_PATHS[@]}"; do
 done
 
 if [ "${#STALE_PATHS[@]}" -eq 0 ]; then
-	echo "note: firefox policies already up to date" >&2
+	echo "debug: firefox policies already up to date" >&2
 fi
 
 DEPLOY_FAILED=0
@@ -90,7 +90,7 @@ for POLICY_PATH in "${STALE_PATHS[@]}"; do
 		DEPLOY_FAILED=1
 		continue
 	fi
-	echo "note: deployed firefox policies to $POLICY_PATH" >&2
+	echo "notice: deployed firefox policies to $POLICY_PATH" >&2
 done
 
 # Exiting non-zero is the point: chezmoi keys a run_onchange_ script on its

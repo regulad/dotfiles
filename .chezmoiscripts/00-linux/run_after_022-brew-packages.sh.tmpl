@@ -177,8 +177,8 @@ if [ "$HAS_BREW" != "true" ]; then
 	# preamble's own fallback would race it by pointing Homebrew's installer at
 	# the same prefix, so refuse rather than fight the unit.
 	echo "error: no brew on an atomic host, can't install system packages" >&2
-	echo "note: brew-setup.service provisions it on first boot; check with" >&2
-	echo "note:   systemctl status brew-setup.service" >&2
+	echo "notice: brew-setup.service provisions it on first boot; check with" >&2
+	echo "notice:   systemctl status brew-setup.service" >&2
 	exit 1
 fi
 

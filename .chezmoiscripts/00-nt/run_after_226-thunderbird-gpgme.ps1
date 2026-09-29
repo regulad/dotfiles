@@ -113,5 +113,5 @@ if (-not (Test-Path -LiteralPath $Dest) -or (Get-Content -LiteralPath $Dest -Raw
     # in Windows PowerShell 5.1.
     $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($Dest, $UserJsContent, $Utf8NoBom)
-    Write-Host "note: wrote $Dest"
+    Write-Host "notice: wrote $Dest"
 }

@@ -22,7 +22,7 @@ set "COC_EXTENSIONS_FILE=%USERPROFILE%\.coc-extensions.txt"
 
 where vim >nul 2>nul
 if errorlevel 1 (
-    echo note: vim is not installed, skipping vim plugin bootstrap 1>&2
+    echo notice: vim is not installed, skipping vim plugin bootstrap 1>&2
     exit /b 0
 )
 
@@ -42,7 +42,7 @@ REM checkouts alone, which is what keeps the coc.nvim pin above intact. -E -s is
 REM required: a normal-mode headless Vim stops on the startup "Press ENTER"
 REM prompt and never reaches the queued -c commands. Vundle exits non-zero from
 REM ex mode even on success, so the result is judged by what is on disk.
-echo note: installing vim plugins with Vundle 1>&2
+echo debug: installing vim plugins with Vundle 1>&2
 vim -E -s -N -u "%VIMRC%" -c "PluginInstall" -c "qall!" <nul >nul 2>nul
 
 for %%R in (Vundle.vim coc.nvim darcula) do (
@@ -73,7 +73,7 @@ for /F "usebackq tokens=* delims=" %%A in ("%COC_EXTENSIONS_FILE%") do (
 if defined COC_WANTED (
     REM -sync so the download finishes before Vim exits; :CocInstall is
     REM otherwise fire-and-forget and qall! would kill it mid-flight.
-    echo note: installing coc extensions:!COC_WANTED! 1>&2
+    echo debug: installing coc extensions:!COC_WANTED! 1>&2
     vim -E -s -N -u "%VIMRC%" -c "CocInstall -sync!COC_WANTED!" -c "qall!" <nul >nul 2>nul
 )
 
@@ -103,7 +103,7 @@ if exist "%COC_PKG%" (
         if errorlevel 1 set "COC_UNWANTED=!COC_UNWANTED! %%B"
     )
     if defined COC_UNWANTED (
-        echo note: removing unlisted coc extensions:!COC_UNWANTED! 1>&2
+        echo notice: removing unlisted coc extensions:!COC_UNWANTED! 1>&2
         for %%C in (!COC_UNWANTED!) do rd /s /q "!COC_DATA_HOME!\extensions\node_modules\%%C" 2>nul
         node -e "var fs=require('fs'),p=process.argv[1],j=JSON.parse(fs.readFileSync(p,'utf8'));process.argv.slice(2).forEach(function(k){delete j.dependencies[k]});fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n');" "!COC_PKG!" !COC_UNWANTED!
     )

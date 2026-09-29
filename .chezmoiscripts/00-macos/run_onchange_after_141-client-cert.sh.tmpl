@@ -22,5 +22,5 @@ if ! security import "$HOME/.x509/client/dotfiles.p12" -k ~/Library/Keychains/lo
 		echo "error: failed to import client certificate (exit $import_status)" >&2
 		exit 1
 	fi
-	echo "note: client certificate already present in keychain" >&2
+	echo "debug: client certificate already present in keychain" >&2
 fi
