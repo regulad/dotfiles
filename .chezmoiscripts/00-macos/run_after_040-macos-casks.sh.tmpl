@@ -79,7 +79,9 @@ BREW_CASKS_MACOS=(
 {{- if not $pre2025 }}
 	"claude"  # cask added 2025
 {{- end }}
-	"element"
+{{- if not $pre2025 }}
+	"element"  # needs macOS 13.0; the pinned casks lack a depends_on macos line, so this gate stands in for it
+{{- end }}
 {{- if not (has $brewEra (list "bigsur" "ventura")) }}
 	"forklift"  # the 2025 cask requires Sonoma; the 2024 one did not, and the current one runs on Sonoma+. The 2023 pin checksums an unversioned ForkLift4.zip that the vendor has since replaced (sha256 mismatch, checksum audit 2026-09-28)
 {{- end }}
