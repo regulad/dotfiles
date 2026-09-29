@@ -23,7 +23,7 @@ MACPORTS_PACKAGES=(
 {{- end }}
 {{- if $pre2022 }}
 	fastfetch     # not in homebrew-core until 2023
-	pam-reattach  # not in homebrew-core until 2022; 010-pam-sudo-touchid points at /opt/local/lib/pam on this era
+	pam-reattach  # not in homebrew-core until 2022 (tmux reattach; Touch ID for sudo itself is Sonoma+ only)
 	wasm-tools    # not in homebrew-core until 2022
 {{- end }}
 )

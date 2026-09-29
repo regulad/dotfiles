@@ -1,0 +1,77 @@
+{{ template "posix-preamble-brew.sh" . }}
+# Touch ID for sudo, with pam_reattach so it also works inside tmux.
+#
+# Ordering matters here, and is the reason this is 025 and not earlier:
+# OpenPAM refuses the WHOLE chain when a listed module file does not exist,
+# and sudo then fails outright ("PAM error") for everyone, regardless of the
+# `optional` control. So this runs after the package scripts that provide
+# pam_reattach.so -- brew's pam-reattach (020-brew-packages) under
+# $HOMEBREW_PREFIX/lib/pam (the Mojave-era MacPorts copy under /opt/local is
+# moot, since Mojave is pre-Sonoma and skipped below) -- and it refuses to
+# write anything unless BOTH modules it names are on disk.
+# A missing module is an error (exit 1), not a policy without that line: an
+# apply that failed here is loud, a sudo that stopped working is not.
+#
+# There is no `visudo` for PAM: OpenPAM ships no validator, and pamtester,
+# the usual dynamic check, is not in homebrew-core and does not build on
+# current macOS. The existence check is the guard.
+#
+# Runs every apply, idempotently: the wanted file is computed, compared with
+# what is there (both are world-readable), and sudo is only asked for when
+# they differ.
+#
+# Sonoma (14) and newer only: there /etc/pam.d/sudo ends with `include
+# sudo_local`, and /etc/pam.d/sudo_local is ours to write whole and survives
+# OS updates. Older releases have no such hook -- the only way in is editing
+# /etc/pam.d/sudo itself, which Apple owns and rewrites -- so they are left
+# alone, and sudo there is password-only.
+
+if ! grep -q 'sudo_local' /etc/pam.d/sudo; then
+	echo "note: this macOS has no /etc/pam.d/sudo_local (pre-Sonoma); leaving /etc/pam.d/sudo alone, no Touch ID for sudo" >&2
+	exit 0
+fi
+
+if [ "$BREW_ERA_NAME" = "mojave" ]; then
+	PAM_REATTACH="/opt/local/lib/pam/pam_reattach.so"
+else
+	PAM_REATTACH="$HOMEBREW_PREFIX/lib/pam/pam_reattach.so"
+fi
+# Apple ships its modules with a version suffix (pam_tid.so.2) that OpenPAM
+# resolves from the bare name in the policy.
+PAM_TID="$(ls /usr/lib/pam/pam_tid.so* 2>/dev/null | head -n1)"
+
+for module in "$PAM_REATTACH" "$PAM_TID"; do
+	if [ -z "$module" ] || [ ! -f "$module" ]; then
+		echo "error: PAM module missing (${module:-/usr/lib/pam/pam_tid.so}); refusing to write a sudo policy that would break sudo" >&2
+		echo "note: pam_reattach comes from 020-brew-packages (brew) or 017-macports-packages (MacPorts, Mojave era)" >&2
+		exit 1
+	fi
+done
+
+PAM_LINES="auth       optional       $PAM_REATTACH ignore_ssh
+auth       sufficient     pam_tid.so"
+
+target=/etc/pam.d/sudo_local
+wanted="$(
+	printf '%s\n' \
+		'# sudo_local: local config file which survives system update and is included for sudo' \
+		'# uncomment following line to enable Touch ID for sudo'
+	printf '%s\n' "$PAM_LINES"
+)"
+
+current="$(cat "$target" 2>/dev/null || true)"
+if [ "$wanted" = "$current" ]; then
+	echo "note: $target is up to date" >&2
+	exit 0
+fi
+
+require_sudo "025-pam-sudo-touchid"
+# Written whole through a temp file and cp, never in place: a half-written
+# PAM file would lock sudo out.
+tmp="$(mktemp)"
+printf '%s\n' "$wanted" >"$tmp"
+sudo cp "$tmp" "$target"
+sudo chown root:wheel "$target"
+sudo chmod 444 "$target"
+rm -f "$tmp"
+echo "note: wrote $target" >&2

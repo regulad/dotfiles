@@ -12,7 +12,7 @@
 # Scoped to /etc/udev/rules.d/*.rules, a root-only path chezmoi itself cannot
 # manage (it only ever writes under $HOME) -- sudo tee + reload is the same
 # shape every other root file in this repo goes through, e.g.
-# 010-pam-sudo-touchid.sh on macOS.
+# 025-pam-sudo-touchid.sh on macOS.
 require_sudo "installing the veracrypt-hc udev rule"
 
 RULE_PATH="/etc/udev/rules.d/99-veracrypt-hc.rules"

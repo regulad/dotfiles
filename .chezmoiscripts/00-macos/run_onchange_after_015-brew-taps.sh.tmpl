@@ -11,8 +11,8 @@
 # run_onchange_ runs it on the first apply and again only when this file
 # changes (e.g. a tap is added).
 #
-# Ordering: after 010-pam-sudo-touchid (which needs nothing from here) and
-# before 020-brew-packages / 040-macos-casks, which install from these taps.
+# Ordering: after 005-homebrew and before 020-brew-packages /
+# 040-macos-casks, which install from these taps.
 
 # kde-mac/kde is disabled until Homebrew fixes a 7.0 regression. Its
 # tools/do-caveats.sh runs `brew services restart dbus`, and brew 7.0.x fails
