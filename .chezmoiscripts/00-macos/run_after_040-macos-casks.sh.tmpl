@@ -88,7 +88,9 @@ BREW_CASKS_MACOS=(
 {{- if and (not $pre2023) (ne $brewEra "bigsur") }}
 	"prismlauncher"  # cask added late 2022. The 7.2 release asset the 2023 pin checksums was re-uploaded upstream (sha256 mismatch, checksum audit 2026-09-28)
 {{- end }}
-	"spotify"
+{{- if not $pre2025 }}
+	"spotify"  # needs macOS 13.0; the pinned casks lack a depends_on macos line, so this gate stands in for it
+{{- end }}
 	"steam"
 	"vagrant"
 	"raspberry-pi-imager"
