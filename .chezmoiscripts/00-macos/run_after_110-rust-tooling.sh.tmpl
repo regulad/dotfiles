@@ -1,5 +1,19 @@
 {{ template "posix-preamble.sh" . }}
+{{- /* Era-pinned host (see .chezmoidata/brew-tiers.toml)? The toolchain
+       itself (rustup + stable, 020-brew-packages) is installed there like
+       everywhere else, but nothing is installed *through* cargo: these are
+       from-source builds of specialised tools, the same policy as the uv and
+       pnpm tooling (see .chezmoiignore.tmpl). $brewPin is empty on a Tier 1
+       host. */ -}}
+{{- $brewPin := dict }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{- end }}
 # rust
+{{- if $brewPin }}
+echo "note: era-pinned brew ({{ $brewPin.era }}); cargo is installed but no tools are installed through it on this host" >&2
+{{- else }}
 cargo install cargo-disasm
 cargo install vtracer
 cargo install apple-codesign
+{{- end }}

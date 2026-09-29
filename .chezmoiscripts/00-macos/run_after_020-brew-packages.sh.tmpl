@@ -202,17 +202,30 @@ env -u HOMEBREW_ARTIFACT_DOMAIN -u HOMEBREW_DOCKER_REGISTRY_BASIC_AUTH_TOKEN \
 brew install -q --formula "${BREW_PACKAGES[@]}"
 brew upgrade -q
 
-# Setup Rust toolchain if needed
-if command -v rustup-init &>/dev/null && [[ ! -d "$HOME/.cargo" ]]; then
-	rustup-init -y --default-toolchain stable --profile default
-	source "$HOME/.cargo/env"
-	rustup component add rust-analyzer
-elif command -v rustup &>/dev/null && rustup toolchain list 2>&1 | grep -qE "(no installed toolchains|^$)"; then
-	rustup default stable
-	rustup set profile default
-	rustup toolchain install stable
-	rustup component add rust-analyzer
+# Rust toolchain. The `rustup` entry above is two different things by era:
+# from 2024 on it is the rustup formula, which ships rustup itself; at the
+# Mojave through Monterey pins it is an alias of rustup-init, which ships
+# only the rustup-init bootstrapper and no `rustup` on PATH. Either way the
+# toolchain's cargo/rustc proxies land in ~/.cargo/bin, so that is the test.
+# It used to be `! -d ~/.cargo`, which never fires: chezmoi puts
+# ~/.cargo/credentials.toml there before this script runs, so on the
+# rustup-init eras neither branch ran and 110-rust-tooling found no cargo.
+if [ ! -x "$HOME/.cargo/bin/cargo" ]; then
+	if command -v rustup-init &>/dev/null; then
+		# --no-modify-path: the shell rc files are chezmoi's, and .commonprofile
+		# already sources ~/.cargo/env.
+		rustup-init -y --no-modify-path --default-toolchain stable --profile default
+	elif command -v rustup &>/dev/null; then
+		# brew's rustup: installs stable into ~/.rustup and the proxies into
+		# ~/.cargo/bin.
+		rustup default stable
+	else
+		echo "error: neither rustup-init nor rustup is on PATH after the brew install above" >&2
+		exit 1
+	fi
 fi
+export PATH="$HOME/.cargo/bin:$PATH"
+rustup component add rust-analyzer
 
 if can_sudo; then
 	# special case needed to link the openjdk into the system java wrapper
