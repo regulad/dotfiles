@@ -20,6 +20,18 @@
 # 060-mac-app-store).
 export THEOS="$HOME/theos"
 
+# Monterey (12) or newer. Theos's docs still say Mavericks, but its
+# bin/install-sdk (run by install-theos for the patched SDKs) does
+# `grep -F -x -z`, and Apple's grep only accepts -z from the text_cmds that
+# shipped with macOS 12 (text_cmds-118; Big Sur's 106 knows the option
+# internally but leaves it out of its getopt string, hence
+# "grep: invalid option -- z"). .chezmoiignore.tmpl masks this script below
+# 12 as well; this guard is for a by-hand run.
+if ! macos_version_ge "$VERSION_ID" 12; then
+	echo "notice: macOS $VERSION_ID is older than Monterey; skipping Theos (its SDK installer needs Apple's grep -z, macOS 12+)" >&2
+	exit 0
+fi
+
 # Without Xcode.app install-theos exits 3, which under `bash -e` would end the
 # whole apply here and skip every later hookscript. Skip instead: a Mac that
 # has not (yet) got Xcode simply does not get Theos on this apply. The check

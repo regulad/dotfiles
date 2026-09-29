@@ -138,6 +138,11 @@ Library
 # it never even appears in the apply on such a host.
 .chezmoiscripts/00-macos/025-pam-sudo-touchid.sh
 {{-   end }}
+{{-   if lt .macos.major 12 }}
+# Theos's SDK installer needs `grep -z`, which Apple's grep only accepts from
+# macOS 12 (text_cmds-118) on. The script refuses below that too.
+.chezmoiscripts/00-macos/125-theos.sh
+{{-   end }}
 {{- end }}
 
 # Linux
