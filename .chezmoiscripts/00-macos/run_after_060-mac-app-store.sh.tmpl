@@ -39,8 +39,36 @@ elif [ "$HAS_BREW" = "true" ]; then
 	else
 		echo "note: no App Store apps to update (Xcode is excluded on purpose)" >&2
 	fi
+	# `mas install` only re-downloads apps that are already in the signed-in
+	# Apple Account's purchase history: it sends the store a redownload
+	# request (pricingParameters=STDRDL, isRedownload), and for an app this
+	# account has never gotten the store answers with no downloads and mas
+	# exits non-zero ("No downloads began" in 1.x, "No downloads initiated"
+	# in 7.x). `mas purchase` -- `mas get` since 5.x, with `purchase` kept as
+	# an alias, so the old spelling works on every era -- sends a real
+	# zero-price purchase instead (STDQ, macappinstalledconfirmed=1), which
+	# adds the app to the account and then downloads it. Free apps only:
+	# paid ones have to be bought in the App Store app (mas-cli/mas#558).
+	# Depending on System Settings (Touch ID for purchases, or Free
+	# Downloads: Always Require) the store may prompt for Apple Account
+	# authentication per app, and mas 4.x+ needs root for both commands and
+	# sudo's itself. Already-installed apps are a warning and exit 0, so they
+	# never reach the fallback.
+	#
+	# Era caveat: mas 1.8.4 through 1.8.6 refuse `purchase` outright on
+	# 10.15+ ("not supported on this macOS version"); 1.8.7 (2024-11)
+	# re-enabled it. The Catalina, Big Sur and Monterey pins carry 1.8.6, so
+	# there the fallback fails too and the app has to be gotten once by hand
+	# in the App Store; after that `mas install` works. Mojave's 1.8.3 and
+	# the 2025+ pins are fine.
 	for mas_id in "${MAS_APP_IDS[@]}"; do
-		mas install "$mas_id"
+		if mas install "$mas_id"; then
+			continue
+		fi
+		echo "note: mas install $mas_id failed; trying to get it as a free purchase with the signed-in Apple Account" >&2
+		if ! mas purchase "$mas_id"; then
+			echo "warning: could not get app $mas_id; if it is free, click Get on https://apps.apple.com/app/id$mas_id in the App Store and re-run this script" >&2
+		fi
 	done
 fi
 
