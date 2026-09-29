@@ -27,9 +27,9 @@
 #            ownership, a git clone of Homebrew/brew checked out at the last
 #            release that treated this OS as fully supported, and the Intel
 #            bin/brew symlink (the Command Line Tools are 003-macos-prereqs'
-#            job on every Mac, pinned or not). Then
-#            homebrew/core and homebrew/cask are tapped through that brew and
-#            checked out at the era's commit for each. From then on
+#            job on every Mac, pinned or not). Then homebrew/core and
+#            homebrew/cask are laid down as single-commit checkouts of the
+#            era's commit for each. From then on
 #            HOMEBREW_NO_AUTO_UPDATE keeps brew from moving itself and
 #            HOMEBREW_NO_INSTALL_FROM_API makes it read those local taps
 #            instead of the API, which only describes today's bottles. The
@@ -71,6 +71,14 @@ brew_repo_path() {
 # Two halves, because of what sits between them. The brew repo is pinned
 # with git alone, by path; only then is brew loaded and asked to pin the
 # taps.
+# Every pinned checkout is SHALLOW: one commit, fetched by tag or by hash at
+# depth 1 (GitHub serves any reachable commit by hash). Nothing in the pinned
+# flow needs history -- `brew install` reads the formula files in the working
+# tree, and the one command that does need history, `brew update`, is the one
+# that never runs here. A full homebrew-core clone is well over a gigabyte;
+# this is the working tree's size, on the slowest machines this repo targets.
+# `brew doctor` will mention the shallow clones; a deliberate `brew! update`
+# has to `git fetch --unshallow` all three first.
 pin_brew_repo() {
 	[ "$BREW_ERA_PINNED" -eq 1 ] || return 0
 	local repo have
@@ -78,32 +86,36 @@ pin_brew_repo() {
 	have="$(git -C "$repo" describe --tags --exact-match 2>/dev/null || true)"
 	if [ "$have" != "$BREW_PIN_TAG" ]; then
 		echo "note: pinning brew to $BREW_PIN_TAG (was ${have:-untagged})" >&2
-		git -C "$repo" fetch --quiet --tags origin
+		git -C "$repo" fetch --quiet --depth 1 origin "refs/tags/$BREW_PIN_TAG:refs/tags/$BREW_PIN_TAG"
 		git -C "$repo" checkout --quiet "$BREW_PIN_TAG"
 	fi
 }
 
 pin_brew_taps() {
 	[ "$BREW_ERA_PINNED" -eq 1 ] || return 0
-	# Full git taps are required for HOMEBREW_NO_INSTALL_FROM_API. Old brew
-	# clones them on `brew tap`; shallow clones are refused, so this is a
-	# gigabyte or so the first time. Each tap then goes to its era commit.
+	# Git taps are required for HOMEBREW_NO_INSTALL_FROM_API. They are laid
+	# down here rather than by `brew tap`, which would clone the full history.
 	pin_tap homebrew/core "$BREW_ERA_CORE_COMMIT"
 	pin_tap homebrew/cask "$BREW_ERA_CASK_COMMIT"
 }
 
 pin_tap() {
 	local tapname="$1" want="$2" tap
-	if ! brew tap | grep -qx "$tapname"; then
-		echo "note: cloning $tapname (full history, this takes a while)" >&2
-		brew tap "$tapname"
-	fi
+	# brew's tap path, e.g. .../Library/Taps/homebrew/homebrew-core; the
+	# repo is github.com/Homebrew/homebrew-<name>.
 	tap="$(brew --repository "$tapname")"
-	if ! git -C "$tap" cat-file -e "$want^{commit}" 2>/dev/null; then
-		# A clone made before the table was bumped; fetch the commit by hash.
-		git -C "$tap" fetch --quiet origin "$want"
+	if [ ! -d "$tap/.git" ]; then
+		echo "note: fetching $tapname at ${want:0:8} (era $BREW_ERA_NAME, single commit)" >&2
+		mkdir -p "$tap"
+		git -C "$tap" init --quiet
+		git -C "$tap" config remote.origin.url "https://github.com/Homebrew/homebrew-${tapname#homebrew/}"
+		git -C "$tap" config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
 	fi
-	if [ "$(git -C "$tap" rev-parse HEAD)" != "$want" ]; then
+	if ! git -C "$tap" cat-file -e "$want^{commit}" 2>/dev/null; then
+		# First fetch, or the table was bumped: fetch the commit by hash.
+		git -C "$tap" fetch --quiet --depth 1 origin "$want"
+	fi
+	if [ "$(git -C "$tap" rev-parse HEAD 2>/dev/null)" != "$want" ]; then
 		echo "note: pinning $tapname to ${want:0:8} (era $BREW_ERA_NAME)" >&2
 		git -C "$tap" checkout --quiet "$want"
 	fi
@@ -151,9 +163,10 @@ install_brew_pinned() {
 	mkdir -p "$HOME/Library/Caches/Homebrew"
 
 	# The repo: init + fetch, not clone, because on Apple Silicon the repo
-	# directory is the prefix and already has entries in it.
+	# directory is the prefix and already has entries in it. Only the era tag
+	# is fetched, at depth 1 (see pin_brew_repo, which does the fetch).
 	if [ ! -d "$repo/.git" ]; then
-		echo "note: fetching Homebrew/brew into $repo" >&2
+		echo "note: fetching Homebrew/brew $BREW_PIN_TAG into $repo" >&2
 		sudo mkdir -p "$repo"
 		sudo chown "$user:admin" "$repo"
 		git -C "$repo" init --quiet
@@ -161,8 +174,6 @@ install_brew_pinned() {
 		git -C "$repo" config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
 		git -C "$repo" config core.autocrlf false
 		git -C "$repo" config --bool core.symlinks true
-		git -C "$repo" fetch --quiet --force origin
-		git -C "$repo" fetch --quiet --force --tags origin
 	fi
 	pin_brew_repo
 

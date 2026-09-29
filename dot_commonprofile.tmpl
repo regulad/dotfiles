@@ -40,6 +40,7 @@ if [ "$(uname -s)" = "Darwin" ]; then
     brew() {
         if [ "$1" = "update" ]; then
             echo "WARNING: this brew is pinned! run \`brew! update\` to update anyway" >&2
+            echo "(the pinned checkouts are single-commit: brew, homebrew/core and homebrew/cask each need \`git fetch --unshallow\` first)" >&2
             return 1
         fi
         command brew "$@"
