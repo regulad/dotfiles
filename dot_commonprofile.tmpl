@@ -151,10 +151,11 @@ if grep -qi wsl /proc/version 2>/dev/null; then
     export BROWSER=wslview
 fi
 
-# pnpm
+# pnpm: PNPM_HOME is the global bin directory itself (no bin/ under it), and
+# pnpm's global commands refuse to run unless exactly that is on PATH.
 case ":$PATH:" in
   *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
 esac
 # pnpm end
 

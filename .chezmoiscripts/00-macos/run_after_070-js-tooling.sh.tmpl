@@ -21,12 +21,16 @@ fi
 
 # `pnpm setup`'s self-managed-copy step is flaky when pnpm is already installed
 # via brew/npm (fails to link its own bundled binary), so just set PNPM_HOME
-# directly instead of relying on it.
-if [ -z "$PNPM_HOME" ]; then
-	export PNPM_HOME="$HOME/.local/share/pnpm"
-	export PATH="$PNPM_HOME/bin:$PATH"
-	mkdir -p "$PNPM_HOME/bin"
-fi
+# directly instead of relying on it. PNPM_HOME *is* pnpm's global bin
+# directory (there is no bin/ under it), and every global command refuses to
+# run unless that exact directory is on PATH -- whether PNPM_HOME came from
+# .commonprofile (same default as here) or is set now, put it there.
+export PNPM_HOME="${PNPM_HOME:-$HOME/Library/pnpm}"
+case ":$PATH:" in
+	*":$PNPM_HOME:"*) ;;
+	*) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+mkdir -p "$PNPM_HOME"
 
 PNPM_CLI_PACKAGES=(
 	"@mermaid-js/mermaid-cli@latest"
