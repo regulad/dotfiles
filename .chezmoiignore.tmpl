@@ -117,6 +117,10 @@ repositories  # symlink
 Library
 .bootstrap.sh
 .chezmoiscripts/00-macos/*
+# The docker CLI only runs on macOS here (docs/containers.md): Windows has wslc
+# and 00-nt/105-docker-desktop-remove deletes ~/.docker there, and Linux
+# runs podman.
+.docker
 {{- else }}
 {{-   $brewPin := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
 {{-   if $brewPin }}
@@ -142,6 +146,13 @@ Library
 # Theos's SDK installer needs `grep -z`, which Apple's grep only accepts from
 # macOS 12 (text_cmds-118) on. The script refuses below that too.
 .chezmoiscripts/00-macos/125-theos.sh
+{{-   end }}
+{{-   if eq .macos.series "10.14" }}
+# No container engine on Mojave: its pinned colima boots an Ubuntu image whose
+# URL is gone (docs/containers.md), so 020 installs no docker CLI either. The
+# script also refuses below 10.15.
+.chezmoiscripts/00-macos/035-container-runtime.sh
+.docker
 {{-   end }}
 {{- end }}
 

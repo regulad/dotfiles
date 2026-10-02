@@ -13,6 +13,8 @@
 {{- $pre2024 := has $brewEra (list "mojave" "catalina" "bigsur") }}
 {{- $pre2025 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey") }}
 {{- $pre2026 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey" "ventura") }}
+{{- /* apple/container host? See .chezmoidata/containers.toml. */ -}}
+{{- $appleContainer := and (eq .chezmoi.arch "arm64") (ge .macos.major .containers.appleMinMacos) }}
 # system-level binary dependencies for macOS hosts (brew).
 # these are typically very stable applications that MUST be provided by a
 # package manager; they are not particularly version-sensitive and are all f(l)oss.
@@ -37,9 +39,23 @@ BREW_PACKAGES=(
 	age
 
 	# =+= CONTAINERIZATION
-	podman
-{{- if not $pre2022 }}
-	podman-compose  # not in homebrew-core until 2022
+	# One engine per Mac, chosen in .chezmoidata/containers.toml and started by
+	# 035-container-runtime; the docker CLI talks to whichever it is (see
+	# docs/containers.md). Mojave gets neither: its pinned colima (0.2.2)
+	# boots an Ubuntu impish image whose URL is gone. podman left this list --
+	# on a Mac it is only a client for a `podman machine` VM, which nothing
+	# here created, and podman 6 dropped Intel Macs.
+{{- if $appleContainer }}
+	container  # apple/container; Apple silicon on macOS 26+ only
+	socktainer  # Docker Engine API on top of container, for the docker CLI and friends
+{{- else if ne $brewEra "mojave" }}
+	colima  # dockerd in a lima VM; vz from Ventura on, qemu before it
+{{- end }}
+{{- if ne $brewEra "mojave" }}
+	docker  # the CLI only
+	docker-compose
+	docker-buildx
+	docker-credential-helper  # docker-credential-osxkeychain, the credsStore in ~/.docker/config.json
 {{- end }}
 
 	# =+= macOS-SPECIFIC

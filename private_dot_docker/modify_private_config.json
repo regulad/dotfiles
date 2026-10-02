@@ -1,0 +1,16 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- /* The docker CLI's config; macOS only (.chezmoiignore.tmpl). Two keys are
+       managed. Everything docker writes itself -- currentContext, auths,
+       plugin state -- passes through json-config-merge untouched.
+
+       credsStore: docker-credential-osxkeychain, from the
+       docker-credential-helper formula (020-brew-packages). It also displaces
+       Docker Desktop's "desktop" helper, which is gone once
+       019-docker-desktop-remove has run, and without which every pull and
+       login fails.
+
+       cliPluginsExtraDirs: where the docker-compose and docker-buildx formulae
+       link their plugins from the Monterey pin on (both formulae's caveats ask
+       for exactly this). 035-container-runtime links the older eras' plugins
+       into ~/.docker/cli-plugins instead. */ -}}
+{{- includeTemplate "json-config-merge" (dict "stdin" .chezmoi.stdin "managed" (dict "credsStore" "osxkeychain" "cliPluginsExtraDirs" (list (printf "%s/lib/docker/cli-plugins" .homebrewPrefix)))) -}}

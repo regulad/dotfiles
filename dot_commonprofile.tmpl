@@ -70,8 +70,21 @@ if [ "$(uname -s)" = "Darwin" ]; then
     export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}"
 
     export PNPM_HOME="$HOME/Library/pnpm"
+{{- if eq .chezmoi.os "darwin" }}
+{{-   if and (eq .chezmoi.arch "arm64") (ge .macos.major .containers.appleMinMacos) }}
 
-    fpath=("$HOME/.docker/completions" $fpath)
+    # The Docker Engine API for the docker CLI and for tools that read
+    # DOCKER_HOST but not docker contexts: socktainer over apple/container
+    # (00-macos/035-container-runtime; .chezmoidata/containers.toml).
+    export DOCKER_HOST="unix://{{ .homebrewPrefix }}/var/run/socktainer/.socktainer/container.sock"
+{{-   else if ne .macos.series "10.14" }}
+
+    # The Docker Engine API for the docker CLI and for tools that read
+    # DOCKER_HOST but not docker contexts: colima's dockerd
+    # (00-macos/035-container-runtime; .chezmoidata/containers.toml).
+    export DOCKER_HOST="unix://$HOME/.colima/default/docker.sock"
+{{-   end }}
+{{- end }}
 elif [ "$(uname -s)" = "Linux" ]; then
     eval "$({{ .homebrewPrefix }}/bin/brew shellenv)"
 

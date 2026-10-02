@@ -1,0 +1,126 @@
+{{ template "posix-preamble-brew.sh" . }}
+{{- $brewEra := "" }}
+{{- $p := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{- if $p }}{{ $brewEra = $p.era }}{{ end }}
+{{- $appleContainer := and (eq .chezmoi.arch "arm64") (ge .macos.major .containers.appleMinMacos) }}
+# Starts this Mac's container engine and points the docker CLI at it. Which
+# engine is decided in .chezmoidata/containers.toml, with the same expression
+# 020-brew-packages uses to install it (see docs/containers.md):
+#
+#   Apple silicon, macOS {{ .containers.appleMinMacos }}+   apple/container, plus socktainer for a Docker API
+#   any other Mac from Catalina   colima (dockerd in a lima VM)
+#   Mojave                        nothing; .chezmoiignore masks this script
+#
+# Both engines run as brew services (launchd agents), so they come back at
+# login without this script. On a re-run every step finds its work done.
+
+# Waits up to $1 seconds for the command in the remaining arguments to succeed.
+wait_for() {
+	local timeout="$1" waited=0
+	shift
+	until "$@" &>/dev/null; do
+		[ "$waited" -ge "$timeout" ] && return 1
+		sleep 2
+		waited=$((waited + 2))
+	done
+}
+
+{{- if $appleContainer }}
+
+# The branch above was picked from .macos and .chezmoi.arch, which only
+# `chezmoi init` refreshes. A Mac whose data has gone stale is told so rather
+# than half set up. hw.optional.arm64 rather than `uname -m`, which says
+# x86_64 in a Rosetta shell.
+if [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" != 1 ] || ! macos_version_ge "$VERSION_ID" {{ .containers.appleMinMacos }}; then
+	echo "notice: this script was rendered for apple/container (Apple silicon, macOS {{ .containers.appleMinMacos }}+), but this Mac is macOS $VERSION_ID on $(uname -m); run chezmoi init and apply again" >&2
+	exit 0
+fi
+
+# The formula's service runs `container system start --disable-kernel-install`,
+# which registers container's own launchd agents (the API server and its
+# helpers) and returns.
+echo "debug: starting the container service" >&2
+brew services start container
+if ! wait_for 60 container system status; then
+	echo "warning: container's API server is not up yet; containers will not run until it is (container system status)" >&2
+	exit 0
+fi
+
+# Because of --disable-kernel-install, nothing fetches a Linux kernel for the
+# VMs until this does (the formula's caveat says as much). `kernel set`
+# downloads and links the recommended one; the link it leaves under the data
+# directory is the idempotency check.
+CONTAINER_KERNEL="$HOME/Library/Application Support/com.apple.container/kernels/default.kernel-arm64"
+if [ ! -e "$CONTAINER_KERNEL" ]; then
+	echo "notice: installing container's recommended Linux kernel" >&2
+	container system kernel set --recommended
+fi
+
+# socktainer serves a Docker Engine API on top of container. Its service keeps
+# HOME at $HOMEBREW_PREFIX/var/run/socktainer, hence the socket path; the same
+# path is DOCKER_HOST in .commonprofile. A docker context too, for GUI apps
+# that never read the shell profile.
+echo "debug: starting the socktainer service" >&2
+brew services start socktainer
+DOCKER_SOCK="$HOMEBREW_PREFIX/var/run/socktainer/.socktainer/container.sock"
+DOCKER_CONTEXT_NAME=socktainer
+{{- else }}
+
+if ! macos_version_ge "$VERSION_ID" 10.15; then
+	echo "notice: macOS $VERSION_ID gets no container engine (its pinned colima boots an image that no longer exists)" >&2
+	exit 0
+fi
+
+{{-   if has $brewEra (list "catalina" "bigsur") }}
+# colima's formula grew a service block after this era's pin (colima 0.4.6 /
+# 0.5.5 have none), so the VM is started directly. It is not restarted at
+# login; the next apply brings it back.
+if ! colima status &>/dev/null; then
+	echo "notice: starting colima (the first start downloads its VM image)" >&2
+	colima start
+fi
+{{-   else }}
+# The service runs `colima start -f`. The first start creates the VM (2 CPUs,
+# 2 GiB, a 100 GiB sparse disk -- `colima start --edit` to change it) and
+# downloads its image, so the socket can take a while to appear.
+echo "debug: starting the colima service" >&2
+brew services start colima
+{{-   end }}
+DOCKER_SOCK="$HOME/.colima/default/docker.sock"
+DOCKER_CONTEXT_NAME=colima
+{{- end }}
+
+if ! wait_for 300 test -S "$DOCKER_SOCK"; then
+	echo "warning: $DOCKER_SOCK has not appeared yet; the engine may still be starting" >&2
+	exit 0
+fi
+
+# The docker CLI picks its engine from the current context; .commonprofile's
+# DOCKER_HOST covers shells, the context covers everything else. The current
+# one is read from config.json because `docker context show` is newer than the
+# Catalina pin's docker 20.10.
+if ! docker context inspect "$DOCKER_CONTEXT_NAME" &>/dev/null; then
+	echo "debug: creating docker context $DOCKER_CONTEXT_NAME" >&2
+	docker context create "$DOCKER_CONTEXT_NAME" --docker "host=unix://$DOCKER_SOCK"
+fi
+if ! grep -q "\"currentContext\": *\"$DOCKER_CONTEXT_NAME\"" "$HOME/.docker/config.json" 2>/dev/null; then
+	echo "notice: switching the docker CLI to the $DOCKER_CONTEXT_NAME context" >&2
+	docker context use "$DOCKER_CONTEXT_NAME" >/dev/null
+fi
+
+# Docker Desktop's context outlives it (019-docker-desktop-remove).
+if docker context inspect desktop-linux &>/dev/null; then
+	echo "notice: removing Docker Desktop's desktop-linux docker context" >&2
+	docker context rm -f desktop-linux >/dev/null
+fi
+
+# CLI plugins. From the Monterey pin on, the compose and buildx formulae link
+# into $HOMEBREW_PREFIX/lib/docker/cli-plugins, which ~/.docker/config.json's
+# cliPluginsExtraDirs names. The Catalina and Big Sur formulae predate that
+# and leave linking ~/.docker/cli-plugins to the user (their caveats).
+for plugin in docker-compose docker-buildx; do
+	if [ ! -e "$HOMEBREW_PREFIX/lib/docker/cli-plugins/$plugin" ] && [ -x "$HOMEBREW_PREFIX/opt/$plugin/bin/$plugin" ]; then
+		mkdir -p "$HOME/.docker/cli-plugins"
+		ln -sfn "$HOMEBREW_PREFIX/opt/$plugin/bin/$plugin" "$HOME/.docker/cli-plugins/$plugin"
+	fi
+done

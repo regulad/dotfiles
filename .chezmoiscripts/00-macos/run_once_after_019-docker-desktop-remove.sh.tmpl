@@ -1,0 +1,97 @@
+{{ template "posix-preamble.sh" . }}
+# Takes Docker Desktop off a Mac that still has it. 040-macos-casks dropped the
+# cask on 2026-09-28 (5885cae), but removing a list entry never uninstalls
+# anything. The engine is apple/container or colima now (020-brew-packages,
+# 035-container-runtime; see docs/containers.md).
+#
+# This runs before 020-brew-packages on purpose. Docker Desktop's docker,
+# docker-compose and docker-credential-* links in the brew prefix (the cask's
+# binary artifacts, or links the app made itself) would stop the docker
+# formulae from linking, and 020's single `brew install` would take every
+# other formula down with them.
+#
+# Destructive by design: Docker Desktop keeps its containers, images and
+# volumes in its own VM disk, and they go with it.
+#
+# run_once_: chezmoi records it only on success, and every step is guarded on
+# the thing it removes, so a re-run on a clean Mac does nothing. brew is
+# optional here (plain preamble): it only matters if the cask is what put
+# Docker Desktop on this Mac.
+
+APP=/Applications/Docker.app
+
+# 1. Docker's own uninstaller (docs.docker.com/desktop/uninstall). It stops the
+#    app and removes its VM data, privileged helper and launchd jobs.
+if [ -x "$APP/Contents/MacOS/uninstall" ]; then
+	echo "notice: uninstalling Docker Desktop; its containers, images and volumes go with it" >&2
+	"$APP/Contents/MacOS/uninstall"
+fi
+
+# 2. brew's record of the cask, which also drops the cask's binary links. The
+#    cask was `docker` before the 2025 rename to docker-desktop. --force
+#    because step 1 may already have removed the app the cask points at. Not
+#    --zap: the cask's zap stanza deletes ~/.docker, whose config.json chezmoi
+#    manages now (private_dot_docker).
+if [ "$HAS_BREW" = "true" ]; then
+	for cask in docker-desktop docker; do
+		if brew list --cask "$cask" &>/dev/null; then
+			echo "notice: removing the $cask cask" >&2
+			brew uninstall --cask --force -q "$cask"
+		fi
+	done
+fi
+
+# Removes a path, with sudo if the plain attempt fails and sudo is available.
+remove_path() {
+	if rm -rf "$1" 2>/dev/null && [ ! -e "$1" ] && [ ! -L "$1" ]; then
+		return 0
+	fi
+	if can_sudo && sudo rm -rf "$1" && [ ! -e "$1" ] && [ ! -L "$1" ]; then
+		return 0
+	fi
+	return 1
+}
+
+# 3. What the uninstall leaves behind, per Docker's doc. The Containers one can
+#    need Full Disk Access for the terminal; Docker says the error is harmless.
+#    ~/.docker/completions is the zsh completion directory the app wrote,
+#    which .commonprofile used to put on fpath.
+for path in \
+	"$APP" \
+	"$HOME/Library/Group Containers/group.com.docker" \
+	"$HOME/Library/Containers/com.docker.docker" \
+	"$HOME/.docker/completions"
+do
+	[ -e "$path" ] || continue
+	if remove_path "$path"; then
+		echo "notice: removed $path" >&2
+	else
+		echo "warning: could not fully remove $path (it may need Full Disk Access for the terminal); delete it by hand" >&2
+	fi
+done
+
+# 4. Links that pointed into the app or at its socket and now dangle: the CLI
+#    and plugin links in the bin directories and ~/.docker, and the
+#    /var/run/docker.sock link the privileged helper made. A link that still
+#    resolves belongs to something else and is left alone.
+remove_dangling_docker_links() {
+	local link target
+	for link in "$@"; do
+		[ -L "$link" ] || continue
+		[ -e "$link" ] && continue
+		target=$(readlink "$link")
+		case "$target" in
+			*/Docker.app/* | */.docker/*) ;;
+			*) continue ;;
+		esac
+		if remove_path "$link"; then
+			echo "notice: removed dangling link $link -> $target" >&2
+		else
+			echo "warning: could not remove dangling link $link -> $target" >&2
+		fi
+	done
+}
+remove_dangling_docker_links /usr/local/bin/* "$HOME/.docker/cli-plugins"/* "$HOME/.docker/bin"/* /var/run/docker.sock
+if [ -n "${HOMEBREW_PREFIX:-}" ] && [ "$HOMEBREW_PREFIX" != /usr/local ]; then
+	remove_dangling_docker_links "$HOMEBREW_PREFIX/bin"/*
+fi
