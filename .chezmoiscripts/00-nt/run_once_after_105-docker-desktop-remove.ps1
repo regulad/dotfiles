@@ -56,6 +56,10 @@ if (Test-Path -LiteralPath $UninstallKey) {
         Write-Host 'error: Docker Desktop is still installed -- was the elevation prompt declined?'
         exit 1
     }
+    # The uninstaller drops its registry key before it has finished deleting
+    # files (AppData\Roaming\Docker Desktop among them), so the per-user
+    # cleanup below would race it. Wait for it to exit first.
+    [void](Wait-Until { -not (Get-Process -Name 'Docker Desktop Installer' -ErrorAction SilentlyContinue) } -TimeoutSeconds 300)
     Write-Host 'notice: Docker Desktop uninstalled'
 }
 else {

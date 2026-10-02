@@ -25,6 +25,14 @@ wait_for() {
 	done
 }
 
+# Whether brew already has the service's launchd job loaded. `brew services
+# start` on a loaded job tries to bootstrap it again, which launchctl refuses
+# (exit 5) when the job is not running -- the normal state of a run-once
+# service such as container's.
+brew_service_loaded() {
+	brew services info --json "$1" 2>/dev/null | grep -q '"loaded": *true'
+}
+
 {{- if $appleContainer }}
 
 # The branch above was picked from .macos and .chezmoi.arch, which only
@@ -38,9 +46,19 @@ fi
 
 # The formula's service runs `container system start --disable-kernel-install`,
 # which registers container's own launchd agents (the API server and its
-# helpers) and returns.
-echo "debug: starting the container service" >&2
-brew services start container
+# helpers) and exits, leaving the brew job loaded but not running. So the API
+# server's own status says whether anything needs doing: nothing while it
+# answers, a restart of the job if it is loaded but the server is down, a
+# first start otherwise.
+if container system status &>/dev/null; then
+	echo "debug: container's API server is already running" >&2
+elif brew_service_loaded container; then
+	echo "notice: restarting the container service (its API server is not running)" >&2
+	brew services restart container
+else
+	echo "debug: starting the container service" >&2
+	brew services start container
+fi
 if ! wait_for 60 container system status; then
 	echo "warning: container's API server is not up yet; containers will not run until it is (container system status)" >&2
 	exit 0
@@ -60,8 +78,12 @@ fi
 # HOME at $HOMEBREW_PREFIX/var/run/socktainer, hence the socket path; the same
 # path is DOCKER_HOST in .commonprofile. A docker context too, for GUI apps
 # that never read the shell profile.
-echo "debug: starting the socktainer service" >&2
-brew services start socktainer
+if brew_service_loaded socktainer; then
+	echo "debug: socktainer service already loaded" >&2
+else
+	echo "debug: starting the socktainer service" >&2
+	brew services start socktainer
+fi
 DOCKER_SOCK="$HOMEBREW_PREFIX/var/run/socktainer/.socktainer/container.sock"
 DOCKER_CONTEXT_NAME=socktainer
 {{- else }}
@@ -83,8 +105,12 @@ fi
 # The service runs `colima start -f`. The first start creates the VM (2 CPUs,
 # 2 GiB, a 100 GiB sparse disk -- `colima start --edit` to change it) and
 # downloads its image, so the socket can take a while to appear.
-echo "debug: starting the colima service" >&2
-brew services start colima
+if brew_service_loaded colima; then
+	echo "debug: colima service already loaded" >&2
+else
+	echo "debug: starting the colima service" >&2
+	brew services start colima
+fi
 {{-   end }}
 DOCKER_SOCK="$HOME/.colima/default/docker.sock"
 DOCKER_CONTEXT_NAME=colima
@@ -101,7 +127,7 @@ fi
 # Catalina pin's docker 20.10.
 if ! docker context inspect "$DOCKER_CONTEXT_NAME" &>/dev/null; then
 	echo "debug: creating docker context $DOCKER_CONTEXT_NAME" >&2
-	docker context create "$DOCKER_CONTEXT_NAME" --docker "host=unix://$DOCKER_SOCK"
+	docker context create "$DOCKER_CONTEXT_NAME" --docker "host=unix://$DOCKER_SOCK" >/dev/null
 fi
 if ! grep -q "\"currentContext\": *\"$DOCKER_CONTEXT_NAME\"" "$HOME/.docker/config.json" 2>/dev/null; then
 	echo "notice: switching the docker CLI to the $DOCKER_CONTEXT_NAME context" >&2
