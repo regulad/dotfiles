@@ -124,7 +124,7 @@ Longer write-ups live in `docs/` (not deployed to `$HOME`):
 - [Theos](docs/theos.md)
 - [SSH server on Windows](docs/windows-sshd.md) -- the user-session `sshd`.
 - [WSL](docs/wsl.md) -- `wsl-deploy` and `wsl-enter`.
-- [Containers](docs/containers.md) -- which engine each host runs (wslc, apple/container, colima, podman) and the Docker Desktop removal.
+- [Containers](docs/containers.md) -- which engine each host runs (wslc, apple/container, colima, podman) and the Docker Desktop and macOS podman removal.
 
 ## TODOs
 

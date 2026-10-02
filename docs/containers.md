@@ -25,14 +25,15 @@ The split is `appleMinMacos`. Apple supports `container` on macOS 26 only, on Ap
 - **apple/container hosts** run `container` and [socktainer](https://github.com/socktainer/socktainer) as brew services. socktainer serves a partial Docker Engine API, enough for the docker CLI, compose, buildx, Dev Containers and testcontainers in most cases. `035` installs container's recommended Linux kernel once, since the service starts it with `--disable-kernel-install`.
 - **colima hosts** run colima as a brew service, using `vz` from Ventura on and QEMU before it. On the Catalina and Big Sur pins, colima predates its service block, so `035` starts the VM directly and it is not restarted at login. The VM defaults to 2 CPUs and 2 GiB; change that with `colima start --edit`.
 - Both get the docker CLI, compose, buildx and `docker-credential-helper` from brew. `~/.docker/config.json` is merged by chezmoi: `credsStore` is `osxkeychain`, and `cliPluginsExtraDirs` points at the brew plugin directory. `035` creates and selects a docker context (`socktainer` or `colima`) for GUI apps. `.commonprofile` exports `DOCKER_HOST` at the same socket for tools that ignore contexts.
-- podman is no longer installed on macOS: there it is only a client for a `podman machine` VM, and its client speaks podman's libpod API, which neither engine serves. Earlier installs are left alone, because the package lists are install-only.
+- podman is no longer installed on macOS: there it is only a client for a `podman machine` VM, and its client speaks podman's libpod API, which neither engine serves. `018-podman-remove` takes earlier installs off (below).
 
-## Docker Desktop removal
+## Removing what came before
 
-Both platforms remove Docker Desktop once, with its containers, images and volumes:
+Docker Desktop goes from both platforms, and podman from macOS, each once and with its containers, images and volumes:
 
 - `00-nt/105-docker-desktop-remove` (Windows) runs the uninstaller through `sudo` (one UAC prompt). It also unregisters the `docker-desktop` distros, deletes the leftover directories from [Docker's uninstall doc](https://docs.docker.com/desktop/uninstall/) including `~/.docker`, and uninstalls scoop's `act`. It runs before `115`, because WSL 3.0.1 is reported to break Docker Desktop ([microsoft/WSL#41759](https://github.com/microsoft/WSL/issues/41759)).
 - `00-macos/019-docker-desktop-remove` (macOS) runs `Docker.app/Contents/MacOS/uninstall` and drops the `docker-desktop`/`docker` cask. It deletes the leftovers and any dangling links into the app (CLI links, `/var/run/docker.sock`). It runs before `020`, so the docker formulae can link. `035` removes the stale `desktop-linux` context.
+- `00-macos/018-podman-remove` (macOS) removes any podman machines (`podman machine reset`, or one by one on the older pins' podman). It also uninstalls `podman-mac-helper` if it was ever installed (sudo). Then it uninstalls `podman-compose`, and `podman` unless another installed formula still depends on it. Last, it deletes `~/.config/containers`, `~/.local/share/containers` and the old `~/.ssh/podman-machine-default` keys. A podman from Podman's own pkg installer is reported, not removed.
 
 ## Known upstream issues (2026-10)
 

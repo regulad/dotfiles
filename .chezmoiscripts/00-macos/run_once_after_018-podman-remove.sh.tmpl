@@ -1,0 +1,101 @@
+{{ template "posix-preamble-brew.sh" . }}
+# Takes podman and podman-compose off a Mac that still has them. 020 stopped
+# installing them when the Mac engines became apple/container and colima
+# (docs/containers.md): on a Mac podman is only a client for a `podman
+# machine` VM, its client speaks the libpod API that neither engine serves,
+# and podman 6 dropped Intel Macs. Removing a list entry never uninstalls
+# anything, hence this. Linux and the WSL distros keep podman.
+#
+# Destructive by design: a podman machine keeps its containers, images and
+# volumes in its own VM disk, and they go with it.
+#
+# run_once_: chezmoi records it only on success, and every step is guarded on
+# the thing it removes, so a re-run on a clean Mac does nothing. Same shape as
+# 019-docker-desktop-remove and 00-nt/105-docker-desktop-remove.
+
+if ! brew list --formula podman &>/dev/null && ! brew list --formula podman-compose &>/dev/null; then
+	echo "debug: neither podman nor podman-compose is installed from brew" >&2
+	exit 0
+fi
+
+# 1. Machines, while brew's podman is still here to drive them. `machine
+#    reset` (podman 5+) removes every machine with its config and data; the
+#    older era pins' podman (3.x/4.x) lacks it, so there each listed machine
+#    is removed by name (the list marks the default one with a trailing *).
+if brew list --formula podman &>/dev/null; then
+	PODMAN="$HOMEBREW_PREFIX/opt/podman/bin/podman"
+	machines=$("$PODMAN" machine list --format '{{ "{{.Name}}" }}' 2>/dev/null || true)
+	if [ -n "$machines" ]; then
+		echo "notice: removing podman machines ($(printf '%s' "$machines" | tr '\n' ' ')); their containers, images and volumes go with them" >&2
+		if "$PODMAN" machine reset --help &>/dev/null; then
+			"$PODMAN" machine reset -f
+		else
+			echo "$machines" | while IFS= read -r name; do
+				name=${name%\*}
+				[ -n "$name" ] || continue
+				"$PODMAN" machine stop "$name" &>/dev/null || true
+				"$PODMAN" machine rm -f "$name"
+			done
+		fi
+	fi
+
+	# podman-mac-helper, if it was ever installed (`sudo podman-mac-helper
+	# install`): a root LaunchDaemon that serves /var/run/docker.sock from the
+	# machine. Its uninstall needs the binary, so it goes before the formula.
+	HELPER_PLIST="/Library/LaunchDaemons/com.github.containers.podman.helper-$(id -un).plist"
+	if [ -e "$HELPER_PLIST" ]; then
+		if can_sudo && sudo "$HOMEBREW_PREFIX/opt/podman/bin/podman-mac-helper" uninstall && [ ! -e "$HELPER_PLIST" ]; then
+			echo "notice: uninstalled podman-mac-helper" >&2
+		else
+			echo "warning: could not uninstall podman-mac-helper; run \`sudo podman-mac-helper uninstall\` before podman is gone, or remove $HELPER_PLIST by hand" >&2
+		fi
+	fi
+fi
+
+# 2. The formulae. podman-compose first: it depends on podman. podman itself
+#    only goes if nothing else installed still depends on it. `brew uses` can
+#    print tap deprecation warnings among its results, so only lines shaped
+#    like formula names count.
+if brew list --formula podman-compose &>/dev/null; then
+	echo "notice: uninstalling podman-compose" >&2
+	brew uninstall -q podman-compose
+fi
+PODMAN_REMOVED=0
+if brew list --formula podman &>/dev/null; then
+	dependents=$(brew uses --installed podman 2>/dev/null | grep -E '^[A-Za-z0-9@+._/-]+$' || true)
+	if [ -n "$dependents" ]; then
+		echo "warning: keeping podman; installed formulae still depend on it: $(printf '%s' "$dependents" | tr '\n' ' ')" >&2
+	else
+		echo "notice: uninstalling podman" >&2
+		brew uninstall -q podman
+		PODMAN_REMOVED=1
+	fi
+else
+	PODMAN_REMOVED=1
+fi
+
+# 3. What podman leaves in the home directory: connection and machine
+#    config, storage, and the machine ssh keys older podman put in ~/.ssh.
+#    Nothing else on a Mac reads these, and chezmoi manages none of them.
+if [ "$PODMAN_REMOVED" -eq 1 ]; then
+	for leftover in \
+		"$HOME/.config/containers" \
+		"$HOME/.local/share/containers" \
+		"$HOME/.ssh/podman-machine-default" \
+		"$HOME/.ssh/podman-machine-default.pub"
+	do
+		[ -e "$leftover" ] || continue
+		if rm -rf "$leftover" 2>/dev/null && [ ! -e "$leftover" ]; then
+			echo "notice: removed $leftover" >&2
+		else
+			echo "warning: could not fully remove $leftover; delete it by hand" >&2
+		fi
+	done
+
+	# A podman that did not come from brew (Podman's own pkg installs into
+	# /opt/podman) is out of this script's reach; say so rather than imply
+	# podman is gone.
+	if command -v podman &>/dev/null; then
+		echo "warning: a podman not installed by brew remains at $(command -v podman); remove it by hand" >&2
+	fi
+fi
