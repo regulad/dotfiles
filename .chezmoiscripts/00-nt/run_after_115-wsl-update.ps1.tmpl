@@ -1,0 +1,103 @@
+# Update half of the WSL setup; runs on every apply. Installing WSL and
+# enabling the optional Windows features lives in 110-wsl-install.cmd,
+# which is run_once.
+#
+# Worth keeping current rather than pinning: microsoft/WSL#40593 (systemd
+# user sessions failing across two distros that both have a uid-1000 user)
+# was fixed by microsoft/WSL#40519, and running an old WSL meant that bug
+# stayed live indefinitely.
+#
+# On top of that there is a floor, wslMinVersion in
+# .chezmoidata/containers.toml. Containers on Windows come from wslc, which
+# ships with WSL 3.0.1 and later (Docker Desktop is gone; see
+# 105-docker-desktop-remove). `wsl --update` stays the only installer: it
+# installs GitHub's latest release and cannot be pinned, so the floor is
+# checked after it rather than enforced by fetching a particular release here.
+# A host still below the floor afterwards stops the apply with an error.
+#
+# PowerShell rather than the .cmd this replaced, for the version compare.
+
+$MinVersion = '{{ .containers.wslMinVersion }}'
+
+# wsl.exe writes UTF-16 to anything that is not a console unless this is
+# exactly 1, and PowerShell reads its output through a pipe.
+$env:WSL_UTF8 = '1'
+
+# The WSL MSI records its version and install directory here. Reading them
+# needs no elevation and no wsl.exe, whose output is localized. The fallback is
+# the file version of the MSI's own wsl.exe -- never System32\wsl.exe, the
+# inbox stub, which reports the Windows build instead.
+function Get-WslInstall {
+    $Key = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Lxss\MSI'
+    $Version = $null
+    $Dir = $null
+    if (Test-Path -LiteralPath $Key) {
+        $Props = Get-ItemProperty -LiteralPath $Key
+        $Version = $Props.Version
+        $Dir = $Props.InstallLocation
+    }
+    if (-not $Dir) { $Dir = Join-Path $env:ProgramFiles 'WSL' }
+    if (-not $Version) {
+        $Exe = Join-Path $Dir 'wsl.exe'
+        if (Test-Path -LiteralPath $Exe) { $Version = (Get-Item -LiteralPath $Exe).VersionInfo.FileVersion }
+    }
+    if (-not $Version) { return $null }
+    return @{ Version = $Version; Dir = $Dir }
+}
+
+# [version] treats a missing component as lower than 0, so in Windows
+# PowerShell [version]'3.0.1' -ge [version]'3.0.1.0' is False. Pad both sides
+# to four components before comparing.
+function ConvertTo-Version4 {
+    param([string]$Text)
+    $Parts = @(($Text -replace '[^0-9.].*$', '').Split('.') | Where-Object { $_ -ne '' })
+    while ($Parts.Count -lt 4) { $Parts += '0' }
+    return [version]($Parts[0..3] -join '.')
+}
+
+if (-not (Get-WslInstall)) {
+    Write-Host 'error: WSL is not installed, or its optional Windows components need'
+    Write-Host 'error: a restart. 110-wsl-install.cmd should have handled the install.'
+    exit 1
+}
+
+# Exits 0 both when it updates and when it is already current -- verified
+# against 2.7.11, which prints "The most recent version ... is already
+# installed" and returns 0 -- so a non-zero here is a real failure.
+#
+# Note this restarts the WSL service when an update actually lands, which
+# terminates every running distro and wslc session. That only happens on a
+# real update, not on the no-op path, so an apply against an already-current
+# WSL disturbs nothing.
+Write-Host 'debug: updating WSL'
+& wsl.exe --update
+if ($LASTEXITCODE -ne 0) {
+    Write-Host 'error: wsl --update failed'
+    exit 1
+}
+
+# Re-read until the floor shows up, briefly: the MSI that `wsl --update`
+# launches can still be finishing when it returns. An up-to-date host passes
+# on the first read.
+$Floor = ConvertTo-Version4 $MinVersion
+$Deadline = (Get-Date).AddSeconds(120)
+while ($true) {
+    $Wsl = Get-WslInstall
+    if ($Wsl -and ((ConvertTo-Version4 $Wsl.Version) -ge $Floor)) { break }
+    if ((Get-Date) -gt $Deadline) {
+        $Found = if ($Wsl) { $Wsl.Version } else { 'none' }
+        Write-Host "error: WSL $Found is older than $MinVersion, the first stable release with wslc, even after wsl --update"
+        Write-Host 'error: update WSL from the Microsoft Store or github.com/microsoft/WSL/releases, then apply again'
+        exit 1
+    }
+    Start-Sleep -Seconds 2
+}
+
+# By absolute path: the MSI appends its directory to the machine PATH, which
+# this already-running apply does not see.
+$Wslc = Join-Path $Wsl.Dir 'wslc.exe'
+if (-not (Test-Path -LiteralPath $Wslc)) {
+    Write-Host "error: WSL $($Wsl.Version) meets the $MinVersion floor but $Wslc is missing"
+    exit 1
+}
+Write-Host "debug: WSL $($Wsl.Version) meets the $MinVersion floor; wslc is at $Wslc"

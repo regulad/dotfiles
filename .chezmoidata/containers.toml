@@ -1,0 +1,18 @@
+# Container engines: which host gets what (see docs/containers.md).
+#
+# Lives in .chezmoidata, not .chezmoi.toml.tmpl, so a change here reaches every
+# template on the next apply without a `chezmoi init`.
+
+[containers]
+
+# Windows: the oldest WSL that 00-nt/115-wsl-update accepts after its
+# `wsl --update`. 3.0.1 (2026-09-29) is the first stable release that ships
+# wslc.exe; the 2.9.x line that introduced it was pre-release only.
+wslMinVersion = "3.0.1"
+
+# macOS: Apple silicon at or above this major runs apple/container plus the
+# socktainer Docker API shim. Apple supports container on 26 only (it starts
+# on 15 with broken container-to-container networking and no `container
+# network`), and both brew formulae declare `depends_on macos: :tahoe` and
+# arm64. Every other Mac from Catalina on gets colima.
+appleMinMacos = 26

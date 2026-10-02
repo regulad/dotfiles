@@ -65,6 +65,10 @@ if errorlevel 1 (
     echo psmux bucket already present, skipping.
 )
 
+REM act (nektos/act) is not in the list: it drives a Docker Engine API, and
+REM with Docker Desktop gone nothing on Windows serves one -- wslc keeps its
+REM dockerd private to its VM (see the README TODOs). 105-docker-desktop-remove
+REM uninstalls an act left over from before.
 set user_packages=^
 maven ^
 tesseract ^
@@ -79,7 +83,6 @@ deno ^
 mongosh ^
 mongodb-compass ^
 mpv ^
-act ^
 git-filter-repo ^
 python27 ^
 dtk ^

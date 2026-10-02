@@ -386,7 +386,7 @@ finally {
 # --- default distribution --------------------------------------------------
 
 # `wsl` with no -d starts the default, and on this machine that is whatever was
-# installed first -- frequently docker-desktop, which is not a thing anyone
+# installed first -- historically docker-desktop, which is not a thing anyone
 # wants a shell in. Offered rather than assumed: changing the default silently
 # would surprise anything that relies on it.
 function Get-DefaultDistro {

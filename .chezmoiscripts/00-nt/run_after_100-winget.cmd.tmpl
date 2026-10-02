@@ -61,7 +61,6 @@ Adobe.Acrobat.Reader.64-bit ^
 Audacity.Audacity ^
 CrystalDewWorld.CrystalDiskInfo ^
 CrystalDewWorld.CrystalDiskMark ^
-Docker.DockerDesktop ^
 Mozilla.Thunderbird ^
 Notepad++.Notepad++ ^
 Meta.Oculus ^
@@ -91,6 +90,7 @@ BillStewart.SyncthingWindowsSetup ^
 
 REM following winget packages are not installed even though I would like them:
 REM Syncthing.Syncthing - doesn't install GUI; billstewart version is psuedo-official and is used instead
+REM Docker.DockerDesktop - replaced by WSL's own wslc (115-wsl-update enforces the WSL that ships it); 105-docker-desktop-remove uninstalls it
 
 for %%p in (%winget_packages%) do (
     call winget list --id %%p --exact >nul 2>&1
