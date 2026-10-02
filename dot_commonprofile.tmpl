@@ -164,12 +164,31 @@ if grep -qi wsl /proc/version 2>/dev/null; then
     export BROWSER=wslview
 fi
 
-# pnpm: PNPM_HOME is the global bin directory itself (no bin/ under it), and
-# pnpm's global commands refuse to run unless exactly that is on PATH.
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
+# pnpm: global binaries live in $PNPM_HOME/bin from pnpm 11.0.0 on
+# (pnpm/pnpm#10986) and in $PNPM_HOME itself before that, and every global
+# command -- `pnpm bin -g` included -- refuses to run unless exactly the right
+# one is on PATH, so pnpm cannot be asked. The era pins carry pnpm 8 and 10
+# as well as 11 and 12, so both layouts are live; the major version decides.
+# It comes from brew's opt link (../Cellar/pnpm/<version>) when brew has pnpm,
+# which starts no process, and from `pnpm --version` otherwise. Unknown (pnpm
+# not installed yet) means the current layout.
+_pnpm_version=
+if [ -n "${HOMEBREW_PREFIX:-}" ] && [ -L "$HOMEBREW_PREFIX/opt/pnpm" ]; then
+  _pnpm_version="$(readlink "$HOMEBREW_PREFIX/opt/pnpm")"
+  _pnpm_version="${_pnpm_version##*/}"
+elif command -v pnpm >/dev/null 2>&1; then
+  _pnpm_version="$(pnpm --version 2>/dev/null)"
+fi
+_pnpm_bin="$PNPM_HOME/bin"
+case "${_pnpm_version%%.*}" in
+  '' | *[!0-9]*) ;;
+  *) if [ "${_pnpm_version%%.*}" -lt 11 ]; then _pnpm_bin="$PNPM_HOME"; fi ;;
 esac
+case ":$PATH:" in
+  *":$_pnpm_bin:"*) ;;
+  *) export PATH="$_pnpm_bin:$PATH" ;;
+esac
+unset _pnpm_version _pnpm_bin
 # pnpm end
 
 # deno

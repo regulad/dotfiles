@@ -10,16 +10,25 @@ fi
 
 # `pnpm setup`'s self-managed-copy step is flaky when pnpm is already installed
 # via brew/npm (fails to link its own bundled binary), so just set PNPM_HOME
-# directly instead of relying on it. PNPM_HOME *is* pnpm's global bin
-# directory (there is no bin/ under it), and every global command refuses to
-# run unless that exact directory is on PATH -- whether PNPM_HOME came from
-# .commonprofile (same default as here) or is set now, put it there.
+# directly instead of relying on it (same default as .commonprofile).
+#
+# pnpm's global bin directory is $PNPM_HOME/bin from pnpm 11.0.0 on
+# (pnpm/pnpm#10986) and $PNPM_HOME itself before that, and every global
+# command -- `pnpm bin -g` included, so pnpm cannot be asked -- refuses to run
+# unless exactly that directory is on PATH. The major version picks it, as in
+# .commonprofile.
 export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
+PNPM_MAJOR="$(pnpm --version | cut -d. -f1)"
+if [ "$PNPM_MAJOR" -ge 11 ]; then
+	PNPM_BIN="$PNPM_HOME/bin"
+else
+	PNPM_BIN="$PNPM_HOME"
+fi
 case ":$PATH:" in
-	*":$PNPM_HOME:"*) ;;
-	*) export PATH="$PNPM_HOME:$PATH" ;;
+	*":$PNPM_BIN:"*) ;;
+	*) export PATH="$PNPM_BIN:$PATH" ;;
 esac
-mkdir -p "$PNPM_HOME"
+mkdir -p "$PNPM_BIN"
 
 PNPM_CLI_PACKAGES=(
 	"@mermaid-js/mermaid-cli@latest"
