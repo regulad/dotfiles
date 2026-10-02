@@ -24,3 +24,9 @@ Host overture
     ForwardAgent yes
     RequestTTY yes
     RemoteCommand r=$(command -v reattach-to-user-namespace || echo /opt/homebrew/bin/reattach-to-user-namespace); [ -x "$r" ] && exec "$r" "$SHELL" -l; exec "$SHELL" -l
+
+Host minintosh
+    HostName minintosh.tail11540.ts.net
+    ForwardAgent yes
+    RequestTTY yes
+    RemoteCommand r=$(command -v reattach-to-user-namespace || echo /opt/homebrew/bin/reattach-to-user-namespace); [ -x "$r" ] && exec "$r" "$SHELL" -l; exec "$SHELL" -l
