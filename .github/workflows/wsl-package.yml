@@ -84,6 +84,9 @@ jobs:
       - name: Stage the distribution overlay
         env:
           FLAVOR: ${{ inputs.flavor }}
+          # In a reusable workflow github.sha is the caller's: the commit the
+          # image itself was built from.
+          COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
           stage="$RUNNER_TEMP/stage"
@@ -101,6 +104,14 @@ jobs:
           sed -e 's/\r$//' -e "s/@FLAVOR@/${FLAVOR}/g" .github/wsl/wsl-distribution.conf \
             > "$stage/etc/wsl-distribution.conf"
           chmod 0644 "$stage/etc/wsl-distribution.conf"
+
+          # Which commit of this repo the instance was built from, readable
+          # from inside it (`cat /etc/dotfiles-commit`) and from Windows
+          # (`wsl -d regulad-<flavor> cat /etc/dotfiles-commit`). Nothing in WSL
+          # records where an imported instance came from, so the image carries
+          # it. One line, the full 40-character SHA.
+          printf '%s\n' "$COMMIT" > "$stage/etc/dotfiles-commit"
+          chmod 0644 "$stage/etc/dotfiles-commit"
 
           # Nothing staged may contain a CR; see above.
           if grep -rlU $'\r' "$stage" 2>/dev/null | grep -q .; then
@@ -311,6 +322,7 @@ jobs:
       - name: Verify the tarball
         env:
           OUT: ${{ steps.pack.outputs.out }}
+          COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
           pigz -dc "$OUT" | tar -tf - > entries.txt
@@ -334,6 +346,7 @@ jobs:
           # The overlay has to have survived the repack, and the masks have to
           # still be symlinks rather than dereferenced copies of /dev/null.
           for required in etc/wsl.conf etc/wsl-distribution.conf etc/oobe.sh \
+                          etc/dotfiles-commit \
                           etc/systemd/system/systemd-resolved.service \
                           etc/systemd/user/systemd-tmpfiles-clean.timer; do
             grep -qx "$required" entries.txt || {
@@ -341,6 +354,13 @@ jobs:
               exit 1
             }
           done
+
+          # The provenance file has to name this run's commit and nothing else.
+          shipped=$(pigz -dc "$OUT" | bsdtar -xOf - 'etc/dotfiles-commit')
+          if [ "$shipped" != "$COMMIT" ]; then
+            echo "::error::etc/dotfiles-commit is '${shipped}', expected '${COMMIT}'"
+            exit 1
+          fi
 
           pigz -dc "$OUT" | bsdtar -tvf - \
             'etc/wsl.conf' 'etc/wsl-distribution.conf' 'etc/oobe.sh' \
@@ -397,6 +417,7 @@ jobs:
           FLAVOR: ${{ inputs.flavor }}
           ARCH: ${{ matrix.arch }}
           DIGEST: ${{ inputs.digest }}
+          COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
           {
@@ -407,6 +428,7 @@ jobs:
             echo "| File | \`${OUT}\` |"
             echo "| Compressed | $(numfmt --to=iec --suffix=B "$BYTES") |"
             echo "| Source digest | \`${DIGEST}\` |"
+            echo "| Commit (\`/etc/dotfiles-commit\`) | \`${COMMIT}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the tarball

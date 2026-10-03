@@ -14,10 +14,10 @@
     expire (currently 14 days), so this deliberately skips expired ones rather
     than failing on a dead download link.
 
-    Each import records which build it came from in deployed-from.json, beside
-    the instance's VHD. Later runs read it back and say whether the installed
-    instance is already the newest build or is behind one -- nothing in WSL
-    itself tracks that.
+    Every image carries the commit it was built from in /etc/dotfiles-commit
+    (written by .github/workflows/wsl-package.yml). When the instance is
+    already installed, this reads that back and says whether it is the newest
+    build or is behind one -- nothing in WSL itself tracks that.
 
     After importing, offers to make the new instance the default distribution.
 
@@ -127,47 +127,49 @@ if (-not $artifact) {
 }
 
 $sizeGb = [math]::Round($artifact.size_in_bytes / 1GB, 2)
-Write-Note "run $($artifact.workflow_run.id), built $($artifact.created_at), $sizeGb GB"
+$newestCommit = $artifact.workflow_run.head_sha
+Write-Note "run $($artifact.workflow_run.id), commit $($newestCommit.Substring(0, 7)), built $($artifact.created_at), $sizeGb GB"
 
 # --- compare against what is already installed -----------------------------
 
 # Nothing about a WSL instance records where it came from -- `wsl --list` knows
-# a name and a VHD path and nothing else -- so this writes its own stamp beside
-# the VHD after each import and reads it back here. It lives in the install
-# directory on purpose: `wsl --unregister` deletes that directory, so the stamp
-# cannot outlive the instance it describes and go stale.
-$stampPath = Join-Path $installPath 'deployed-from.json'
-
-function Get-DeploymentStamp {
-    if (-not (Test-Path $stampPath)) { return $null }
+# a name and a VHD path and nothing else -- so the image carries it instead:
+# the overlay step of .github/workflows/wsl-package.yml writes the commit the
+# image was built from to /etc/dotfiles-commit, and the artifact's workflow run
+# names the commit it built, so the two compare directly.
+#
+# Read with --exec as root: no login shell, so none of the dotfiles run, and no
+# OOBE, which WSL starts only for an interactive shell. This does start the
+# instance if it is stopped. Anything other than one 40-hex line -- the file is
+# missing (an image from before it existed), the instance will not start --
+# counts as unknown rather than failing the deploy.
+function Get-InstalledCommit {
     try {
-        return Get-Content -Raw -LiteralPath $stampPath | ConvertFrom-Json
-    } catch {
-        # A stamp we cannot parse is worth a note, not a failed deploy.
-        Write-Note "could not read $stampPath ($($_.Exception.Message))"
-        return $null
-    }
+        $out = wsl.exe -d $distroName -u root --exec cat /etc/dotfiles-commit 2>$null
+        if ($LASTEXITCODE -ne 0) { return $null }
+        $sha = "$($out | Select-Object -First 1)".Trim()
+        if ($sha -match '^[0-9a-f]{40}$') { return $sha }
+    } catch { }
+    return $null
 }
 
 $installedAlready = (wsl.exe --list --quiet) -contains $distroName
-$stamp = if ($installedAlready) { Get-DeploymentStamp } else { $null }
 
 if ($installedAlready) {
-    if ($null -eq $stamp) {
-        Write-Note "installed instance has no deployment stamp, so its build is unknown"
-        Write-Note "(deployed before stamping existed, or imported by hand)"
-    } elseif ($stamp.artifact_id -eq $artifact.id) {
+    $installedCommit = Get-InstalledCommit
+    if ($null -eq $installedCommit) {
+        Write-Note "installed instance has no readable /etc/dotfiles-commit, so its build is unknown"
+        Write-Note "(built before images carried it, or imported by hand)"
+    } elseif ($installedCommit -eq $newestCommit) {
         Write-Host ""
-        Write-Host "  '$distroName' is already running this exact build." -ForegroundColor Green
-        Write-Host "  run $($stamp.workflow_run_id), built $($stamp.artifact_created_at)," -ForegroundColor Green
-        Write-Host "  deployed $($stamp.deployed_at)." -ForegroundColor Green
+        Write-Host "  '$distroName' is already running this exact build (commit $($installedCommit.Substring(0, 7)))." -ForegroundColor Green
         Write-Host "  Redeploying downloads $sizeGb GB again and resets the instance." -ForegroundColor Green
         Write-Host ""
     } else {
         Write-Host ""
         Write-Host "  a newer build is available." -ForegroundColor Cyan
-        Write-Host "    installed: run $($stamp.workflow_run_id), built $($stamp.artifact_created_at)" -ForegroundColor Cyan
-        Write-Host "    newest:    run $($artifact.workflow_run.id), built $($artifact.created_at)" -ForegroundColor Cyan
+        Write-Host "    installed: commit $($installedCommit.Substring(0, 7))" -ForegroundColor Cyan
+        Write-Host "    newest:    commit $($newestCommit.Substring(0, 7)), run $($artifact.workflow_run.id), built $($artifact.created_at)" -ForegroundColor Cyan
         Write-Host ""
     }
 }
@@ -347,34 +349,13 @@ try {
         '--location', $installPath
         '--no-launch'
     )
-    # Finish installing before opening an interactive shell. Otherwise the
-    # provenance write waits for that shell to exit and is lost if the deploy
-    # process is interrupted or its terminal is closed during the session.
+    # Finish installing before opening an interactive shell: the launch, and
+    # with it OOBE, comes at the very end, after the default-distribution
+    # prompt below. The instance carries its own provenance in
+    # /etc/dotfiles-commit, so there is nothing to record here.
 
     wsl.exe @installArgs
     Assert-NativeSuccess 'wsl --install --from-file'
-
-    # Record which build this instance is, so a later run can say whether it is
-    # stale. Written after the import succeeds, never before: a stamp for an
-    # instance that failed to import would be a lie that survives.
-    #
-    # Not fatal if it fails -- the instance is installed and working either way,
-    # and the only cost is that the next run cannot tell you how old it is.
-    try {
-        [pscustomobject]@{
-            artifact_id         = $artifact.id
-            artifact_name       = $artifactName
-            artifact_created_at = $artifact.created_at
-            workflow_run_id     = $artifact.workflow_run.id
-            head_sha            = $artifact.workflow_run.head_sha
-            size_in_bytes       = $artifact.size_in_bytes
-            repo                = $Repo
-            deployed_at         = (Get-Date).ToString('o')
-        } | ConvertTo-Json | Set-Content -LiteralPath $stampPath -Encoding utf8
-        Write-Note "recorded build provenance in $stampPath"
-    } catch {
-        Write-Note "warning: could not write $stampPath ($($_.Exception.Message))"
-    }
 }
 finally {
     if (-not $KeepDownload -and (Test-Path $downloadDir)) {
