@@ -138,16 +138,11 @@ require_sudo "apt package installation"
 # keychain is the fallback SSH agent for hosts that have none (.commonprofile
 # only reaches for it when no agent socket exists). Not on WSL, where
 # ssh-agent-relay.service relays the Windows agent in -- see the note in
-# 020-dnf-packages for the login hang Fedora's package caused there. The images
-# are built in Docker, where WSL cannot be told apart, so they still carry it;
-# the apply /etc/oobe.sh runs inside WSL takes it out here. purge rather than
-# remove: remove leaves a package's conffiles under /etc behind.
-if [ "$IS_WSL" -eq 1 ]; then
-	if dpkg -s keychain &>/dev/null; then
-		echo "notice: removing keychain on WSL; the Windows agent is relayed in instead" >&2
-		sudo apt-get purge -qq -y keychain
-	fi
-else
+# 020-dnf-packages. The images carry it (built in Docker, where WSL cannot be
+# told apart); .github/workflows/wsl-package.yml purges it from the WSL
+# tarball in a chroot, and leaving it out here keeps the first apply inside
+# the instance from putting it back.
+if [ "$IS_WSL" -ne 1 ]; then
 	APT_PACKAGES+=(keychain)
 fi
 

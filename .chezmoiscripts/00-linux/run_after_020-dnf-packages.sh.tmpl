@@ -124,29 +124,13 @@ require_sudo "dnf package installation"
 # ssh-agent-relay.service relays the Windows agent in. Fedora's keychain
 # package also ships /etc/profile.d/keychain.sh, which runs
 # `keychain --immediate` over every key in ~/.ssh in every login shell; after
-# a `wsl --shutdown` that sat on an invisible passphrase prompt until ^C. The
-# images are built in Docker, where WSL cannot be told apart, so they still
-# carry it -- the apply /etc/oobe.sh runs inside WSL takes it out here, and
-# ~/.zshenv keeps the hook quiet until then.
+# a `wsl --shutdown` that sat on an invisible passphrase prompt until ^C.
 #
-# The hook (and its csh twin) is a %config(noreplace) file. rpm deletes such a
-# file on erase only while it is unmodified -- an edited copy is kept as
-# .rpmsave -- and neither dnf nor rpm has a flag to force the deletion. So the
-# files are removed by name after the package goes, whatever state they were
-# in.
-if [ "$IS_WSL" -eq 1 ]; then
-	if rpm -q keychain &>/dev/null; then
-		echo "notice: removing keychain on WSL; the Windows agent is relayed in instead" >&2
-		sudo dnf remove -q -y keychain
-	fi
-	for f in /etc/profile.d/keychain.sh /etc/profile.d/keychain.csh \
-		/etc/profile.d/keychain.sh.rpmsave /etc/profile.d/keychain.csh.rpmsave; do
-		if [ -e "$f" ]; then
-			echo "notice: removing leftover $f" >&2
-			sudo rm -f "$f"
-		fi
-	done
-else
+# Only installing is decided here. The images are built in Docker, where WSL
+# cannot be told apart, so they carry keychain; .github/workflows/wsl-package.yml
+# removes it from the WSL tarball in a chroot, and leaving it out on WSL is
+# what keeps the first apply inside the instance from putting it back.
+if [ "$IS_WSL" -ne 1 ]; then
 	DNF_PACKAGES+=(keychain)
 fi
 

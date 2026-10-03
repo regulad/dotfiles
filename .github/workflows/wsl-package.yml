@@ -7,11 +7,10 @@ name: Package WSL distribution
 # rather than inlined twice because the step list is long enough that the
 # duplication would drift.
 #
-# NOTE: what this produces is a bootable root filesystem, not yet a finished
-# distribution. It deliberately contains neither /etc/wsl.conf nor
-# /etc/wsl-distribution.conf, so an imported instance starts as root with
-# systemd disabled, and `wsl --install --from-file` has no oobe.defaultName to
-# register it under. Adding those is a separate, deliberate change.
+# The image's root filesystem is exported, edited in a chroot (keychain is
+# removed -- see that step), and repacked with a distribution overlay on top:
+# /etc/wsl.conf, /etc/wsl-distribution.conf, /etc/oobe.sh, /etc/dotfiles-commit,
+# an empty machine-id and Microsoft's unit masks.
 
 on:
   workflow_call:
@@ -34,12 +33,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64]
-    # Deliberately not matched to a native arm64 runner the way the build jobs
-    # are. crane only streams and repacks layers -- nothing out of the image is
-    # ever executed -- so there is nothing for QEMU to emulate and no reason to
-    # pay for a second runner type.
-    runs-on: ubuntu-24.04
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    # Native per architecture, like the build jobs. This used to be one amd64
+    # runner for both, back when nothing out of the image was ever executed;
+    # the chroot step below now runs the image's own package manager to take
+    # keychain out, and that binary has to be able to run here.
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: read
@@ -62,7 +65,7 @@ jobs:
                       /opt/hostedtoolcache /usr/local/share/boost
           df -h /
 
-      - name: Install crane, pigz and bsdtar
+      - name: Install crane, pigz, bsdtar and getcap
         env:
           CRANE_VERSION: "0.21.9"
         run: |
@@ -70,8 +73,16 @@ jobs:
           sudo apt-get update -qq
           # pigz: gzip is single-threaded and this is several GB.
           # libarchive-tools: provides bsdtar, which can filter a tar *stream*.
-          sudo apt-get install -y -qq pigz libarchive-tools
-          curl -fsSL "https://github.com/google/go-containerregistry/releases/download/v${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz" \
+          # libcap2-bin: getcap, to check file capabilities survive the
+          # extract-and-repack round trip (see the verify step).
+          sudo apt-get install -y -qq pigz libarchive-tools libcap2-bin
+          # crane's release assets are named for the runner's own machine.
+          case "$(uname -m)" in
+            x86_64) crane_arch=x86_64 ;;
+            aarch64) crane_arch=arm64 ;;
+            *) echo "::error::no crane build for $(uname -m)"; exit 1 ;;
+          esac
+          curl -fsSL "https://github.com/google/go-containerregistry/releases/download/v${CRANE_VERSION}/go-containerregistry_Linux_${crane_arch}.tar.gz" \
             | sudo tar -xz -C /usr/local/bin crane
           crane version
 
@@ -264,6 +275,84 @@ jobs:
           echo "exported $(stat -c %s rootfs.tar) bytes"
           df -h /
 
+      # keychain comes out of the WSL tarball here, with the image's own
+      # package manager, rather than at first run. The image is built in
+      # Docker, where WSL cannot be told apart, so its package lists install
+      # keychain like any Linux host's -- and Fedora's package ships
+      # /etc/profile.d/keychain.sh, a login hook that runs
+      # `keychain --immediate` over every key in ~/.ssh and hung the first shell
+      # after every `wsl --shutdown` on an invisible passphrase prompt. WSL has
+      # no use for it: the Windows agent is relayed in (ssh-agent-relay.service),
+      # .commonprofile points SSH_AUTH_SOCK there, and the package lists leave
+      # keychain out once they run inside WSL, so it does not come back.
+      - name: Remove keychain in a chroot
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/rootfs"
+          sudo mkdir -p "$root"
+
+          # As root, bsdtar restores owners, modes, ACLs and extended
+          # attributes -- which carry file capabilities -- by default;
+          # --numeric-owner keeps the image's uids and gids rather than mapping
+          # them by name onto this runner's /etc/passwd.
+          sudo bsdtar -xpf rootfs.tar --numeric-owner -C "$root"
+          rm -f rootfs.tar
+          df -h /
+
+          # File capabilities, recorded here so the verify step can check the
+          # repack kept every one of them.
+          { sudo getcap -r "$root" 2>/dev/null || true; } | sed "s|^$root/||" | sort > "$RUNNER_TEMP/caps.txt"
+          echo "file capabilities in the image: $(wc -l < "$RUNNER_TEMP/caps.txt")"
+          cat "$RUNNER_TEMP/caps.txt"
+
+          # The image's own rpm/dpkg run in the chroot, against its own package
+          # database -- which this Ubuntu runner's tools could not read
+          # (Fedora's rpmdb is sqlite). /proc and /dev are what package
+          # maintainer scripts expect; both are unmounted again before anything
+          # is packed, and the step refuses to continue if either is not.
+          release() {
+            for m in dev proc; do
+              if mountpoint -q "$root/$m"; then sudo umount "$root/$m"; fi
+            done
+          }
+          trap release EXIT
+          sudo mount -t proc proc "$root/proc"
+          sudo mount --bind /dev "$root/dev"
+
+          if sudo chroot "$root" rpm -q keychain >/dev/null 2>&1; then
+            sudo chroot "$root" rpm -e keychain
+            echo "removed keychain (rpm)"
+          elif sudo chroot "$root" dpkg -s keychain >/dev/null 2>&1; then
+            # purge, not remove: remove leaves conffiles under /etc behind.
+            sudo chroot "$root" dpkg --purge keychain
+            echo "purged keychain (dpkg)"
+          else
+            echo "keychain is not installed in this image"
+          fi
+
+          release
+          trap - EXIT
+          if findmnt -rn -o TARGET | grep -q "^$root/"; then
+            echo "::error::still mounted inside the rootfs; refusing to pack the runner's /proc or /dev"
+            findmnt -rn -o TARGET | grep "^$root/"
+            exit 1
+          fi
+
+          # Fedora's hook is a %config(noreplace) file: rpm deletes it on erase
+          # only while unmodified (an edited copy survives as .rpmsave) and has
+          # no flag to force that, so whatever is left goes by name.
+          sudo rm -f "$root"/etc/profile.d/keychain.sh "$root"/etc/profile.d/keychain.csh \
+                     "$root"/etc/profile.d/keychain.sh.rpmsave "$root"/etc/profile.d/keychain.csh.rpmsave
+
+          for gone in usr/bin/keychain etc/profile.d/keychain.sh; do
+            if [ -e "$root/$gone" ]; then
+              echo "::error::$gone is still in the rootfs"
+              exit 1
+            fi
+          done
+
+          echo "ROOTFS=$root" >> "$GITHUB_ENV"
+
       - name: Repack as a WSL tarball
         id: pack
         env:
@@ -277,9 +366,11 @@ jobs:
           # the download hoisted out, anything that fails here is a real defect
           # and should be read as one rather than hidden behind a second try.
           #
-          # bsdtar reads the exported tar (the `@rootfs.tar` operand) and
-          # writes a new one, dropping files WSL populates itself at first
-          # boot.
+          # bsdtar packs the rootfs the chroot step extracted and edited -- its
+          # top-level entries named relatively, so the tar is rooted at / with
+          # no ./ prefix -- dropping files WSL populates itself at first boot.
+          # As root it archives extended attributes (file capabilities) by
+          # default; the verify step checks they made it.
           #
           # Verified against a real registry image: etc/hosts and etc/machine-id
           # *are* baked into the image and really do get stripped here.
@@ -296,25 +387,28 @@ jobs:
           # extended attributes that carry file capabilities. Forcing gnutar
           # would silently drop them.
           #
-          # The `-C "$STAGE" etc` operand after `@rootfs.tar` appends the
+          # The `-C "$STAGE" etc` operand after the rootfs entries appends the
           # distribution overlay staged above. Order is load-bearing: tar has
           # no notion of replacing an entry, so a later entry simply overwrites
           # an earlier one at extraction time, and the overlay has to come
           # second to win. Verified that it does, and that /dev/null mask
           # symlinks survive the round trip as symlinks rather than being
           # dereferenced.
-          bsdtar --numeric-owner -cf - \
+          cd "$ROOTFS"
+          mapfile -t top < <(ls -A)
+          sudo bsdtar --numeric-owner -cf - \
               --exclude '.dockerenv' \
               --exclude 'etc/resolv.conf' \
               --exclude 'etc/hostname' \
               --exclude 'etc/hosts' \
-              @rootfs.tar \
+              "${top[@]}" \
               -C "$STAGE" etc \
-            | pigz -9 > "$out"
+            | pigz -9 > "$GITHUB_WORKSPACE/$out"
+          cd "$GITHUB_WORKSPACE"
 
           # Several times larger than everything downstream of it, and of no
           # further use once repacked.
-          rm -f rootfs.tar
+          sudo rm -rf "$ROOTFS"
 
           echo "out=$out" >> "$GITHUB_OUTPUT"
           echo "bytes=$(stat -c %s "$out")" >> "$GITHUB_OUTPUT"
@@ -361,6 +455,30 @@ jobs:
             echo "::error::etc/dotfiles-commit is '${shipped}', expected '${COMMIT}'"
             exit 1
           fi
+
+          # keychain and its login hook must not ship (see the chroot step).
+          if grep -xE 'usr/bin/keychain|etc/profile\.d/keychain\.c?sh(\.rpmsave)?' entries.txt; then
+            echo "::error::keychain is still in the tarball"
+            exit 1
+          fi
+
+          # The extract-and-repack round trip must keep every file capability
+          # the image had (rootless podman needs newuidmap/newgidmap's, for
+          # one). Pull just those files back out as root, which restores
+          # extended attributes, and compare with what the chroot step saw.
+          mapfile -t capfiles < <(cut -d' ' -f1 "$RUNNER_TEMP/caps.txt")
+          if [ "${#capfiles[@]}" -gt 0 ]; then
+            t="$RUNNER_TEMP/capcheck"
+            sudo mkdir -p "$t"
+            pigz -dc "$OUT" | sudo bsdtar -xpf - --numeric-owner -C "$t" "${capfiles[@]}"
+            { sudo getcap -r "$t" 2>/dev/null || true; } | sed "s|^$t/||" | sort > caps-after.txt
+            sudo rm -rf "$t"
+            if ! diff -u "$RUNNER_TEMP/caps.txt" caps-after.txt; then
+              echo "::error::file capabilities changed in the repack"
+              exit 1
+            fi
+          fi
+          echo "file capabilities preserved: ${#capfiles[@]}"
 
           pigz -dc "$OUT" | bsdtar -tvf - \
             'etc/wsl.conf' 'etc/wsl-distribution.conf' 'etc/oobe.sh' \
