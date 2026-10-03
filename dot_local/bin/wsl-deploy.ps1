@@ -4,8 +4,8 @@
 
 .DESCRIPTION
     Finds the most recent non-expired wsl-<flavor>-<arch> build artifact,
-    downloads it, replaces any existing regulad-<flavor> instance, and imports
-    it. The first interactive shell runs /etc/oobe.sh, which pulls the
+    downloads it to ~/Downloads, replaces any existing regulad-<flavor>
+    instance, and imports it. The first interactive shell runs /etc/oobe.sh, which pulls the
     Bitwarden API credentials off this machine's own .secrets/.bwrc and runs
     the privileged chezmoi apply.
 
@@ -53,7 +53,7 @@ param(
     # shell rather than at install time.
     [switch]$NoLaunch,
 
-    # Keep the downloaded .wsl. Off by default: import copies everything into
+    # Keep the downloaded .wsl in ~/Downloads. Off by default: import copies everything into
     # the instance's VHD, so the tarball is ~5 GB of dead weight afterwards.
     [switch]$KeepDownload,
 
@@ -185,35 +185,42 @@ if ($freeGb -lt $needGb) {
     throw "need roughly $needGb GB free on C: for the download and import, but only $freeGb GB is available"
 }
 
-# --- replace any existing instance -----------------------------------------
+# --- confirm replacing any existing instance -------------------------------
 
-# Reuses the lookup done for the staleness comparison above rather than asking
-# wsl.exe again; nothing between the two can have changed it.
+# Asked before the download, so saying no costs nothing, but carried out only
+# after it: unregistering first meant a failed or interrupted download left no
+# instance at all.
 if ($installedAlready) {
     Write-Host ""
     Write-Host "  '$distroName' is already installed." -ForegroundColor Yellow
     Write-Host "  Replacing it UNREGISTERS it: its disk, and anything in it that" -ForegroundColor Yellow
     Write-Host "  is not pushed somewhere, is destroyed. There is no undo." -ForegroundColor Yellow
+    Write-Host "  (It stays untouched until the new image has fully downloaded.)" -ForegroundColor Yellow
     Write-Host ""
 
     if (-not $Force) {
         $reply = Read-Host "  Replace '$distroName'? [y/N]"
-        if ($reply -notmatch '^[Yy]') {
+        # Compared as "$reply", never bare. With no console to read -- stdin
+        # redirected or at EOF -- Read-Host outputs nothing at all, and
+        # `-notmatch` on that yields an empty array, which `if` reads as false:
+        # the bare form skipped this return and went on to replace the
+        # instance. The string is empty instead, and so a no.
+        if ("$reply" -notmatch '^[Yy]') {
             Write-Step 'left the existing instance alone; nothing was changed.'
             return
         }
     }
-
-    Write-Step "unregistering $distroName"
-    wsl.exe --unregister $distroName
-    Assert-NativeSuccess "wsl --unregister $distroName"
 }
 
 # --- download --------------------------------------------------------------
 
-$downloadDir = Join-Path ([System.IO.Path]::GetTempPath()) "wsl-deploy-$Flavor-$arch"
-if (Test-Path $downloadDir) { Remove-Item -Recurse -Force $downloadDir }
-New-Item -ItemType Directory -Path $downloadDir | Out-Null
+# Into ~/Downloads, under the name .github/workflows/wsl-package.yml packs it
+# as. Looked for by that exact name rather than any *.wsl, since Downloads holds
+# other things and a stray .wsl there must never be what gets imported. A copy
+# left by an earlier -KeepDownload run goes first, for the same reason.
+$downloadDir = Join-Path $HOME 'Downloads'
+$tarballPath = Join-Path $downloadDir "regulad-$Flavor-$arch.wsl"
+if (Test-Path -LiteralPath $tarballPath) { Remove-Item -LiteralPath $tarballPath -Force }
 
 # `gh run download` prints nothing at all for the whole transfer -- no bar, no
 # byte count, no timeout -- so a 5 GB fetch looks identical to a hang for ten
@@ -329,14 +336,25 @@ function Invoke-GhDownloadWithProgress {
 }
 
 try {
-    Write-Step "downloading $sizeGb GB (this takes a while)"
+    Write-Step "downloading $sizeGb GB to $downloadDir (this takes a while)"
     Invoke-GhDownloadWithProgress `
         -GhArgs @('run', 'download', "$($artifact.workflow_run.id)", '--repo', $Repo, '--name', $artifactName, '--dir', $downloadDir) `
         -ExpectedBytes ([long]$artifact.size_in_bytes)
 
-    $tarball = Get-ChildItem -Path $downloadDir -Filter '*.wsl' -File | Select-Object -First 1
-    if (-not $tarball) {
-        throw "no .wsl file inside artifact $artifactName"
+    if (-not (Test-Path -LiteralPath $tarballPath -PathType Leaf)) {
+        throw "artifact $artifactName did not contain $(Split-Path -Leaf $tarballPath)"
+    }
+
+    # --- replace any existing instance -------------------------------------
+
+    # Only now, with the new image on disk. wsl.exe is asked again rather than
+    # trusting the lookup from before the download, which takes long enough for
+    # the instance to have been removed by hand in the meantime; and only an
+    # instance the user was asked about above is ever unregistered.
+    if ($installedAlready -and ((wsl.exe --list --quiet) -contains $distroName)) {
+        Write-Step "unregistering $distroName"
+        wsl.exe --unregister $distroName
+        Assert-NativeSuccess "wsl --unregister $distroName"
     }
 
     # --- import ------------------------------------------------------------
@@ -344,7 +362,7 @@ try {
     Write-Step "importing as '$distroName' at $installPath"
     $installArgs = @(
         '--install'
-        '--from-file', $tarball.FullName
+        '--from-file', $tarballPath
         '--name', $distroName
         '--location', $installPath
         '--no-launch'
@@ -358,9 +376,9 @@ try {
     Assert-NativeSuccess 'wsl --install --from-file'
 }
 finally {
-    if (-not $KeepDownload -and (Test-Path $downloadDir)) {
-        Write-Note "cleaning up $downloadDir"
-        Remove-Item -Recurse -Force $downloadDir -ErrorAction SilentlyContinue
+    if (-not $KeepDownload -and (Test-Path -LiteralPath $tarballPath)) {
+        Write-Note "removing $tarballPath"
+        Remove-Item -LiteralPath $tarballPath -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -397,7 +415,8 @@ if ($currentDefault -eq $distroName) {
         }
         Write-Host "  The default is what a bare 'wsl' starts." -ForegroundColor Yellow
         $reply = Read-Host "  Make '$distroName' the default? [y/N]"
-        $makeDefault = $reply -match '^[Yy]'
+        # "$reply" for the same reason as the replace prompt above.
+        $makeDefault = "$reply" -match '^[Yy]'
     }
 
     if ($makeDefault) {
