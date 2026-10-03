@@ -99,7 +99,7 @@ APT_PACKAGES=(
 	git-filter-repo
 	gnupg # gpg
 	openssh-client
-	keychain
+	# keychain: off WSL only, appended below
 	gh # GitHub
 	restic
 	ffmpeg
@@ -134,6 +134,22 @@ APT_PACKAGES=(
 )
 
 require_sudo "apt package installation"
+
+# keychain is the fallback SSH agent for hosts that have none (.commonprofile
+# only reaches for it when no agent socket exists). Not on WSL, where
+# ssh-agent-relay.service relays the Windows agent in -- see the note in
+# 020-dnf-packages for the login hang Fedora's package caused there. The images
+# are built in Docker, where WSL cannot be told apart, so they still carry it;
+# the apply /etc/oobe.sh runs inside WSL takes it out here. purge rather than
+# remove: remove leaves a package's conffiles under /etc behind.
+if [ "$IS_WSL" -eq 1 ]; then
+	if dpkg -s keychain &>/dev/null; then
+		echo "notice: removing keychain on WSL; the Windows agent is relayed in instead" >&2
+		sudo apt-get purge -qq -y keychain
+	fi
+else
+	APT_PACKAGES+=(keychain)
+fi
 
 sudo apt update -qq
 sudo apt install -qq -y "${APT_PACKAGES[@]}"
