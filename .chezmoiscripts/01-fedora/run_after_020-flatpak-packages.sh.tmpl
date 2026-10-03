@@ -14,6 +14,12 @@ if [ "$CONTAINERIZED" -eq 1 ]; then
 	echo "notice: containerized, skipping flatpak packages" >&2
 	exit 0
 fi
+# A WSL instance is the container image repackaged, so it has no flatpak
+# either; without this the check below failed every WSL apply.
+if [ "$IS_WSL" -eq 1 ]; then
+	echo "notice: WSL (built from the container image, no flatpak), skipping flatpak packages" >&2
+	exit 0
+fi
 
 if ! command -v flatpak &>/dev/null; then
 	echo "error: flatpak not on PATH; it ships in every Fedora-family install" >&2

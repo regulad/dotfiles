@@ -13,6 +13,11 @@ if [ "$CONTAINERIZED" -eq 1 ]; then
 	echo "notice: containerized, skipping flatpak media config" >&2
 	exit 0
 fi
+# See 020-flatpak-packages: a WSL instance has no flatpak to configure.
+if [ "$IS_WSL" -eq 1 ]; then
+	echo "notice: WSL, skipping flatpak media config" >&2
+	exit 0
+fi
 
 if ! command -v flatpak &>/dev/null; then
 	echo "error: flatpak not on PATH; it ships in every Fedora-family install" >&2

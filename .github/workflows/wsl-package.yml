@@ -8,7 +8,8 @@ name: Package WSL distribution
 # duplication would drift.
 #
 # The image's root filesystem is exported, edited in a chroot (keychain is
-# removed -- see that step), and repacked with a distribution overlay on top:
+# removed, then the apply a WSL instance runs is run against stand-ins for
+# WSL -- see that step), and repacked with a distribution overlay on top:
 # /etc/wsl.conf, /etc/wsl-distribution.conf, /etc/oobe.sh, /etc/dotfiles-commit,
 # an empty machine-id and Microsoft's unit masks.
 
@@ -285,11 +286,27 @@ jobs:
       # no use for it: the Windows agent is relayed in (ssh-agent-relay.service),
       # .commonprofile points SSH_AUTH_SOCK there, and the package lists leave
       # keychain out once they run inside WSL, so it does not come back.
-      - name: Remove keychain in a chroot
+      #
+      # Then the rootfs gets the apply a WSL instance runs, minus secrets. The
+      # image is built in Docker, where every hookscript takes its container
+      # branch; inside WSL they take the WSL one, and what that adds belongs in
+      # the tarball rather than in a first-run download -- lima above all, which
+      # 030-brew-extras keeps out of containers because on Linux it brings
+      # brew's qemu and an exclusive 4.29 GB subtree under it. Nothing here
+      # names a package: the chroot is made to look like WSL to the scripts
+      # (the stand-ins below), and the Dockerfiles' dummy-secrets `chezmoi
+      # init` + `chezmoi apply --exclude encrypted` runs again as the image's
+      # user, through `runuser -l` with WSL_DISTRO_NAME kept, the way
+      # /etc/oobe.sh runs its own apply.
+      - name: Remove keychain and run the WSL apply in a chroot
+        env:
+          FLAVOR: ${{ inputs.flavor }}
         run: |
           set -euo pipefail
           root="$RUNNER_TEMP/rootfs"
+          work="$RUNNER_TEMP/wsl-apply"
           sudo mkdir -p "$root"
+          mkdir -p "$work"
 
           # As root, bsdtar restores owners, modes, ACLs and extended
           # attributes -- which carry file capabilities -- by default;
@@ -308,16 +325,27 @@ jobs:
           # The image's own rpm/dpkg run in the chroot, against its own package
           # database -- which this Ubuntu runner's tools could not read
           # (Fedora's rpmdb is sqlite). /proc and /dev are what package
-          # maintainer scripts expect; both are unmounted again before anything
-          # is packed, and the step refuses to continue if either is not.
+          # maintainer scripts expect. /dev goes in recursively, so /dev/shm and
+          # /dev/pts exist as they did in the build container, and as a slave
+          # so nothing mounted under it propagates back to the runner.
+          #
+          # Every mount is recorded so release() can take them off in reverse:
+          # the stand-ins below sit on top of /proc and of files in the rootfs,
+          # so they have to come off first. All of them are gone before
+          # anything is packed, and the step refuses to continue if any is not.
+          mounts=()
+          mount_in() { sudo mount "$@"; mounts+=("${!#}"); }
           release() {
-            for m in dev proc; do
-              if mountpoint -q "$root/$m"; then sudo umount "$root/$m"; fi
+            local i
+            for ((i = ${#mounts[@]} - 1; i >= 0; i--)); do
+              if mountpoint -q "${mounts[i]}"; then sudo umount -R "${mounts[i]}"; fi
             done
+            mounts=()
           }
           trap release EXIT
-          sudo mount -t proc proc "$root/proc"
-          sudo mount --bind /dev "$root/dev"
+          mount_in -t proc proc "$root/proc"
+          mount_in --rbind /dev "$root/dev"
+          sudo mount --make-rslave "$root/dev"
 
           if sudo chroot "$root" rpm -q keychain >/dev/null 2>&1; then
             sudo chroot "$root" rpm -e keychain
@@ -330,6 +358,153 @@ jobs:
             echo "keychain is not installed in this image"
           fi
 
+          # --- the WSL apply ------------------------------------------------
+
+          # The same account /etc/oobe.sh runs its apply as.
+          user=$(awk -F: '$3 == 1000 { print $1 }' "$root/etc/passwd")
+          home=$(awk -F: '$3 == 1000 { print $6 }' "$root/etc/passwd")
+          if [ -z "$user" ] || [ -z "$home" ]; then
+            echo "::error::uid 1000 is missing from the image"
+            exit 1
+          fi
+
+          # Stand-in 1, the kernel. systemd-detect-virt recognises WSL by
+          # "microsoft"/"WSL" in the kernel release, as Microsoft documents,
+          # and .chezmoi.toml.tmpl goes through it: on a Linux it does not
+          # recognise as a container or WSL it asks hostnamectl over D-Bus,
+          # which a chroot cannot answer. A WSL kernel's string (WSL 3.0.1's,
+          # the floor 00-nt holds WSL at) is bind-mounted over this chroot's
+          # /proc/sys/kernel/osrelease; the runner's own /proc is a different
+          # mount and is untouched.
+          printf '%s\n' 6.18.40.1-microsoft-standard-WSL2 > "$work/osrelease"
+          mount_in --bind "$work/osrelease" "$root/proc/sys/kernel/osrelease"
+          virt=$(sudo chroot "$root" systemd-detect-virt --container || true)
+          if [ "$virt" != wsl ]; then
+            echo "::error::the chroot does not pass for WSL: systemd-detect-virt --container says '$virt'"
+            exit 1
+          fi
+
+          # Stand-in 2, DNS. WSL writes /etc/resolv.conf at boot and the image
+          # has none (Docker injects one at run time), so the runner's is
+          # copied in and taken out again; the repack excludes the path
+          # regardless, and the verify step checks it is gone.
+          sudo rm -f "$root/etc/resolv.conf"
+          sudo cp -L /etc/resolv.conf "$root/etc/resolv.conf"
+
+          # Stand-in 3, the build's cache mounts. The Dockerfiles run their
+          # apply with these paths as BuildKit cache mounts and /tmp as a
+          # tmpfs, so no download lands in a layer -- /etc/environment points
+          # brew, uv, pip and npm at the buildkit ones, and dnf and apt are set
+          # to keep packages. Each gets a scratch directory bind-mounted over
+          # it here, seeded with whatever the image has there, so the apply
+          # sees what it saw at build time and the downloads go away with the
+          # scratch. /run is a tmpfs under WSL and gets the same treatment.
+          cache_dirs=(tmp run var/cache/buildkit/uv var/cache/buildkit/pip
+                      var/cache/buildkit/npm var/cache/buildkit/brew)
+          if sudo test -e "$root/usr/bin/dnf"; then cache_dirs+=(var/cache/libdnf5); fi
+          if sudo test -e "$root/usr/bin/apt-get"; then cache_dirs+=(var/cache/apt var/lib/apt); fi
+          for d in "${cache_dirs[@]}"; do
+            sudo mkdir -p "$root/$d" "$work/scratch/$d"
+            sudo cp -a "$root/$d/." "$work/scratch/$d/"
+            sudo chown --reference="$root/$d" "$work/scratch/$d"
+            sudo chmod --reference="$root/$d" "$work/scratch/$d"
+            mount_in --bind "$work/scratch/$d" "$root/$d"
+          done
+
+          # Stand-in 4, systemd. A WSL instance boots systemd and runs a
+          # --user manager for the login user; a chroot has neither, so
+          # 150-user-services, 007-ssh-agent-relay and `brew services` would
+          # find "no user session" and fail. While the apply runs, systemctl is
+          # a wrapper (bind-mounted over the real binary, which is copied to
+          # the scratch /tmp): system-scope calls go straight to the real one,
+          # which handles a chroot itself -- enable and disable work offline,
+          # start and restart are skipped -- and so do --user unit-file
+          # operations, forced offline and minus --now. Anything that would
+          # talk to the --user manager succeeds without doing anything, which
+          # is what a running manager would answer. The unit files and
+          # enablement links end up exactly where a WSL apply leaves them.
+          systemctl_path=$(sudo chroot "$root" sh -c 'readlink -f "$(command -v systemctl)"')
+          sudo cp -p "$root$systemctl_path" "$work/scratch/tmp/wsl-package-systemctl"
+          cat > "$work/systemctl" <<'WRAPPER'
+          #!/bin/bash
+          # systemctl stand-in, bind-mounted over the real one only while
+          # .github/workflows/wsl-package.yml runs its WSL apply in a chroot.
+          real=/tmp/wsl-package-systemctl
+          # brew runs its children with a scrubbed environment.
+          : "${XDG_RUNTIME_DIR:=/run/user/$(id -u)}"
+          export XDG_RUNTIME_DIR
+          user=0 verb='' args=()
+          for a in "$@"; do
+            case $a in
+              --user) user=1; args+=("$a") ;;
+              --now) ;;
+              -*) args+=("$a") ;;
+              *) if [ -z "$verb" ]; then verb=$a; fi; args+=("$a") ;;
+            esac
+          done
+          if [ "$user" -eq 0 ]; then exec "$real" "$@"; fi
+          case $verb in
+            enable|disable|reenable|preset|mask|unmask|link|revert|add-wants|add-requires|is-enabled|list-unit-files|cat|get-default|set-default)
+              SYSTEMD_OFFLINE=1 exec "$real" "${args[@]}" ;;
+            *) exit 0 ;;
+          esac
+          WRAPPER
+          chmod 0755 "$work/systemctl"
+          mount_in --bind "$work/systemctl" "$root$systemctl_path"
+
+          # chezmoi's state is put back afterwards. The run_once scripts that
+          # ran here against stand-ins -- the WSL-only ones especially -- must
+          # still run for real on first boot, so the instance's own first apply
+          # has to see the state it sees today.
+          state="$root$home/.config/chezmoi/chezmoistate.boltdb"
+          sudo cp -p "$state" "$work/chezmoistate.boltdb"
+
+          # The Dockerfiles' init, minus CHEZMOI_USE_HEADLESS: /etc/oobe.sh's
+          # init does not set it either, so this applies with the data a WSL
+          # instance has, dummy secrets aside.
+          #
+          # --force because there is no terminal here: chezmoi asks before
+          # overwriting a managed file that changed since it last wrote it,
+          # and with no TTY to ask on, the question fails the apply. Overwriting
+          # is the answer a fresh image wants anyway; nobody has edited it.
+          cat > "$work/apply.sh" <<'APPLY'
+          #!/bin/bash
+          set -euo pipefail
+          # A WSL login gets /etc/environment from pam_env, and the image's
+          # points brew, uv, pip and npm at the /var/cache/buildkit scratch
+          # mounts. runuser's PAM stack has no pam_env, so it is read here.
+          set -a
+          # shellcheck disable=SC1091
+          . /etc/environment
+          set +a
+          # pam_systemd sets this in a WSL login; the chroot's login has no
+          # logind to ask, so the directory is made in the scratch /run.
+          XDG_RUNTIME_DIR="/run/user/$(id -u)"
+          export XDG_RUNTIME_DIR
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          CHEZMOI_USE_DUMMY=1 chezmoi init
+          chezmoi apply --force --exclude encrypted
+          APPLY
+          sudo install -m 0755 "$work/apply.sh" "$work/scratch/tmp/wsl-package-apply.sh"
+          sudo install -d -m 0700 -o 1000 -g "$(awk -F: '$3 == 1000 { print $4 }' "$root/etc/passwd")" \
+            "$work/scratch/run/user/1000"
+
+          # Stand-in 5, the session: runuser -l starts a fresh login
+          # environment, as on first run; -w keeps WSL_DISTRO_NAME through it,
+          # which is what .chezmoiignore, the preamble and .commonprofile key
+          # WSL off.
+          started=$(date +%s)
+          sudo env WSL_DISTRO_NAME="regulad-${FLAVOR}" chroot "$root" \
+            runuser -l -w WSL_DISTRO_NAME "$user" -c 'bash /tmp/wsl-package-apply.sh'
+          echo "WSL apply finished in $(( ($(date +%s) - started) / 60 )) min"
+
+          sudo cp -p "$work/chezmoistate.boltdb" "$state"
+          # The Dockerfiles end their apply the same way.
+          if sudo test -d "$root$home/.cache"; then
+            sudo find "$root$home/.cache" -mindepth 1 -delete
+          fi
+          sudo rm -f "$root/etc/resolv.conf"
+
           release
           trap - EXIT
           if findmnt -rn -o TARGET | grep -q "^$root/"; then
@@ -337,6 +512,9 @@ jobs:
             findmnt -rn -o TARGET | grep "^$root/"
             exit 1
           fi
+          # The scratch directories hold every download the apply made.
+          sudo rm -rf "$work"
+          df -h /
 
           # Fedora's hook is a %config(noreplace) file: rpm deletes it on erase
           # only while unmodified (an edited copy survives as .rpmsave) and has
@@ -459,6 +637,26 @@ jobs:
           # keychain and its login hook must not ship (see the chroot step).
           if grep -xE 'usr/bin/keychain|etc/profile\.d/keychain\.c?sh(\.rpmsave)?' entries.txt; then
             echo "::error::keychain is still in the tarball"
+            exit 1
+          fi
+
+          # The WSL apply (see the chroot step) has to have taken the WSL
+          # branches: 030-brew-extras installs lima, its extra guest agents and
+          # qemu everywhere but a container, so a tarball without them means
+          # the scripts took the chroot for a container.
+          for required in home/linuxbrew/.linuxbrew/bin/limactl \
+                          home/linuxbrew/.linuxbrew/opt/lima-additional-guestagents \
+                          home/linuxbrew/.linuxbrew/opt/qemu; do
+            grep -qx "$required" entries.txt || {
+              echo "::error::the WSL apply left no $required in the tarball"
+              exit 1
+            }
+          done
+          # ...and none of its downloads may ride along: the cache directories
+          # are packed, but empty, as they are in the image.
+          if grep -E '^(var/cache/buildkit/[^/]+|home/[^/]+/\.cache)/.+' entries.txt > packed-caches.txt; then
+            echo "::error::download caches were packed ($(wc -l < packed-caches.txt) entries), e.g.:"
+            head -20 packed-caches.txt
             exit 1
           fi
 
