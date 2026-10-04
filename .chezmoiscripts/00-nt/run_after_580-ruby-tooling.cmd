@@ -16,15 +16,18 @@ REM scoop's ruby package puts bin dirs on user PATH via env_add_path rather
 REM than shims, and that hasn't propagated into this session on a first apply
 REM -- same trap 570-pnpm-tooling.cmd documents for pnpm. Fall back to the
 REM install location itself.
-set "GEM=gem"
-call where gem >nul 2>&1
-if errorlevel 1 set "GEM=%USERPROFILE%\scoop\apps\ruby\current\bin\gem.cmd"
+REM
+REM gem and ridk are resolved to full paths, never left as bare names: their
+REM .cmd wrappers find ruby.exe through %~dp0, and cmd gets %~dp0 wrong for a
+REM batch file started by a quoted bare name found on PATH. `call "ridk"`
+REM from the home directory, where chezmoi runs scripts, looked for
+REM "C:\Users\<user>\ruby" and failed; `call "%GEM%"` with GEM=gem did the same.
+set "GEM="
+for /f "delims=" %%i in ('where gem.cmd 2^>nul') do if not defined GEM set "GEM=%%i"
+if not defined GEM set "GEM=%USERPROFILE%\scoop\apps\ruby\current\bin\gem.cmd"
 if not exist "%GEM%" (
-    call where gem >nul 2>&1
-    if errorlevel 1 (
-        echo error: gem not found on PATH or in scoop; 200-scoop-install.cmd should have installed ruby 1>&2
-        exit /b 1
-    )
+    echo error: gem not found on PATH or in scoop; 200-scoop-install.cmd should have installed ruby 1>&2
+    exit /b 1
 )
 
 REM The neovim gem's msgpack dependency builds a C extension, and scoop's
@@ -35,9 +38,9 @@ REM the devkit for native gem builds -- it probes scoop's msys2 location on
 REM its own, no MSYS2_PATH needed.
 REM Resolved before the block below: %RIDK% inside it expands when the block
 REM is parsed, so a set inside the same block would come too late.
-set "RIDK=ridk"
-call where ridk >nul 2>&1
-if errorlevel 1 set "RIDK=%USERPROFILE%\scoop\apps\ruby\current\bin\ridk.cmd"
+set "RIDK="
+for /f "delims=" %%i in ('where ridk.cmd 2^>nul') do if not defined RIDK set "RIDK=%%i"
+if not defined RIDK set "RIDK=%USERPROFILE%\scoop\apps\ruby\current\bin\ridk.cmd"
 if not exist "%USERPROFILE%\scoop\apps\msys2\current\ucrt64\bin\gcc.exe" (
     echo debug: installing msys2 ucrt64 toolchain for native gem builds
     call "%RIDK%" install 3

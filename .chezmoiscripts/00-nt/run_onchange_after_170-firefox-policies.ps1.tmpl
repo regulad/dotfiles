@@ -58,14 +58,20 @@ try {
     # Invoked through the call operator with separate arguments, so PowerShell
     # does the quoting; the inner -Command string uses single quotes around the
     # paths and therefore never nests a double quote inside a double quote.
+    #
+    # This relies on sudo being inline, which registry-system.reg sets
+    # (000-registry): sudo then waits for the copy before returning. In Force
+    # New Window mode -- Windows' default once sudo is switched on -- it
+    # returned as soon as the elevated PowerShell started, so the read-back
+    # below lost the race, and the finally block deleted $Tmp before the
+    # Copy-Item could read it.
     & sudo powershell -NoProfile -NonInteractive -Command "New-Item -ItemType Directory -Force -Path '$DistDir' | Out-Null; Copy-Item -LiteralPath '$Tmp' -Destination '$Dest' -Force"
 
-    # sudo is pinned to Force New Window mode on this machine (see
-    # 030-w32time.cmd) and reports success unconditionally, so the copy is
-    # verified by reading it back rather than by trusting the exit code.
+    # Read back rather than trusting sudo's exit code alone: what matters is the
+    # file Firefox will read.
     $Written = if (Test-Path -LiteralPath $Dest) { (Get-FileHash -LiteralPath $Dest -Algorithm SHA256).Hash } else { '' }
     if ($Written -ne $Wanted) {
-        Write-Error 'firefox policy deployment did not apply -- was the elevation prompt declined?'
+        Write-Host "error: firefox policy deployment did not apply (sudo exited $LASTEXITCODE) -- was the elevation prompt declined?"
         exit 1
     }
 }

@@ -1,0 +1,131 @@
+Windows Registry Editor Version 5.00
+
+; Every static machine-wide registry value this repo sets on Windows, imported
+; by .chezmoiscripts/00-nt/run_onchange_after_000-registry.cmd ahead of every
+; other NT hookscript. Only values that can be stated outright belong here. A
+; value that is read-modify-written (035-sshd's IFEO MitigationOptions bits,
+; the PATH appends in 224 and neosetx), computed at run time (225's native
+; messaging host paths) or owned by a tool that has to be told about it (nssm
+; in 215, sc.exe in 030 and 035) stays with its script.
+;
+; A chezmoi template, kept in UTF-8 like every other file here. 000-registry
+; carries it inline and converts it to UTF-16LE -- the encoding "Version 5.00"
+; means -- only at the moment it hands it to reg.exe.
+
+; sudo: Inline (3). The elevated command runs in the calling console, and sudo
+; waits for it and returns its exit code, as sudo does elsewhere. Switching
+; sudo on in Settings defaults to Force New Window (1), where sudo returns 0
+; as soon as the elevated process has been launched, so a script reading back
+; what it just elevated raced the elevated process and lost.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Sudo]
+"Enabled"=dword:00000003
+
+; Windows PowerShell 5.1 script execution. This is why 000-registry is a .cmd:
+; no .ps1 can be relied on to run before this value is in place.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\PowerShell]
+"ExecutionPolicy"="Unrestricted"
+"EnableScripts"=dword:00000001
+
+; Developer Mode: the one value Settings' toggle writes. What this repo needs
+; from it is unprivileged symlink creation -- chezmoi creates every symlink_
+; entry (the AppData links into ~/.config, ~/repositories) as the user, and
+; without Developer Mode CreateSymbolicLink requires an elevated token.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock]
+"AllowDevelopmentWithoutDevLicense"=dword:00000001
+
+; Machine-wide package caches, on the D: Dev Drive that 050-dev-drive creates;
+; 060-dev-caches makes the directories and migrates whatever was in the old
+; locations. REG_SZ, as setx wrote them. reg.exe does not tell running
+; programs that the environment changed, so 000-registry broadcasts
+; WM_SETTINGCHANGE "Environment" afterwards, as setx did, and newly started
+; shells pick these up. Already-running ones never do.
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment]
+"npm_config_cache"="D:\\packages\\npm"
+"NUGET_PACKAGES"="D:\\packages\\nuget"
+"VCPKG_DEFAULT_BINARY_CACHE"="D:\\packages\\vcpkg"
+"PIP_CACHE_DIR"="D:\\packages\\pip"
+"CARGO_HOME"="D:\\packages\\cargo"
+"MAVEN_OPTS"="-Dmaven.repo.local=D:\\packages\\maven"
+"GRADLE_USER_HOME"="D:\\packages\\gradle"
+
+; w32time tuning. This box drifts noticeably between the stock sync intervals:
+; the default standalone profile polls once a week and refuses to correct
+; anything it considers a "spike". 030-w32time configures the service with
+; sc.exe and has the running service reload everything here with
+; `w32tm /config /update`.
+;
+; NtpServer: the pool rather than time.windows.com. Microsoft's server is a
+; single anycast endpoint polled by every Windows machine on earth and is
+; routinely seconds off, while the pool hands out four independent servers
+; that w32time can compare against each other and discard outliers from.
+; 0x9 = 0x1 SpecialInterval plus 0x8 Client, so NtpClient's
+; SpecialPollInterval below is the poll rate; dropping 0x1 would hand the
+; schedule back to Min/MaxPollInterval. w32time cannot learn servers from
+; DHCP (option 42 is neither requested nor surfaced on Windows), and outside
+; a domain there is no hierarchy to discover one from, so the list is static.
+; Type: NTP pins w32time to that list instead of the domain hierarchy -- what
+; `w32tm /config /syncfromflags:manual` writes.
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\W32Time\Parameters]
+"NtpServer"="0.pool.ntp.org,0x9 1.pool.ntp.org,0x9 2.pool.ntp.org,0x9 3.pool.ntp.org,0x9"
+"Type"="NTP"
+
+; MinPollInterval/MaxPollInterval are log2 seconds: 6 = 64s, 10 = 1024s. The
+; standalone defaults are 10/15, i.e. up to 9 hours between polls.
+; UpdateInterval: clock ticks between phase corrections. Standalone default is
+; 360000 (~1 hour); 100 applies the accumulated correction roughly every
+; second.
+; PhaseCorrectRate: slew rate divisor -- 1 is the fastest correction w32time
+; will apply.
+; MaxPos/MaxNegPhaseCorrection: max offset (seconds) w32time will accept and
+; correct. 0xffffffff means "always correct", however far off the local clock
+; has wandered; the default 54000 silently gives up past 15 hours.
+; MaxAllowedPhaseOffset: offset (seconds) past which the clock is stepped
+; rather than slewed. 1 trades a monotonic clock for actually being on time;
+; slewing a large offset at the default 300s threshold can take hours.
+; SpikeWatchPeriod: seconds a suspiciously large sample is watched before it
+; is believed (90). The default 900 is 15 minutes of knowingly-wrong clock.
+; HoldPeriod: samples accepted without spike checking after a sync, shortened
+; so a genuine jump is not held off for five consecutive polls.
+; EventLogFlags: 1 = special-source events, 2 = time-jump events, 3 = both.
+; Time jumps are the only record left that a correction happened at all.
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\W32Time\Config]
+"MinPollInterval"=dword:00000006
+"MaxPollInterval"=dword:0000000a
+"UpdateInterval"=dword:00000064
+"PhaseCorrectRate"=dword:00000001
+"MaxPosPhaseCorrection"=dword:ffffffff
+"MaxNegPhaseCorrection"=dword:ffffffff
+"MaxAllowedPhaseOffset"=dword:00000001
+"SpikeWatchPeriod"=dword:0000005a
+"HoldPeriod"=dword:00000002
+"EventLogFlags"=dword:00000003
+
+; SpecialPollInterval: poll interval in seconds for peers flagged 0x1
+; (SpecialInterval), which NtpServer's are. 900 = every 15 minutes, well
+; inside what pool.ntp.org considers polite for a single host.
+; ResolvePeerBackoffMinutes/MaxTimes: minutes to wait before re-resolving a
+; peer that failed to answer, and how many times to back off. The defaults
+; (15 / 7) mean a transient DNS or network failure can cost most of a day of
+; no syncing at all.
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\W32Time\TimeProviders\NtpClient]
+"Enabled"=dword:00000001
+"SpecialPollInterval"=dword:00000384
+"ResolvePeerBackoffMinutes"=dword:00000001
+"ResolvePeerBackoffMaxTimes"=dword:00000003
+{{- if not .useDummySecrets }}
+
+; Chrome: present the client certificate 021-x509-client imports without a
+; "Select a certificate" prompt on every TLS client-auth handshake. Each
+; numbered value is one rule, and rules match on the *issuer*, so anything
+; chaining to the regulad.internal root -- a self-signed root, subject ==
+; issuer -- is presented without asking. [*.] is Chrome's URL-pattern syntax
+; for "this domain and every subdomain", so these cover regulad.xyz and
+; regulad.internal themselves plus anything under them, on any port. HKLM
+; rather than HKCU because that is the scope Chrome's policy documentation is
+; written against; a machine-wide rule pairs correctly with the per-user
+; import, since it only chooses among certificates the browsing user holds.
+; Left out under dummy secrets, where 021 and its certificate are masked.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\AutoSelectCertificateForUrls]
+"1"="{\"pattern\":\"https://[*.]regulad.xyz\",\"filter\":{\"ISSUER\":{\"CN\":\"regulad.internal\"}}}"
+"2"="{\"pattern\":\"https://[*.]regulad.internal\",\"filter\":{\"ISSUER\":{\"CN\":\"regulad.internal\"}}}"
+{{- end }}

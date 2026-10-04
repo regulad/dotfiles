@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 
 REM Git for Windows bundles its own MSYS2 gpg/gpg-agent/gpgconf/gpg-connect-agent,
 REM and scoop's git manifest shims all four onto PATH. Gpg4win (installed via
-REM winget in run_after_100-winget.cmd.tmpl) is the intended provider here: it is
+REM winget in run_after_100-winget.ps1) is the intended provider here: it is
 REM the newer GnuPG core, and it is the one the HKLM\SOFTWARE\GnuPG registry key
 REM and gpgme/Kleopatra actually agree on. Two GnuPG builds racing to answer for
 REM the same agent socket is the same shape of collision as the Homebrew `gnupg`

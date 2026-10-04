@@ -1,0 +1,106 @@
+# Cargo's and Gradle's homes exist only on the D: Dev Drive on Windows, named
+# by CARGO_HOME and GRADLE_USER_HOME: machine-wide in registry-system.reg, and
+# GRADLE_USER_HOME again per-user in registry-user.reg, replacing the one the
+# since-dropped scoop gradle set. ~/.cargo and ~/.gradle are not used here, so
+# .chezmoiignore keeps chezmoi from writing them on Windows, and this script
+# writes the two managed files into the D: homes instead. Same arrangement as
+# 170-firefox-policies: the bodies live in .chezmoitemplates, and dot_cargo /
+# dot_gradle are thin wrappers that macOS and Linux deploy as usual.
+#
+# run_after_, not run_onchange_: nothing here needs elevation, so every apply
+# can afford to compare and put back whatever drifted -- a file, the per-user
+# variable, a ~/.cargo that something recreated -- rather than act only when
+# the templates change.
+#
+# The homes are read from the registry's machine scope, not from this
+# process's environment: 000-registry's import reaches shells started after
+# it, not the chezmoi running it, so on a first apply $env:CARGO_HOME is still
+# unset here.
+#
+# The credentials are rendered into this script, so they pass through
+# chezmoi's temporary copy of it for the length of the run; the files they end
+# up in hold them anyway.
+
+$Utf8NoBom = New-Object System.Text.UTF8Encoding $false
+# The rendered bodies carry the line endings of the working tree they came
+# from. Neither tool cares, so everything is written and compared as LF.
+function ConvertTo-Lf([string]$Text) { $Text -replace "`r`n", "`n" }
+
+$Homes = @(
+    @{
+        Var    = 'CARGO_HOME'
+        Legacy = (Join-Path $HOME '.cargo')
+        File   = 'credentials.toml'
+{{- if .useDummySecrets }}
+        # Masked under dummy secrets, as ~/.cargo/credentials.toml is elsewhere.
+        Text   = $null
+{{- else }}
+        Text   = @'
+{{ template "cargo-credentials.toml" . }}'@
+{{- end }}
+    }
+    @{
+        Var    = 'GRADLE_USER_HOME'
+        Legacy = (Join-Path $HOME '.gradle')
+        File   = 'gradle.properties'
+        Text   = @'
+{{ template "gradle.properties" . }}'@
+    }
+)
+
+foreach ($H in $Homes) {
+    $Dir = [Environment]::GetEnvironmentVariable($H.Var, 'Machine')
+    if (-not $Dir) {
+        Write-Host "error: $($H.Var) is not set machine-wide; 000-registry imports it from registry-system.reg"
+        exit 1
+    }
+    New-Item -ItemType Directory -Force -Path $Dir | Out-Null
+    $Dest = Join-Path $Dir $H.File
+
+    if ($null -ne $H.Text) {
+        # A here-string drops the newline before its closing '@, which the
+        # template body ends with; it is put back here.
+        $Want = (ConvertTo-Lf $H.Text) + "`n"
+        $Have = if (Test-Path -LiteralPath $Dest) { [IO.File]::ReadAllText($Dest) } else { $null }
+        if ($Have -ceq $Want) {
+            Write-Host "debug: $Dest is up to date"
+        } else {
+            [IO.File]::WriteAllText($Dest, $Want, $Utf8NoBom)
+            Write-Host "notice: wrote $Dest"
+        }
+    }
+
+    # ~/.cargo and ~/.gradle must not exist on Windows. One is removed only when
+    # it holds nothing, or nothing but a copy of the managed file identical to
+    # the one on D: -- what earlier applies of this repo left behind. Anything
+    # else means some tool is not honouring the variable, and is reported, not
+    # deleted. A link is never deleted through: it is reported too.
+    if (Test-Path -LiteralPath $H.Legacy) {
+        $Item = Get-Item -LiteralPath $H.Legacy -Force
+        if ($Item.LinkType) {
+            Write-Host "warning: $($H.Legacy) is a $($Item.LinkType) to $($Item.Target); $($H.Var) is $Dir, so remove the link by hand"
+            continue
+        }
+        $Entries = @(Get-ChildItem -LiteralPath $H.Legacy -Force)
+        $OnlyCopy = $Entries.Count -eq 1 -and -not $Entries[0].PSIsContainer -and
+            $Entries[0].Name -eq $H.File -and (Test-Path -LiteralPath $Dest) -and
+            ((ConvertTo-Lf ([IO.File]::ReadAllText($Entries[0].FullName))) -ceq (ConvertTo-Lf ([IO.File]::ReadAllText($Dest))))
+        if ($Entries.Count -eq 0 -or $OnlyCopy) {
+            Remove-Item -LiteralPath $H.Legacy -Recurse -Force
+            Write-Host "notice: removed $($H.Legacy); $($H.Var) is $Dir"
+        } else {
+            Write-Host "warning: $($H.Legacy) holds $(($Entries | ForEach-Object Name) -join ', '); something is not honouring $($H.Var) ($Dir), so it was left in place"
+        }
+    }
+}
+
+# Suspenders for registry-user.reg: should anything rewrite the per-user
+# GRADLE_USER_HOME -- scoop's gradle post_install did, before 200-scoop-install
+# dropped it -- put it back to the machine value. SetEnvironmentVariable
+# broadcasts the change, as setx did.
+$MachineGradle = [Environment]::GetEnvironmentVariable('GRADLE_USER_HOME', 'Machine')
+$UserGradle = [Environment]::GetEnvironmentVariable('GRADLE_USER_HOME', 'User')
+if ($UserGradle -ne $MachineGradle) {
+    [Environment]::SetEnvironmentVariable('GRADLE_USER_HOME', $MachineGradle, 'User')
+    Write-Host "warning: per-user GRADLE_USER_HOME was '$UserGradle'; reset to $MachineGradle"
+}

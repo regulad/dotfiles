@@ -1,0 +1,26 @@
+Windows Registry Editor Version 5.00
+
+; Every static per-user (HKEY_CURRENT_USER) registry value this repo sets on
+; Windows, imported by .chezmoiscripts/00-nt/run_onchange_after_001-user-registry.cmd
+; right after 000-registry imports the machine-wide registry-system.reg. Kept
+; apart so it can be imported without elevation: an elevated reg.exe writes
+; the HKEY_CURRENT_USER of whichever account approved the UAC prompt, which
+; need not be the account applying. Same rules as registry-system.reg
+; otherwise: static values only, UTF-8 here, converted to UTF-16LE at import.
+
+; GRADLE_USER_HOME, repeated per-user. registry-system.reg sets it machine-wide
+; to the D: Dev Drive, but a user value shadows a machine one, and scoop's
+; gradle left exactly that behind: its manifest's post_install sets a per-user
+; GRADLE_USER_HOME into scoop's persist directory whenever the user scope has
+; none. scoop's gradle is gone now (200-scoop-install says why, and
+; 205-scoop-gradle-remove uninstalls it), but the value it set on a machine
+; that had it stays until something replaces it -- this does -- and should
+; that hook ever run again, it finds a value already in place and leaves it
+; alone.
+[HKEY_CURRENT_USER\Environment]
+"GRADLE_USER_HOME"="D:\\packages\\gradle"
+
+; Has Claude Code use its PowerShell tool on Windows. Per-user, since it is
+; read by the user's own Claude Code sessions.
+[HKEY_CURRENT_USER\Environment]
+"CLAUDE_CODE_USE_POWERSHELL_TOOL"="1"

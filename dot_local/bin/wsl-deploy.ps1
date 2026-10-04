@@ -266,72 +266,107 @@ function Invoke-GhDownloadWithProgress {
         return ([long]($mine | Measure-Object -Property WriteTransferCount -Sum).Sum)
     }
 
-    while (-not $proc.HasExited) {
-        Start-Sleep -Milliseconds 1000
-        $written = Get-WrittenBytes -RootPid $proc.Id
-        $now = Get-Date
+    # The terminal's own progress bar, OSC 9;4: Windows Terminal draws it on
+    # the tab and the taskbar button, ConEmu in its status bar, so the transfer
+    # can be followed from another window. It follows the readout's phases --
+    # 0 to 100 for the download, then from 0 again for the extract -- since a
+    # single bar over both would sit at 50% while the unpack had barely begun.
+    # [Console]::Write, because a bare string here would land in the function's
+    # output; and never to a redirected console, where it is only junk in a log.
+    function Set-TerminalProgress {
+        param([int]$State, [int]$Percent = 0)
+        if (-not $interactive) { return }
+        $Percent = [math]::Max(0, [math]::Min(100, $Percent))
+        [Console]::Write("$([char]27)]9;4;$State;$Percent$([char]7)")
+    }
 
-        $span = ($now - $lastTime).TotalSeconds
-        if ($span -gt 0 -and $written -ge $lastBytes) {
-            $instant = ($written - $lastBytes) / $span
-            # Smoothed, so the readout does not flap between samples.
-            $rate = if ($rate -eq 0) { $instant } else { ($rate * 0.7) + ($instant * 0.3) }
-        }
-        $lastBytes = $written
-        $lastTime = $now
+    try {
+        # Indeterminate until the first sample: gh spends that time resolving
+        # the artifact's download URL, and a bar at 0% looks like no bar.
+        Set-TerminalProgress -State 3
 
-        if ($written -le $ExpectedBytes) {
-            $phase = 'downloading'
-            $done = $written
-            $total = $ExpectedBytes
-        } else {
-            $phase = 'extracting '
-            $done = $written - $ExpectedBytes
-            $total = $ExpectedBytes
-        }
-        # The unpacked .wsl is not byte-for-byte the size of the zip that held
-        # it, so the extract phase can run slightly past its own estimate.
-        # Clamp for display rather than showing "5.63 / 5.41 GB".
-        if ($done -gt $total) { $done = $total }
-        $pct = if ($total -gt 0) { [math]::Min(100, [math]::Round(100 * $done / $total)) } else { 0 }
+        while (-not $proc.HasExited) {
+            Start-Sleep -Milliseconds 1000
+            $written = Get-WrittenBytes -RootPid $proc.Id
+            $now = Get-Date
 
-        # Each phase gets its own milestone sequence. Without the reset the
-        # counter would still be sitting at 100% from the download when the
-        # extract starts over near zero, and a redirected console would print
-        # nothing at all for the whole second phase.
-        if ($phase -ne $lastPhase) {
-            $nextMilestone = 0.05
-            $lastPhase = $phase
-        }
+            $span = ($now - $lastTime).TotalSeconds
+            if ($span -gt 0 -and $written -ge $lastBytes) {
+                $instant = ($written - $lastBytes) / $span
+                # Smoothed, so the readout does not flap between samples.
+                $rate = if ($rate -eq 0) { $instant } else { ($rate * 0.7) + ($instant * 0.3) }
+            }
+            $lastBytes = $written
+            $lastTime = $now
 
-        $eta = ''
-        if ($rate -gt 0) {
-            $remaining = (2 * $ExpectedBytes) - $written
-            if ($remaining -gt 0) {
-                $secs = [int]($remaining / $rate)
-                $eta = '  eta {0:mm\:ss}' -f [timespan]::FromSeconds($secs)
+            if ($written -le $ExpectedBytes) {
+                $phase = 'downloading'
+                $done = $written
+                $total = $ExpectedBytes
+            } else {
+                $phase = 'extracting '
+                $done = $written - $ExpectedBytes
+                $total = $ExpectedBytes
+            }
+            # The unpacked .wsl is not byte-for-byte the size of the zip that held
+            # it, so the extract phase can run slightly past its own estimate.
+            # Clamp for display rather than showing "5.63 / 5.41 GB".
+            if ($done -gt $total) { $done = $total }
+            $pct = if ($total -gt 0) { [math]::Min(100, [math]::Round(100 * $done / $total)) } else { 0 }
+
+            # Each phase gets its own milestone sequence. Without the reset the
+            # counter would still be sitting at 100% from the download when the
+            # extract starts over near zero, and a redirected console would print
+            # nothing at all for the whole second phase.
+            if ($phase -ne $lastPhase) {
+                $nextMilestone = 0.05
+                $lastPhase = $phase
+            }
+
+            # Left a double, never cast to [int]. The smoothed rate can be a few
+            # bytes a second -- on a first sample in which gh has written next
+            # to nothing, or after a stall, which decays it by 0.7 a second --
+            # and 20 GB over that is past Int32's 68 years of seconds: a stall
+            # during an extract killed the whole deploy that way. Past a day the
+            # estimate is noise anyway, so none is shown, which also keeps it
+            # inside what TimeSpan can hold and inside the format's hours.
+            $eta = ''
+            if ($rate -gt 0) {
+                $remaining = (2 * $ExpectedBytes) - $written
+                if ($remaining -gt 0) {
+                    $secs = $remaining / $rate
+                    if ($secs -lt 86400) {
+                        $eta = '  eta {0:h\:mm\:ss}' -f [timespan]::FromSeconds($secs)
+                    }
+                }
+            }
+
+            $line = '    {0} {1,3}%  {2,6:N2} / {3,6:N2} GB  {4,5:N1} MB/s{5}' -f `
+                $phase, $pct, ($done / 1GB), ($total / 1GB), ($rate / 1MB), $eta
+
+            Set-TerminalProgress -State 1 -Percent $pct
+            if ($interactive) {
+                Write-Host ("`r" + $line.PadRight(70)) -NoNewline -ForegroundColor DarkGray
+            } elseif ($total -gt 0 -and ($done / $total) -ge $nextMilestone) {
+                Write-Host $line -ForegroundColor DarkGray
+                $nextMilestone = [math]::Floor(($done / $total) / 0.05) * 0.05 + 0.05
             }
         }
 
-        $line = '    {0} {1,3}%  {2,6:N2} / {3,6:N2} GB  {4,5:N1} MB/s{5}' -f `
-            $phase, $pct, ($done / 1GB), ($total / 1GB), ($rate / 1MB), $eta
+        $proc.WaitForExit()
+        if ($interactive) { Write-Host "`r".PadRight(72) -NoNewline; Write-Host "`r" -NoNewline }
 
-        if ($interactive) {
-            Write-Host ("`r" + $line.PadRight(70)) -NoNewline -ForegroundColor DarkGray
-        } elseif ($total -gt 0 -and ($done / $total) -ge $nextMilestone) {
-            Write-Host $line -ForegroundColor DarkGray
-            $nextMilestone = [math]::Floor(($done / $total) / 0.05) * 0.05 + 0.05
+        $elapsed = (Get-Date) - $started
+        Write-Note ('transfer finished in {0:mm\:ss}' -f $elapsed)
+
+        if ($proc.ExitCode -ne 0) {
+            throw "gh run download failed with exit code $($proc.ExitCode)"
         }
     }
-
-    $proc.WaitForExit()
-    if ($interactive) { Write-Host "`r".PadRight(72) -NoNewline; Write-Host "`r" -NoNewline }
-
-    $elapsed = (Get-Date) - $started
-    Write-Note ('transfer finished in {0:mm\:ss}' -f $elapsed)
-
-    if ($proc.ExitCode -ne 0) {
-        throw "gh run download failed with exit code $($proc.ExitCode)"
+    finally {
+        # Cleared on every way out -- done, a throw, Ctrl+C -- since the tab
+        # otherwise keeps showing the last percentage long after this exits.
+        Set-TerminalProgress -State 0
     }
 }
 

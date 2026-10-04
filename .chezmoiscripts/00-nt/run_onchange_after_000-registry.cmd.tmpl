@@ -1,0 +1,61 @@
+@echo off
+setlocal
+
+REM Imports .chezmoitemplates/registry-system.reg -- every static machine-wide
+REM registry value this repo sets on Windows -- with one UAC prompt, ahead of
+REM every other NT hookscript.
+REM
+REM A .cmd, not a .ps1: registry-system.reg is what sets Windows PowerShell's
+REM execution policy, so nothing here may depend on it. The PowerShell below is
+REM a -Command with -ExecutionPolicy Bypass, as neosetx does, never a script
+REM file.
+REM
+REM run_onchange_: chezmoi re-runs a script whose rendered contents differ from
+REM what it last ran successfully, and registry-system.reg is rendered into
+REM this one (after the exit /b at the bottom), so editing the .reg is the
+REM trigger -- the same arrangement as 170-firefox-policies and its
+REM policies.json.
+REM
+REM The .reg rides below that exit /b, where cmd never reads, in UTF-8 like the
+REM rest of the repo. PowerShell reads this file back, takes everything after
+REM the marker line, and writes it out as UTF-16LE with a BOM and CRLF -- the
+REM encoding "Version 5.00" means -- right before reg.exe imports it.
+REM
+REM Elevated with Start-Process -Verb RunAs -Wait rather than sudo, because
+REM this is the script that sets sudo's mode: before it has run, sudo may be
+REM off, or in Force New Window mode, where it returns 0 as soon as the
+REM elevated process starts. Start-Process waits for reg.exe and hands back its
+REM exit code, and a declined UAC prompt throws, which exits non-zero too.
+
+set "SELF=%~f0"
+set "REGFILE=%TEMP%\dotfiles-registry-%RANDOM%%RANDOM%.reg"
+
+echo debug: importing registry-system.reg
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$t = [IO.File]::ReadAllText($env:SELF); $m = '::REGISTRY' + '-SYSTEM.REG::'; $reg = $t.Substring($t.LastIndexOf($m) + $m.Length).TrimStart(\"`r`n\") -replace '\r?\n', \"`r`n\"; [IO.File]::WriteAllText($env:REGFILE, $reg, [Text.Encoding]::Unicode); $code = 1; try { $p = Start-Process -FilePath reg.exe -ArgumentList 'import', ('\"' + $env:REGFILE + '\"') -Verb RunAs -Wait -PassThru -WindowStyle Hidden; $code = $p.ExitCode } catch { Write-Host ('error: ' + $_.Exception.Message) }; Remove-Item -LiteralPath $env:REGFILE -Force -ErrorAction SilentlyContinue; exit $code"
+if errorlevel 1 (
+    echo error: registry-system.reg was not imported -- reg.exe failed or the UAC prompt was declined 1>&2
+    exit /b 1
+)
+
+REM reg.exe's exit code covers the import as a whole. sudo's mode is read back
+REM as well, since every hookscript after this one relies on sudo waiting.
+for /f "tokens=3" %%v in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Sudo" /v Enabled 2^>nul') do set "SUDO_MODE=%%v"
+if not "%SUDO_MODE%"=="0x3" (
+    echo error: registry-system.reg imported, but sudo's mode reads back as "%SUDO_MODE%", not 0x3 1>&2
+    exit /b 1
+)
+
+REM registry-system.reg carries machine environment variables, and a registry
+REM write does not tell anyone the environment changed. setx used to broadcast
+REM WM_SETTINGCHANGE "Environment" for them, which is what makes Explorer, and
+REM every shell started from it afterwards, reread the environment; this is
+REM that broadcast. Best-effort, with SMTO_ABORTIFHUNG and a 5 s timeout, so a
+REM hung top-level window cannot stall the apply. Programs already running,
+REM this chezmoi included, never see the change.
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Add-Type -Namespace Dotfiles -Name Env -MemberDefinition '[DllImport(\"user32.dll\", CharSet = CharSet.Unicode)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);'; $r = [UIntPtr]::Zero; [void][Dotfiles.Env]::SendMessageTimeout([IntPtr]0xffff, 0x1A, [UIntPtr]::Zero, 'Environment', 2, 5000, [ref]$r)"
+
+echo notice: applied registry-system.reg; sudo is inline
+exit /b 0
+
+::REGISTRY-SYSTEM.REG::
+{{ template "registry-system.reg" . }}

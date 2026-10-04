@@ -1,6 +1,4 @@
-{{ if not .useDummySecrets -}}
-mavenCentralUsername={{- (bitwardenFields "item" "central.sonatype.com").chezmoiUsername.value }}
-mavenCentralPassword={{- (bitwardenFields "item" "central.sonatype.com").chezmoiPassword.value }}
-{{- end }}
-
-signing.gnupg.keyName=EA23ACF3
+{{- /* The body is shared with .chezmoiscripts/00-nt/065-tool-homes, which
+       writes it into %GRADLE_USER_HOME% on Windows, where ~/.gradle is not
+       used. */ -}}
+{{ template "gradle.properties" . -}}

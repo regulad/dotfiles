@@ -69,6 +69,17 @@ REM act (nektos/act) is not in the list: it drives a Docker Engine API, and
 REM with Docker Desktop gone nothing on Windows serves one -- wslc keeps its
 REM dockerd private to its VM (see the README TODOs). 105-docker-desktop-remove
 REM uninstalls an act left over from before.
+REM
+REM gradle is not in the list either. Its manifest (main/gradle.json) has a
+REM post_install that sets a per-user GRADLE_USER_HOME pointing into scoop's
+REM own persist directory whenever the user scope has none, and a user value
+REM shadows the machine-wide one that keeps Gradle's home on the D: Dev Drive
+REM (registry-system.reg). registry-user.reg holding the same D: path per-user
+REM leaves that check nothing to do, but a hook that redirects Gradle's home
+REM has no business running at all, and scoop cannot be told to skip it: as of
+REM 0.6.0 every post_install runs unconditionally, with no install flag or
+REM config key to stop it. Projects bring their own Gradle through gradlew
+REM instead. 205-scoop-gradle-remove uninstalls a gradle left over from before.
 set user_packages=^
 maven ^
 tesseract ^
@@ -123,7 +134,6 @@ uv ^
 file ^
 dos2unix ^
 grep ^
-gradle ^
 coreutils ^
 openssl ^
 wingetcreate ^

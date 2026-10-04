@@ -1,0 +1,49 @@
+@echo off
+setlocal
+
+REM Imports .chezmoitemplates/registry-user.reg -- the per-user half of the
+REM repo's static registry values -- right after 000-registry's machine-wide
+REM half. Unelevated, so there is no UAC prompt: HKEY_CURRENT_USER belongs to
+REM the account applying, and an elevated import could write someone else's.
+REM
+REM Same shape as 000-registry otherwise: a .cmd, so it never depends on
+REM PowerShell's execution policy; the rendered .reg rides below the exit /b
+REM and PowerShell converts it to UTF-16LE right before reg.exe imports it; and
+REM run_onchange_ re-runs it whenever the rendered file changes.
+
+set "SELF=%~f0"
+set "REGFILE=%TEMP%\dotfiles-user-registry-%RANDOM%%RANDOM%.reg"
+
+echo debug: importing registry-user.reg
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$t = [IO.File]::ReadAllText($env:SELF); $m = '::REGISTRY' + '-USER.REG::'; $reg = $t.Substring($t.LastIndexOf($m) + $m.Length).TrimStart(\"`r`n\") -replace '\r?\n', \"`r`n\"; [IO.File]::WriteAllText($env:REGFILE, $reg, [Text.Encoding]::Unicode)"
+if errorlevel 1 (
+    echo error: could not stage registry-user.reg for import 1>&2
+    exit /b 1
+)
+reg import "%REGFILE%"
+set "IMPORT_RC=%ERRORLEVEL%"
+del /q "%REGFILE%" 2>nul
+if not "%IMPORT_RC%"=="0" (
+    echo error: reg import of registry-user.reg failed 1>&2
+    exit /b 1
+)
+
+REM reg.exe's exit code covers the import as a whole; GRADLE_USER_HOME is read
+REM back as well, since it is the value scoop would otherwise claim.
+set "USER_GRADLE_HOME="
+for /f "tokens=2,*" %%a in ('reg query "HKCU\Environment" /v GRADLE_USER_HOME 2^>nul ^| findstr /i "GRADLE_USER_HOME"') do set "USER_GRADLE_HOME=%%b"
+if /i not "%USER_GRADLE_HOME%"=="D:\packages\gradle" (
+    echo error: registry-user.reg imported, but GRADLE_USER_HOME reads back as "%USER_GRADLE_HOME%" 1>&2
+    exit /b 1
+)
+
+REM A registry write does not tell anyone the environment changed; this is the
+REM WM_SETTINGCHANGE "Environment" broadcast setx used to send, so shells
+REM started afterwards see it. See 000-registry.
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "Add-Type -Namespace Dotfiles -Name Env -MemberDefinition '[DllImport(\"user32.dll\", CharSet = CharSet.Unicode)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);'; $r = [UIntPtr]::Zero; [void][Dotfiles.Env]::SendMessageTimeout([IntPtr]0xffff, 0x1A, [UIntPtr]::Zero, 'Environment', 2, 5000, [ref]$r)"
+
+echo notice: applied registry-user.reg
+exit /b 0
+
+::REGISTRY-USER.REG::
+{{ template "registry-user.reg" . }}

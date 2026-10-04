@@ -110,6 +110,13 @@ repositories  # symlink
 .zprofile
 .zshrc
 .zshenv
+# Cargo's and Gradle's homes exist only on the D: Dev Drive on Windows, named by
+# CARGO_HOME and GRADLE_USER_HOME (registry-system.reg); ~/.cargo and ~/.gradle
+# are not used there at all. 00-nt/065-tool-homes writes the managed files into
+# the D: homes instead, from the same .chezmoitemplates bodies, and removes
+# these two when an older apply left them behind.
+.cargo
+.gradle
 {{- end }}
 
 
