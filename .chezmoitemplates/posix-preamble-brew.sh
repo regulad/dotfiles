@@ -10,3 +10,6 @@
 # *prefer* brew and have a fallback (js-tooling, python-tooling on Linux) keep
 # the plain preamble and branch on HAS_BREW instead.
 require_brew "$(basename "$0")"
+# brew's download queue does not print URLs, so this is the one place an
+# apply's output says which host the bottles come from (brew-mirror-env.sh).
+echo "debug: brew bottles from ${HOMEBREW_ARTIFACT_DOMAIN:-ghcr.io (no mirror)}" >&2
