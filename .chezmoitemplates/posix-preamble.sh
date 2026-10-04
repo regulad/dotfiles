@@ -2,7 +2,7 @@
 
 # =+= START CONFIGURATION =+=
 FEDORA_MINIMUM_VERSION=44
-MACOS_MINIMUM_VERSION=10.14  # Mojave. tested on 14 and 26; older hosts get era-pinned brew (see .chezmoidata/brew-tiers.toml)
+MACOS_MINIMUM_VERSION=10.15  # Catalina. tested on 14 and 26; older hosts get era-pinned brew (see .chezmoidata/brew-tiers.toml)
 UBUNTU_MINIMUM_VERSION=26.04
 # =+= END CONFIGURATION =+=
 
@@ -141,8 +141,8 @@ if [ -f /etc/os-release ]; then
     VERSION_ID=${VERSION_ID:-0}
 elif [ "$(uname)" = "Darwin" ]; then
     OS="macos"
-    # The release as Homebrew names it: "11".."27", or "10.14"/"10.15" --
-    # the major alone cannot tell Mojave from Catalina.
+    # The release as Homebrew names it: "11".."27", or "10.15" -- the
+    # major alone cannot tell Catalina from the 10.x releases before it.
     VERSION_ID=$(sw_vers -productVersion | cut -d. -f1)
     if [ "$VERSION_ID" = "10" ]; then
         VERSION_ID=$(sw_vers -productVersion | cut -d. -f1-2)
@@ -235,10 +235,9 @@ CHEZMOI_HOMEBREW_PREFIX="{{ .homebrewPrefix }}"
 # must carry these two variables or brew will `brew update` itself back to a
 # HEAD that doesn't know this OS, and/or read formulae from the JSON API,
 # which only describes current bottles. What follows them (brew-era-env.sh)
-# sends the bottle downloads through the Nexus proxy of ghcr.io and, on the
-# releases whose Apple trust store is too old for today's download hosts,
-# makes brew download through its own curl. .commonprofile exports the same
-# set for interactive shells.
+# makes brew download through its own curl on the releases whose Apple trust
+# store is too old for today's download hosts. .commonprofile exports the
+# same set for interactive shells.
 {{- $brewPin := dict }}
 {{- if eq .chezmoi.os "darwin" }}
 {{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
@@ -254,7 +253,7 @@ BREW_ERA_CASK_COMMIT="{{ $era.cask_commit }}"
 BREW_ERA_SERVICES_COMMIT="{{ index $era "services_commit" | default "" }}"
 export HOMEBREW_NO_AUTO_UPDATE=1
 export HOMEBREW_NO_INSTALL_FROM_API=1
-{{ template "brew-era-env.sh" (dict "era" $brewPin.era "mirror" .brewMirror) }}
+{{ template "brew-era-env.sh" (dict "era" $brewPin.era) }}
 {{- else }}
 BREW_ERA_PINNED=0
 BREW_ERA_NAME=
@@ -263,6 +262,10 @@ BREW_ERA_CORE_COMMIT=
 BREW_ERA_CASK_COMMIT=
 BREW_ERA_SERVICES_COMMIT=
 {{- end }}
+
+# Every host, pinned or not, Linux included. Set before load_brew, so that
+# even the first brew invocation (which may fetch portable-ruby) uses it.
+{{ template "brew-mirror-env.sh" .brewMirror }}
 
 # The package lists adapt themselves to the era: each of 020-brew-packages,
 # 030-brew-extras and 040-macos-casks resolves the era name the same way

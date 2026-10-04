@@ -492,10 +492,15 @@ jobs:
           # Stand-in 5, the session: runuser -l starts a fresh login
           # environment, as on first run; -w keeps WSL_DISTRO_NAME through it,
           # which is what .chezmoiignore, the preamble and .commonprofile key
-          # WSL off.
+          # WSL off. It also keeps this runner's own RUNNER_ENVIRONMENT
+          # ("github-hosted"), which sudo and runuser would otherwise drop:
+          # the preamble's bottle-mirror check (.chezmoitemplates/
+          # brew-mirror-env.sh) keys on it to leave brew on ghcr.io here. The
+          # instance's own applies, on the machine it is imported on, have no
+          # RUNNER_ENVIRONMENT and use the mirror.
           started=$(date +%s)
-          sudo env WSL_DISTRO_NAME="regulad-${FLAVOR}" chroot "$root" \
-            runuser -l -w WSL_DISTRO_NAME "$user" -c 'bash /tmp/wsl-package-apply.sh'
+          sudo env WSL_DISTRO_NAME="regulad-${FLAVOR}" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" chroot "$root" \
+            runuser -l -w WSL_DISTRO_NAME,RUNNER_ENVIRONMENT "$user" -c 'bash /tmp/wsl-package-apply.sh'
           echo "WSL apply finished in $(( ($(date +%s) - started) / 60 )) min"
 
           sudo cp -p "$work/chezmoistate.boltdb" "$state"

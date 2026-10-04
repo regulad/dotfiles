@@ -19,7 +19,7 @@ The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/
 
 Supported environments:
 
-- macOS 10.14 (Mojave) and newer, Apple Silicon and Intel (w/ `brew`; releases Homebrew no longer bottles for get an era-pinned brew that still installs bottles, see [docs/homebrew-older-macos.md](docs/homebrew-older-macos.md))
+- macOS 10.15 (Catalina) and newer, Apple Silicon and Intel (w/ `brew`; releases Homebrew no longer bottles for get an era-pinned brew that still installs bottles, see [docs/homebrew-older-macos.md](docs/homebrew-older-macos.md))
 - Bluefin (Universal Blue's atomic Fedora desktop)
 - Ubuntu GNU/Linux >= 25.10
 - Fedora GNU/Linux >= 44
@@ -64,7 +64,6 @@ export PATH="$PATH:$HOME/.local/bin"
 # sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.72.0   # macOS 12 Monterey
 # sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.64.0   # macOS 11 Big Sur
 # sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.52.0   # macOS 10.15 Catalina
-# sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -t v2.37.0   # macOS 10.14 Mojave
 
 # Initalize & run first-time dependency install
 CHEZMOI_USE_DUMMY=1 chezmoi init regulad
@@ -120,7 +119,8 @@ Remember to define the package in the correct hookscript under `.chezmoiscripts/
 Longer write-ups live in `docs/` (not deployed to `$HOME`):
 
 - [Hookscripts](docs/hookscripts.md) -- the preambles, script order, the brew prefix, C/C++ language support.
-- [Homebrew on older macOS](docs/homebrew-older-macos.md) -- era-pinned brew for releases Homebrew no longer bottles for, the Mojave floor, `brew update`, MacPorts, bootstrapping 10.x.
+- [Homebrew on older macOS](docs/homebrew-older-macos.md) -- era-pinned brew for releases Homebrew no longer bottles for, the Catalina floor, `brew update`, MacPorts, bootstrapping 10.x.
+- [Bottle mirror](docs/brew-mirror.md) -- every brew fetches bottles through a Nexus proxy of ghcr.io, except on GitHub-hosted runners.
 - [Theos](docs/theos.md)
 - [SSH server on Windows](docs/windows-sshd.md) -- the user-session `sshd`.
 - [WSL](docs/wsl.md) -- `wsl-deploy` and `wsl-enter`.

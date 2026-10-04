@@ -14,8 +14,8 @@
 #
 # Any tuple absent from [brewTiers.legacy] is treated as Tier 1 and gets
 # mainline brew. Keys are "<macOS series>-<chezmoi arch>": the series is the
-# release as Homebrew names it -- "11".."27", or "10.14"/"10.15" for Mojave
-# and Catalina, where the major alone would not tell them apart -- and
+# release as Homebrew names it -- "11".."27", or "10.15" for Catalina, where
+# the major alone would not tell it from the 10.x releases before it -- and
 # chezmoi's arch is Go's: arm64 for Apple Silicon, amd64 for Intel.
 #
 # Per tuple:
@@ -30,7 +30,6 @@
 # docs/Support-Tiers.md history, the release tags, and Homebrew/install
 # install.sh history):
 #
-#   Mojave 10.14  demoted by c8752c9 "Mark macOS Monterey as supported" 2021-10-19, first in 3.3.0
 #   Catalina 10.15 demoted by e16afb3 "Mark macOS Ventura as supported" 2022-10-19, first in 3.6.7
 #   Big Sur 11    demoted by c3a2c40 "Make Sonoma supported"       2023-09-24, first in 4.1.13
 #   Monterey 12   demoted by 4ab19e0 "Make Sequoia supported"      2024-09-11, first in 4.3.21
@@ -51,27 +50,27 @@
 # Big Sur off entirely, Intel off entirely, and 15 on arm64 to Tier 3 -- add
 # "15-arm64" here (tag 7.0.x and a new era block) when that lands.
 #
-# Why the floor is Mojave. Homebrew moved bottles from Bintray to ghcr.io in
-# April 2021 (brew a2251a1, first in 3.1.0) and copied only the bottle that
-# was live in each formula at that moment. Mojave and Catalina were demoted
-# after that, so their era brews fetch from ghcr natively and their bottles
-# were built onto it: a HEAD on the blob digest of every formula in these
-# lists at the two era commits returns 200 today. High Sierra (demoted
-# 2020-11-20, brew 2.5.11), Sierra and El Capitan were demoted before it:
-# their brews only know the dead Bintray scheme, and of 30 sampled formulae
-# at their era commits, 6, 1 and 1 still have a bottle on ghcr (audit of
-# 2026-09-28). A newer brew that still runs there (4.6.10 does) has nothing
-# left to fetch, so nothing older than 10.14 can work.
+# Why the floor is Catalina. Every era fetches its bottles through the bottle
+# mirror (brew-mirror.toml), and Catalina's brew 3.6.6 is the oldest that can:
+# Mojave's 3.2.17 sends no Basic auth, which is all the mirror accepts, and
+# rewrites every download URL to it rather than only ghcr.io ones, so with
+# the mirror set it could fetch no source tarball or cask at all. Mojave was
+# an era here until 2026-10-04 (brew 3.2.17, taps at 2021-10-19), the one
+# host left off the mirror, and is no longer supported. Older than that was
+# never an option: Homebrew moved bottles from Bintray to ghcr.io in April
+# 2021 (brew a2251a1, first in 3.1.0) and copied only the bottle that was
+# live in each formula at that moment, so High Sierra (demoted 2020-11-20,
+# brew 2.5.11), Sierra and El Capitan have almost nothing left to fetch (of
+# 30 sampled formulae at their era commits, 6, 1 and 1 still have a bottle
+# on ghcr; audit of 2026-09-28). Catalina was demoted after the move, so its
+# bottles were built onto ghcr: a HEAD on the blob digest of every formula in
+# these lists at its era commit returns 200.
 #
-# Keep MACOS_MINIMUM_VERSION in posix-preamble.sh (10.14, Mojave) in step
+# Keep MACOS_MINIMUM_VERSION in posix-preamble.sh (10.15, Catalina) in step
 # with the oldest key here. Nothing is pinned for Linux: linuxbrew has one
 # tier.
 
 [brewTiers]
-
-[brewTiers.legacy."10.14-amd64"]
-brew_tag = "3.2.17"
-era = "mojave"
 
 [brewTiers.legacy."10.15-amd64"]
 brew_tag = "3.6.6"
@@ -150,19 +149,6 @@ era = "current"
 # through a synced fork, since GitHub no longer serves the original (its last
 # commit is 057d1202c4ac9d4059909260af8d13e20fbf8cab, the 2024-05-02
 # deprecation merge): nothing in these lists ever lived there.
-
-# Mojave (10.14), Intel only. Taps at their last commit before the docs
-# demotion (2021-10-19). Every formula in the lists that existed then has a
-# mojave bottle on ghcr, except mas (its bottle block already started at
-# Catalina), so mas and the App Store script are skipped there. Twelve
-# formulae and fifteen casks in the lists did not exist yet, and lulu's cask
-# requires Catalina; the lists leave those out inline. MacPorts (00-macos/017)
-# backfills retry, sshpass, fastfetch, pam-reattach and wasm-tools from its
-# prebuilt darwin_18 archives.
-[brewTiers.eras.mojave]
-core_commit = "8a1d5a3435c77bd08fddf6e7f8b6625ecc2171d2"  # 2021-10-19
-cask_commit = "170ef24a73c3d10cefd37decc1eb22b6f83826da"  # 2021-10-19
-services_commit = "c3f98cb20c1d7d9141ce51dfca72c3b989c76ecb"  # 2021-10-13
 
 # Catalina (10.15), Intel only. Taps at their last commit before the docs
 # demotion (2022-10-19). Every formula in the lists that existed then has a

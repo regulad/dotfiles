@@ -12,8 +12,7 @@
 {{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
 {{- end }}
 {{- $pinned := ne $brewEra "" }}
-{{- $pre2022 := has $brewEra (list "mojave") }}
-{{- $pre2023 := has $brewEra (list "mojave" "catalina") }}
+{{- $pre2023 := has $brewEra (list "catalina") }}
 # pnpm
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q pnpm
@@ -60,19 +59,16 @@ PNPM_CLI_PACKAGES=(
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q \
 		bitwarden-cli \
-		typescript
+		typescript \
+		bash-language-server \
+		yaml-language-server
 {{- if not $pre2023 }} \
 		typescript-language-server
 {{- end }}
-{{- if not $pre2022 }}
-	brew install -q \
-		bash-language-server \
-		yaml-language-server
-{{- end }}
 {{- if $pinned }}
-{{-   if or $pre2022 $pre2023 }}
-	# typescript-language-server (2023) and bash/yaml-language-server (2022)
-	# postdate this era's homebrew-core; without pnpm here, they are left out.
+{{-   if $pre2023 }}
+	# typescript-language-server (2023) postdates this era's homebrew-core;
+	# without pnpm here, it is left out.
 {{-   end }}
 else
 	echo "error: brew is required on macOS" >&2

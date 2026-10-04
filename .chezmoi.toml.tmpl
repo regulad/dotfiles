@@ -47,8 +47,8 @@
 {{- end }}
 
 # macOS version, as Homebrew names releases: "11" and up for Big Sur onward,
-# "10.14"/"10.15" for Mojave/Catalina, where the major alone would collapse
-# every 10.x release into one. ("" elsewhere.) Consumed with .chezmoi.arch as
+# "10.15" for Catalina, where the major alone would collapse every 10.x
+# release into one. ("" elsewhere.) Consumed with .chezmoi.arch as
 # the "<series>-<arch>" key into .chezmoidata/brew-tiers.toml, which decides
 # whether this host gets mainline brew or an era-pinned one.
 {{- $macosSeries := "" }}

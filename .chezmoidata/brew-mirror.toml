@@ -1,13 +1,14 @@
-# Bottle mirror for the era-pinned brews (see .chezmoidata/brew-tiers.toml
-# and docs/homebrew-older-macos.md, "Bottle mirror"). A Sonatype Nexus
-# docker (proxy) repository in front of ghcr.io: it caches every bottle an
-# old Mac pulls, so the blobs stay fetchable even if GitHub Packages ever
-# retires them, and repeat installs come off the LAN-side cache.
+# Bottle mirror for every brew this repo runs (see docs/brew-mirror.md). A
+# Sonatype Nexus docker (proxy) repository in front of ghcr.io: it caches
+# every bottle a host pulls, so the old blobs the era-pinned Macs depend on
+# (.chezmoidata/brew-tiers.toml) stay fetchable even if GitHub Packages ever
+# retires them, and repeat installs come off the cache.
 #
 # Rendered into HOMEBREW_ARTIFACT_DOMAIN and, joined by ":" and base64d,
-# HOMEBREW_DOCKER_REGISTRY_BASIC_AUTH_TOKEN by .chezmoitemplates/brew-era-env.sh,
-# which posix-preamble.sh and dot_commonprofile.tmpl include on every
-# era-pinned host except Mojave (its brew 3.2.17 cannot use a mirror safely).
+# HOMEBREW_DOCKER_REGISTRY_BASIC_AUTH_TOKEN by
+# .chezmoitemplates/brew-mirror-env.sh, which posix-preamble.sh and
+# dot_commonprofile.tmpl include on every host. It exports them at run time
+# everywhere but on a GitHub-hosted Actions runner.
 #
 # The account is read-only on the proxy (pull only, nothing else on the
 # server) and the only way in -- anonymous access is off -- created for

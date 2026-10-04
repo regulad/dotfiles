@@ -5,16 +5,14 @@
        installed *through* it there: the `uv tool install` set below is
        specialised tooling, not part of the general environment an old Mac
        is brought up for, and every entry carries its own Python-version
-       story. hatch (homebrew-core 2022) is left out on Mojave. $brewEra is
-       "" on a Tier 1 host. */ -}}
+       story. $brewEra is "" on a Tier 1 host. */ -}}
 {{- $brewEra := "" }}
 {{- if eq .chezmoi.os "darwin" }}
 {{-   $p := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
 {{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
 {{- end }}
 {{- $pinned := ne $brewEra "" }}
-{{- $pre2022 := has $brewEra (list "mojave") }}
-{{- $pre2024 := has $brewEra (list "mojave" "catalina" "bigsur") }}
+{{- $pre2024 := has $brewEra (list "catalina" "bigsur") }}
 # poetry and uv are both always brew-installed here: MANAGER is guaranteed to be
 # "brew" on macOS by posix-preamble.sh, since dnf/apt require Linux-only files.
 brew install -q poetry
@@ -91,9 +89,7 @@ uv tool install --python cp314 -q claude-swap
 
 # like in the JS ecosystem, some python tools are available as tools/bottles from brew
 brew install -q \
-{{- if not $pre2022 }}
 	hatch \
-{{- end }}
 	autopep8
 {{- if not $pinned }}
 

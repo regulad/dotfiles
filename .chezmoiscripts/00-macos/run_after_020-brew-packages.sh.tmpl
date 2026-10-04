@@ -9,10 +9,9 @@
 {{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
 {{- end }}
 {{- /* eras whose tap checkout predates the given year */ -}}
-{{- $pre2022 := has $brewEra (list "mojave") }}
-{{- $pre2024 := has $brewEra (list "mojave" "catalina" "bigsur") }}
-{{- $pre2025 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey") }}
-{{- $pre2026 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey" "ventura") }}
+{{- $pre2024 := has $brewEra (list "catalina" "bigsur") }}
+{{- $pre2025 := has $brewEra (list "catalina" "bigsur" "monterey") }}
+{{- $pre2026 := has $brewEra (list "catalina" "bigsur" "monterey" "ventura") }}
 {{- /* apple/container host? See .chezmoidata/containers.toml. */ -}}
 {{- $appleContainer := and (eq .chezmoi.arch "arm64") (ge .macos.major .containers.appleMinMacos) }}
 # system-level binary dependencies for macOS hosts (brew).
@@ -23,9 +22,7 @@ BREW_PACKAGES=(
 	bash
 	nushell
 	tmux
-{{- if not $pre2022 }}
-	fastfetch  # not in homebrew-core until 2023; MacPorts supplies it on Mojave (017)
-{{- end }}
+	fastfetch
 {{- if not $pre2024 }}
 	retry  # not in homebrew-core until 2024; MacPorts supplies it on the older eras (017)
 {{- end }}
@@ -41,33 +38,26 @@ BREW_PACKAGES=(
 	# =+= CONTAINERIZATION
 	# One engine per Mac, chosen in .chezmoidata/containers.toml and started by
 	# 035-container-runtime; the docker CLI talks to whichever it is (see
-	# docs/containers.md). Mojave gets neither: its pinned colima (0.2.2)
-	# boots an Ubuntu impish image whose URL is gone. podman left this list --
-	# on a Mac it is only a client for a `podman machine` VM, which nothing
-	# here created, and podman 6 dropped Intel Macs. 018-podman-remove
-	# uninstalls an earlier install.
+	# docs/containers.md). podman left this list -- on a Mac it is only a
+	# client for a `podman machine` VM, which nothing here created, and
+	# podman 6 dropped Intel Macs. 018-podman-remove uninstalls an earlier
+	# install.
 {{- if $appleContainer }}
 	container  # apple/container; Apple silicon on macOS 26+ only
 	socktainer  # Docker Engine API on top of container, for the docker CLI and friends
-{{- else if ne $brewEra "mojave" }}
+{{- else }}
 	colima  # dockerd in a lima VM; vz from Ventura on, qemu before it
 {{- end }}
-{{- if ne $brewEra "mojave" }}
 	docker  # the CLI only
 	docker-compose
 	docker-buildx
 	docker-credential-helper  # docker-credential-osxkeychain, the credsStore in ~/.docker/config.json
-{{- end }}
 
 	# =+= macOS-SPECIFIC
 	reattach-to-user-namespace
-{{- if not $pre2022 }}
-	mas  # its bottles start at Catalina; 060-mac-app-store skips when mas is absent
-{{- end }}
+	mas
 	smartmontools
-{{- if not $pre2022 }}
-	pam-reattach  # not in homebrew-core until 2022; MacPorts supplies it on Mojave (017)
-{{- end }}
+	pam-reattach
 	pinentry-mac
 
 	# =+= BUILD TOOLS
@@ -221,7 +211,7 @@ brew upgrade -q
 
 # Rust toolchain. The `rustup` entry above is two different things by era:
 # from 2024 on it is the rustup formula, which ships rustup itself; at the
-# Mojave through Monterey pins it is an alias of rustup-init, which ships
+# Catalina through Monterey pins it is an alias of rustup-init, which ships
 # only the rustup-init bootstrapper and no `rustup` on PATH. Either way the
 # toolchain's cargo/rustc proxies land in ~/.cargo/bin, so that is the test.
 # It used to be `! -d ~/.cargo`, which never fires: chezmoi puts

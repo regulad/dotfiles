@@ -12,6 +12,12 @@ ARG USERNAME="regulad.linux"
 ARG UID="1000"
 ARG GROUPNAME="regulad.linux"
 ARG GID="1000"
+# "github-hosted" when docker-publish.yml builds on a GitHub-hosted runner,
+# whose environment BuildKit does not pass to RUN. The apply below hands it to
+# the hookscripts, whose bottle-mirror check (.chezmoitemplates/
+# brew-mirror-env.sh) then leaves brew on ghcr.io. It is not baked into the
+# image: a container run from it, or a local build, uses the mirror.
+ARG RUNNER_ENVIRONMENT
 
 ENV TZ="America/New_York"
 # tells systemd and RPM %post scriptlets (dconf, glib-networking, etc.) they're in a
@@ -123,7 +129,7 @@ RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
   && su -l ${USERNAME} -c 'NONINTERACTIVE=1 CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' \
   && npm install -g pnpm \
   && su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; brew install chezmoi' \
-  && su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; CHEZMOI_USE_DUMMY=1 CHEZMOI_USE_HEADLESS=1 chezmoi init; chezmoi apply --exclude encrypted' \
+  && su -l -w RUNNER_ENVIRONMENT ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; CHEZMOI_USE_DUMMY=1 CHEZMOI_USE_HEADLESS=1 chezmoi init; chezmoi apply --exclude encrypted' \
   \
   && rm -rf /home/${USERNAME}/.cache/*
 

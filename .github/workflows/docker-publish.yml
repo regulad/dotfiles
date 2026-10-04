@@ -84,11 +84,17 @@ jobs:
       cache: true
       cache-scope: ubuntu
       cache-mode: max
+      # RUNNER_ENVIRONMENT: github-builder only builds on GitHub-hosted
+      # runners, and BuildKit does not pass the runner's environment to RUN,
+      # so the variable the bottle-mirror check reads is handed in here (see
+      # the ARG in the Dockerfiles). A with: block has no runner context to
+      # take it from.
       build-args: |
         USERNAME=regulad.linux
         UID=1000
         GROUPNAME=regulad.linux
         GID=1000
+        RUNNER_ENVIRONMENT=github-hosted
       meta-images: ghcr.io/${{ github.repository }}
       meta-flavor: |
         suffix=-ubuntu,onlatest=true
@@ -121,11 +127,13 @@ jobs:
       cache: true
       cache-scope: fedora
       cache-mode: max
+      # RUNNER_ENVIRONMENT: see build-ubuntu.
       build-args: |
         USERNAME=regulad.linux
         UID=1000
         GROUPNAME=regulad.linux
         GID=1000
+        RUNNER_ENVIRONMENT=github-hosted
       meta-images: ghcr.io/${{ github.repository }}
       meta-flavor: |
         suffix=-fedora,onlatest=true

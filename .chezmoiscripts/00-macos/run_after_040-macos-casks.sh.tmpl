@@ -10,11 +10,10 @@
 {{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
 {{- end }}
 {{- /* eras whose tap checkout predates the given year */ -}}
-{{- $pre2022 := has $brewEra (list "mojave") }}
-{{- $pre2023 := has $brewEra (list "mojave" "catalina") }}
-{{- $pre2024 := has $brewEra (list "mojave" "catalina" "bigsur") }}
-{{- $pre2025 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey") }}
-{{- $pre2026 := has $brewEra (list "mojave" "catalina" "bigsur" "monterey" "ventura") }}
+{{- $pre2023 := has $brewEra (list "catalina") }}
+{{- $pre2024 := has $brewEra (list "catalina" "bigsur") }}
+{{- $pre2025 := has $brewEra (list "catalina" "bigsur" "monterey") }}
+{{- $pre2026 := has $brewEra (list "catalina" "bigsur" "monterey" "ventura") }}
 {{- $preApp := $pre2025 }}
 ## addl. brew things packaged as casks
 BREW_CASKS_MACOS=(
@@ -25,9 +24,7 @@ BREW_CASKS_MACOS=(
 	"nx-studio"  # proprietary freeware; cask added 2024, and Nikon has since removed the archive URLs the Monterey and Ventura pins point at (URL audit 2026-09-28)
 {{- end }}
 	"thetimemachinemechanic"
-{{- if not $pre2022 }}
-	"lulu"  # the 2021 cask required Catalina
-{{- end }}
+	"lulu"
 {{- if not $pre2025 }}
 	"ghostty"  # needs Ventura
 {{- end }}
@@ -58,9 +55,7 @@ BREW_CASKS_MACOS=(
 	"jetbrains-toolbox"  # proprietary freeware
 	"gimp"
 	"signal"
-{{- if $pre2022 }}
-{{- /* no tailscale cask yet in 2021 */ -}}
-{{- else if $preApp }}
+{{- if $preApp }}
 	"tailscale"  # proprietary! ... kinda?
 {{- else }}
 	"tailscale-app"  # proprietary! ... kinda?
@@ -126,9 +121,7 @@ BREW_CASKS_MACOS=(
 	"vesktop"  # cask added 2025
 {{- end }}
 	"macfuse" # we finally have `-o backend=fskit`! no kext!
-{{- if not $pre2022 }}
-	"regulad/tap/epson-et8500" # super proprietary 😈 # Epson lists the package for 10.7 through 27; only the Mojave era's brew 3.2.17 cannot parse its requires_rosetta caveat
-{{- end }}
+	"regulad/tap/epson-et8500" # super proprietary 😈 # Epson lists the package for 10.7 through 27
 {{- if not $pre2024 }}
 	"regulad/tap/cricut-design-space" # super proprietary 😈 # Cricut's own requirement is macOS 12 or later; the cask declares no floor
 {{- end }}

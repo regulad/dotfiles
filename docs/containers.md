@@ -7,7 +7,6 @@ No host runs Docker Desktop. Each one gets the native engine it can run, and the
 | Windows | `wslc` (WSL 3.0.1+) | none on the Windows side | `00-nt/115-wsl-update` |
 | macOS 26+, Apple silicon | Apple's `container` | partial, via socktainer | `00-macos/020-brew-packages`, `035-container-runtime` |
 | macOS 10.15–26 otherwise (Intel; Apple silicon up to 15) | colima (dockerd in a Lima VM) | full | `00-macos/020-brew-packages`, `035-container-runtime` |
-| macOS 10.14 Mojave | none | -- | -- |
 | Linux, WSL distros | podman (`podman.socket`) | podman's compat API | `00-linux` package lists, `150-user-services` |
 
 ## Windows: wslc

@@ -26,9 +26,8 @@ fi
 require_sudo "016-macports"
 
 # The preamble's VERSION_ID is the release as Homebrew and MacPorts name it:
-# "10.14".."10.15", "11".."27". Map it to the package's codename.
+# "10.15", "11".."27". Map it to the package's codename.
 case "$VERSION_ID" in
-	10.14) MACPORTS_OS_NAME=Mojave ;;
 	10.15) MACPORTS_OS_NAME=Catalina ;;
 	11) MACPORTS_OS_NAME=BigSur ;;
 	12) MACPORTS_OS_NAME=Monterey ;;

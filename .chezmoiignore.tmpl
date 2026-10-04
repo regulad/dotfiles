@@ -155,13 +155,6 @@ Library
 # macOS 12 (text_cmds-118) on. The script refuses below that too.
 .chezmoiscripts/00-macos/125-theos.sh
 {{-   end }}
-{{-   if eq .macos.series "10.14" }}
-# No container engine on Mojave: its pinned colima boots an Ubuntu image whose
-# URL is gone (docs/containers.md), so 020 installs no docker CLI either. The
-# script also refuses below 10.15.
-.chezmoiscripts/00-macos/035-container-runtime.sh
-.docker
-{{-   end }}
 {{- end }}
 
 # Linux

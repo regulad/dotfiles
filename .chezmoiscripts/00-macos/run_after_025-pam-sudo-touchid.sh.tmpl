@@ -6,9 +6,8 @@
 # and sudo then fails outright ("PAM error") for everyone, regardless of the
 # `optional` control. So this runs after the package scripts that provide
 # pam_reattach.so -- brew's pam-reattach (020-brew-packages) under
-# $HOMEBREW_PREFIX/lib/pam (the Mojave-era MacPorts copy under /opt/local is
-# moot, since Mojave is pre-Sonoma and skipped below) -- and it refuses to
-# write anything unless BOTH modules it names are on disk.
+# $HOMEBREW_PREFIX/lib/pam -- and it refuses to write anything unless BOTH
+# modules it names are on disk.
 # A missing module is an error (exit 1), not a policy without that line: an
 # apply that failed here is loud, a sudo that stopped working is not.
 #
@@ -31,11 +30,7 @@ if ! grep -q 'sudo_local' /etc/pam.d/sudo; then
 	exit 0
 fi
 
-if [ "$BREW_ERA_NAME" = "mojave" ]; then
-	PAM_REATTACH="/opt/local/lib/pam/pam_reattach.so"
-else
-	PAM_REATTACH="$HOMEBREW_PREFIX/lib/pam/pam_reattach.so"
-fi
+PAM_REATTACH="$HOMEBREW_PREFIX/lib/pam/pam_reattach.so"
 # Apple ships its modules with a version suffix (pam_tid.so.2) that OpenPAM
 # resolves from the bare name in the policy.
 PAM_TID="$(ls /usr/lib/pam/pam_tid.so* 2>/dev/null | head -n1)"
@@ -43,7 +38,7 @@ PAM_TID="$(ls /usr/lib/pam/pam_tid.so* 2>/dev/null | head -n1)"
 for module in "$PAM_REATTACH" "$PAM_TID"; do
 	if [ -z "$module" ] || [ ! -f "$module" ]; then
 		echo "error: PAM module missing (${module:-/usr/lib/pam/pam_tid.so}); refusing to write a sudo policy that would break sudo" >&2
-		echo "notice: pam_reattach comes from 020-brew-packages (brew) or 017-macports-packages (MacPorts, Mojave era)" >&2
+		echo "notice: pam_reattach comes from 020-brew-packages (brew's pam-reattach)" >&2
 		exit 1
 	fi
 done

@@ -21,8 +21,7 @@ MAS_APP_IDS=(
 )
 
 if ! command -v mas &>/dev/null; then
-	# mas comes from 020-brew-packages, which leaves it out on the Mojave era:
-	# its bottles start at Catalina. No mas, no App Store installs.
+	# mas comes from 020-brew-packages. No mas, no App Store installs.
 	echo "notice: mas is not installed on this host; skipping App Store apps" >&2
 elif [ "$HAS_BREW" = "true" ]; then
 	# mas is distributed via brew
@@ -59,8 +58,8 @@ elif [ "$HAS_BREW" = "true" ]; then
 	# 10.15+ ("not supported on this macOS version"); 1.8.7 (2024-11)
 	# re-enabled it. The Catalina, Big Sur and Monterey pins carry 1.8.6, so
 	# there the fallback fails too and the app has to be gotten once by hand
-	# in the App Store; after that `mas install` works. Mojave's 1.8.3 and
-	# the 2025+ pins are fine.
+	# in the App Store; after that `mas install` works. The 2025+ pins are
+	# fine.
 	for mas_id in "${MAS_APP_IDS[@]}"; do
 		if mas install "$mas_id"; then
 			continue

@@ -8,8 +8,7 @@
 # 020-brew-packages uses to install it (see docs/containers.md):
 #
 #   Apple silicon, macOS {{ .containers.appleMinMacos }}+   apple/container, plus socktainer for a Docker API
-#   any other Mac from Catalina   colima (dockerd in a lima VM)
-#   Mojave                        nothing; .chezmoiignore masks this script
+#   any other Mac                 colima (dockerd in a lima VM)
 #
 # Both engines run as brew services (launchd agents), so they come back at
 # login without this script. On a re-run every step finds its work done.
@@ -87,11 +86,6 @@ fi
 DOCKER_SOCK="$HOMEBREW_PREFIX/var/run/socktainer/.socktainer/container.sock"
 DOCKER_CONTEXT_NAME=socktainer
 {{- else }}
-
-if ! macos_version_ge "$VERSION_ID" 10.15; then
-	echo "notice: macOS $VERSION_ID gets no container engine (its pinned colima boots an image that no longer exists)" >&2
-	exit 0
-fi
 
 {{-   if has $brewEra (list "catalina" "bigsur") }}
 # colima's formula grew a service block after this era's pin (colima 0.4.6 /
