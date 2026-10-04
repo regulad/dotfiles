@@ -24,14 +24,18 @@
 #   chezmoi apply            full apply: encrypted files, real secrets, and the
 #                            WSL-only scriptlets that are masked everywhere else
 #
+# Every step is a no-op when its work is already done, so a re-run on an
+# instance that is partly or fully set up picks up where the last one stopped:
+# the server is only configured when it differs, the login is skipped when
+# there is one, and chezmoi's applies are idempotent by nature.
+#
 # Credentials: `bw login --apikey` reads BW_CLIENTID and BW_CLIENTSECRET from
 # the environment and prompts for them when absent. ~/.secrets/.bwrc defines
 # exactly those two variables -- as bare KEY=VALUE, systemd EnvironmentFile
 # syntax, deliberately without `export`, so the same file can back a unit's
-# EnvironmentFile=. Sourcing it therefore sets them in this shell but does not
-# put them in the environment of anything this shell runs, which is why the
-# inner script below exports them explicitly after sourcing. It cannot exist
-# yet inside a fresh instance -- that file is itself templated *out of*
+# EnvironmentFile=. The inner script below reads the two values out of it and
+# exports them; it does not source it (see read_bwrc there for why). It cannot
+# exist yet inside a fresh instance -- that file is itself templated *out of*
 # Bitwarden (private_dot_secrets/private_dot_bwrc.tmpl),
 # so it only appears after an authenticated apply -- but the Windows host this
 # instance runs on has already been provisioned by the same repo, so its copy
@@ -115,9 +119,38 @@ find_bwrc() {
     esac
 }
 
+# WSL_DISTRO_NAME is set only by WSL's own session bootstrap, and a re-run as
+# `sudo /etc/oobe.sh` arrives without it, because sudo resets the environment.
+# The apply needs it (see the inner script), so it is recovered from the
+# nearest ancestor process that has it: the shell sudo was typed into. Only
+# whether it is set matters to anything in this repo, not the name itself.
+recover_wsl_distro_name() {
+    local pid=$$ value depth=0
+    while [ -n "$pid" ] && [ "$pid" -gt 1 ] && [ "$depth" -lt 32 ]; do
+        depth=$((depth + 1))
+        value="$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | sed -n 's/^WSL_DISTRO_NAME=//p' | head -n 1)"
+        if [ -n "$value" ]; then
+            printf '%s\n' "$value"
+            return 0
+        fi
+        pid="$(awk '/^PPid:/ { print $2 }' "/proc/$pid/status" 2>/dev/null)"
+    done
+    return 1
+}
+
 if ! getent passwd "$DISTRO_UID" >/dev/null 2>&1; then
     warn "uid $DISTRO_UID is missing from this image, which should be impossible."
     warn "skipping first-run setup."
+    exit 0
+fi
+
+if [ -z "${WSL_DISTRO_NAME:-}" ]; then
+    WSL_DISTRO_NAME="$(recover_wsl_distro_name || true)"
+fi
+if [ -z "${WSL_DISTRO_NAME:-}" ]; then
+    warn "WSL_DISTRO_NAME is not set, and no parent process has it either;"
+    warn "the apply would take this instance for a container. Run it from Windows instead:"
+    warn "    wsl -d <this distribution> -u root -- /etc/oobe.sh"
     exit 0
 fi
 
@@ -171,8 +204,15 @@ fi
 # a no-op, so OOBE reported success while having applied nothing.
 inner="$(mktemp /tmp/oobe-inner.XXXXXX.sh)"
 
-cat > "$inner" <<INNER
-#!/bin/bash
+# The values the inner script needs from here go in as %q-quoted assignments
+# ahead of its body, and the body is a quoted heredoc, so nothing in it is
+# expanded by this shell and none of its `$` needs escaping.
+{
+    printf '#!/bin/bash\n'
+    printf 'WSL_DISTRO_NAME=%q\n' "$WSL_DISTRO_NAME"
+    printf 'BWRC=%q\n' "$BWRC"
+    printf 'BW_SERVER=%q\n' "$BW_SERVER"
+    cat <<'INNER'
 set -u
 
 # runuser -l starts a fresh login environment, which drops WSL's own exports.
@@ -180,23 +220,62 @@ set -u
 # (004-wsl-binfmt-interop, 006-wsl-gpu, 007-ssh-agent-relay) off it, and the
 # posix preamble uses it to tell a real WSL session apart from a container --
 # systemd-detect-virt reports "wsl" for both.
-export WSL_DISTRO_NAME="${WSL_DISTRO_NAME:-}"
+export WSL_DISTRO_NAME
 
-# Path only -- the credentials themselves are never passed through argv or the
-# environment of this script, so they never appear in ps for other users.
-BWRC="${BWRC}"
-if [ -n "\$BWRC" ] && [ -r "\$BWRC" ]; then
-    # shellcheck disable=SC1090
-    . "\$BWRC"
-    if [ -n "\${BW_CLIENTID:-}" ] && [ -n "\${BW_CLIENTSECRET:-}" ]; then
+# The .bwrc is read, not sourced. The Windows host's copy is rendered by
+# chezmoi on Windows from a CRLF checkout (core.autocrlf), so sourcing it left
+# a CR on the end of each value and bw rejected the id with "bad client_id".
+# Only the two keys are taken, each line's CR is dropped, and so is the pair
+# of quotes the template puts around each value, as systemd's
+# EnvironmentFile= drops them. Path only -- the credentials themselves are
+# never passed through argv or the environment of this script, so they never
+# appear in ps for other users.
+read_bwrc() {
+    local line key value
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%$'\r'}"
+        case "$line" in
+            BW_CLIENTID=*|BW_CLIENTSECRET=*) ;;
+            *) continue ;;
+        esac
+        key="${line%%=*}"
+        value="${line#*=}"
+        case "$value" in
+            \"*\") value="${value#\"}"; value="${value%\"}" ;;
+            \'*\') value="${value#\'}"; value="${value%\'}" ;;
+        esac
+        printf -v "$key" '%s' "$value"
+    done < "$1"
+}
+
+BW_CLIENTID=
+BW_CLIENTSECRET=
+if [ -n "$BWRC" ] && [ -r "$BWRC" ]; then
+    read_bwrc "$BWRC"
+    if [ -n "$BW_CLIENTID" ] && [ -n "$BW_CLIENTSECRET" ]; then
         export BW_CLIENTID BW_CLIENTSECRET
-        echo "debug: API credentials loaded from \$BWRC" >&2
+        echo "debug: API credentials loaded from $BWRC" >&2
     else
-        echo "warning: \$BWRC did not define BW_CLIENTID/BW_CLIENTSECRET; will prompt" >&2
+        echo "warning: $BWRC did not define BW_CLIENTID/BW_CLIENTSECRET; will prompt" >&2
     fi
 fi
+if [ -z "${BW_CLIENTID:-}" ] || [ -z "${BW_CLIENTSECRET:-}" ]; then
+    unset BW_CLIENTID BW_CLIENTSECRET
+fi
 
-bw config server "${BW_SERVER}" || exit 1
+# `bw config server` refuses to change the server while an account is logged
+# in ("Logout required before server config update."), even to the URL it
+# already has, so a re-run used to stop here. Reading it is always allowed,
+# so it is only set when it differs.
+current_server="$(bw config server 2>/dev/null || true)"
+if [ "${current_server%/}" = "${BW_SERVER%/}" ]; then
+    echo "debug: bw already points at $BW_SERVER" >&2
+elif bw login --check >/dev/null 2>&1; then
+    echo "error: bw is logged in to ${current_server:-another server}, not $BW_SERVER; run 'bw logout' first" >&2
+    exit 1
+else
+    bw config server "$BW_SERVER" || exit 1
+fi
 
 if bw login --check >/dev/null 2>&1; then
     echo "debug: already logged in to Bitwarden" >&2
@@ -208,7 +287,7 @@ fi
 # templating; this just fails fast with a clear message if the vault will not
 # unlock, rather than letting every bitwarden template lookup fail one by one.
 if ! bw unlock --check >/dev/null 2>&1; then
-    BW_SESSION="\$(bw unlock --raw)" || exit 1
+    BW_SESSION="$(bw unlock --raw)" || exit 1
     export BW_SESSION
 fi
 
@@ -217,12 +296,13 @@ fi
 chezmoi init || exit 1
 
 # age identity first -- everything encrypted depends on it.
-chezmoi apply "\$HOME/key.txt" || exit 1
+chezmoi apply "$HOME/key.txt" || exit 1
 
 # Full apply. Expected to do real work here: encrypted files, real secrets, and
 # the WSL-only scriptlets, none of which ran during the image build.
 chezmoi apply || exit 1
 INNER
+} > "$inner"
 
 # Only now that the content is written. runuser invokes it as `bash '$inner'`,
 # so this needs to be readable by the user rather than executable, but 0700
