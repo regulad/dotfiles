@@ -37,8 +37,8 @@ fi
 # has not (yet) got Xcode simply does not get Theos on this apply. The check
 # mirrors install-theos's own: the active developer directory must be an
 # Xcode bundle, and if it is the Command Line Tools directory while
-# /Applications/Xcode.app exists (the usual state here, since
-# 003-macos-prereqs switches to the CLT when it installs them), install-theos
+# /Applications/Xcode.app exists (the state of a Mac that got Xcode after
+# 003-macos-prereqs installed the CLT and selected them), install-theos
 # would `sudo xcode-select -s` to Xcode itself. Do that switch here instead,
 # with require_sudo, so it is not a silent prompt from inside a piped
 # installer -- and it has to be the system-wide switch, not DEVELOPER_DIR for
