@@ -222,6 +222,22 @@ set -u
 # systemd-detect-virt reports "wsl" for both.
 export WSL_DISTRO_NAME
 
+# The user's systemd manager has to be reachable: the apply runs
+# `systemctl --user` (brew services in 030-brew-extras, the user units in
+# 007/150). runuser's login gets XDG_RUNTIME_DIR and DBUS_SESSION_BUS_ADDRESS
+# from pam_systemd when it starts outside any session, as WSL's own first-run
+# call does; re-run as `sudo /etc/oobe.sh` from the user's shell, it gets
+# neither, and systemctl fails with "$DBUS_SESSION_BUS_ADDRESS and
+# $XDG_RUNTIME_DIR not defined". The manager is running whenever the user is
+# logged in, so point at it, as .github/workflows/wsl-package.yml's chroot
+# apply does.
+if [ -z "${XDG_RUNTIME_DIR:-}" ] && [ -d "/run/user/$(id -u)" ]; then
+    export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+fi
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "${XDG_RUNTIME_DIR:-/nonexistent}/bus" ]; then
+    export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+fi
+
 # The .bwrc is read, not sourced. The Windows host's copy is rendered by
 # chezmoi on Windows from a CRLF checkout (core.autocrlf), so sourcing it left
 # a CR on the end of each value and bw rejected the id with "bad client_id".
@@ -323,7 +339,17 @@ fi
 
 say "running first-run apply as ${DISTRO_USER} (this will take a few minutes)"
 
-if runuser -l "$DISTRO_USER" -c "bash '$inner'"; then
+# -w WSL_DISTRO_NAME: runuser -l starts a fresh login environment, and the
+# login shell sources .profile -> .commonprofile *before* the inner script
+# runs. .commonprofile points SSH_AUTH_SOCK at the agent relay's socket only
+# when WSL_DISTRO_NAME is set, so it has to be in the environment runuser
+# starts with; exported by the inner script, it came too late, and the whole
+# apply ran without an agent. The relay itself is started partway through the
+# apply (007-ssh-agent-relay), ahead of the first script that needs it: with
+# real secrets 080-vencord fetches over SSH, and failed with "Permission
+# denied (publickey)".
+export WSL_DISTRO_NAME
+if runuser -l -w WSL_DISTRO_NAME "$DISTRO_USER" -c "bash '$inner'"; then
     rm -f "$inner"
     say "done. open a new shell to pick up the applied environment."
     exit 0
