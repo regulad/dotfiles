@@ -10,7 +10,7 @@ UBUNTU_MINIMUM_VERSION=26.04
 # script via `{{ "{{" }} template "posix-preamble.sh" . {{ "}}" }}`. Guards against
 # unsupported platforms, loads Homebrew if it is present, and picks a system
 # package manager.
-# Exports: CONTAINERIZED, IS_WSL, IS_ATOMIC, HAS_BREW, MANAGER.
+# Exports: CONTAINERIZED, IS_WSL, IS_ATOMIC, HAS_BREW, MANAGER, BREW_SECONDARY.
 # Defines: can_sudo, require_sudo, load_brew, require_brew, brew_trust.
 #
 # Two things are deliberately NOT done here:
@@ -24,6 +24,52 @@ UBUNTU_MINIMUM_VERSION=26.04
 #    which fails fast when brew is missing and exports HOMEBREW_PREFIX and the
 #    era-pin environment for the rest of the script.
 # https://www.chezmoi.io/user-guide/use-scripts-to-perform-actions/
+#
+# Rosetta brew. On an Apple Silicon Mac up to Tahoe 26, a second, x86_64
+# Homebrew lives in /usr/local (docs/rosetta-brew.md). Its hookscripts
+# (00-macos/006, 021, 031) render the same shared templates as the native
+# ones, with brewArch=amd64 added to the template data; everything below that
+# depends on the arch reads $brewArch instead of .chezmoi.arch. Such a script
+# re-executes itself under Rosetta first, so that uname -m, brew and every
+# formula it runs are x86_64 -- brew refuses a /usr/local prefix from a
+# native process -- and drops the native brew from the environment it
+# inherited from chezmoi.
+{{- $brewArch := get . "brewArch" | default .chezmoi.arch }}
+{{- $brewSecondary := and (eq .chezmoi.os "darwin") (eq .chezmoi.arch "arm64") (eq $brewArch "amd64") }}
+{{- if $brewSecondary }}
+if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" != 1 ]; then
+	if ! /usr/bin/arch -x86_64 /usr/bin/true 2>/dev/null; then
+		echo "error: Rosetta 2 is not installed (003-macos-prereqs installs it)" >&2
+		exit 1
+	fi
+	# `bash file` ignores the shebang, so -e is passed explicitly.
+	exec /usr/bin/arch -x86_64 /bin/bash -e "$0" "$@"
+fi
+# Translated from here on. chezmoi was started from a native shell, so PATH
+# leads with the native prefix and HOMEBREW_* describe the native brew.
+_native_free_path=
+_old_ifs="$IFS"
+IFS=:
+for _d in $PATH; do
+	case "$_d" in
+		{{ .homebrewPrefix }}|{{ .homebrewPrefix }}/*) ;;
+		*) _native_free_path="${_native_free_path:+$_native_free_path:}$_d" ;;
+	esac
+done
+IFS="$_old_ifs"
+export PATH="/usr/local/bin:/usr/local/sbin:$_native_free_path"
+unset _d _old_ifs _native_free_path HOMEBREW_PREFIX HOMEBREW_CELLAR HOMEBREW_REPOSITORY
+{{- else if eq .chezmoi.os "darwin" }}
+#
+# Native hookscripts must not run translated: an x86_64 chezmoi (one started
+# from an `intel` shell) would render every template for the wrong arch.
+# .chezmoiignore.tmpl refuses that case before anything is written; this is
+# the backstop for a script run by hand.
+if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = 1 ]; then
+	echo "error: running under Rosetta; run chezmoi from a native (arm) shell -- \`arm\`" >&2
+	exit 1
+fi
+{{- end }}
 
 echo "debug: entering hookscript" >&2
 export DEBIAN_FRONTEND=noninteractive
@@ -223,8 +269,15 @@ esac
 # the arch rule -- /opt/homebrew on Apple Silicon, /usr/local on Intel,
 # /home/linuxbrew/.linuxbrew on Linux. Static config files render the same
 # value, so what the hookscripts install against and what tmux/gpg/pam point
-# at can never disagree.
+# at can never disagree. The Rosetta brew's scripts (BREW_SECONDARY=1) work on
+# /usr/local instead, which is Homebrew's own rule for an x86_64 brew.
+{{- if $brewSecondary }}
+CHEZMOI_HOMEBREW_PREFIX="/usr/local"
+BREW_SECONDARY=1
+{{- else }}
 CHEZMOI_HOMEBREW_PREFIX="{{ .homebrewPrefix }}"
+BREW_SECONDARY=0
+{{- end }}
 
 # Era pin. A macOS release that mainline Homebrew no longer ships bottles for
 # is served by a pinned brew (a release tag) + homebrew/core + homebrew/cask
@@ -240,7 +293,7 @@ CHEZMOI_HOMEBREW_PREFIX="{{ .homebrewPrefix }}"
 # same set for interactive shells.
 {{- $brewPin := dict }}
 {{- if eq .chezmoi.os "darwin" }}
-{{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series $brewArch) | default dict }}
 {{- end }}
 {{- $era := dict }}
 {{- if $brewPin }}
@@ -285,14 +338,21 @@ BREW_ERA_SERVICES_COMMIT=
 # honest check: a prefix survives a half-finished uninstall, and /usr/local
 # exists on practically every Intel Mac whether or not brew is under it.
 # The chezmoi-decided prefix is tried first; the rest are fallbacks for a host
-# whose brew moved since the last `chezmoi init`.
+# whose brew moved since the last `chezmoi init`. Two exceptions, both because
+# Apple Silicon can carry the Rosetta brew in /usr/local: its own scripts
+# (BREW_SECONDARY=1) load that brew or none, and native scripts there never
+# fall back to it -- a missing /opt/homebrew must not quietly turn into
+# installing native packages into the x86_64 prefix.
 load_brew() {
-	local candidate
-	for candidate in \
-		"$CHEZMOI_HOMEBREW_PREFIX/bin/brew" \
-		/opt/homebrew/bin/brew \
-		/usr/local/bin/brew \
-		/home/linuxbrew/.linuxbrew/bin/brew; do
+	local candidate candidates
+	if [ "$BREW_SECONDARY" -eq 1 ]; then
+		candidates="$CHEZMOI_HOMEBREW_PREFIX/bin/brew"
+	elif [ "$(uname -s)" = "Darwin" ] && [ "$(sysctl -n hw.optional.arm64 2>/dev/null)" = 1 ]; then
+		candidates="$CHEZMOI_HOMEBREW_PREFIX/bin/brew /opt/homebrew/bin/brew"
+	else
+		candidates="$CHEZMOI_HOMEBREW_PREFIX/bin/brew /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew"
+	fi
+	for candidate in $candidates; do
 		[ -x "$candidate" ] || continue
 		eval "$("$candidate" shellenv)"
 		return 0

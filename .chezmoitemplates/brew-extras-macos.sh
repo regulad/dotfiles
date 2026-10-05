@@ -1,0 +1,128 @@
+{{ template "posix-preamble-brew.sh" . }}
+{{- /* Shared by 00-macos/030-brew-extras (the native brew) and
+       031-brew-extras-x86 (the Rosetta brew in /usr/local on Apple Silicon,
+       rendered with brewArch=amd64 and nativeArch=false; see
+       docs/rosetta-brew.md). Same formulae for both; casks, gems and
+       services stay with the native brew. */ -}}
+{{- $brewArch := get . "brewArch" | default .chezmoi.arch }}
+{{- $secondary := ne $brewArch .chezmoi.arch }}
+{{- /* Era-pinned host (see .chezmoidata/brew-tiers.toml)? Entries below pick
+       the name the same formula had at that checkout, or are left out
+       because it did not exist there yet, inline and keyed on the era name.
+       $brewEra is "" on a Tier 1 host. */ -}}
+{{- $brewEra := "" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $p := index .brewTiers.legacy (printf "%s-%s" .macos.series $brewArch) | default dict }}
+{{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
+{{- end }}
+{{- /* eras whose tap checkout predates the given year */ -}}
+{{- $pre2023 := has $brewEra (list "catalina") }}
+{{- $pre2025 := has $brewEra (list "catalina" "bigsur" "monterey") }}
+{{- $pre2026 := has $brewEra (list "catalina" "bigsur" "monterey" "ventura") }}
+# user-level binary dependencies
+# these dependencies aren't provided by the system package manager, for whatever reason
+# these packages do NOT require compilation and are distributed as binaries.
+# they may be closed-source/non-libre (although I don't think any are).
+# brew distributes these on GNU/Linux and Darwin. no attempt is made on other platforms
+# most of them are needed for specific workflows (i.e. kotlin, python, java)
+SECONDARY_BINARY_DEPENDENCIES=(
+	"awscli"
+	"go"  # needed for newer versions of toolchain
+	"languagetool"
+	"cloudflared"
+	"wakatime-cli"
+	"tokei"
+	# minio-mc dropped: formula deprecated 2026-07-17 (repo archived); see the
+	# OMITTED block in 020-brew-packages. rclone/awscli/s3cmd cover S3.
+	"s3cmd"
+	"wasm-tools"
+	"kotlin"
+	"kotlin-language-server"
+{{- if not $pre2026 }}
+	"fernflower"  # not in homebrew-core until 2026
+{{- end }}
+	"jdtls"
+	"emscripten"
+{{- if not $pre2025 }}
+	"harper"  # not in homebrew-core until 2025
+{{- end }}
+	# lima: colima already pulls it in as a dependency where 020 installs
+	# colima; listed so that every Mac has it, apple/container ones included.
+	# On macOS it pulls in qemu only on the pre-Ventura eras, whose pinned
+	# lima still declared it for every OS (later releases moved it under
+	# on_linux); every formula in that closure has a bottle at each era's
+	# core_commit (audit of 2026-10-03). Native environments only
+	# (.nativeArch), like the engines in 020: no translated copy of the VM
+	# stack in the Rosetta brew.
+{{- if .nativeArch }}
+	"lima"
+{{-   if not $pre2025 }}
+	"lima-additional-guestagents"  # not in homebrew-core until 2025
+{{-   end }}
+{{- end }}
+	"deno"
+	"shfmt"
+{{- if not $pre2026 }}
+	"ghidra"  # the formula dates from 2026; before that ghidra is a cask, installed below
+{{- end }}
+	"poppler"
+	"tesseract"
+	"ocrmypdf"
+	"rclone"
+{{- if not $pre2026 }}
+	"git-xet"  # not in homebrew-core until 2026
+{{- end }}
+{{- if $pre2023 }}
+{{- /* huggingface-cli itself only reached homebrew-core in 2023 */ -}}
+{{- else if $pre2026 }}
+	"huggingface-cli"  # renamed to hf upstream in 2026
+{{- else }}
+	"hf"
+{{- end }}
+	"brew-gem"
+	"bash-completion@2"
+  "nushell"  # not available on ubuntu
+)
+
+if [ "$HAS_BREW" = "true" ]; then
+	# use brew-managed ruby
+	export PATH="$(brew --prefix ruby)/bin:$PATH"
+	export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"
+
+	# --formula: names that are also casks would otherwise draw a "treating
+	# as a formula" warning on every apply.
+	brew install -q --formula "${SECONDARY_BINARY_DEPENDENCIES[@]}"
+{{- if $secondary }}
+	# Formulae only for the Rosetta brew: the ghidra cask, the brew-gem
+	# globals and the languagetool service (one port, one server) are the
+	# native brew's.
+{{- else }}
+{{- if $pre2026 }}
+	# ghidra: no formula at this era's checkout, only the cask (the same
+	# prebuilt zip from NSA's releases), so it cannot ride the --formula
+	# install above.
+	brew install -q --cask ghidra
+{{- end }}
+	# brew-gem global gems (like cargo/go/uv)
+	# `brew trust` first: the install itself passes on argv, but every later
+	# load of the tap formula (upgrade/outdated) refuses untrusted taps. See
+	# the longer note in 00-linux/030-brew-extras.sh.
+	brew_trust --formula brew-gem/gems/gem-ruby-lsp
+	brew gem install ruby-lsp
+	# neovim: the ruby provider bridge gem (:checkhealth vim.provider).
+	# The Windows counterpart for both gems is 00-nt/580-ruby-tooling.cmd.
+	brew_trust --formula brew-gem/gems/gem-neovim
+	brew gem install neovim
+
+	# `brew services` is built into brew from 4.6; the older era brews get
+	# the homebrew/services tap pinned by 005-homebrew (services_commit in
+	# brew-tiers.toml), so this works on every era.
+	if ! [ "$CONTAINERIZED" -eq 1 ]; then
+		echo "debug: installing brew services" >&2
+		brew services start languagetool
+	fi
+{{- end }}
+else
+	echo "error: no brew for misc. binary deps" >&2
+	exit 1
+fi

@@ -120,6 +120,7 @@ Longer write-ups live in `docs/` (not deployed to `$HOME`):
 
 - [Hookscripts](docs/hookscripts.md) -- the preambles, script order, the brew prefix, C/C++ language support.
 - [Homebrew on older macOS](docs/homebrew-older-macos.md) -- era-pinned brew for releases Homebrew no longer bottles for, the Catalina floor, `brew update`, MacPorts, bootstrapping 10.x.
+- [Rosetta brew](docs/rosetta-brew.md) -- the x86_64 brew in `/usr/local` on Apple Silicon up to Tahoe 26, `intel`/`arm`, and `nativeArch`.
 - [Bottle mirror](docs/brew-mirror.md) -- every brew fetches bottles through a Nexus proxy of ghcr.io, except on GitHub-hosted runners.
 - [Theos](docs/theos.md)
 - [SSH server on Windows](docs/windows-sshd.md) -- the user-session `sshd`.

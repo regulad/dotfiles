@@ -45,9 +45,17 @@ SECONDARY_BINARY_DEPENDENCIES=(
 # images do want it, and get it from this line: the chroot step of
 # .github/workflows/wsl-package.yml re-runs the apply with the rootfs made
 # to look like WSL, where CONTAINERIZED is 0.
+#
+# And only where this environment runs on the CPU's own arch (.nativeArch,
+# .chezmoi.toml.tmpl), the same gate as the VM tooling on macOS: a VM or WSL2
+# guest counts as native, a qemu-user/FEX/box64-translated userland does not.
+# Both image workflows build every arch on a native runner (no QEMU), so the
+# images and WSL tarballs come out as above.
+{{- if .nativeArch }}
 if [ "$CONTAINERIZED" -eq 0 ]; then
 	SECONDARY_BINARY_DEPENDENCIES+=("lima" "lima-additional-guestagents")
 fi
+{{- end }}
 
 if [ "$HAS_BREW" = "true" ]; then
 	# use brew-managed ruby

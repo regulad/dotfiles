@@ -1,6 +1,11 @@
 {{ template "posix-preamble.sh" . }}
 # Homebrew installer, shared verbatim by 00-macos/005-homebrew.sh and
-# 00-linux/005-homebrew.sh. This used to live in posix-preamble.sh, which
+# 00-linux/005-homebrew.sh -- and by 00-macos/006-homebrew-x86.sh, which
+# renders it with brewArch=amd64 to lay the Rosetta brew down in /usr/local on
+# Apple Silicon (BREW_SECONDARY=1; docs/rosetta-brew.md). That one is always
+# era-pinned, from the "<series>-amd64" rows of brew-tiers.toml: the upstream
+# installer refuses x86_64 outright since Homebrew/install e078684
+# (2026-09-04). This used to live in posix-preamble.sh, which
 # every hookscript inlines -- so whichever script chezmoi happened to run first
 # on a brew-less host did the installing, and the installer's own environment
 # (pinned refs, launchctl PATH) had nowhere to live. Now it is one script that
@@ -197,7 +202,7 @@ if [ -x "$(brew_repo_path)/bin/brew" ]; then
 		echo "error: brew is present under $CHEZMOI_HOMEBREW_PREFIX but 'brew shellenv' failed" >&2
 		exit 1
 	fi
-	echo "debug: brew already installed at $HOMEBREW_PREFIX" >&2
+	echo "debug: brew already installed at $HOMEBREW_PREFIX ($(uname -m))" >&2
 	pin_brew_taps
 	exit 0
 fi
@@ -211,6 +216,9 @@ if [ "$BREW_ERA_PINNED" -eq 1 ]; then
 		exit 1
 	fi
 	install_brew_pinned
+elif [ "$BREW_SECONDARY" -eq 1 ]; then
+	echo "error: no era pin for the Rosetta brew on macOS $VERSION_ID (add \"$VERSION_ID-amd64\" to .chezmoidata/brew-tiers.toml); the upstream installer refuses x86_64" >&2
+	exit 1
 else
 	# The official installer asks for sudo itself; NONINTERACTIVE skips the
 	# "press RETURN" prompt only. It would install the Command Line Tools
@@ -218,7 +226,10 @@ else
 	NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
-if [ "$(uname -s)" = "Darwin" ]; then
+if [ "$(uname -s)" = "Darwin" ] && [ "$BREW_SECONDARY" -eq 0 ]; then
+	# Not for the Rosetta brew: the native prefix stays first for launchd,
+	# and /usr/local/bin is in the default already.
+	#
 	# launchd-started processes (GUI apps, `brew services`) don't read the
 	# shell profile; give them the prefix on PATH. /usr/local/bin is in the
 	# default already, so this only adds anything on Apple Silicon, but
@@ -237,4 +248,4 @@ if ! load_brew; then
 	exit 1
 fi
 pin_brew_taps
-echo "notice: brew $(brew --version | head -n1) ready at $HOMEBREW_PREFIX" >&2
+echo "notice: brew $(brew --version | head -n1) ready at $HOMEBREW_PREFIX ($(uname -m))" >&2

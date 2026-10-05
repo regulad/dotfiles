@@ -18,6 +18,18 @@
 # the major alone would not tell it from the 10.x releases before it -- and
 # chezmoi's arch is Go's: arm64 for Apple Silicon, amd64 for Intel.
 #
+# The amd64 rows also serve the Rosetta brew: the x86_64 Homebrew that
+# 00-macos/006, 021 and 031 keep in /usr/local on Apple Silicon Macs up to
+# Tahoe 26 (docs/rosetta-brew.md). Those scripts look the table up with the
+# template key brewArch=amd64 in place of .chezmoi.arch, so an Apple Silicon
+# Sonoma gets "14-amd64" for that brew and "14-arm64" for its native one.
+# Under Rosetta brew is an Intel brew in every respect that matters here --
+# Tier 3, same bottles -- and every amd64 tuple is pinned, which is what the
+# Rosetta brew relies on: the upstream installer refuses x86_64 outright
+# since Homebrew/install e078684 (2026-09-04), so it can only ever be laid
+# down by hand. There is deliberately no "27-amd64": Homebrew never treated
+# Intel Golden Gate as supported, so the Rosetta brew stops at 26.
+#
 # Per tuple:
 #   brew_tag       -- Homebrew/brew release tag to check the brew repo out at:
 #                     the last release whose docs listed this tuple as fully

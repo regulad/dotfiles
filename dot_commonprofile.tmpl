@@ -18,36 +18,73 @@ export DONT_PROMPT_WSL_INSTALL=1
        brew invocation -- interactive ones included -- must carry these two
        or brew updates itself out from under the pin / reads the API. */}}
 {{- $brewPin := dict }}
+{{- $x86Pin := dict }}
+{{- /* Apple Silicon up to Tahoe 26 also carries the Rosetta brew, x86_64 in
+       /usr/local (00-macos/006, docs/rosetta-brew.md). */}}
+{{- $rosettaBrew := false }}
 {{- if eq .chezmoi.os "darwin" }}
 {{-   $brewPin = index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
+{{-   $rosettaBrew = and (eq .chezmoi.arch "arm64") (le .macos.major 26) }}
+{{-   if $rosettaBrew }}
+{{-     $x86Pin = index .brewTiers.legacy (printf "%s-amd64" .macos.series) | default dict }}
+{{-   end }}
 {{- end }}
+{{- $nativeBrew := dict "prefix" .homebrewPrefix "pin" $brewPin "label" (printf "%s/%s" .macos.series .chezmoi.arch) }}
 {{- /* uname -s, never -o: BSD uname only grew -o in macOS 13, and on older
        releases "$(uname -o)" is empty, which silently skipped this whole
        block (and brew with it). */}}
 if [ "$(uname -s)" = "Darwin" ]; then
     # Prefix decided by chezmoi at init (.homebrewPrefix): /opt/homebrew on
     # Apple Silicon, /usr/local on Intel.
-    eval "$({{ .homebrewPrefix }}/bin/brew shellenv)"
-{{- if $brewPin }}
-    # macOS {{ .macos.series }}/{{ .chezmoi.arch }} is era-pinned to brew {{ $brewPin.brew_tag }}
-    # (see .chezmoidata/brew-tiers.toml); keep it there. The env stops the
-    # implicit update; the wrapper stops the explicit one, since `brew update`
-    # would move brew and both taps off the era and, on 10.x, leave a brew
-    # that will not start. `brew!` is the unwrapped binary for when you mean
-    # it (the next `chezmoi apply` re-pins). Functions and aliases only exist
-    # in interactive shells; the hookscripts never run `brew update`.
-    export HOMEBREW_NO_AUTO_UPDATE=1
-    export HOMEBREW_NO_INSTALL_FROM_API=1
-{{- with includeTemplate "brew-era-env.sh" (dict "era" $brewPin.era) }}{{ . | nindent 4 }}{{ end }}
-    brew() {
-        if [ "$1" = "update" ]; then
-            echo "WARNING: this brew is pinned! run \`brew! update\` to update anyway" >&2
-            echo "(the pinned checkouts are single-commit: brew, homebrew/core and homebrew/cask each need \`git fetch --unshallow\` first)" >&2
-            return 1
-        fi
-        command brew "$@"
+{{- if $rosettaBrew }}
+    # ... unless this shell is translated by Rosetta -- an `intel` shell, see
+    # below -- which gets the x86_64 brew in /usr/local instead, so that it
+    # looks like a login on an Intel Mac.
+    if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = 1 ]; then
+        {{- includeTemplate "brew-profile-env.sh" (dict "prefix" "/usr/local" "pin" $x86Pin "label" (printf "%s/amd64 (Rosetta)" .macos.series)) | trim | nindent 8 }}
+
+        # chezmoi must run natively: an x86_64 one would render every template
+        # for Intel (.chezmoiignore.tmpl refuses to), and the native brew's
+        # chezmoi is not on this shell's PATH at all. Run the native binary
+        # -- brew's, or the get.chezmoi.io one in ~/.local/bin -- minus this
+        # brew's environment, which would otherwise leak into the native
+        # hookscripts.
+        chezmoi() {
+            local _cz
+            for _cz in {{ .homebrewPrefix }}/bin/chezmoi "$HOME/.local/bin/chezmoi" "$HOME/bin/chezmoi" ""; do
+                [ -x "$_cz" ] && break
+            done
+            if [ -z "$_cz" ]; then
+                echo "error: no native chezmoi found; run \`arm\` first" >&2
+                return 1
+            fi
+            /usr/bin/env -u HOMEBREW_PREFIX -u HOMEBREW_CELLAR -u HOMEBREW_REPOSITORY \
+                -u HOMEBREW_NO_AUTO_UPDATE -u HOMEBREW_NO_INSTALL_FROM_API -u HOMEBREW_FORCE_BREWED_CURL \
+                PATH="{{ .homebrewPrefix }}/bin:{{ .homebrewPrefix }}/sbin:$PATH" \
+                /usr/bin/arch -arm64 "$_cz" "$@"
+        }
+    else
+        {{- includeTemplate "brew-profile-env.sh" $nativeBrew | trim | nindent 8 }}
+    fi
+
+    # `intel` / `arm`: replace this shell with a fresh login shell running as
+    # x86_64 (under Rosetta) or arm64, from a clean environment -- only what a
+    # real login would bring along -- so that it comes up as if this were a
+    # native login on that arch: PATH rebuilt by path_helper, the matching
+    # brew, every universal binary started from it in the same arch.
+    _arch_login() {
+        local _arch="$1" _n
+        set --
+        for _n in HOME USER LOGNAME SHELL TERM COLORTERM TERM_PROGRAM TERM_PROGRAM_VERSION \
+            LANG LC_ALL TMPDIR SSH_AUTH_SOCK SSH_CONNECTION SSH_CLIENT SSH_TTY __CF_USER_TEXT_ENCODING; do
+            eval "[ -n \"\${$_n+x}\" ] && set -- \"\$@\" \"$_n=\${$_n}\""
+        done
+        exec /usr/bin/env -i "$@" /usr/bin/arch "-$_arch" "${SHELL:-/bin/zsh}" -l
     }
-    alias brew!='command brew'
+    intel() { _arch_login x86_64; }
+    arm() { _arch_login arm64; }
+{{- else }}
+    {{- includeTemplate "brew-profile-env.sh" $nativeBrew | trim | nindent 4 }}
 {{- end }}
     export PATH="/Applications/Ghostty.app/Contents/MacOS/:$PATH"
 

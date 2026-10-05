@@ -1,0 +1,7 @@
+{{- /* 020's formula list for the Rosetta brew (x86_64, /usr/local; Apple
+       Silicon, macOS 11-26; docs/rosetta-brew.md). See 006 for the context
+       override. */ -}}
+{{- $c := deepCopy . }}
+{{- $_ := set $c "brewArch" "amd64" }}
+{{- $_ := set $c "nativeArch" false -}}
+{{ template "brew-packages-macos.sh" $c }}

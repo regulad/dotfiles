@@ -63,6 +63,29 @@
 {{-   end }}
 {{- end }}
 
+# Whether this environment runs on the hardware's own instruction set:
+# directly, or through a hypervisor (a VM, WSL2 -- the guest is native code
+# on the host's CPU). False when its binaries are being translated: Rosetta
+# on Apple Silicon, Prism on Windows on ARM, qemu-user/FEX/box64 on Linux.
+# Gates what only makes sense natively -- the VM and container engines
+# (colima, lima, apple/container), which a translated copy would duplicate.
+# The x86_64 Rosetta brew's hookscripts (00-macos/006, 021, 031) render the
+# shared templates with this forced to false; see docs/rosetta-brew.md.
+{{- $nativeArch := true }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   if eq (output "sh" "-c" "sysctl -n sysctl.proc_translated 2>/dev/null; true" | trim) "1" }}
+{{-     $nativeArch = false }}
+{{-   end }}
+{{- else if eq .chezmoi.os "linux" }}
+{{-   $machine := output "uname" "-m" | trim }}
+{{-   $goarch := get (dict "x86_64" "amd64" "aarch64" "arm64" "armv7l" "arm" "i686" "386" "riscv64" "riscv64") $machine | default $machine }}
+{{-   $nativeArch = eq $goarch .chezmoi.arch }}
+{{- else if eq .chezmoi.os "windows" }}
+{{-   $cpuArch := output "pwsh.exe" "-NoProfile" "-NonInteractive" "-Command" "(Get-CimInstance -ClassName 'Win32_Processor' | Select-Object -First 1).Architecture" | trim }}
+{{-   $goarch := get (dict "9" "amd64" "12" "arm64" "0" "386" "5" "arm") $cpuArch | default $cpuArch }}
+{{-   $nativeArch = eq $goarch .chezmoi.arch }}
+{{- end }}
+
 encryption = "age"
 [age]
     identity = "{{ .chezmoi.homeDir }}/key.txt"
@@ -77,6 +100,7 @@ encryption = "age"
     useDummySecrets = {{ env "CHEZMOI_USE_DUMMY" | not | not }}
     useHeadless = {{ env "CHEZMOI_USE_HEADLESS" | not | not }}
     homebrewPrefix = "{{ $homebrewPrefix }}"
+    nativeArch = {{ $nativeArch }}
 [data.macos]
     major = {{ $macosMajor }}
     series = "{{ $macosSeries }}"

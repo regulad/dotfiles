@@ -1,0 +1,9 @@
+{{- /* The Rosetta brew: x86_64 Homebrew in /usr/local on Apple Silicon, macOS
+       11-26 (.chezmoiignore.tmpl masks it elsewhere; docs/rosetta-brew.md).
+       005's installer, rendered for amd64 and as a translated environment.
+       `set`, not `merge`: mergo treats false as empty and would keep the
+       config's nativeArch = true. */ -}}
+{{- $c := deepCopy . }}
+{{- $_ := set $c "brewArch" "amd64" }}
+{{- $_ := set $c "nativeArch" false -}}
+{{ template "homebrew-install.sh" $c }}

@@ -1,0 +1,257 @@
+{{ template "posix-preamble-brew.sh" . }}
+{{- /* Shared by 00-macos/020-brew-packages (the native brew) and
+       021-brew-packages-x86 (the Rosetta brew in /usr/local on Apple
+       Silicon, rendered with brewArch=amd64 and nativeArch=false; see
+       docs/rosetta-brew.md). Same formulae for both; what only the native
+       brew does is marked inline. */ -}}
+{{- $brewArch := get . "brewArch" | default .chezmoi.arch }}
+{{- $secondary := ne $brewArch .chezmoi.arch }}
+{{- /* Era-pinned host (see .chezmoidata/brew-tiers.toml)? A few entries
+       below pick the name the same formula had at that checkout, or are
+       left out because it did not exist there yet, inline and keyed on the
+       era name. $brewEra is "" on a Tier 1 host. */ -}}
+{{- $brewEra := "" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $p := index .brewTiers.legacy (printf "%s-%s" .macos.series $brewArch) | default dict }}
+{{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
+{{- end }}
+{{- /* eras whose tap checkout predates the given year */ -}}
+{{- $pre2024 := has $brewEra (list "catalina" "bigsur") }}
+{{- $pre2025 := has $brewEra (list "catalina" "bigsur" "monterey") }}
+{{- $pre2026 := has $brewEra (list "catalina" "bigsur" "monterey" "ventura") }}
+{{- /* apple/container host? See .chezmoidata/containers.toml. */ -}}
+{{- $appleContainer := and (eq $brewArch "arm64") (ge .macos.major .containers.appleMinMacos) }}
+# system-level binary dependencies for macOS hosts (brew).
+# these are typically very stable applications that MUST be provided by a
+# package manager; they are not particularly version-sensitive and are all f(l)oss.
+BREW_PACKAGES=(
+	# =+= CORE
+	bash
+	nushell
+	tmux
+	fastfetch
+{{- if not $pre2024 }}
+	retry  # not in homebrew-core until 2024; MacPorts supplies it on the older eras (017)
+{{- end }}
+	zsh
+	binwalk
+	ncdu
+	htop
+	nmap
+	curl
+	watch
+	age
+
+	# =+= CONTAINERIZATION
+	# One engine per Mac, chosen in .chezmoidata/containers.toml and started by
+	# 035-container-runtime; the docker CLI talks to whichever it is (see
+	# docs/containers.md). podman left this list -- on a Mac it is only a
+	# client for a `podman machine` VM, which nothing here created, and
+	# podman 6 dropped Intel Macs. 018-podman-remove uninstalls an earlier
+	# install. The engine only where this environment runs natively
+	# (.nativeArch): the Rosetta brew would be a second, translated copy of
+	# the hypervisor stack, so it gets the clients only.
+{{- if .nativeArch }}
+{{-   if $appleContainer }}
+	container  # apple/container; Apple silicon on macOS 26+ only
+	socktainer  # Docker Engine API on top of container, for the docker CLI and friends
+{{-   else }}
+	colima  # dockerd in a lima VM; vz from Ventura on, qemu before it
+{{-   end }}
+{{- end }}
+	docker  # the CLI only
+	docker-compose
+	docker-buildx
+	docker-credential-helper  # docker-credential-osxkeychain, the credsStore in ~/.docker/config.json
+
+	# =+= macOS-SPECIFIC
+	reattach-to-user-namespace
+	mas
+	smartmontools
+	pam-reattach
+	pinentry-mac
+
+	# =+= BUILD TOOLS
+	ninja
+{{- if $pre2025 }}
+	pkg-config  # freedesktop pkg-config; at these pins pkgconf is a separate, conflicting formula that installs no pkg-config binary
+{{- else }}
+	pkgconf  # pkg-config is an alias of it since 2025 and it links bin/pkg-config
+{{- end }}
+	cmake
+
+	# =+= DEPENDENCIES
+	cairo  # needed by cairo PyPi package
+	libxml2
+	freetype
+	jpeg
+
+	# =+= EDITOR
+	llvm  # includes clangd; keg-only bin is exposed in .commonprofile
+	neovim
+	vim
+	shellcheck
+{{- if $pre2025 }}
+	tree-sitter  # the CLI was split out as tree-sitter-cli in 2025; before that it shipped in tree-sitter
+{{- else }}
+	tree-sitter-cli
+{{- end }}
+	ripgrep
+	imagemagick
+
+	# =+= DESKTOP
+	mpv
+
+	# =+= SERIAL
+	minicom
+
+	# =+= UTILS
+	# See the note on the apt side. No bind-utils equivalent is needed here:
+	# macOS ships dig in the base system at /usr/bin/dig.
+	direnv
+	socat
+	# telnet, not inetutils. brew's `telnet` formula is macOS-only, which is the
+	# only reason the Linux list carries inetutils instead. On macOS inetutils
+	# unprefixes just dnsdomainname/ftp/rcp/rexec/rlogin/rsh/telnet, declares
+	# conflicts_with telnet, and refuses to install while telnet is linked --
+	# which took the whole single-shot `brew install` below down with it.
+	# (macOS has shipped no ftp since 10.13; add `tnftp` if that is ever missed.)
+	telnet
+	binutils
+	perl
+{{- if not $pre2024 }}
+	sshpass  # not in homebrew-core until 2024; MacPorts supplies it on the older eras (017)
+{{- end }}
+	git
+	git-lfs
+	git-filter-repo
+	gnupg # gpg
+	gpgme
+	openssh # ssh-agent & ssh
+	keychain
+	gh # GitHub
+	restic
+	ffmpeg
+	syncthing
+
+	# =+= JS/TS
+	node
+	npm # just to install pnpm
+
+	# =+= JVM
+	openjdk
+	maven
+
+	# =+= RUST
+	rustup
+
+	# =+= PYTHON (>= 3.12)
+	python3
+
+	# =+= GO
+	go
+
+	# =+= RUBY
+{{- if $pre2026 }}
+	ruby  # ruby@4 is an alias of ruby.rb only since 2026; before that the current ruby was plain `ruby`
+{{- else }}
+	ruby@4
+{{- end }}
+
+	# =+= LUA
+	lua
+	luarocks
+)
+
+# OMITTED, and why. Everything here goes through a single `brew install`, so
+# one unknown formula aborts the whole list before anything installs -- keep
+# this current. The Linux counterpart is the block in 00-linux/022-brew-packages.
+#
+#   gone from homebrew-core:
+#     libolm -- deprecated upstream, formula removed (brew returns "No available
+#       formula"). It was only ever here to build the mautrix tools, and nothing
+#       in this repo builds those any more.
+#   deprecated in homebrew-core (still installs with a warning, but brew disables
+#   deprecated formulae after ~1 year and then deletes them):
+#     nyx -- deprecated 2026-03-29, upstream repo archived. Still in the dnf and
+#       apt lists, where distro packaging is unaffected.
+#     minio-mc -- deprecated 2026-07-17, MinIO archived the repo. Was in
+#       030-brew-extras; rclone, awscli and s3cmd cover the same S3 workflows.
+#   conflicts with a formula we want more:
+#     inetutils -- conflicts_with telnet; see the note in the UTILS section.
+
+# Migration for a host that got inetutils before the list switched to telnet:
+# the conflict is symmetric, so `brew install telnet` would fail the same way.
+if brew list --formula inetutils &>/dev/null; then
+	echo "debug: replacing inetutils with telnet (conflicting formulae)" >&2
+	brew uninstall -q inetutils
+fi
+{{- if $pre2025 }}
+
+# Migration for an era host that got pkgconf before the list switched to
+# pkg-config: at these pins the two are separate formulae that conflict over
+# pkg.m4, so pkgconf has to go first or the install below fails.
+if brew list --formula pkgconf &>/dev/null; then
+	echo "debug: replacing pkgconf with pkg-config (conflicting formulae at this era)" >&2
+	brew uninstall -q --ignore-dependencies pkgconf
+fi
+{{- end }}
+
+{{- if $pre2025 }}
+# Apple's trust store on this release predates roots that today's download
+# hosts chain to (emSign, via InCommon, since July 2026: ftp.osuosl.org,
+# where get.videolan.org sends the vlc cask, for one), and on 10.15/11 that
+# curl's LibreSSL 2.8.3 backend speaks TLS 1.2 at most, which the bottle
+# mirror refuses. The preamble therefore sets
+# HOMEBREW_FORCE_BREWED_CURL, which only takes effect once brew's own curl
+# exists, so it goes in first, on its own, before anything below or in the
+# cask list has to fetch from such a host. (curl is in the list below anyway;
+# this just makes the order explicit.) This one install is the only brew
+# download that may still run through the system curl, so it bypasses the
+# mirror: the TLS 1.2 ceiling that rules out the mirror does not apply to
+# ghcr.io, and its DigiCert chain is in Apple's store. No-op once brew's curl
+# exists, since then brew is already using it.
+env -u HOMEBREW_ARTIFACT_DOMAIN -u HOMEBREW_DOCKER_REGISTRY_BASIC_AUTH_TOKEN \
+	brew install -q --formula curl
+{{- end }}
+
+# --formula: several names here (cmake, mpv, syncthing) are also casks -- the
+# GUI apps -- and without it brew guesses formula with a warning each time.
+brew install -q --formula "${BREW_PACKAGES[@]}"
+brew upgrade -q
+{{- if $secondary }}
+
+# The rest is the native brew's: ~/.cargo is shared by both arches, and
+# /Library/Java can only point at one openjdk.
+{{- else }}
+
+# Rust toolchain. The `rustup` entry above is two different things by era:
+# from 2024 on it is the rustup formula, which ships rustup itself; at the
+# Catalina through Monterey pins it is an alias of rustup-init, which ships
+# only the rustup-init bootstrapper and no `rustup` on PATH. Either way the
+# toolchain's cargo/rustc proxies land in ~/.cargo/bin, so that is the test.
+# It used to be `! -d ~/.cargo`, which never fires: chezmoi puts
+# ~/.cargo/credentials.toml there before this script runs, so on the
+# rustup-init eras neither branch ran and 110-rust-tooling found no cargo.
+if [ ! -x "$HOME/.cargo/bin/cargo" ]; then
+	if command -v rustup-init &>/dev/null; then
+		# --no-modify-path: the shell rc files are chezmoi's, and .commonprofile
+		# already sources ~/.cargo/env.
+		rustup-init -y --no-modify-path --default-toolchain stable --profile default
+	elif command -v rustup &>/dev/null; then
+		# brew's rustup: installs stable into ~/.rustup and the proxies into
+		# ~/.cargo/bin.
+		rustup default stable
+	else
+		echo "error: neither rustup-init nor rustup is on PATH after the brew install above" >&2
+		exit 1
+	fi
+fi
+export PATH="$HOME/.cargo/bin:$PATH"
+rustup component add rust-analyzer
+
+if can_sudo; then
+	# special case needed to link the openjdk into the system java wrapper
+	sudo ln -sfn $HOMEBREW_PREFIX/opt/openjdk/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk.jdk
+fi
+{{- end }}

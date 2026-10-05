@@ -130,6 +130,24 @@ Library
 # runs podman.
 .docker
 {{- else }}
+{{-   if and (eq .chezmoi.arch "amd64") (eq .homebrewPrefix "/opt/homebrew") }}
+{{- /* An x86_64 chezmoi on an Apple Silicon host (the prefix was decided
+       natively at init), e.g. one installed into the Rosetta brew and
+       started from an `intel` shell. Everything keyed on .chezmoi.arch would
+       render for Intel, so refuse before a single file is written.
+       .commonprofile routes `chezmoi` in such a shell to the native one;
+       this is the backstop. */}}
+{{-     fail "chezmoi is running under Rosetta (x86_64) on an Apple Silicon Mac; run it from a native shell (`arm`)" }}
+{{-   end }}
+{{-   if not (and (eq .chezmoi.arch "arm64") (le .macos.major 26)) }}
+# The Rosetta brew -- x86_64 Homebrew in /usr/local next to the native one --
+# exists only on Apple Silicon up to Tahoe 26 (docs/rosetta-brew.md): Intel
+# Macs have nothing to translate, and Homebrew never supported Intel on
+# Golden Gate 27, the last release with general-purpose Rosetta.
+.chezmoiscripts/00-macos/006-homebrew-x86.sh
+.chezmoiscripts/00-macos/021-brew-packages-x86.sh
+.chezmoiscripts/00-macos/031-brew-extras-x86.sh
+{{-   end }}
 {{-   $brewPin := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
 {{-   if $brewPin }}
 # Era-pinned brew (see .chezmoidata/brew-tiers.toml): uv and pnpm themselves
