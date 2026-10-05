@@ -69,5 +69,13 @@ if [ ! -s "$installer" ]; then
 	echo "error: could not fetch roothide/theos bin/install-theos" >&2
 	exit 1
 fi
+# DOTFILES_GITHUB_TOKEN: set only by CI (.github/workflows/macos-apply.yml,
+# the runner's own GITHUB_TOKEN), where the shared runner IPs exhaust
+# api.github.com's unauthenticated limit; as on Linux, Theos's installer
+# authenticates with GITHUB_TOKEN when it is set.
+if [ -n "${DOTFILES_GITHUB_TOKEN:-}" ]; then
+	echo "debug: authenticating Theos's GitHub API requests with DOTFILES_GITHUB_TOKEN" >&2
+	export GITHUB_TOKEN="$DOTFILES_GITHUB_TOKEN"
+fi
 # stdout to stderr: retry holds stdout until the command exits (see Linux).
 retry -t 3 -d 30 -- bash -c 'bash "$1" >&2' bash "$installer"

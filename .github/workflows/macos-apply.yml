@@ -1,0 +1,113 @@
+name: macOS apply
+
+# Applies the dotfiles to GitHub's Apple Silicon macOS runners, one per
+# supported release on offer, and fails if the apply does. Nothing is
+# published: this is the macOS counterpart of what docker-publish.yml proves
+# for Linux as a side effect of building the images -- that a fresh apply goes
+# through clean, hookscripts and all.
+#
+# The runners are VMs, but on the host CPU's own instruction set, so
+# .nativeArch comes out true there (.chezmoi.toml.tmpl) and the apply installs
+# exactly what a bare-metal Apple Silicon Mac gets: native brew, the container
+# engine's packages (starting it is 035's job and needs nested virtualization,
+# which these VMs lack -- a warning, not a failure), the casks, and, since all
+# three are 26 or older, the Rosetta brew in /usr/local (docs/rosetta-brew.md).
+#
+# Secrets are dummies, as in the images: CHEZMOI_USE_DUMMY masks every
+# Bitwarden-backed file and the scripts that read them, and the apply runs
+# with --exclude encrypted. RUNNER_ENVIRONMENT=github-hosted, which GitHub
+# sets on these runners, keeps brew on ghcr.io instead of the bottle mirror
+# (brew-mirror-env.sh).
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "28 4 * * 2,6"
+  push:
+    branches: ["master"]
+
+# A newer run cancels the one it supersedes, as in docker-publish.yml.
+concurrency:
+  group: macos-apply
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 14 is era-pinned on arm64 (brew 6.0.22, .chezmoidata/brew-tiers.toml);
+          # 15 and 26 get mainline brew. All three get the Rosetta brew's
+          # "current" era.
+          - runner: macos-14
+          - runner: macos-15
+          - runner: macos-26
+    runs-on: ${{ matrix.runner }}
+    # Two brews, ~45 casks, cargo/uv/go installs and Theos, on 3 cores.
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the dotfiles
+        uses: actions/checkout@v5.0.0
+
+      - name: Make the runner look like a fresh Mac
+        run: |
+          set -euo pipefail
+          # The image ships a mainline brew in /opt/homebrew with a few hundred
+          # formulae, and root-owned tools in /usr/local. Neither exists on a
+          # fresh Mac, and both get in the way of what is being tested: 005
+          # would era-pin (on 14) a brew whose kegs were built by a newer one,
+          # `brew upgrade` would take on the image's whole formula set, and
+          # the Rosetta brew would collide with the image's links in
+          # /usr/local/bin. Clear both, so 005 and 006 install from scratch
+          # exactly as they would on a new machine. Also the space: these
+          # runners come with little free disk, and the extra Xcodes and the
+          # Android SDK are most of what can go (the active Xcode stays --
+          # 125-theos uses it).
+          active_xcode="$(xcode-select -p)"
+          active_xcode="${active_xcode%/Contents/Developer}"
+          echo "active Xcode: $active_xcode"
+          for x in /Applications/Xcode*.app; do
+            if [ "$x" != "$active_xcode" ] && [ ! -L "$x" ]; then
+              sudo rm -rf "$x"
+            fi
+          done
+          sudo rm -rf /opt/homebrew "$HOME/Library/Android" "$HOME/.android"
+          sudo find /usr/local -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+          df -h /
+
+      - name: Install chezmoi
+        run: |
+          set -euo pipefail
+          # The get.chezmoi.io binary in ~/.local/bin (README), since there is
+          # no brew yet to install it with.
+          sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- -b "$HOME/.local/bin"
+          "$HOME/.local/bin/chezmoi" --version
+
+      - name: Apply
+        env:
+          # The runner's own short-lived token, for 125-theos's api.github.com
+          # requests (shared runner IPs exhaust the unauthenticated limit).
+          DOTFILES_GITHUB_TOKEN: ${{ github.token }}
+          CHEZMOI_USE_DUMMY: "1"
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/share"
+          cp -R "$GITHUB_WORKSPACE" "$HOME/.local/share/chezmoi"
+          "$HOME/.local/bin/chezmoi" init
+          # --force: the image has dotfiles of its own (~/.zshrc,
+          # ~/.bash_profile), and with no TTY chezmoi cannot ask whether to
+          # overwrite them.
+          "$HOME/.local/bin/chezmoi" apply --force --exclude encrypted
+
+      - name: Check both brews and the intel/arm shells
+        run: |
+          set -euo pipefail
+          echo "--- native login shell"
+          /bin/zsh -lc 'set -e; uname -m; echo "$HOMEBREW_PREFIX"; test "$(uname -m)" = arm64; test "$HOMEBREW_PREFIX" = /opt/homebrew; brew --version'
+          echo "--- translated login shell (what \`intel\` starts)"
+          /usr/bin/arch -x86_64 /bin/zsh -lc 'set -e; uname -m; echo "$HOMEBREW_PREFIX"; test "$(uname -m)" = x86_64; test "$HOMEBREW_PREFIX" = /usr/local; brew --version; file "$(brew --prefix)/bin/tmux" | tee /dev/stderr | grep -q x86_64'
+          echo "--- intel/arm defined in an interactive shell"
+          /bin/zsh -lic 'whence -w intel arm _arch_login'

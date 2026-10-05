@@ -47,8 +47,10 @@ elif can_sudo; then
 	} 2>&1)" || write_status=$?
 	if [ "$write_status" -eq 0 ]; then
 		echo "notice: deployed firefox policies to $DEST" >&2
-	elif [ -n "${SSH_CONNECTION:-}" ] && [[ "$write_output" == *"Operation not permitted"* ]]; then
-		echo "warning: macOS kept this SSH session out of $FIREFOX_APP (App Management); firefox policies not deployed. Apply from a Terminal on the Mac's screen, or allow full disk access for remote users under Remote Login in System Settings" >&2
+	elif [ -n "${SSH_CONNECTION:-}${GITHUB_ACTIONS:-}" ] && [[ "$write_output" == *"Operation not permitted"* ]]; then
+		# GITHUB_ACTIONS: the macos-apply workflow's runner is in the same
+		# position as an SSH session -- no one at a screen to grant it.
+		echo "warning: macOS kept this session out of $FIREFOX_APP (App Management); firefox policies not deployed. Apply from a Terminal on the Mac's screen, or allow full disk access for remote users under Remote Login in System Settings" >&2
 	else
 		printf '%s\n' "$write_output" >&2
 		echo "error: could not write $DEST" >&2

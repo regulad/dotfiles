@@ -28,3 +28,9 @@
 # in $HOME is dead. Safe to prune from this file once every machine has
 # applied once.
 .vscode-extensions.txt
+
+# xyz.regulad.xmrig.plist was a long-retired LaunchAgent for an xmrig miner
+# under ~/xmrig. launchd loads every plist in ~/Library/LaunchAgents at login,
+# so an orphaned copy would keep trying to start it on every Mac that ever
+# applied it. Safe to prune from this file once every Mac has applied once.
+Library/LaunchAgents/xyz.regulad.xmrig.plist

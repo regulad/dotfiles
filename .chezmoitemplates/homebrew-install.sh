@@ -144,7 +144,11 @@ install_brew_pinned() {
 	# The directories install.sh creates under the prefix. On Apple Silicon
 	# the prefix is new and wholly ours; on Intel it is /usr/local, which
 	# other things also use, so only these entries are created and chowned,
-	# never the prefix recursively -- same as upstream.
+	# never the prefix recursively -- same as upstream. An entry that already
+	# exists is taken over too, as upstream does ("The following existing
+	# directories will have their owner set to"): /usr/local/bin is often
+	# there already, root-owned, from some other installer, and brew cannot
+	# link into it otherwise.
 	local dirs="bin etc include lib sbin share opt var Frameworks
 		etc/bash_completion.d lib/pkgconfig share/aclocal share/doc share/info
 		share/locale share/man share/man/man1 share/man/man2 share/man/man3
@@ -159,10 +163,11 @@ install_brew_pinned() {
 		sudo chmod ug=rwx "$prefix"
 	fi
 	for d in $dirs; do
-		if [ ! -d "$prefix/$d" ]; then
-			sudo mkdir -p "$prefix/$d"
-			sudo chown "$user:admin" "$prefix/$d"
+		[ -d "$prefix/$d" ] || sudo mkdir -p "$prefix/$d"
+		if [ ! -O "$prefix/$d" ]; then
+			echo "debug: taking ownership of $prefix/$d" >&2
 		fi
+		sudo chown "$user:admin" "$prefix/$d"
 		sudo chmod ug=rwx "$prefix/$d"
 	done
 	# zsh refuses completion dirs that are group/other writable.

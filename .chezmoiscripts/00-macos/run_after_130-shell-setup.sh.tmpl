@@ -52,7 +52,9 @@ if command -v chsh &>/dev/null; then
 	# Change shell if not already set
 	if [ "$SHELL" != "$SHELL_PATH" ]; then
 		if can_sudo; then
-			sudo chsh -s "$SHELL_PATH"
+			# The user has to be named: under sudo, chsh with no user changes
+			# root's shell, not this one.
+			sudo chsh -s "$SHELL_PATH" "$(id -un)"
 		else
 			chsh -s "$SHELL_PATH"
 		fi

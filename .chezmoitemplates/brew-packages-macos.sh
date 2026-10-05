@@ -58,6 +58,9 @@ BREW_PACKAGES=(
 {{-   else }}
 	colima  # dockerd in a lima VM; vz from Ventura on, qemu before it
 {{-   end }}
+{{-   if and (eq $brewArch "arm64") (ge .macos.major 13) }}
+	openai/tools/tart  # macOS/Linux VMs as OCI images; Apple silicon, Ventura+ (tapped by 015, trusted below)
+{{-   end }}
 {{- end }}
 	docker  # the CLI only
 	docker-compose
@@ -213,6 +216,14 @@ fi
 # exists, since then brew is already using it.
 env -u HOMEBREW_ARTIFACT_DOMAIN -u HOMEBREW_DOCKER_REGISTRY_BASIC_AUTH_TOKEN \
 	brew install -q --formula curl
+{{- end }}
+
+{{- if and .nativeArch (eq $brewArch "arm64") (ge .macos.major 13) }}
+
+# openai/tools (tart, and softnet with it) is a non-official tap: trusted
+# before the install, as 040 does for its taps. A no-op on a brew without
+# `brew trust`.
+brew_trust --tap openai/tools
 {{- end }}
 
 # --formula: several names here (cmake, mpv, syncthing) are also casks -- the
