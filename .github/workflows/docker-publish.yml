@@ -88,7 +88,9 @@ jobs:
       # runners, and BuildKit does not pass the runner's environment to RUN,
       # so the variable the bottle-mirror check reads is handed in here (see
       # the ARG in the Dockerfiles). A with: block has no runner context to
-      # take it from.
+      # take it from. The runner's token needs no wiring: github-builder
+      # passes github.token to every build as the GIT_AUTH_TOKEN secret,
+      # which the Dockerfiles mount for 00-linux/125-theos.
       build-args: |
         USERNAME=regulad.linux
         UID=1000

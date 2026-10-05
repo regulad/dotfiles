@@ -301,6 +301,9 @@ jobs:
       - name: Remove keychain and run the WSL apply in a chroot
         env:
           FLAVOR: ${{ inputs.flavor }}
+          # This job's own token (contents and packages: read), for Theos's
+          # api.github.com request in 00-linux/125-theos; see stand-in 5.
+          DOTFILES_GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           root="$RUNNER_TEMP/rootfs"
@@ -497,10 +500,14 @@ jobs:
           # the preamble's bottle-mirror check (.chezmoitemplates/
           # brew-mirror-env.sh) keys on it to leave brew on ghcr.io here. The
           # instance's own applies, on the machine it is imported on, have no
-          # RUNNER_ENVIRONMENT and use the mirror.
+          # RUNNER_ENVIRONMENT and use the mirror. DOTFILES_GITHUB_TOKEN goes
+          # through the same way, as Dockerfile.* pass it, but by
+          # --preserve-env rather than on env's command line, so the token
+          # is never in a process's argv.
           started=$(date +%s)
-          sudo env WSL_DISTRO_NAME="regulad-${FLAVOR}" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" chroot "$root" \
-            runuser -l -w WSL_DISTRO_NAME,RUNNER_ENVIRONMENT "$user" -c 'bash /tmp/wsl-package-apply.sh'
+          sudo --preserve-env=DOTFILES_GITHUB_TOKEN \
+            env WSL_DISTRO_NAME="regulad-${FLAVOR}" RUNNER_ENVIRONMENT="$RUNNER_ENVIRONMENT" chroot "$root" \
+            runuser -l -w WSL_DISTRO_NAME,RUNNER_ENVIRONMENT,DOTFILES_GITHUB_TOKEN "$user" -c 'bash /tmp/wsl-package-apply.sh'
           echo "WSL apply finished in $(( ($(date +%s) - started) / 60 )) min"
 
           sudo cp -p "$work/chezmoistate.boltdb" "$state"

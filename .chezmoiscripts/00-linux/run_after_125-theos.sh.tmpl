@@ -42,7 +42,38 @@
 # For the non-Swift one, remove $THEOS/toolchain/linux/iphone and re-run this
 # by hand without that sed. Anchored, so it misses the commented-out copy of
 # the same line further down the installer.
+#
+# It runs under retry, from a file, so a retry re-runs it rather than
+# re-fetching it. A re-run after a partial failure is safe: each step looks for
+# its own earlier work first (an existing clone gets update-theos, an existing
+# toolchain or SDK set is left alone). The step that needs it most is
+# bin/install-sdk's single api.github.com request for theos/sdks' latest
+# release: when GitHub refuses it, the whole install ends with "ERROR:
+# api.github.com request failed?!" (as it did in a Docker build, most likely
+# because the runner's address had used up GitHub's 60 unauthenticated API
+# requests an hour).
+#
+# install-sdk sends $GITHUB_TOKEN as a Bearer token on that request when it is
+# set. In CI the build hands in the runner's own short-lived token as
+# DOTFILES_GITHUB_TOKEN (the Dockerfiles, .github/workflows/wsl-package.yml),
+# a name no other tool reads, and it becomes GITHUB_TOKEN here, for the
+# installer only. Everywhere else it is unset, and a GITHUB_TOKEN of your own,
+# if you export one, is left as it is.
 export THEOS="$HOME/theos"
-CI=1 bash -c "$(curl -fsSL https://github.com/roothide/theos/raw/refs/heads/master/bin/install-theos \
+installer="$(mktemp)"
+trap 'rm -f "$installer"' EXIT
+curl -fsSL --retry 3 https://github.com/roothide/theos/raw/refs/heads/master/bin/install-theos \
 	| sed -e '/apt install -y build-essential/s/ libxml2/ libxml2-dev/' \
-	      -e 's/^[[:space:]]*stoolchain="n"$/stoolchain="y"/')"
+	      -e 's/^[[:space:]]*stoolchain="n"$/stoolchain="y"/' > "$installer"
+if [ ! -s "$installer" ]; then
+	echo "error: could not fetch roothide/theos bin/install-theos" >&2
+	exit 1
+fi
+if [ -n "${DOTFILES_GITHUB_TOKEN:-}" ]; then
+	echo "debug: authenticating Theos's GitHub API requests with DOTFILES_GITHUB_TOKEN" >&2
+	export GITHUB_TOKEN="$DOTFILES_GITHUB_TOKEN"
+fi
+# retry holds a command's stdout in memory until it exits, so the installer
+# writes to stderr instead, which streams; otherwise its progress would show
+# up all at once, minutes later.
+CI=1 retry -t 3 -d 30 -- bash -c 'bash "$1" >&2' bash "$installer"
