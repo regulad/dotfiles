@@ -17,6 +17,28 @@
 {{- $preApp := $pre2025 }}
 ## addl. brew things packaged as casks
 BREW_CASKS_MACOS=(
+	# Every Mac, headless or not: CLIs, drivers, the tailnet.
+{{- if not $pre2025 }}
+	"claude-code"  # proprietary freeware; cask added 2025
+{{- end }}
+{{- if not $pre2026 }}
+	"codex"  # cask added 2026
+{{- end }}
+{{- if $preApp }}
+	"tailscale"  # proprietary! ... kinda?
+{{- else }}
+	"tailscale-app"  # proprietary! ... kinda?
+{{- end }}
+	"vagrant"
+	"android-platform-tools"
+	"android-commandlinetools"
+	"macfuse" # we finally have `-o backend=fskit`! no kext!
+{{- /* GUI apps: only for a Mac someone sits at, i.e. not under useHeadless
+       (CHEZMOI_USE_HEADLESS at init). The macos-apply CI run is headless:
+       its runner has no one at the screen, and nothing to gain from GUI apps
+       whose installs depend on vendor sites (Cricut's signed-URL API,
+       Fusion's downloader). */}}
+{{- if not .useHeadless }}
 {{- if not $pre2024 }}
 	"retroarch-metal@nightly"  # cask added 2024
 {{- end }}
@@ -45,21 +67,12 @@ BREW_CASKS_MACOS=(
 	"handbrake-app"
 {{- end }}
 	"grandperspective"
-{{- if not $pre2025 }}
-	"claude-code"  # proprietary freeware; cask added 2025
-{{- end }}
 {{- if not $pre2026 }}
-	"codex"  # cask added 2026
 	"chatgpt"  # proprietary freeware; the cask required Sonoma + Apple Silicon until 2026
 {{- end }}
 	"jetbrains-toolbox"  # proprietary freeware
 	"gimp"
 	"signal"
-{{- if $preApp }}
-	"tailscale"  # proprietary! ... kinda?
-{{- else }}
-	"tailscale-app"  # proprietary! ... kinda?
-{{- end }}
 	"appcleaner"  # no idea
 {{- if not $pre2025 }}
 	"google-chrome"  # proprietary freeware (you can't make me use anything other than chrome) # needs macOS 13.0; the cask is improperly missing a depends_on macos line, so this gate stands in for it
@@ -87,7 +100,6 @@ BREW_CASKS_MACOS=(
 	"spotify"  # needs macOS 13.0; the pinned casks lack a depends_on macos line, so this gate stands in for it
 {{- end }}
 	"steam"
-	"vagrant"
 	"raspberry-pi-imager"
 	"vlc"
 	"calibre"
@@ -114,8 +126,6 @@ BREW_CASKS_MACOS=(
 {{- else if eq $brewEra "" }}
 	"kde-connect"
 {{- end }}
-	"android-platform-tools"
-	"android-commandlinetools"
 {{- if $preApp }}
 	"syncthing"
 {{- else }}
@@ -124,13 +134,13 @@ BREW_CASKS_MACOS=(
 {{- if not $pre2025 }}
 	"vesktop"  # cask added 2025
 {{- end }}
-	"macfuse" # we finally have `-o backend=fskit`! no kext!
 	"regulad/tap/epson-et8500" # super proprietary 😈 # Epson lists the package for 10.7 through 27
 {{- if not $pre2024 }}
 	"regulad/tap/cricut-design-space" # super proprietary 😈 # Cricut's own requirement is macOS 12 or later; the cask declares no floor
 {{- end }}
 {{- if or (eq $brewEra "") (has $brewEra (list "current" "sonoma")) }}
 	"Gcenx/wine/game-porting-toolkit"  # the cask requires Sonoma
+{{- end }}
 {{- end }}
 )
 

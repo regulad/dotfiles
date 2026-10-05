@@ -8,14 +8,18 @@ name: macOS apply
 #
 # The runners are VMs, but on the host CPU's own instruction set, so
 # .nativeArch comes out true there (.chezmoi.toml.tmpl) and the apply installs
-# exactly what a bare-metal Apple Silicon Mac gets: native brew, the container
-# engine's packages (starting it is 035's job and needs nested virtualization,
-# which these VMs lack -- a warning, not a failure), the casks, and, since all
-# three are 26 or older, the Rosetta brew in /usr/local (docs/rosetta-brew.md).
+# what a headless Apple Silicon Mac gets: native brew, the container engine's
+# packages (starting it is 035's job and needs nested virtualization, which
+# these VMs lack -- a warning, not a failure), the headless casks, and, since
+# all three are 26 or older, the Rosetta brew in /usr/local
+# (docs/rosetta-brew.md).
 #
-# Secrets are dummies, as in the images: CHEZMOI_USE_DUMMY masks every
-# Bitwarden-backed file and the scripts that read them, and the apply runs
-# with --exclude encrypted. RUNNER_ENVIRONMENT=github-hosted, which GitHub
+# Headless and with dummy secrets, as in the images: CHEZMOI_USE_HEADLESS
+# leaves out the GUI casks (040), the App Store apps (060), VS Code's
+# extensions (160) and vencord (080) -- no one is at the screen, and several
+# GUI installers depend on vendor sites that have nothing to do with the
+# dotfiles. CHEZMOI_USE_DUMMY masks every Bitwarden-backed file and the scripts
+# that read them, and the apply runs with --exclude encrypted. RUNNER_ENVIRONMENT=github-hosted, which GitHub
 # sets on these runners, keeps brew on ghcr.io instead of the bottle mirror
 # (brew-mirror-env.sh).
 
@@ -99,6 +103,7 @@ jobs:
           # requests (shared runner IPs exhaust the unauthenticated limit).
           DOTFILES_GITHUB_TOKEN: ${{ github.token }}
           CHEZMOI_USE_DUMMY: "1"
+          CHEZMOI_USE_HEADLESS: "1"
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.local/share"

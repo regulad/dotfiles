@@ -68,6 +68,11 @@ key.txt
 .chezmoiscripts/00-nt/600-vencord.cmd
 .chezmoiscripts/00-macos/080-vencord.sh
 .chezmoiscripts/00-linux/080-vencord.sh
+# 040-macos-casks leaves the GUI casks out under useHeadless, VS Code
+# included, and 160 has nothing to install extensions into without it; the
+# App Store apps 060 installs are all GUI ones.
+.chezmoiscripts/00-macos/060-mac-app-store.sh
+.chezmoiscripts/00-macos/160-install-vscode-ext.sh
 {{- end }}
 
 # Tailnet
