@@ -18,7 +18,7 @@ The brew prefix is decided once, at `chezmoi init`, as `.homebrewPrefix` (`/opt/
 Some macOS changes are only granted through a prompt on the Mac's own screen, which an SSH session cannot show. The scripts that run into one print a `warning:` instead of stopping the apply, and they are `run_after_` so the next apply from the Mac's own session (in person or over Screen Sharing) finishes the job:
 
 - `140-ca-certs`: certificate trust settings ("no user interaction was possible"). Apple supports no non-interactive way short of MDM.
-- `141-client-cert`: the login keychain is locked while nobody is logged in at the Mac. `security unlock-keychain` over SSH unlocks it.
+- `141-client-cert`: an SSH session sees the login keychain locked, even while you are logged in at the Mac. `security unlock-keychain` in that session unlocks it.
 - `170-firefox-policies`: writing into `Firefox.app` takes App Management. Allowing full disk access for remote users (System Settings → General → Sharing → Remote Login) grants it over SSH too.
 
 ## Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever

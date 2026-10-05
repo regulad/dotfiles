@@ -5,12 +5,12 @@
 # and so .chezmoiignore can mask *only* this script under useDummySecrets,
 # matching the GNU/Linux side. The CAs are not secrets and stay installed there.
 #
-# run_after_, every apply. `security import` has no "already present" check of
-# its own, but reliably exits 45 (errSecDuplicateItem, -25299 truncated to a
-# Unix exit status) when the identity is already in the keychain, so the
-# import is its own idempotency check, and a rotated certificate goes in on
-# the next apply. It used to be run_onchange_, keyed on the .p12's digest,
-# which recorded an apply that could not import (below) as done.
+# run_after_, every apply. The identity is looked up first by its
+# certificate's SHA-1 (`security find-identity` lists identities even while
+# the keychain is locked), so an apply with nothing to do imports nothing, and
+# a rotated certificate goes in on the next apply. It used to be
+# run_onchange_, keyed on the .p12's digest, which recorded an apply that
+# could not import (below) as done.
 #
 # The .p12 is OpenSSL 3's default encoding -- AES-256/PBKDF2 bags and a
 # SHA-256 MAC -- which Apple's importer rejects as "MAC verification failed
@@ -21,11 +21,13 @@
 # passes through pipes; the re-encoded file sits in a private temp directory
 # for the length of the import.
 #
-# The login keychain unlocks at a login on the Mac's own screen. An SSH login
-# is not one, so with nobody logged in there the keychain is locked, and
-# `security` cannot ask for its password ("User interaction is not allowed").
-# That alone is a warning, leaving the import for a later apply; any other
-# failure stops the apply.
+# Importing needs the login keychain unlocked, and an SSH session sees it
+# locked even while someone is logged in at the Mac: unlocking it there is
+# per session. `security` cannot ask for the password without the GUI, and
+# the import then fails with no more than errSecInternal (-26276), so the
+# lock is checked first. Locked is a warning, leaving the import for an
+# apply after `security unlock-keychain` or from the Mac's own session; any
+# other failure stops the apply.
 P12="$HOME/.x509/client/dotfiles.p12"
 KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
 
@@ -37,8 +39,26 @@ for candidate in "$HOMEBREW_PREFIX/opt/openssl@3/bin/openssl" "$HOMEBREW_PREFIX/
 	fi
 done
 if [ -z "$OPENSSL" ]; then
-	echo "error: no brew OpenSSL under $HOMEBREW_PREFIX/opt (openssl@3 or openssl@1.1) to re-encode $P12 for the keychain" >&2
+	echo "error: no brew OpenSSL under $HOMEBREW_PREFIX/opt (openssl@3 or openssl@1.1) to read $P12" >&2
 	exit 1
+fi
+
+# "SHA1 Fingerprint=AB:CD:..." -> ABCD..., the form find-identity prints.
+cert_sha1="$("$OPENSSL" pkcs12 -in "$P12" -passin pass: -nokeys -clcerts \
+	| "$OPENSSL" x509 -noout -fingerprint -sha1 \
+	| sed -e 's/.*=//' -e 's/://g' | tr 'a-f' 'A-F')"
+if [ -z "$cert_sha1" ]; then
+	echo "error: could not read the client certificate out of $P12" >&2
+	exit 1
+fi
+if security find-identity "$KEYCHAIN" 2>/dev/null | grep -q " $cert_sha1 "; then
+	echo "debug: client certificate already present in keychain" >&2
+	exit 0
+fi
+
+if security show-keychain-info "$KEYCHAIN" 2>&1 | grep -q "User interaction is not allowed"; then
+	echo "warning: the login keychain is locked in this session (SSH?) and cannot be unlocked without the Mac's GUI; client certificate not imported. Run security unlock-keychain and apply again, or apply from the Mac's own session" >&2
+	exit 0
 fi
 
 tmp="$(mktemp -d)"
@@ -64,12 +84,12 @@ fi
 import_status=0
 import_output="$(security import "$tmp/dotfiles.p12" -k "$KEYCHAIN" -f pkcs12 -P "$P12_PASS" 2>&1)" || import_status=$?
 
+# 45 is errSecDuplicateItem (-25299 truncated to an exit status): another
+# import got there between the lookup above and this one.
 if [ "$import_status" -eq 0 ]; then
 	echo "notice: imported the client certificate into the login keychain" >&2
 elif [ "$import_status" -eq 45 ] || [[ "$import_output" == *"already exists in the keychain"* ]]; then
 	echo "debug: client certificate already present in keychain" >&2
-elif [[ "$import_output" == *"User interaction is not allowed"* ]]; then
-	echo "warning: the login keychain is locked and this session (SSH?) cannot unlock it; client certificate not imported. Run security unlock-keychain first, or apply from the Mac's own session" >&2
 else
 	printf '%s\n' "$import_output" >&2
 	echo "error: failed to import client certificate (exit $import_status)" >&2
