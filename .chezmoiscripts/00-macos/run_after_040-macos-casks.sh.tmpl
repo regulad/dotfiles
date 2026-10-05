@@ -102,8 +102,12 @@ BREW_CASKS_MACOS=(
 {{- if not $pre2025 }}
 	"thunderbird@esr"  # cask added 2025 (never in cask-versions either)
 {{- end }}
-{{- if not $pre2026 }}
-	"safe-exam-browser"  # partially proprietary # the GitHub release assets for the 3.x versions every pre-2026 pin references have been deleted (URL audit 2026-09-28)
+{{- /* The 2026 pins (sonoma 2026-08-01, current 2026-08-31) have SEB 3.7,
+       whose release dmg upstream re-uploaded after the cask bump, so its
+       sha256 (fcf9725e...) no longer matches (macos-apply CI, 2026-10-05);
+       3.7.1 came 2026-09-09, after both pins. */ -}}
+{{- if not (or $pre2026 (eq $brewEra "sonoma") (eq $brewEra "current")) }}
+	"safe-exam-browser"  # partially proprietary # the GitHub release assets for the 3.x versions every pre-2026 pin references have been deleted (URL audit 2026-09-28); the 2026 pins' 3.7 checksum is stale
 {{- end }}
 {{- if eq $brewEra "sonoma" }}
 	"kde-connect"  # arm64-only upstream and needs Ventura; cask added 2026
