@@ -31,9 +31,10 @@ if errorlevel 1 (
 )
 REM Lazy! sync rather than Lazy! update: install what is missing, update the
 REM rest, and delete anything no longer declared in lua/plugins.lua -- the
-REM plugin list is the whole truth on every apply, the same contract as
-REM dot_vscode-extensions.txt. The bang makes headless nvim block until the
-REM tasks finish instead of quitting mid-flight.
+REM plugin list is the whole truth on every apply, the same contract as the
+REM VS Code extension list (.chezmoidata/vscode.toml). The bang makes
+REM headless nvim block until the tasks finish instead of quitting
+REM mid-flight.
 echo debug: syncing nvim plugins with lazy.nvim 1>&2
 nvim --headless "+Lazy! sync" +qa <nul
 if errorlevel 1 (

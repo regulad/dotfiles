@@ -95,7 +95,7 @@ fi
 
 # strip \r: the list picks up CRLF line endings on Windows checkouts
 # (core.autocrlf), and a trailing \r turns every entry into a package name npm
-# has never heard of -- the same trap 160-install-vscode-ext.sh documents.
+# has never heard of.
 # (read loop, not mapfile: macOS /bin/bash is 3.2, see AGENTS.md.)
 wanted=()
 while IFS= read -r line; do
@@ -111,7 +111,7 @@ fi
 
 # Uninstall anything coc is carrying that the list no longer asks for, so
 # dot_coc-extensions.txt is the whole truth rather than an append-only wishlist
-# -- same contract as dot_vscode-extensions.txt.
+# -- same contract as the VS Code extension list (.chezmoidata/vscode.toml).
 #
 # This is done by hand rather than with :CocUninstall because coc has no
 # headless uninstall at all. All three routes were tried against this checkout:

@@ -1,5 +1,4 @@
 #!/bin/bash -e
-# {{ include "dot_vscode-extensions.txt" | sha256sum }}
 # code's own WSL-kernel detection otherwise prompts interactively in WSL
 # and in Docker containers whose host happens to be WSL2-backed.
 export DONT_PROMPT_WSL_INSTALL=1
@@ -8,20 +7,19 @@ if ! command -v code &>/dev/null; then
     exit 1
 fi
 
+# The list, from .chezmoidata/vscode.toml. Rendered in, so editing it changes
+# this run_once script and the next apply runs it again.
+extensions=(
+{{- range .vscode.extensions }}
+    {{ . | quote }}
+{{- end }}
+)
+
 # Install all extensions in a single `code` invocation. Spawning one `code`
 # process per extension (e.g. via `xargs -I {} code --install-extension {}`)
 # causes every invocation after the first to fail instantly as "not found"
 # instead of querying the marketplace, likely due to instance-lock/IPC
 # contention between the rapid-fire Electron CLI processes.
-# strip \r: dot_vscode-extensions.txt gets CRLF line endings on Windows
-# checkouts (core.autocrlf), and a trailing \r turns every extension ID
-# into one the marketplace has never heard of, failing every install.
-# (read loop, not mapfile: kept identical to the macOS twin, whose
-# /bin/bash is 3.2, see AGENTS.md.)
-extensions=()
-while IFS= read -r line; do
-    [ -n "$line" ] && extensions+=("$line")
-done < <(tr -d '\r' < ~/.vscode-extensions.txt)
 flags=()
 for extension in "${extensions[@]}"; do
     flags+=(--install-extension "$extension")
@@ -30,14 +28,14 @@ done
 # retry is for the marketplace's transient failures. One that outlasts every
 # attempt fails the apply (and so leaves this run_once script to run again
 # next time): it is a real problem, and an extension that can never install
-# belongs out of dot_vscode-extensions.txt. That is what github.copilot
+# belongs out of the list. That is what github.copilot
 # became -- it pulls in the marketplace's github.copilot-chat, which is older
 # than the copy VS Code now ships built in, and `code` refuses with "cannot
 # be downgraded" on every attempt.
 retry -t 5 -d 2,5,15,30 -- code "${flags[@]}" --force
 
-# Uninstall what dot_vscode-extensions.txt does not ask for -- but not what
-# something it asks for brings along. An extension pack installs its members
+# Uninstall what the list does not ask for -- but not what something it asks
+# for brings along. An extension pack installs its members
 # and an extension its extensionDependencies, none of them listed
 # (vscjava.vscode-java-pack alone brings six), and `code` refuses to
 # uninstall an extension that another installed one depends on: "Cannot

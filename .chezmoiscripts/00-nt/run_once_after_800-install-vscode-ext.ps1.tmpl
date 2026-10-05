@@ -1,5 +1,4 @@
-# {{ include "dot_vscode-extensions.txt" | sha256sum }}
-# Installs every extension in dot_vscode-extensions.txt, then uninstalls what
+# Installs every extension in .chezmoidata/vscode.toml, then uninstalls what
 # is installed but neither listed nor brought in by something listed. The
 # Windows counterpart of 00-{linux,macos}/160-install-vscode-ext.sh, with the
 # same rules; the reasons behind each are in the comments there.
@@ -36,11 +35,17 @@ function Invoke-CodeWithRetry {
     }
 }
 
+# The list, from .chezmoidata/vscode.toml. Rendered in, so editing it changes
+# this run_once script and the next apply runs it again.
+$Extensions = @(
+{{- range .vscode.extensions }}
+    {{ . | squote }}
+{{- end }}
+)
+
 # All in one `code` invocation: one process per extension makes every
 # invocation after the first fail instantly as "not found" (instance-lock/IPC
 # contention between the Electron CLI processes).
-$ListFile = Join-Path $env:USERPROFILE '.vscode-extensions.txt'
-$Extensions = @(Get-Content -LiteralPath $ListFile | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 $InstallArgs = @($Extensions | ForEach-Object { '--install-extension', $_ }) + '--force'
 Invoke-CodeWithRetry 'install extensions' $InstallArgs
 

@@ -1,0 +1,58 @@
+# VS Code extensions, for 00-linux/160, 00-macos/160 and
+# 00-nt/800-install-vscode-ext. Each renders this list into itself, so an edit
+# here changes those run_once scripts and they run again on the next apply.
+# Every extension listed is installed at its newest version; anything installed
+# that is neither listed nor brought in by a listed one (an extension pack's
+# members, an extension's extensionDependencies) is uninstalled.
+#
+# It used to be a file in $HOME, ~/.vscode-extensions.txt, which nothing but
+# those scripts ever read; .chezmoiremove takes the old copies away.
+#
+# github.copilot is deliberately absent: VS Code ships GitHub Copilot Chat
+# built in, and the marketplace's github.copilot drags in an older
+# copilot-chat that `code` refuses to install over it.
+
+[vscode]
+extensions = [
+    "EditorConfig.EditorConfig",
+    "GregorBiswanger.json2ts",
+    "MS-vsliveshare.vsliveshare",
+    "Vendicated.vencord-companion",
+    "anthropic.claude-code",
+    "asvetliakov.vscode-neovim",
+    "bradlc.vscode-tailwindcss",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "github.codespaces",
+    "github.vscode-github-actions",
+    "github.vscode-pull-request-github",
+    "marlinfirmware.auto-build",
+    "ms-azuretools.vscode-containers",
+    "ms-azuretools.vscode-docker",
+    "ms-dotnettools.csharp",
+    "ms-dotnettools.vscode-dotnet-runtime",
+    "ms-python.black-formatter",
+    "ms-python.debugpy",
+    "ms-python.mypy-type-checker",
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.vscode-python-envs",
+    "ms-vscode-remote.remote-containers",
+    "ms-vscode-remote.remote-ssh",
+    "ms-vscode-remote.remote-wsl",
+    "ms-vscode.PowerShell",
+    "ms-vscode.cmake-tools",
+    "ms-vscode.cpp-devtools",
+    "ms-vscode.cpptools",
+    "ms-vscode.cpptools-extension-pack",
+    "ms-vscode.cpptools-themes",
+    "ms-vscode.hexeditor",
+    "platformio.platformio-ide",
+    "redhat.vscode-yaml",
+    "streetsidesoftware.code-spell-checker",
+    "stylelint.vscode-stylelint",
+    "unifiedjs.vscode-mdx",
+    "vscjava.vscode-java-pack",
+    "wakatime.vscode-wakatime",
+    "wytheglobal.pdfmore",
+]

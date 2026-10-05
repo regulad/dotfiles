@@ -21,3 +21,10 @@
 # applied before the move still has it sitting in $HOME. Safe to prune from
 # this file once every machine has applied once.
 .firefox-policies.json
+
+# ~/.vscode-extensions.txt was the VS Code extension list, read by the
+# 160/800-install-vscode-ext scripts and nothing else. The list is now
+# .chezmoidata/vscode.toml, rendered straight into those scripts, so the copy
+# in $HOME is dead. Safe to prune from this file once every machine has
+# applied once.
+.vscode-extensions.txt
