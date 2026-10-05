@@ -1,0 +1,119 @@
+# {{ include "dot_vscode-extensions.txt" | sha256sum }}
+# Installs every extension in dot_vscode-extensions.txt, then uninstalls what
+# is installed but neither listed nor brought in by something listed. The
+# Windows counterpart of 00-{linux,macos}/160-install-vscode-ext.sh, with the
+# same rules; the reasons behind each are in the comments there.
+#
+# PowerShell rather than the .cmd this replaced, for the retries and for
+# reading the extensions' package.json files. No $ErrorActionPreference =
+# 'Stop': `code` writes a Node deprecation warning to stderr on every call,
+# and Windows PowerShell turns a native command's stderr into an error record
+# when its own stderr is redirected, as it is under chezmoi in CI. Exit codes
+# are checked explicitly instead.
+
+if (-not (Get-Command code -ErrorAction SilentlyContinue)) {
+    Write-Host "error: VSCode 'code' command not found in PATH"
+    exit 1
+}
+
+# Five tries, backing off 2, 5, 15 and 30 seconds, as `retry -t 5 -d
+# 2,5,15,30` does on the other platforms. A failure that outlasts them fails
+# the apply, which leaves this run_once script to run again on the next one.
+function Invoke-CodeWithRetry {
+    param([string]$What, [string[]]$Arguments)
+    $Delays = 2, 5, 15, 30
+    for ($Attempt = 1; ; $Attempt++) {
+        & code @Arguments
+        $Status = $LASTEXITCODE
+        if ($Status -eq 0) { return }
+        if ($Attempt -gt $Delays.Count) {
+            Write-Host "error: code could not $What (exit $Status after $Attempt attempts)"
+            exit 1
+        }
+        $Delay = $Delays[$Attempt - 1]
+        Write-Host "warning: code could not $What (exit $Status); trying again in $Delay s"
+        Start-Sleep -Seconds $Delay
+    }
+}
+
+# All in one `code` invocation: one process per extension makes every
+# invocation after the first fail instantly as "not found" (instance-lock/IPC
+# contention between the Electron CLI processes).
+$ListFile = Join-Path $env:USERPROFILE '.vscode-extensions.txt'
+$Extensions = @(Get-Content -LiteralPath $ListFile | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$InstallArgs = @($Extensions | ForEach-Object { '--install-extension', $_ }) + '--force'
+Invoke-CodeWithRetry 'install extensions' $InstallArgs
+
+# What each installed extension brings in: its extensionDependencies and its
+# extensionPack members. The id comes from the directory name, which VS Code
+# makes <publisher>.<name>-<version>[-<platform>]. The two arrays are read with
+# a regex rather than ConvertFrom-Json, which in Windows PowerShell refuses a
+# document with keys that differ only in case, as some large package.json
+# files have; both arrays are flat lists of id strings.
+$ExtensionDirs = @(Join-Path $env:USERPROFILE '.vscode\extensions')
+if ($env:VSCODE_EXTENSIONS) { $ExtensionDirs += $env:VSCODE_EXTENSIONS }
+$Links = @{}
+foreach ($Dir in $ExtensionDirs) {
+    if (-not (Test-Path -LiteralPath $Dir)) { continue }
+    foreach ($Entry in Get-ChildItem -LiteralPath $Dir -Directory) {
+        $Manifest = Join-Path $Entry.FullName 'package.json'
+        if (-not (Test-Path -LiteralPath $Manifest)) { continue }
+        $Id = ($Entry.Name -replace '-\d+\.\d+\.\d+.*$', '').ToLowerInvariant()
+        if (-not $Links.ContainsKey($Id)) { $Links[$Id] = New-Object 'System.Collections.Generic.HashSet[string]' }
+        $Json = Get-Content -LiteralPath $Manifest -Raw -Encoding UTF8
+        foreach ($Key in 'extensionDependencies', 'extensionPack') {
+            $Array = [regex]::Match($Json, '"' + $Key + '"\s*:\s*\[([^\]]*)\]')
+            if (-not $Array.Success) { continue }
+            foreach ($Item in [regex]::Matches($Array.Groups[1].Value, '"([^"]+)"')) {
+                [void]$Links[$Id].Add($Item.Groups[1].Value.ToLowerInvariant())
+            }
+        }
+    }
+}
+
+# Keep the list's closure over those links; everything else installed goes.
+$Keep = New-Object 'System.Collections.Generic.HashSet[string]'
+$Todo = New-Object 'System.Collections.Generic.Stack[string]'
+foreach ($Extension in $Extensions) { $Todo.Push($Extension.ToLowerInvariant()) }
+while ($Todo.Count -gt 0) {
+    $Id = $Todo.Pop()
+    if ($Keep.Add($Id) -and $Links.ContainsKey($Id)) {
+        foreach ($Brought in $Links[$Id]) { $Todo.Push($Brought) }
+    }
+}
+# Only lines shaped like an extension id (VS Code's own pattern) count:
+# --list-extensions can print others, a remote's "Extensions installed on
+# ..." header among them, and code.cmd runs through cmd.exe, whose AutoRun
+# hook can print too.
+$IdPattern = '^[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z0-9][a-zA-Z0-9-]*$'
+$Installed = @(& code --list-extensions | ForEach-Object { "$_".Trim() } | Where-Object { $_ -match $IdPattern })
+if ($LASTEXITCODE -ne 0) {
+    Write-Host 'error: code --list-extensions failed'
+    exit 1
+}
+$Drop = @{}
+foreach ($Extension in $Installed) {
+    if (-not $Keep.Contains($Extension.ToLowerInvariant())) { $Drop[$Extension.ToLowerInvariant()] = $Extension }
+}
+
+# Each extension ahead of anything it depends on: `code` refuses to uninstall
+# an extension that another installed one still depends on.
+$Order = New-Object 'System.Collections.Generic.List[string]'
+$Seen = New-Object 'System.Collections.Generic.HashSet[string]'
+function Add-DependenciesFirst {
+    param([string]$Id)
+    if (-not $Seen.Add($Id)) { return }
+    if ($Links.ContainsKey($Id)) {
+        foreach ($Dependency in ($Links[$Id] | Sort-Object)) {
+            if ($Drop.ContainsKey($Dependency)) { Add-DependenciesFirst $Dependency }
+        }
+    }
+    $Order.Add($Id)
+}
+foreach ($Id in ($Drop.Keys | Sort-Object)) { Add-DependenciesFirst $Id }
+$Order.Reverse()
+
+if ($Order.Count -gt 0) {
+    $UninstallArgs = @($Order | ForEach-Object { '--uninstall-extension', $Drop[$_] }) + '--force'
+    Invoke-CodeWithRetry 'uninstall extensions' $UninstallArgs
+}

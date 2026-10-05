@@ -8,7 +8,6 @@ bradlc.vscode-tailwindcss
 dbaeumer.vscode-eslint
 esbenp.prettier-vscode
 github.codespaces
-github.copilot
 github.vscode-github-actions
 github.vscode-pull-request-github
 marlinfirmware.auto-build

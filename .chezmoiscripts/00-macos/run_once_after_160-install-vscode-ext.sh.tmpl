@@ -13,53 +13,108 @@
 echo "notice: era-pinned brew ({{ $brewPin.era }}); VS Code extensions are not installed on this host" >&2
 exit 0
 {{- end }}
-if command -v code &>/dev/null; then
-    # Install all extensions in a single `code` invocation. Spawning one `code`
-    # process per extension (e.g. via `xargs -I {} code --install-extension {}`)
-    # causes every invocation after the first to fail instantly as "not found"
-    # instead of querying the marketplace, likely due to instance-lock/IPC
-    # contention between the rapid-fire Electron CLI processes.
-    # strip \r: dot_vscode-extensions.txt gets CRLF line endings on Windows
-    # checkouts (core.autocrlf), and a trailing \r turns every extension ID
-    # into one the marketplace has never heard of, failing every install.
-    # (read loop, not mapfile: macOS /bin/bash is 3.2, see AGENTS.md.)
-    extensions=()
-    while IFS= read -r line; do
-        [ -n "$line" ] && extensions+=("$line")
-    done < <(tr -d '\r' < ~/.vscode-extensions.txt)
-    flags=()
-    for extension in "${extensions[@]}"; do
-        flags+=(--install-extension "$extension")
-    done
-    # Non-fatal: some requested extensions (e.g. github.copilot-chat, pulled in
-    # as a hard dependency of github.copilot) may already ship built-in at a
-    # newer version than the marketplace has, which `code` reports as a
-    # permanent, unretryable failure. Don't let that abort the whole apply.
-    retry -t 5 -d 2 -m 60 -- code "${flags[@]}" --force || echo "warning: some extensions failed to install (see above)" >&2
-
-    # Uninstall anything installed that isn't in dot_vscode-extensions.txt.
-    # Extension IDs compare case-insensitively; tr, since bash 3.2 has no ${var,,}.
-    lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
-    is_wanted() {
-        local candidate w
-        candidate="$(lower "$1")"
-        for w in "${extensions[@]}"; do
-            [ "$(lower "$w")" = "$candidate" ] && return 0
-        done
-        return 1
-    }
-    installed=()
-    while IFS= read -r line; do
-        [ -n "$line" ] && installed+=("$line")
-    done < <(code --list-extensions)
-    uninstall_flags=()
-    for extension in "${installed[@]}"; do
-        is_wanted "$extension" || uninstall_flags+=(--uninstall-extension "$extension")
-    done
-    if [ "${#uninstall_flags[@]}" -gt 0 ]; then
-        retry -t 5 -d 2 -m 60 -- code "${uninstall_flags[@]}" --force || echo "warning: some extensions failed to uninstall (see above)" >&2
-    fi
-else
+if ! command -v code &>/dev/null; then
     echo "error: VSCode 'code' command not found in PATH" >&2
     exit 1
+fi
+
+# Install all extensions in a single `code` invocation. Spawning one `code`
+# process per extension (e.g. via `xargs -I {} code --install-extension {}`)
+# causes every invocation after the first to fail instantly as "not found"
+# instead of querying the marketplace, likely due to instance-lock/IPC
+# contention between the rapid-fire Electron CLI processes.
+# strip \r: dot_vscode-extensions.txt gets CRLF line endings on Windows
+# checkouts (core.autocrlf), and a trailing \r turns every extension ID
+# into one the marketplace has never heard of, failing every install.
+# (read loop, not mapfile: macOS /bin/bash is 3.2, see AGENTS.md.)
+extensions=()
+while IFS= read -r line; do
+    [ -n "$line" ] && extensions+=("$line")
+done < <(tr -d '\r' < ~/.vscode-extensions.txt)
+flags=()
+for extension in "${extensions[@]}"; do
+    flags+=(--install-extension "$extension")
+done
+
+# retry is for the marketplace's transient failures. One that outlasts every
+# attempt fails the apply (and so leaves this run_once script to run again
+# next time): it is a real problem, and an extension that can never install
+# belongs out of dot_vscode-extensions.txt. That is what github.copilot
+# became -- it pulls in the marketplace's github.copilot-chat, which is older
+# than the copy VS Code now ships built in, and `code` refuses with "cannot
+# be downgraded" on every attempt.
+retry -t 5 -d 2,5,15,30 -- code "${flags[@]}" --force
+
+# Uninstall what dot_vscode-extensions.txt does not ask for -- but not what
+# something it asks for brings along. An extension pack installs its members
+# and an extension its extensionDependencies, none of them listed
+# (vscjava.vscode-java-pack alone brings six), and `code` refuses to
+# uninstall an extension that another installed one depends on: "Cannot
+# uninstall 'Language Support for Java(TM) by Red Hat' extension. 'Test Runner
+# for Java' extension depends on this." python3 reads every installed
+# extension's package.json, keeps the list's closure over both fields, and
+# prints the rest with each extension ahead of anything it depends on, so
+# dropping a pack from the list removes the pack before its members.
+# (read -d '' returns 1 at the heredoc's end, having no NUL to stop at.)
+IFS= read -r -d '' uninstall_plan <<'PY' || true
+import json, os, re, sys
+
+split = sys.argv.index("--")
+dirs, wanted = sys.argv[1:split], {w.lower() for w in sys.argv[split + 1:]}
+# Only lines shaped like an extension id (VS Code's own pattern) count:
+# --list-extensions can print others, such as a remote's "Extensions
+# installed on ..." header.
+ident_pattern = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z0-9][a-zA-Z0-9-]*")
+installed = [line.strip() for line in sys.stdin if ident_pattern.fullmatch(line.strip())]
+
+links = {}
+for d in dirs:
+    if not os.path.isdir(d):
+        continue
+    for entry in os.listdir(d):
+        try:
+            with open(os.path.join(d, entry, "package.json"), encoding="utf-8") as f:
+                manifest = json.load(f)
+        except (OSError, ValueError):
+            continue
+        ident = "{}.{}".format(manifest.get("publisher", ""), manifest.get("name", "")).lower()
+        brought = (manifest.get("extensionDependencies") or []) + (manifest.get("extensionPack") or [])
+        links.setdefault(ident, set()).update(b.lower() for b in brought if isinstance(b, str))
+
+keep, todo = set(), list(wanted)
+while todo:
+    ident = todo.pop()
+    if ident not in keep:
+        keep.add(ident)
+        todo.extend(links.get(ident, ()))
+
+drop = {i.lower(): i for i in installed if i.lower() not in keep}
+order, seen = [], set()
+def visit(ident):
+    if ident not in seen:
+        seen.add(ident)
+        for dep in sorted(links.get(ident, ())):
+            if dep in drop:
+                visit(dep)
+        order.append(ident)
+for ident in sorted(drop):
+    visit(ident)
+print("\n".join(drop[i] for i in reversed(order)))
+PY
+ext_dirs=("$HOME/.vscode/extensions" "$HOME/.vscode-server/extensions")
+if [ -n "${VSCODE_EXTENSIONS:-}" ]; then
+    ext_dirs+=("$VSCODE_EXTENSIONS")
+fi
+installed="$(code --list-extensions)"
+plan="$(printf '%s\n' "$installed" | python3 -c "$uninstall_plan" "${ext_dirs[@]}" -- "${extensions[@]}")"
+uninstall_flags=()
+# `if`, not `[ ] &&`: an empty plan is one empty line, and the loop must not
+# end on a false test under bash -e, on any bash version (3.2 included).
+while IFS= read -r extension; do
+    if [ -n "$extension" ]; then
+        uninstall_flags+=(--uninstall-extension "$extension")
+    fi
+done <<< "$plan"
+if [ "${#uninstall_flags[@]}" -gt 0 ]; then
+    retry -t 5 -d 2,5,15,30 -- code "${uninstall_flags[@]}" --force
 fi

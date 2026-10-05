@@ -108,7 +108,7 @@ The `autorun.cmd` will automatically set up Clink and doskey macros (`pipx`, `vi
 
 ### VSCode
 
-Make sure you add any extensions you'd like to download to `vscode-extensions.txt`. The newest version of every extension listed in the file is installed on each apply, and any installed extension not listed in the file is uninstalled.
+Make sure you add any extensions you'd like to download to `vscode-extensions.txt`. The newest version of every extension listed in the file is installed on each apply, and any installed extension not listed in the file is uninstalled. The extensions a listed one brings in (extension pack members and `extensionDependencies`) are kept, and an install or uninstall that still fails after its retries fails the apply. Copilot needs no entry: VS Code ships GitHub Copilot Chat built in.
 
 ### Packages
 
