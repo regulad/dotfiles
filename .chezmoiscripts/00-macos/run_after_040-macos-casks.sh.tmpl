@@ -136,7 +136,7 @@ BREW_CASKS_MACOS=(
 {{- end }}
 	"regulad/tap/epson-et8500" # super proprietary 😈 # Epson lists the package for 10.7 through 27
 {{- if not $pre2024 }}
-	"regulad/tap/cricut-design-space" # super proprietary 😈 # Cricut's own requirement is macOS 12 or later; the cask declares no floor
+	"regulad/tap/cricut-design-space" # super proprietary 😈 # Cricut's own requirement is macOS 12 or later, as the cask now declares (depends_on macos: :monterey)
 {{- end }}
 {{- if or (eq $brewEra "") (has $brewEra (list "current" "sonoma")) }}
 	"Gcenx/wine/game-porting-toolkit"  # the cask requires Sonoma

@@ -241,11 +241,17 @@ brew upgrade -q
 # Rust toolchain. The `rustup` entry above is two different things by era:
 # from 2024 on it is the rustup formula, which ships rustup itself; at the
 # Catalina through Monterey pins it is an alias of rustup-init, which ships
-# only the rustup-init bootstrapper and no `rustup` on PATH. Either way the
-# toolchain's cargo/rustc proxies land in ~/.cargo/bin, so that is the test.
+# only the rustup-init bootstrapper and no `rustup` on PATH. rustup-init puts
+# the cargo/rustc proxies in ~/.cargo/bin; the keg-only rustup formula keeps
+# them in its own bin, added to PATH below. ~/.cargo/bin/cargo is the test:
+# on a brew-rustup host it is absent, so `rustup default stable` reruns each
+# apply, which is a no-op once stable is installed.
 # It used to be `! -d ~/.cargo`, which never fires: chezmoi puts
 # ~/.cargo/credentials.toml there before this script runs, so on the
 # rustup-init eras neither branch ran and 110-rust-tooling found no cargo.
+# brew's rustup is keg-only (the preamble adds this dir too, but only when it
+# already existed as this script started).
+[ -d "$HOMEBREW_PREFIX/opt/rustup/bin" ] && export PATH="$HOMEBREW_PREFIX/opt/rustup/bin:$PATH"
 if [ ! -x "$HOME/.cargo/bin/cargo" ]; then
 	if command -v rustup-init &>/dev/null; then
 		# --no-modify-path: the shell rc files are chezmoi's, and .commonprofile

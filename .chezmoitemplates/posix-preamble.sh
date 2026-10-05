@@ -407,6 +407,9 @@ load_brew || true
 # scripts (e.g. rustup, go) would have set up rather than assuming it carried over
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:$PATH"
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+# brew's rustup formula (00-macos/020) is keg-only, so its rustup and the
+# cargo/rustc proxies stay in the keg; .commonprofile adds the same dir.
+[ -n "${HOMEBREW_PREFIX:-}" ] && [ -d "$HOMEBREW_PREFIX/opt/rustup/bin" ] && export PATH="$HOMEBREW_PREFIX/opt/rustup/bin:$PATH"
 # MacPorts (00-macos/016), ahead of brew as in .commonprofile.
 [ -d /opt/local/bin ] && export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
 
