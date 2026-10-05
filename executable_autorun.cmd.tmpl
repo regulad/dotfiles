@@ -23,6 +23,13 @@ echo(
 REM unix-style prompt while still windows-y
 PROMPT %USERNAME%@%COMPUTERNAME% $P$G
 
+REM stale-apply warning, like .commonrc's. The date below is rendered at apply
+REM time, so the first apply each day rewrites this file; forfiles /D -8 then
+REM matches it once that is more than a week back. forfiles because %DATE% is
+REM locale-formatted and cmd has no date arithmetic; /d keeps its cmd from
+REM running this autorun again.
+forfiles /P "%USERPROFILE%" /M autorun.cmd /D -8 /C "cmd /d /c rem" >nul 2>&1 && echo warning: last chezmoi sync was {{ now | date "2006-01-02" }}, resync soon 1>&2
+
 REM final fastfetch for both terminal-porn and usefulness since i switch between machines
 call fastfetch
 REM can't do a padding after it because clink strips the last newline before the prompt
