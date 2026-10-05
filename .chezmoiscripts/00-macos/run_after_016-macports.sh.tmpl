@@ -43,7 +43,20 @@ case "$VERSION_ID" in
 esac
 
 # Latest release tag from the GitHub API, without jq (not on a fresh Mac).
-MACPORTS_TAG="$(curl -fsSL https://api.github.com/repos/macports/macports-base/releases/latest \
+#
+# DOTFILES_GITHUB_TOKEN: set only by CI (.github/workflows/macos-apply.yml,
+# the runner's own GITHUB_TOKEN), where the shared runner IPs exhaust the
+# unauthenticated API limit and the request gets a 403. Handed to curl as a
+# config on stdin, so it never shows up on argv.
+RELEASES_URL=https://api.github.com/repos/macports/macports-base/releases/latest
+if [ -n "${DOTFILES_GITHUB_TOKEN:-}" ]; then
+	echo "debug: authenticating the GitHub API request with DOTFILES_GITHUB_TOKEN" >&2
+	release_json="$(printf 'header = "Authorization: Bearer %s"\n' "$DOTFILES_GITHUB_TOKEN" \
+		| curl -fsSL -K - "$RELEASES_URL" || true)"
+else
+	release_json="$(curl -fsSL "$RELEASES_URL" || true)"
+fi
+MACPORTS_TAG="$(printf '%s\n' "$release_json" \
 	| sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
 MACPORTS_VERSION="${MACPORTS_TAG#v}"
 if [ -z "$MACPORTS_VERSION" ]; then

@@ -22,7 +22,14 @@ name: macOS apply
 on:
   workflow_dispatch:
   schedule:
-    - cron: "28 4 * * 2,6"
+    # Every ~14 days: cron has no fixed-interval form, so the 1st and 15th
+    # (gaps of 14-16 days). Rarer than docker-publish.yml: three macOS jobs
+    # of an hour or more each, against upstream drift that is slow, and
+    # nothing is published. If this pipeline ever builds and publishes Tart
+    # VM images for real (a self-hosted Apple Silicon runner; GitHub's lack
+    # nested virtualization), go back to docker-publish.yml's
+    # "28 4 * * 2,6", so the images stay as fresh as the Linux ones.
+    - cron: "28 4 1,15 * *"
   push:
     branches: ["master"]
 

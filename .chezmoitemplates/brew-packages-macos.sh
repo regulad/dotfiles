@@ -58,8 +58,10 @@ BREW_PACKAGES=(
 {{-   else }}
 	colima  # dockerd in a lima VM; vz from Ventura on, qemu before it
 {{-   end }}
-{{-   if and (eq $brewArch "arm64") (ge .macos.major 13) }}
-	openai/tools/tart  # macOS/Linux VMs as OCI images; Apple silicon, Ventura+ (tapped by 015, trusted below)
+{{-   if and (eq $brewArch "arm64") (ge .macos.major 26) }}
+	# tart itself runs from Ventura, but its softnet dependency (same tap)
+	# declares `depends_on macos: :tahoe`, and brew refuses the pair below 26.
+	openai/tools/tart  # macOS/Linux VMs as OCI images (tapped by 015, trusted below)
 {{-   end }}
 {{- end }}
 	docker  # the CLI only
@@ -218,7 +220,7 @@ env -u HOMEBREW_ARTIFACT_DOMAIN -u HOMEBREW_DOCKER_REGISTRY_BASIC_AUTH_TOKEN \
 	brew install -q --formula curl
 {{- end }}
 
-{{- if and .nativeArch (eq $brewArch "arm64") (ge .macos.major 13) }}
+{{- if and .nativeArch (eq $brewArch "arm64") (ge .macos.major 26) }}
 
 # openai/tools (tart, and softnet with it) is a non-official tap: trusted
 # before the install, as 040 does for its taps. A no-op on a brew without
