@@ -1,0 +1,34 @@
+{{ template "posix-preamble.sh" . }}
+# Client certificate (matches the "My" store import on NT).
+#
+# Split out from the CA install (140-ca-certs) so the two re-run independently
+# and so .chezmoiignore can mask *only* this script under useDummySecrets,
+# matching the GNU/Linux side. The CAs are not secrets and stay installed there.
+#
+# run_after_, every apply. `security import` has no "already present" check of
+# its own, but reliably exits 45 (errSecDuplicateItem, -25299 truncated to a
+# Unix exit status) when the identity is already in the keychain, so the
+# import is its own idempotency check, and a rotated certificate goes in on
+# the next apply. It used to be run_onchange_, keyed on the .p12's digest,
+# which recorded an apply that could not import (below) as done.
+#
+# The login keychain unlocks at a login on the Mac's own screen. An SSH login
+# is not one, so with nobody logged in there the keychain is locked, and
+# `security` cannot ask for its password ("User interaction is not allowed").
+# That alone is a warning, leaving the import for a later apply; any other
+# failure stops the apply.
+KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
+import_status=0
+import_output="$(security import "$HOME/.x509/client/dotfiles.p12" -k "$KEYCHAIN" -P "" 2>&1)" || import_status=$?
+
+if [ "$import_status" -eq 0 ]; then
+	echo "notice: imported the client certificate into the login keychain" >&2
+elif [ "$import_status" -eq 45 ] || [[ "$import_output" == *"already exists in the keychain"* ]]; then
+	echo "debug: client certificate already present in keychain" >&2
+elif [[ "$import_output" == *"User interaction is not allowed"* ]]; then
+	echo "warning: the login keychain is locked and this session (SSH?) cannot unlock it; client certificate not imported. Run security unlock-keychain first, or apply from the Mac's own session" >&2
+else
+	printf '%s\n' "$import_output" >&2
+	echo "error: failed to import client certificate (exit $import_status)" >&2
+	exit 1
+fi

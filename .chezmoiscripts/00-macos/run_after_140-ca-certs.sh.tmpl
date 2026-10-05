@@ -1,0 +1,64 @@
+{{ template "posix-preamble.sh" . }}
+# Trusts every .crt and .pem in ~/.x509/ca -- no hardcoded list to keep in
+# sync. Both extensions are enumerated because the CA directory holds both
+# (pve-root-ca.pem); a bare * would also pick up any stray non-certificate file.
+# `security` cares about contents, not the extension, so .pem needs no special
+# handling on this side (unlike Debian's update-ca-certificates).
+#
+# run_after_, every apply: a CA that `security verify-cert` already accepts is
+# passed over without sudo, so an apply with nothing to do costs one check per
+# CA. It used to be run_onchange_, keyed on the CAs' digests, which recorded an
+# apply that could not trust them (below) as done until a CA file changed.
+#
+# Changing trust settings takes an answer to macOS's own authorization prompt:
+# root alone has not been enough since Big Sur, and an SSH session has no
+# screen to show the prompt on, so there it is refused with "The authorization
+# was denied since no user interaction was possible". Apple supports no way
+# around that short of MDM (a com.apple.security.root payload); the
+# `authorizationdb write com.apple.trust-settings.admin allow` trick is
+# unsupported and reported broken on Apple silicon since 14.7.5. That refusal
+# alone is a warning, naming what is left for an apply from the Mac's own
+# session; any other failure stops the apply.
+CA_DIR="$HOME/.x509/ca"
+shopt -s nullglob
+CERT_PATHS=("$CA_DIR"/*.crt "$CA_DIR"/*.pem)
+shopt -u nullglob
+
+if [ "${#CERT_PATHS[@]}" -eq 0 ]; then
+	echo "warning: no CA certificates found in $CA_DIR" >&2
+fi
+
+UNTRUSTED=()
+for CERT_PATH in "${CERT_PATHS[@]}"; do
+	CERT_NAME="$(basename "$CERT_PATH")"
+	if security verify-cert -c "$CERT_PATH" &>/dev/null; then
+		echo "debug: $CERT_NAME already trusted" >&2
+		continue
+	fi
+
+	if can_sudo; then
+		trust_cmd=(sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain "$CERT_PATH")
+	else
+		trust_cmd=(security add-trusted-cert -d -r trustRoot -k "$HOME/Library/Keychains/login.keychain-db" "$CERT_PATH")
+	fi
+	trust_status=0
+	trust_output="$("${trust_cmd[@]}" 2>&1)" || trust_status=$?
+
+	if [ "$trust_status" -eq 0 ]; then
+		if can_sudo; then
+			echo "notice: trusted $CERT_NAME system-wide" >&2
+		else
+			echo "warning: trusted $CERT_NAME in the user keychain only (no sudo available)" >&2
+		fi
+	elif [[ "$trust_output" == *"no user interaction was possible"* ]]; then
+		UNTRUSTED+=("$CERT_NAME")
+	else
+		printf '%s\n' "$trust_output" >&2
+		echo "error: could not trust $CERT_PATH (security exited $trust_status)" >&2
+		exit 1
+	fi
+done
+
+if [ "${#UNTRUSTED[@]}" -gt 0 ]; then
+	echo "warning: macOS changes certificate trust only after its authorization prompt, which this session (SSH?) cannot show; not trusted yet: ${UNTRUSTED[*]}. Finish from a Terminal on the Mac's screen (Screen Sharing works): chezmoi apply ~/.chezmoiscripts/00-macos/140-ca-certs.sh" >&2
+fi

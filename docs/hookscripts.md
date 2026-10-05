@@ -13,6 +13,14 @@ On macOS, `003-macos-prereqs` runs first and installs the Apple-shipped prerequi
 
 The brew prefix is decided once, at `chezmoi init`, as `.homebrewPrefix` (`/opt/homebrew` on Apple Silicon, `/usr/local` on Intel, `/home/linuxbrew/.linuxbrew` on Linux) and rendered into every static file that has to name a brew binary: tmux, gpg-agent, the Touch ID PAM lines, the Chrome gpgme manifest, `.bootstrap.sh`. Hookscripts get the same answer at runtime from `brew shellenv`. **After pulling a version of this repo that introduced `.homebrewPrefix` or `.macos.series`, run `chezmoi init` once** -- `.chezmoi.toml.tmpl` is only re-rendered by init, and templates reference both keys.
 
+### Applying a Mac over SSH
+
+Some macOS changes are only granted through a prompt on the Mac's own screen, which an SSH session cannot show. The scripts that run into one print a `warning:` instead of stopping the apply, and they are `run_after_` so the next apply from the Mac's own session (in person or over Screen Sharing) finishes the job:
+
+- `140-ca-certs`: certificate trust settings ("no user interaction was possible"). Apple supports no non-interactive way short of MDM.
+- `141-client-cert`: the login keychain is locked while nobody is logged in at the Mac. `security unlock-keychain` over SSH unlocks it.
+- `170-firefox-policies`: writing into `Firefox.app` takes App Management. Allowing full disk access for remote users (System Settings → General → Sharing → Remote Login) grants it over SSH too.
+
 ## Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever
 
 Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`.

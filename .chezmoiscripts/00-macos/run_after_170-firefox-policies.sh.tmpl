@@ -1,21 +1,21 @@
 {{ template "posix-preamble.sh" . }}
-# run_onchange_: chezmoi re-runs a script whose *rendered* contents differ from
-# what this filename last ran successfully. The policy document is written
-# inline below rather than deployed as its own dotfile, so the trigger is the
-# policy itself -- edit .chezmoitemplates/firefox-policies.json and this
-# re-runs; an otherwise unchanged apply skips it and never asks for sudo.
-#
-# That inlining is also why there is no `{{ "{{" }} include ... | sha256sum {{ "}}" }}` digest
-# comment here like the CA scripts carry. Those install a file that lives in
-# the destination in its own right, so they need something to hash; this one
-# has nothing to point at, and hashing the text would only restate what the
-# text already changes.
+# run_after_, every apply: the policy document is written inline below and
+# compared with the deployed copy before sudo is touched, so an apply with
+# nothing to do costs one cmp. It used to be run_onchange_, keyed on the policy
+# text, which never came back after Firefox's updater replaced the bundle (and
+# the copy inside it), nor after an apply that could not write it (below).
 #
 # macOS has no system-wide policies.json path -- unlike Linux, which also reads
 # /etc/firefox/policies, the only location Mozilla supports here is the copy
 # inside the app bundle. It lives under the cask-installed Firefox.app from
-# 040-macos-casks, and Firefox's own updater can replace the bundle out from
-# under this, so a re-apply after an update puts it back.
+# 040-macos-casks.
+#
+# Writing into an app bundle takes App Management (Ventura on), sudo or not,
+# and macOS asks for it only with a prompt on the Mac's screen. A Terminal
+# there has it once allowed (brew's cask upgrades want it too); an SSH session
+# has nowhere to show the prompt and is refused ("Operation not permitted")
+# unless Remote Login was given Full Disk Access. Over SSH that refusal is a
+# warning, and the next apply from the Mac's own session deploys the policies.
 POLICY_JSON="$(mktemp)"
 trap 'rm -f "$POLICY_JSON"' EXIT
 cat >"$POLICY_JSON" <<'FIREFOX_POLICIES_JSON'
@@ -39,16 +39,23 @@ elif can_sudo; then
 	# chmod is not optional: mktemp creates at 0600 and cp takes its mode from
 	# the source, which would leave a policies.json only root can read -- and
 	# Firefox reads it as the browsing user.
-	sudo mkdir -p "$(dirname "$DEST")"
-	sudo cp "$POLICY_JSON" "$DEST"
-	sudo chmod 0644 "$DEST"
-	echo "notice: deployed firefox policies to $DEST" >&2
+	write_status=0
+	write_output="$({
+		sudo mkdir -p "$(dirname "$DEST")" &&
+			sudo cp "$POLICY_JSON" "$DEST" &&
+			sudo chmod 0644 "$DEST"
+	} 2>&1)" || write_status=$?
+	if [ "$write_status" -eq 0 ]; then
+		echo "notice: deployed firefox policies to $DEST" >&2
+	elif [ -n "${SSH_CONNECTION:-}" ] && [[ "$write_output" == *"Operation not permitted"* ]]; then
+		echo "warning: macOS kept this SSH session out of $FIREFOX_APP (App Management); firefox policies not deployed. Apply from a Terminal on the Mac's screen, or allow full disk access for remote users under Remote Login in System Settings" >&2
+	else
+		printf '%s\n' "$write_output" >&2
+		echo "error: could not write $DEST" >&2
+		exit 1
+	fi
 else
-	# Exiting non-zero is the point: chezmoi keys a run_onchange_ script on its
-	# rendered contents, and those do not change just because sudo happened to
-	# be unavailable. Returning 0 after skipping the write would record this
-	# script as having succeeded, and the stale policies.json would then never
-	# be revisited on any later apply.
+	# Not an SSH limitation, so it stays an error.
 	#
 	# Worth knowing when this fires: can_sudo probes with `sudo -l &>/dev/null`,
 	# which suppresses the password prompt along with everything else, so an
