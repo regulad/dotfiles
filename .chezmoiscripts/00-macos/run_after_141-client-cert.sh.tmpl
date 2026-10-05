@@ -1,4 +1,4 @@
-{{ template "posix-preamble.sh" . }}
+{{ template "posix-preamble-brew.sh" . }}
 # Client certificate (matches the "My" store import on NT).
 #
 # Split out from the CA install (140-ca-certs) so the two re-run independently
@@ -12,14 +12,57 @@
 # the next apply. It used to be run_onchange_, keyed on the .p12's digest,
 # which recorded an apply that could not import (below) as done.
 #
+# The .p12 is OpenSSL 3's default encoding -- AES-256/PBKDF2 bags and a
+# SHA-256 MAC -- which Apple's importer rejects as "MAC verification failed
+# during PKCS12 import (wrong password?)" even with the right (empty)
+# password. So it is re-encoded first, by brew's OpenSSL (a dependency of
+# curl, python and the rest of 020-brew-packages), into the SHA-1/3DES form
+# the keychain takes, under a throwaway password. The decrypted key only ever
+# passes through pipes; the re-encoded file sits in a private temp directory
+# for the length of the import.
+#
 # The login keychain unlocks at a login on the Mac's own screen. An SSH login
 # is not one, so with nobody logged in there the keychain is locked, and
 # `security` cannot ask for its password ("User interaction is not allowed").
 # That alone is a warning, leaving the import for a later apply; any other
 # failure stops the apply.
+P12="$HOME/.x509/client/dotfiles.p12"
 KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
+
+OPENSSL=
+for candidate in "$HOMEBREW_PREFIX/opt/openssl@3/bin/openssl" "$HOMEBREW_PREFIX/opt/openssl@1.1/bin/openssl"; do
+	if [ -x "$candidate" ]; then
+		OPENSSL="$candidate"
+		break
+	fi
+done
+if [ -z "$OPENSSL" ]; then
+	echo "error: no brew OpenSSL under $HOMEBREW_PREFIX/opt (openssl@3 or openssl@1.1) to re-encode $P12 for the keychain" >&2
+	exit 1
+fi
+
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+export P12_PASS
+P12_PASS="$("$OPENSSL" rand -hex 16)"
+# The bag's friendlyName is the identity's label in the keychain; -export
+# drops it unless told.
+name_args=()
+friendly_name="$("$OPENSSL" pkcs12 -in "$P12" -passin pass: -nokeys -clcerts | sed -n 's/^ *friendlyName: //p' | head -n1)"
+if [ -n "$friendly_name" ]; then
+	name_args=(-name "$friendly_name")
+fi
+# Key and certificates as two separate streams: given neither -inkey nor a
+# file, -export reads stdin twice and finds it empty the second time.
+"$OPENSSL" pkcs12 -export \
+	-in <("$OPENSSL" pkcs12 -in "$P12" -passin pass: -nokeys) \
+	-inkey <("$OPENSSL" pkcs12 -in "$P12" -passin pass: -nocerts -nodes) \
+	"${name_args[@]}" \
+	-keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1 \
+	-passout env:P12_PASS -out "$tmp/dotfiles.p12"
+
 import_status=0
-import_output="$(security import "$HOME/.x509/client/dotfiles.p12" -k "$KEYCHAIN" -P "" 2>&1)" || import_status=$?
+import_output="$(security import "$tmp/dotfiles.p12" -k "$KEYCHAIN" -f pkcs12 -P "$P12_PASS" 2>&1)" || import_status=$?
 
 if [ "$import_status" -eq 0 ]; then
 	echo "notice: imported the client certificate into the login keychain" >&2
