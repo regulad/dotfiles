@@ -15,6 +15,10 @@
 # PATH and cope with being upgraded while running, so they are never held back.
 
 $WingetPackages = @(
+    # Interactive `codex` fails from this package since 0.157.1 ("the CLI
+    # package does not match this platform or executable"): its flat layout is
+    # not one the background server can install itself from. `codex
+    # --no-daemon` works meanwhile; https://github.com/openai/codex/issues/48366
     'OpenAI.Codex'
     'uvncbvba.UltraVNC'
     'Swift.Toolchain'
