@@ -1,0 +1,13 @@
+{{- /* The Vercel CLI's credential file, auth.json in its com.vercel.cli data
+       directory: ~/.local/share on Linux, ~/Library/Application Support on
+       macOS, %APPDATA%\xdg.data on Windows (xdg-app-paths v5, which the CLI
+       pins). A file rather than VERCEL_TOKEN in the environment, so the token
+       does not ride along into every process. With no expiresAt the CLI takes
+       the token as-is and never tries to refresh it. The two comment keys and
+       the layout are what the CLI itself writes, so its own rewrites do not
+       show up as drift. Rotate by replacing the field and re-applying. */ -}}
+{
+  "// Note": "This is your Vercel credentials file. DO NOT SHARE!",
+  "// Docs": "https://vercel.com/docs/projects/project-configuration/global-configuration#auth.json",
+  "token": "{{ (bitwardenFields "item" "vercel.com").token.value }}"
+}

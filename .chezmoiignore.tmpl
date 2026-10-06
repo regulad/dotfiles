@@ -28,6 +28,11 @@ key.txt
 .cargo/credentials.toml
 .aws/
 
+# The Vercel CLI's auth.json, one per platform's data directory.
+.local/share/com.vercel.cli
+Library/Application Support/com.vercel.cli
+AppData/Roaming/xdg.data/com.vercel.cli
+
 # will have to insta-gen android secrets if needed
 .android/adbkey
 .android/adbkey.pub
@@ -186,6 +191,9 @@ Library
 .chezmoiscripts/01-fedora/*
 .chezmoiscripts/02-bluefin/*
 .config/systemd/
+# The Vercel CLI keeps its data under ~/.local/share on Linux only; macOS and
+# Windows get their own copies under Library and AppData.
+.local/share/com.vercel.cli
 {{- else }}
 # only one package manager's script applies per distro
 # NOTE: chezmoiignore patterns match the target-relative path, i.e. with the
