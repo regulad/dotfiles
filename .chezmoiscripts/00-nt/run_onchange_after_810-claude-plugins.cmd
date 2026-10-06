@@ -23,10 +23,13 @@ if errorlevel 1 (
 call :add_marketplace wakatime wakatime/claude-code-wakatime
 call :add_marketplace claude-plugins-official anthropics/claude-plugins-official
 call :add_marketplace openai-codex openai/codex-plugin-cc
+call :add_marketplace cloudflare cloudflare/skills
 
 call :install_plugin claude-code-wakatime wakatime
 call :install_plugin ralph-loop claude-plugins-official
 call :install_plugin codex openai-codex
+call :install_plugin vercel claude-plugins-official
+call :install_plugin cloudflare cloudflare
 
 endlocal
 exit /b 0

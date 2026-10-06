@@ -31,15 +31,24 @@ fi
 # Each marketplace entry is "name|add-source"; each plugin entry is
 # "plugin|marketplace". Names are what `... list` is grepped for, so they must
 # match the marketplace/plugin identifiers, not the repo path.
+#
+# vercel comes from the official marketplace, not a marketplace of its own:
+# that is where Vercel's installer (`npx plugins add vercel/vercel-plugin`)
+# sends Claude Code. cloudflare comes from Cloudflare's own marketplace, as its
+# README says (https://github.com/cloudflare/skills#claude-code); the official
+# one carries it too, pinned to an older commit.
 MARKETPLACES=(
 	"wakatime|wakatime/claude-code-wakatime"
 	"claude-plugins-official|anthropics/claude-plugins-official"
 	"openai-codex|openai/codex-plugin-cc"
+	"cloudflare|cloudflare/skills"
 )
 PLUGINS=(
 	"claude-code-wakatime|wakatime"
 	"ralph-loop|claude-plugins-official"
 	"codex|openai-codex"
+	"vercel|claude-plugins-official"
+	"cloudflare|cloudflare"
 )
 
 for entry in "${MARKETPLACES[@]}"; do
