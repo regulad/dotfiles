@@ -139,3 +139,4 @@ Longer write-ups live in `docs/` (not deployed to `$HOME`):
 - [ ] Shell: direnv-style watcher script executor with script verification
 - [ ] Containers: no Docker Engine API socket shim exists for Windows yet. wslc keeps its dockerd inside its VM and exposes no socket or pipe to Windows (microsoft/WSL#40976), and has no compose (microsoft/WSL#40948), so `act`, testcontainers, `docker compose` and compose-based devcontainers have nothing to target on Windows. Revisit when wslc or a third-party shim serves one.
 - [ ] WSL: IPv6 default route via a localhost-bound WireGuard server on the Windows side, with a host-deterministic ULA and NAT66. Mirrored networking was the only mode that gave WSL IPv6, and `.wslconfig` moved to NAT; NAT provides no routable IPv6 and there is no setting that adds it.
+- [ ] CI: Windows test apply
