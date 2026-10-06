@@ -33,6 +33,12 @@ key.txt
 Library/Application Support/com.vercel.cli
 AppData/Roaming/xdg.data/com.vercel.cli
 
+# The sign-in reminders go with the credentials: a dummy-secrets image never
+# signs in to anything, so they would only ever nag in its build log.
+.chezmoiscripts/00-linux/999-reminders.sh
+.chezmoiscripts/00-macos/999-reminders.sh
+.chezmoiscripts/00-nt/999-reminders.cmd
+
 # will have to insta-gen android secrets if needed
 .android/adbkey
 .android/adbkey.pub
