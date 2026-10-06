@@ -24,3 +24,14 @@ Windows Registry Editor Version 5.00
 ; read by the user's own Claude Code sessions.
 [HKEY_CURRENT_USER\Environment]
 "CLAUDE_CODE_USE_POWERSHELL_TOOL"="1"
+
+; Telemetry opt-outs, the same set .commonprofile exports (which says why
+; there are so many, and what DO_NOT_TRACK costs in Claude Code).
+[HKEY_CURRENT_USER\Environment]
+"DO_NOT_TRACK"="1"
+"VERCEL_PLUGIN_TELEMETRY"="off"
+"VERCEL_TELEMETRY_DISABLED"="1"
+"VERCEL_SANDBOX_TELEMETRY_DISABLED"="1"
+"NEXT_TELEMETRY_DISABLED"="1"
+"TURBO_TELEMETRY_DISABLED"="1"
+"EVE_TELEMETRY_DISABLED"="1"

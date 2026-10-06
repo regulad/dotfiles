@@ -289,7 +289,18 @@ esac
 unset _bw_sock
 
 export VISUAL="$(command -v nvim || command -v vim)"
+# Telemetry opt-outs, mirrored for Windows in registry-user.reg. Claude Code
+# takes DO_NOT_TRACK as an opt-out too, which also stops its feature-flag
+# fetching and so the features gated on it; that cost is accepted. Vercel's
+# tools mostly ignore DO_NOT_TRACK (only turbo, `npx skills` and `npx plugins`
+# read it), so each gets its own.
 export DO_NOT_TRACK=1
+export VERCEL_PLUGIN_TELEMETRY=off  # the Claude Code / Codex plugin's hooks
+export VERCEL_TELEMETRY_DISABLED=1  # vercel CLI, also the sandbox CLI and SDK
+export VERCEL_SANDBOX_TELEMETRY_DISABLED=1
+export NEXT_TELEMETRY_DISABLED=1  # next, next-devtools-mcp (which wants exactly 1)
+export TURBO_TELEMETRY_DISABLED=1
+export EVE_TELEMETRY_DISABLED=1
 export HOMEBREW_NO_ENV_HINTS=1
 
 # keychain is the fallback for a host with no agent socket. Never on WSL: the
