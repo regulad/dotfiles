@@ -56,13 +56,18 @@ REM every other package unlinked. On Windows npm's prefix *is* the bin directory
 REM so point it at pnpm's. Kept local to this script; npm shouldn't inherit it.
 set "npm_config_prefix=%PNPM_BIN%"
 
+REM vercel, wrangler and cf are the CLIs behind the vercel and cloudflare agent
+REM plugins' skills; on macOS and Linux wrangler comes from brew instead.
 set pnpm_packages=^
 @mermaid-js/mermaid-cli@latest ^
 go-ios@latest ^
 typescript@latest ^
 typescript-language-server@latest ^
 bash-language-server@latest ^
-yaml-language-server@latest
+yaml-language-server@latest ^
+vercel@latest ^
+wrangler@latest ^
+cf@latest
 
 REM deliberately not --silent: it suppresses fatal errors too, which is how the
 REM failing go-ios postinstall went unnoticed.

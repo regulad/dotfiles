@@ -33,6 +33,11 @@ mkdir -p "$PNPM_BIN"
 PNPM_CLI_PACKAGES=(
 	"@mermaid-js/mermaid-cli@latest"
 	"go-ios@latest"
+	# The CLIs behind the vercel and cloudflare agent plugins' skills. Neither
+	# has a homebrew-core formula: brew's `cf` is an unrelated timestamp
+	# filter, so it must not be installed alongside this one.
+	"vercel@latest"
+	"cf@latest"
 )
 
 ## packages available on brew are preferred over their pnpm packages (may have binary bottles pre-built)
@@ -42,7 +47,8 @@ if [ "$HAS_BREW" = "true" ]; then
 		typescript \
 		typescript-language-server \
 		bash-language-server \
-		yaml-language-server
+		yaml-language-server \
+		cloudflare-wrangler
 else
 	PNPM_CLI_PACKAGES+=(
 		"@bitwarden/cli@latest"
@@ -50,6 +56,7 @@ else
 		"typescript-language-server@latest"
 		"bash-language-server@latest"
 		"yaml-language-server@latest"
+		"wrangler@latest"
 	)
 fi
 

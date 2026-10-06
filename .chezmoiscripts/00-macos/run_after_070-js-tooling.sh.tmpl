@@ -52,6 +52,11 @@ echo "notice: era-pinned brew ({{ $brewEra }}); pnpm is installed but no global 
 PNPM_CLI_PACKAGES=(
 	"@mermaid-js/mermaid-cli@latest"
 	"go-ios@latest"
+	# The CLIs behind the vercel and cloudflare agent plugins' skills. Neither
+	# has a homebrew-core formula: brew's `cf` is an unrelated timestamp
+	# filter, so it must not be installed alongside this one.
+	"vercel@latest"
+	"cf@latest"
 )
 {{- end }}
 
@@ -64,6 +69,9 @@ if [ "$HAS_BREW" = "true" ]; then
 		yaml-language-server
 {{- if not $pre2023 }} \
 		typescript-language-server
+{{- end }}
+{{- if not $pinned }} \
+		cloudflare-wrangler
 {{- end }}
 {{- if $pinned }}
 {{-   if $pre2023 }}
@@ -82,6 +90,7 @@ else
 		"typescript-language-server@latest"
 		"bash-language-server@latest"
 		"yaml-language-server@latest"
+		"wrangler@latest"
 	)
 fi
 
