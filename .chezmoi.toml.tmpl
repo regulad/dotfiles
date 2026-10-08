@@ -86,6 +86,29 @@
 {{-   $nativeArch = eq $goarch .chezmoi.arch }}
 {{- end }}
 
+# The computer's make and model, verbatim as its firmware reports them in the
+# SMBIOS System Information table, for the per-model hookscript tier
+# (.chezmoiscripts/99-<os>-<make>-<model>, see .chezmoiignore.tmpl). Windows
+# and Linux read the same table, so one computer reports the same pair under
+# either. Apple Silicon has no SMBIOS, so Macs use Apple's model identifier
+# (hw.model, e.g. Mac15,3). Both stay empty in containers, which would see
+# their host's table, and in WSL, which has none. They are free text, so they
+# are written out with toJson: a JSON string is also a valid TOML basic string,
+# with any quote or backslash in it escaped.
+{{- $machineMake := "" }}
+{{- $machineModel := "" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $machineMake = "Apple Inc." }}
+{{-   $machineModel = output "sysctl" "-n" "hw.model" | trim }}
+{{- else if and (eq .chezmoi.os "linux") (eq (trimAll "\n" (output "sh" "-c" "systemd-detect-virt --container; true")) "none") }}
+{{-   $machineMake = output "sh" "-c" "cat /sys/class/dmi/id/sys_vendor 2>/dev/null; true" | trim }}
+{{-   $machineModel = output "sh" "-c" "cat /sys/class/dmi/id/product_name 2>/dev/null; true" | trim }}
+{{- else if eq .chezmoi.os "windows" }}
+{{-   $system := output "pwsh.exe" "-NoProfile" "-NonInteractive" "-Command" "Get-CimInstance -ClassName 'Win32_ComputerSystem' | Select-Object Manufacturer, Model | ConvertTo-Json -Compress" | mustFromJson }}
+{{-   $machineMake = $system.Manufacturer | default "" | trim }}
+{{-   $machineModel = $system.Model | default "" | trim }}
+{{- end }}
+
 encryption = "age"
 [age]
     identity = "{{ .chezmoi.homeDir }}/key.txt"
@@ -108,3 +131,6 @@ encryption = "age"
     type = "{{ $chassisType }}"
     cores = {{ $cpuCores }}
     threads = {{ $cpuThreads }}
+[data.machine]
+    make = {{ $machineMake | toJson }}
+    model = {{ $machineModel | toJson }}

@@ -1,0 +1,219 @@
+# ROG Flow Z13 (GZ302): S0ix sleep is entirely broken on this model, so Modern
+# Standby is switched off and every way into sleep -- lid, power button, sleep
+# key, idle, critical battery -- hibernates instead, with a full hiberfile.
+# Sleep comes off the power menus and Hibernate goes on them, wake timers and
+# Automatic Maintenance can no longer wake the machine, and Fast Startup goes,
+# so "Shut down" is a true cold boot.
+#
+# PlatformAoAcOverride is only read at boot: until the first reboot after it is
+# set, Windows still has S0ix. The reboot notice at the end is printed for as
+# long as Windows still reports Modern Standby. The power-setting changes apply
+# to the active scheme (SCHEME_CURRENT) only.
+#
+# run_onchange_: chezmoi re-runs a script whose rendered contents differ from
+# what it last ran successfully, and the Windows build, update revision
+# included, is rendered in here:
+#
+#     {{ output "cmd.exe" "/d" "/c" "ver" | trim }}
+#
+# So every feature or monthly cumulative update re-runs this, and an update is
+# exactly what is likely to put these values back. (/d keeps cmd's AutoRun,
+# autorun.cmd here, out of that output.)
+#
+# Idempotent: every value is read first and only the ones that are off are
+# rewritten, so a re-run on a machine that is still configured changes nothing
+# and raises no UAC prompt. A declined prompt or a value that did not stick
+# exits 1, and the next apply runs this again.
+#
+# Same elevation shape as 215-languagetool-service: the elevated half is one
+# script handed to sudo as -EncodedCommand -- one UAC prompt rather than one
+# per command -- and its effect is read back unelevated. sudo is inline
+# (registry-system.reg sets it), so it waits and returns the exit code as well.
+
+$PowerKey = 'HKLM\SYSTEM\CurrentControlSet\Control\Power'
+
+# Set through reg.exe, read back from the registry.
+$RegistryValues = @(
+    # Disable Modern Standby entirely so Windows has no S0ix to enter (needs a reboot)
+    @{ Key = $PowerKey; Name = 'PlatformAoAcOverride'; Value = 0 }
+    # Stop Automatic Maintenance from waking the machine (redundant with RTCWAKE 0)
+    @{ Key = 'HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance'; Name = 'WakeUp'; Value = 0 }
+    # Remove Sleep from the Start / Win+X / Alt+F4 power menus (policy key)
+    @{ Key = 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer'; Name = 'ShowSleepOption'; Value = 0 }
+    # Show Hibernate in those menus
+    @{ Key = 'HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer'; Name = 'ShowHibernateOption'; Value = 1 }
+    # Disable Fast Startup so "Shut down" is a true cold boot
+    @{ Key = 'HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power'; Name = 'HiberbootEnabled'; Value = 0 }
+    # ...and keep the "Require use of fast startup" policy from forcing it back
+    # on: 1 there outranks the value above, 0 is the policy's Disabled state,
+    # which defers to it.
+    @{ Key = 'HKLM\SOFTWARE\Policies\Microsoft\Windows\System'; Name = 'HiberbootEnabled'; Value = 0 }
+)
+
+# Set through `powercfg /hibernate`, read back from where it keeps them.
+# Without a HibernateEnabled, Windows goes by HibernateEnabledDefault, which is
+# how this machine shipped (1, with no HibernateEnabled at all), so that is the
+# Fallback. HiberFileType 2 is HIBERFILE_TYPE_FULL (winnt.h); 1 is the reduced
+# type, which only supports Fast Startup.
+# 100% of RAM, so a poorly compressible image always fits
+$HiberFileSizePercent = 100
+$HibernateValues = @(
+    @{ Key = $PowerKey; Name = 'HibernateEnabled'; Fallback = 'HibernateEnabledDefault'; Value = 1 }
+    @{ Key = $PowerKey; Name = 'HiberFileType'; Value = 2 }
+    @{ Key = $PowerKey; Name = 'HiberFileSizePercent'; Value = $HiberFileSizePercent }
+)
+
+# Active-scheme power settings, the same index plugged in (AC) and on battery
+# (DC). Lid/button actions: 2 is Hibernate.
+$PowerSettings = @(
+    @{ Sub = 'SUB_BUTTONS'; Setting = 'LIDACTION'; Value = 2 }
+    @{ Sub = 'SUB_BUTTONS'; Setting = 'PBUTTONACTION'; Value = 2 }
+    # Sleep button/hotkey
+    @{ Sub = 'SUB_BUTTONS'; Setting = 'SBUTTONACTION'; Value = 2 }
+    # Never idle into sleep
+    @{ Sub = 'SUB_SLEEP'; Setting = 'STANDBYIDLE'; Value = 0 }
+    # Never re-sleep after an unattended wake; redundant once the override is active
+    @{ Sub = 'SUB_SLEEP'; Setting = 'UNATTENDSLEEP'; Value = 0 }
+    # Idle -> hibernate after 30 min (seconds)
+    @{ Sub = 'SUB_SLEEP'; Setting = 'HIBERNATEIDLE'; Value = 1800 }
+    # Disable wake timers so scheduled tasks can't wake the machine from hibernate
+    @{ Sub = 'SUB_SLEEP'; Setting = 'RTCWAKE'; Value = 0 }
+    # Critical battery -> hibernate; on AC too, which covers draining on an
+    # underpowered charger
+    @{ Sub = 'SUB_BATTERY'; Setting = 'BATACTIONCRIT'; Value = 2 }
+)
+
+# One command, as a line of PowerShell that runs it with `&` and every
+# argument single-quoted, so no command line is ever re-parsed by cmd.
+function Format-Command {
+    return ($args | ForEach-Object { "'" + "$_".Replace("'", "''") + "'" }) -join ' '
+}
+
+function Get-RegistryValue {
+    param([hashtable]$Value)
+    $Actual = (Get-ItemProperty -LiteralPath "Registry::$($Value.Key)" -Name $Value.Name -ErrorAction SilentlyContinue).($Value.Name)
+    if (($null -eq $Actual) -and $Value.Fallback) {
+        $Actual = (Get-ItemProperty -LiteralPath "Registry::$($Value.Key)" -Name $Value.Fallback -ErrorAction SilentlyContinue).($Value.Fallback)
+    }
+    return $Actual
+}
+
+# Everything not yet in its wanted state, each with what it is off by and the
+# commands that fix it, in the order they have to run: the hiberfile first, then
+# the registry values (HiberbootEnabled after the hiberfile, so nothing
+# `powercfg /hibernate` does can leave Fast Startup on), then the power
+# settings. All of it is readable unelevated.
+#
+# The power settings go through `powercfg /qh`, not /q: /q leaves out hidden
+# settings, UNATTENDSLEEP among them. Its labels are localized, but the current
+# AC and DC indices are always its last two hex numbers -- a range setting such
+# as HIBERNATEIDLE lists its minimum, maximum and increment in hex before them.
+function Get-Drift {
+    # The three hiberfile commands go together: /size only applies to a full
+    # hiberfile, so if any one value is off, all three run, in this order.
+    $Off = @(foreach ($Value in $HibernateValues) {
+            $Actual = Get-RegistryValue $Value
+            if ($Actual -ne $Value.Value) { "$($Value.Key)\$($Value.Name): '$Actual' -> $($Value.Value)" }
+        })
+    if ($Off.Count -gt 0) {
+        [pscustomobject]@{
+            Lines    = $Off
+            Commands = @(
+                Format-Command powercfg.exe /hibernate on
+                Format-Command powercfg.exe /hibernate /type full
+                Format-Command powercfg.exe /hibernate /size $HiberFileSizePercent
+            )
+            Scheme   = $false
+        }
+    }
+    foreach ($Value in $RegistryValues) {
+        $Actual = Get-RegistryValue $Value
+        if ($Actual -ne $Value.Value) {
+            [pscustomobject]@{
+                Lines    = @("$($Value.Key)\$($Value.Name): '$Actual' -> $($Value.Value)")
+                Commands = @(Format-Command reg.exe add $Value.Key /v $Value.Name /t REG_DWORD /d $Value.Value /f)
+                Scheme   = $false
+            }
+        }
+    }
+    foreach ($Setting in $PowerSettings) {
+        $Query = & powercfg.exe /qh SCHEME_CURRENT $Setting.Sub $Setting.Setting 2>$null | Out-String
+        $Indices = @([regex]::Matches($Query, '0x[0-9a-fA-F]{8}') | ForEach-Object { [Convert]::ToUInt32($_.Value, 16) })
+        $Now = if ($Indices.Count -ge 2) { "AC $($Indices[-2]), DC $($Indices[-1])" } else { 'not found in the active scheme' }
+        if (($Indices.Count -lt 2) -or ($Indices[-2] -ne $Setting.Value) -or ($Indices[-1] -ne $Setting.Value)) {
+            [pscustomobject]@{
+                Lines    = @("$($Setting.Sub) $($Setting.Setting): $Now -> $($Setting.Value)")
+                Commands = @(
+                    Format-Command powercfg.exe /setacvalueindex SCHEME_CURRENT $Setting.Sub $Setting.Setting $Setting.Value
+                    Format-Command powercfg.exe /setdcvalueindex SCHEME_CURRENT $Setting.Sub $Setting.Setting $Setting.Value
+                )
+                Scheme   = $true
+            }
+        }
+    }
+}
+
+# Whether Windows is still running with Modern Standby, which it does from
+# PlatformAoAcOverride being set until the next boot. Asked of the kernel --
+# the AoAc flag, byte 20 of the SYSTEM_POWER_CAPABILITIES GetPwrCapabilities
+# fills in -- rather than parsed out of `powercfg /a`, whose text is localized.
+# A failed query counts as still on, so the notice errs towards being printed.
+function Test-ModernStandby {
+    Add-Type -Namespace Dotfiles -Name PowrProf -MemberDefinition '[DllImport("powrprof.dll")] public static extern bool GetPwrCapabilities(byte[] caps);'
+    $Caps = [byte[]]::new(76)
+    if (-not [Dotfiles.PowrProf]::GetPwrCapabilities($Caps)) { return $true }
+    return ($Caps[20] -ne 0)
+}
+
+$Drift = @(Get-Drift)
+if ($Drift.Count -eq 0) {
+    Write-Host 'debug: hibernation already configured in place of S0ix'
+}
+else {
+    Write-Host 'debug: configuring hibernation in place of S0ix:'
+    foreach ($Line in $Drift.Lines) { Write-Host "debug:   $Line" }
+
+    # Only the commands for what is off, with /setactive SCHEME_CURRENT last if
+    # any power setting is among them: it re-applies the active scheme so the
+    # new indices take effect.
+    $Commands = @($Drift | ForEach-Object { $_.Commands })
+    if (@($Drift | Where-Object { $_.Scheme }).Count -gt 0) {
+        $Commands += Format-Command powercfg.exe /setactive SCHEME_CURRENT
+    }
+
+    # The elevated script runs all of them, so one failure does not hide the
+    # rest from the read-back, and exits with how many failed. reg.exe's
+    # "The operation completed successfully." goes to Out-Null; anything a
+    # command writes to stderr still shows.
+    $Elevated = @(
+        '$Failed = 0'
+        foreach ($Command in $Commands) {
+            "& $Command | Out-Null"
+            "if (`$LASTEXITCODE) { `$Failed++; Write-Host ('error: ' + $(Format-Command $Command) + ' exited ' + `$LASTEXITCODE) }"
+        }
+        'exit $Failed'
+    ) -join "`r`n"
+    $Encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Elevated))
+
+    & sudo powershell -NoProfile -NonInteractive -EncodedCommand $Encoded
+    $Code = $LASTEXITCODE
+
+    $Still = @(Get-Drift)
+    if ($Still.Count -gt 0) {
+        Write-Host "error: hibernation is not fully configured (sudo exited $Code) -- was the elevation prompt declined? Still off:"
+        foreach ($Line in $Still.Lines) { Write-Host "error:   $Line" }
+        exit 1
+    }
+    if ($Code -ne 0) {
+        Write-Host "error: every value reads back as wanted, but $Code elevated command(s) failed; see above"
+        exit 1
+    }
+    Write-Host 'notice: hibernation configured in place of S0ix; lid, buttons, idle and critical battery now hibernate'
+}
+
+if (Test-ModernStandby) {
+    Write-Host 'notice: machine must be rebooted at least once; Windows still reports Modern Standby (S0ix) active'
+}
+else {
+    Write-Host 'debug: Modern Standby is off'
+}

@@ -305,3 +305,25 @@ Library
 .config/systemd/user/ssh-agent-relay.service
 {{-     end }}
 {{- end }}
+
+# Computer model
+# .chezmoiscripts/99-<os>-<make>-<model>/ holds the hookscripts for one
+# computer model, usually a workaround for its firmware or hardware. <os> is
+# the tier name (nt, macos, linux); <make> and <model> are .machine.make and
+# .machine.model (.chezmoi.toml.tmpl) put through urlquery, so a directory is
+# named by exactly what the firmware reports, e.g.
+# 99-nt-ASUSTeK+COMPUTER+INC.-ROG+Flow+Z13+GZ302EA_GZ302EA. urlquery leaves
+# only A-Za-z0-9, - _ . ~ + and %XX, which is a valid name on NT and Unix
+# alike and has no glob metacharacter or `#` left in it; a trailing dot, which
+# Win32 strips, is escaped as %2E too. The <os> part keeps a model's Windows
+# and Linux scripts apart, since both read the same make and model.
+#
+# Every 99- directory is masked but this host's own. That takes a `!` line,
+# and those outrank every other line in this file, so a script in this host's
+# directory cannot also be masked from here on some other condition
+# (useHeadless, say); such a script has to check for itself.
+.chezmoiscripts/99-*/*
+{{- if and .machine.make .machine.model }}
+{{-   $tier := get (dict "windows" "nt" "darwin" "macos" "linux" "linux") .chezmoi.os }}
+!.chezmoiscripts/{{ regexReplaceAll "\\.$" (printf "99-%s-%s-%s" $tier (urlquery .machine.make) (urlquery .machine.model)) "%2E" }}/*
+{{- end }}
