@@ -60,7 +60,7 @@ Host immich # 116
     Tag rsa3072
 
 Host uptime # 117
-    HostName uptime.regulad.internal
+    HostName uptime.tail11540.ts.net
     User root
     Tag rsa3072
 
