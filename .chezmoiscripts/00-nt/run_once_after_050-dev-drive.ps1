@@ -19,24 +19,32 @@ if (-not (Get-DiskImage -ImagePath "C:\DevDrive.vhdx").Attached) {
         Initialize-Disk -Number $vhd.Number -PartitionStyle GPT
         $part = New-Partition -DiskNumber $vhd.Number -UseMaximumSize -AssignDriveLetter
         Format-Volume -DriveLetter $part.DriveLetter -DevDrive -Confirm:$false
-        Set-Partition -DriveLetter $part.DriveLetter -NewDriveLetter D
     }
 }
 
-# Reassign to D: if mounted on a different letter
+# Reassign to D: if mounted on a different letter. Not while another volume
+# holds D: (a second disk, an optical drive, a CI runner's work disk):
+# Set-Partition only fails there, and the MountDevDrive task below moves that
+# volume aside and mounts the Dev Drive at D: on the next boot.
 $img = Get-DiskImage -ImagePath "C:\DevDrive.vhdx"
+$letter = $null
 if ($img.Attached) {
     $letter = ($img | Get-Disk | Get-Partition | Where-Object { $_.DriveLetter } | Select-Object -First 1).DriveLetter
     if ($letter -and $letter -ne 'D') {
-        Set-Partition -DriveLetter $letter -NewDriveLetter D
+        if (Get-Volume -DriveLetter D -ErrorAction SilentlyContinue) {
+            Write-Host "notice: D: is taken by another volume; the Dev Drive is at ${letter}: until the MountDevDrive task moves it at the next boot"
+        } else {
+            Set-Partition -DriveLetter $letter -NewDriveLetter D
+            $letter = 'D'
+        }
     }
 }
 
 # Apply allowed filters
 fsutil devdrv setfiltersallowed "PrjFlt, MsSecFlt, WdFilter, bindFlt, wcifs, FileInfo, ProcMon24"
 
-# Label
-if (-not (Get-Volume -DriveLetter D).FileSystemLabel) {
+# Label, only once the Dev Drive is the volume at D:
+if ($letter -eq 'D' -and -not (Get-Volume -DriveLetter D).FileSystemLabel) {
     Set-Volume -DriveLetter D -NewFileSystemLabel "DevDrive"
 }
 
