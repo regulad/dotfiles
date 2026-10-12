@@ -40,7 +40,9 @@ REM compiler for cffi/pycryptodomex. Use CPython 3.13 here so a fresh machine
 REM does not need an OpenSSL/MSVC build environment. Keep x64 on Windows ARM
 REM too: these wheels are x64-only, running under the same emulation PyPy used.
 call :uvinstall --python "cpython-3.13-windows-x86_64-none" -q --with "bgutil-ytdlp-pot-provider" "yt-dlp[pin,pin-curl-cffi,pin-secretstorage,pin-deno]" || goto :uv_install_failed
-call :uvinstall --python cp314 -q "keydive" || goto :uv_install_failed
+REM Current cryptography releases have Windows x64 wheels only. Retain the
+REM current dependency releases on ARM through x64 emulation.
+call :uvinstall --python "cpython-3.14-windows-x86_64-none" -q "keydive" || goto :uv_install_failed
 call :uvinstall --python cp313 -q "pre-commit" || goto :uv_install_failed
 REM The optional archive support pins py7zr 0.22 / pyppmd 1.1, whose Windows
 REM wheels stop at CPython 3.12 x64. Keep optional features without requiring
@@ -55,7 +57,8 @@ REM https://miticollo.github.io/repos/roothide/Packages, since the 17.x major
 REM family has yet to be ported there. frida-tools' own frida>=16.2.2,<17.0.0 is
 REM loose enough to drift to 16.7.19, so the --with is what holds it. See the
 REM long NOTE in 00-linux/run_after_100-python-tooling.sh.tmpl.
-call :uvinstall --python cp312 -q --with "frida==16.7.0" "frida-tools==13.7.1" || goto :uv_install_failed
+REM This pinned Frida release also predates Windows ARM wheels.
+call :uvinstall --python "cpython-3.12-windows-x86_64-none" -q --with "frida==16.7.0" "frida-tools==13.7.1" || goto :uv_install_failed
 
 REM 2.3 onward are LLM slop, and 2.2 is the last version that didn't change the
 REM schema. cp313 because 2.2 wants pydantic-core 2.27.2, which has no cp314
