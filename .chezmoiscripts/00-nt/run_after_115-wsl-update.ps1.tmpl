@@ -70,7 +70,9 @@ if (-not (Get-WslInstall)) {
 # real update, not on the no-op path, so an apply against an already-current
 # WSL disturbs nothing.
 Write-Host 'debug: updating WSL'
-& wsl.exe --update
+# Bypass the WindowsApps execution alias: it can fail silently while the
+# inbox launcher works. Version detection above still reads the MSI binary.
+& "$env:SystemRoot\System32\wsl.exe" --update
 if ($LASTEXITCODE -ne 0) {
     Write-Host "error: wsl --update failed (exit $LASTEXITCODE)"
     exit 1
