@@ -11,6 +11,12 @@ tools/  # maintenance scripts, run by hand from the source dir
 # Credentialfiles
 {{- if .useDummySecrets }}
 key.txt
+# sops's age identity is ~/key.txt behind a symlink (dot_config/sops, which
+# AppData/Roaming/sops and Library/Application Support/sops point at), so it
+# goes with it rather than dangle.
+.config/sops
+AppData/Roaming/sops
+Library/Application Support/sops
 
 .npmrc
 
