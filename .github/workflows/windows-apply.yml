@@ -99,6 +99,17 @@ jobs:
           $env:PATH = "$windowsApps;$wingetLinks;$env:PATH"
           winget --version
 
+          # Windows Update. The image disables the service and points the
+          # policies away from it; a workstation has neither, and 035 installs
+          # the OpenSSH.Server capability, a Feature on Demand that comes from
+          # Windows Update when the image does not already carry it.
+          $wuPolicy = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate'
+          if (Test-Path $wuPolicy) {
+            Get-ItemProperty $wuPolicy | Format-List | Out-String | Write-Host
+            Remove-Item -Path $wuPolicy -Recurse -Force
+          }
+          Set-Service -Name wuauserv -StartupType Manual
+
           # README's NT install: scoop first, then chezmoi and git from it.
           # get.scoop.sh refuses an elevated shell without -RunAsAdmin.
           $installer = Join-Path $env:RUNNER_TEMP 'install-scoop.ps1'
@@ -108,18 +119,126 @@ jobs:
           $env:PATH = "$shims;$env:PATH"
           scoop install chezmoi git
 
-          # The hookscripts elevate with Windows' own sudo, which Windows 11
-          # has (000-registry turns it on) and Windows Server does not. gsudo
-          # stands in where it is missing: its scoop manifest shims it as
-          # `sudo`.
-          if (-not (Test-Path "$env:SystemRoot\System32\sudo.exe")) {
-            scoop install gsudo
-          }
+          # sudo. The hookscripts elevate with Windows' own, inline (000-
+          # registry sets the mode): it runs the command line it is given in
+          # the calling console and returns its exit code. Server has none,
+          # and on windows-11-arm it refuses to run from the runner's
+          # non-interactive session (0x800710E0, "The operator or
+          # administrator has refused the request"). gsudo is no substitute:
+          # called from PowerShell, it hands the command to another
+          # PowerShell, which expands the `$ that the hookscripts escape in
+          # their -Command strings. The job is already elevated, so all sudo
+          # has to do is run the command line verbatim; this pass-through
+          # does that, ahead of System32 on the Machine PATH (what refreshenv
+          # rebuilds PATH from) and on this job's.
+          $sudoDir = 'C:\ci-sudo'
+          New-Item -ItemType Directory -Force -Path $sudoDir | Out-Null
+          $sudoSource = @'
+          using System;
+          using System.Collections.Generic;
+          using System.Diagnostics;
+          using System.IO;
 
-          # A logon would put all three on PATH from the registry; later steps
+          public static class Sudo
+          {
+              public static int Main()
+              {
+                  // Everything after argv[0], exactly as it was passed.
+                  string line = Environment.CommandLine;
+                  int i = 0;
+                  if (line.StartsWith("\"")) { i = line.IndexOf('"', 1) + 1; }
+                  else { while (i < line.Length && line[i] != ' ' && line[i] != '\t') i++; }
+                  string rest = line.Substring(i).TrimStart(' ', '\t');
+                  if (rest.Length == 0) { Console.Error.WriteLine("usage: sudo <command> [arguments]"); return 1; }
+
+                  string first, args;
+                  if (rest[0] == '"')
+                  {
+                      int j = rest.IndexOf('"', 1);
+                      if (j < 0) j = rest.Length;
+                      first = rest.Substring(1, j - 1);
+                      args = j < rest.Length ? rest.Substring(j + 1) : "";
+                  }
+                  else
+                  {
+                      int j = 0;
+                      while (j < rest.Length && rest[j] != ' ' && rest[j] != '\t') j++;
+                      first = rest.Substring(0, j);
+                      args = rest.Substring(j);
+                  }
+
+                  // Batch files (scoop's shims among them) and cmd built-ins go
+                  // through cmd, as CreateProcess itself would for a batch file.
+                  string exe = Resolve(first);
+                  ProcessStartInfo psi;
+                  if (exe == null || exe.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) || exe.EndsWith(".bat", StringComparison.OrdinalIgnoreCase))
+                      psi = new ProcessStartInfo(Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe", "/d /s /c \"" + rest + "\"");
+                  else
+                      psi = new ProcessStartInfo(exe, args.TrimStart(' ', '\t'));
+                  psi.UseShellExecute = false;
+                  using (Process p = Process.Start(psi)) { p.WaitForExit(); return p.ExitCode; }
+              }
+
+              static string Resolve(string name)
+              {
+                  string[] exts = (Environment.GetEnvironmentVariable("PATHEXT") ?? ".COM;.EXE;.BAT;.CMD").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                  List<string> dirs = new List<string>();
+                  if (name.IndexOfAny(new[] { '\\', '/', ':' }) >= 0) dirs.Add("");
+                  else
+                  {
+                      dirs.Add(Environment.CurrentDirectory);
+                      dirs.AddRange((Environment.GetEnvironmentVariable("PATH") ?? "").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries));
+                  }
+                  foreach (string d in dirs)
+                  {
+                      try
+                      {
+                          string b = d.Length == 0 ? name : Path.Combine(d.Trim('"'), name);
+                          if (Path.HasExtension(name) && File.Exists(b)) return Path.GetFullPath(b);
+                          foreach (string e in exts) if (File.Exists(b + e)) return Path.GetFullPath(b + e);
+                      }
+                      catch (ArgumentException) { }
+                  }
+                  return null;
+              }
+          }
+          '@
+          # Windows PowerShell's Add-Type can still emit a console exe.
+          powershell.exe -NoProfile -Command {
+            param($Source, $Output)
+            Add-Type -TypeDefinition $Source -OutputAssembly $Output -OutputType ConsoleApplication
+          } -args $sudoSource, "$sudoDir\sudo.exe"
+          $machinePath = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
+          [Environment]::SetEnvironmentVariable('PATH', "$sudoDir;$machinePath", 'Machine')
+          $env:PATH = "$sudoDir;$env:PATH"
+          sudo cmd /c "echo sudo pass-through works"
+
+          # A logon would put these on PATH from the registry; later steps
           # only see what is added here.
-          $shims, $wingetLinks, $windowsApps | Add-Content -Path $env:GITHUB_PATH
+          $shims, $wingetLinks, $windowsApps, $sudoDir | Add-Content -Path $env:GITHUB_PATH
           Get-PSDrive -PSProvider FileSystem | Format-Table Name, Root, @{ n = 'FreeGiB'; e = { [math]::Round($_.Free / 1GB, 1) } }
+
+      # TEMPORARY (ci/windows-apply iteration): Gpg4win's silent install never
+      # returned on either runner in the first run. Time-boxed here so the
+      # log shows what it is waiting on.
+      - name: "Diagnose: Gpg4win silent install"
+        continue-on-error: true
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP 'gpg4win-winget.log'
+          $since = Get-Date
+          $p = Start-Process -FilePath winget -NoNewWindow -PassThru -ArgumentList 'install', '--id', 'GnuPG.Gpg4win', '--exact', '--silent', '--accept-source-agreements', '--accept-package-agreements', '--disable-interactivity', '--verbose-logs', '--log', $log
+          if (-not $p.WaitForExit(600000)) {
+            Write-Host 'warning: winget install GnuPG.Gpg4win still running after 10 minutes'
+            Get-CimInstance Win32_Process | Where-Object { $_.CreationDate -ge $since } | Sort-Object CreationDate |
+              Format-Table ProcessId, ParentProcessId, Name, CommandLine -Wrap | Out-String -Width 400 | Write-Host
+            Get-Process | Where-Object MainWindowTitle | Format-Table Id, Name, MainWindowTitle | Out-String -Width 300 | Write-Host
+            taskkill /T /F /PID $p.Id
+          } else {
+            Write-Host "winget exited $($p.ExitCode)"
+          }
+          if (Test-Path $log) { Get-Content $log | Select-Object -Last 60 }
+          Get-ChildItem $env:TEMP -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -ge $since -and $_.Extension -in '.log', '.txt' } |
+            ForEach-Object { Write-Host "--- $($_.FullName)"; Get-Content $_.FullName -Tail 30 }
 
       - name: Apply
         env:
@@ -132,11 +251,27 @@ jobs:
           Copy-Item -Recurse -Path $env:GITHUB_WORKSPACE -Destination $source
           chezmoi init
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # An installer that waits on a prompt nobody can see stalls the
+          # apply with no output until the job times out. Every 15 minutes
+          # this lists the newest processes, so the log says what it was
+          # stuck on.
+          $watch = @'
+          $start = Get-Date
+          while ($true) {
+            Start-Sleep -Seconds 900
+            Write-Host "watchdog: still applying after $([int]((Get-Date) - $start).TotalMinutes) minutes; newest processes:"
+            Get-CimInstance Win32_Process | Sort-Object CreationDate -Descending | Select-Object -First 15 |
+              Format-Table ProcessId, ParentProcessId, Name, CommandLine -Wrap | Out-String -Width 400 | Write-Host
+          }
+          '@
+          $watchdog = Start-Process -FilePath pwsh -NoNewWindow -PassThru -ArgumentList '-NoProfile', '-EncodedCommand', ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($watch)))
           # --force: no TTY to ask on about files the image already has.
           # --keep-going: every failing hookscript in one run, not just the
           # first; the apply still exits non-zero if any failed.
           chezmoi apply --force --keep-going --exclude encrypted
-          exit $LASTEXITCODE
+          $code = $LASTEXITCODE
+          Stop-Process -Id $watchdog.Id -ErrorAction SilentlyContinue
+          exit $code
 
       - name: Check what a new logon would find
         if: ${{ !cancelled() }}
