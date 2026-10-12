@@ -182,6 +182,16 @@ jobs:
                   else
                       psi = new ProcessStartInfo(exe, args.TrimStart(' ', '\t'));
                   psi.UseShellExecute = false;
+                  // The inbox WSL bootstrap refuses --install when stdin is
+                  // a pipe, reporting "not installed" instead. Give only that
+                  // installer its own hidden console; the runner is already
+                  // elevated, so no elevation prompt is needed.
+                  // https://github.com/microsoft/WSL/discussions/12426
+                  if (exe != null && Path.GetFileName(exe).Equals("wsl.exe", StringComparison.OrdinalIgnoreCase) && args.TrimStart().StartsWith("--install ", StringComparison.OrdinalIgnoreCase))
+                  {
+                      psi.UseShellExecute = true;
+                      psi.WindowStyle = ProcessWindowStyle.Hidden;
+                  }
                   using (Process p = Process.Start(psi)) { p.WaitForExit(); return p.ExitCode; }
               }
 
