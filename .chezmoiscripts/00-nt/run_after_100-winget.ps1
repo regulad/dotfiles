@@ -47,6 +47,9 @@ $WingetPackages = @(
     'Anthropic.ClaudeCode'
     'WinSCP.WinSCP'
     'GnuPG.Gpg4win'
+    # sops from here, not scoop: scoop's manifest pulls in scoop's own gpg
+    # beside Gpg4win (see 200-scoop-install).
+    'SecretsOPerationS.SOPS'
     'MHNexus.HxD'
     'VideoLAN.VLC'
     'Prusa3D.PrusaSlicer'

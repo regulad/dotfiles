@@ -85,6 +85,13 @@ uv tool install --python cp313 -q \
 
 uv tool install --python cp314 -q pymobiledevice3
 uv tool install --python cp314 -q claude-swap
+
+# NOTE: Ansible; the interpreter pins and the two ansible-cores are explained
+#       in 00-linux/run_after_100-python-tooling.sh.tmpl. Collections come
+#       from 105-ansible-collections.
+uv tool install --python cp314 -q ansible-core
+uv tool install --python cp313 -q ansible-lint
+uv tool install --python cp314 -q yamllint
 {{- end }}
 
 # like in the JS ecosystem, some python tools are available as tools/bottles from brew

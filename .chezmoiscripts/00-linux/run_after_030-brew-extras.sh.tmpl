@@ -31,6 +31,15 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"ocrmypdf"
 	"rclone"
 	"git-xet"
+	# Infrastructure as code, from brew on every Linux rather than dnf/apt:
+	# neither Fedora nor Ubuntu packages sops, Ubuntu has no opentofu and
+	# Fedora's lags upstream, and Ubuntu's `yq` is kislyuk's Python wrapper,
+	# not mikefarah's Go yq that this formula (and Fedora's package) is. tflint
+	# is a cask now, installed below. age, jq and retry come from the system
+	# lists; ansible-core, ansible-lint and yamllint are uv tools (100).
+	"opentofu"
+	"sops"
+	"yq"
 	"hf"
 	"brew-gem"
 	"bash-completion@2"
@@ -63,6 +72,15 @@ if [ "$HAS_BREW" = "true" ]; then
 	export PATH="$HOMEBREW_PREFIX/lib/ruby/gems/4.0.0/bin:$PATH"
 
 	brew install -q --formula "${SECONDARY_BINARY_DEPENDENCIES[@]}"
+
+	# tflint left homebrew-core on 2026-05-13, when it went BUSL; upstream
+	# ships it as a cask in its own tap, with Linux builds. A non-official tap,
+	# so trusted first (see the brew-gem note below); the fully qualified name
+	# taps it on first use.
+	brew_trust --tap terraform-linters/tap
+	if ! brew list --cask terraform-linters/tap/tflint &>/dev/null; then
+		brew install -q --cask terraform-linters/tap/tflint
+	fi
 
 	# rclone above pulls in libfuse as a Linux dependency, and brew links it
 	# unless told otherwise. Its fusermount3 is not setuid -- brew never marks

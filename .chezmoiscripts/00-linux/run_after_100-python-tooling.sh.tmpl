@@ -154,6 +154,16 @@ uv tool install --python cp313 -q \
 uv tool install --python cp314 -q pymobiledevice3
 uv tool install --python cp314 -q claude-swap
 
+# NOTE: Ansible. ansible-core's controller is tested on 3.12-3.14 (2.22 needs
+#       3.13+), ansible-lint's CI tops out at 3.13, and yamllint's covers 3.14.
+#       ansible-lint carries its own ansible-core in its tool venv and runs that
+#       one (it puts its own bin first on PATH), so the two can sit a release
+#       apart between upgrades. Both read collections from ~/.ansible, which
+#       105-ansible-collections fills.
+uv tool install --python cp314 -q ansible-core
+uv tool install --python cp313 -q ansible-lint
+uv tool install --python cp314 -q yamllint
+
 # like in the JS ecosystem, some python tools are available as tools/bottles from brew
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q \

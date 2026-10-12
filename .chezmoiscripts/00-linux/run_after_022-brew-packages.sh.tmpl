@@ -144,7 +144,9 @@ BREW_SYSTEM_PACKAGES=(
 #      again -- it only has to read a text file. See the note in .commonrc.)
 #   provided by the Silverblue base:
 #     bash, curl, git, perl, gawk, binutils, net-tools, iputils, openssh,
-#     python3, systemd
+#     python3, systemd, jq
+#     (no Bluefin list names jq, but its image build runs it under set -e in
+#      build_files/base/20-tests.sh, so the base has to carry it)
 #     (git still arrives from brew transitively via git-filter-repo; 030
 #      unlinks it on Bluefin so the image's /etc/gitconfig-aware copy wins.)
 #   already installed by a later hookscript:

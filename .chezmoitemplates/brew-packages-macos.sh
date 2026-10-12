@@ -114,6 +114,7 @@ BREW_PACKAGES=(
 	# See the note on the apt side. No bind-utils equivalent is needed here:
 	# macOS ships dig in the base system at /usr/bin/dig.
 	direnv
+	jq
 	socat
 	# telnet, not inetutils. brew's `telnet` formula is macOS-only, which is the
 	# only reason the Linux list carries inetutils instead. On macOS inetutils

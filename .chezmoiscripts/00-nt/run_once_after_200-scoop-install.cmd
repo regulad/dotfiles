@@ -80,6 +80,15 @@ REM has no business running at all, and scoop cannot be told to skip it: as of
 REM 0.6.0 every post_install runs unconditionally, with no install flag or
 REM config key to stop it. Projects bring their own Gradle through gradlew
 REM instead. 205-scoop-gradle-remove uninstalls a gradle left over from before.
+REM
+REM sops is not in the list either: scoop's manifest depends on scoop's gpg, a
+REM second GnuPG beside the Gpg4win that 100-winget installs and
+REM 220-gpg-scoop-unlink keeps in charge. winget's SecretsOPerationS.SOPS has no
+REM such dependency, so it comes from there.
+REM
+REM retry is the regulad bucket's: minfrin/retry, the tool apt, dnf and brew
+REM ship as retry, built against the MSYS2 runtime since it has no native port
+REM (https://github.com/regulad/retry/tree/main/windows). age is extras'.
 set user_packages=^
 maven ^
 tesseract ^
@@ -117,6 +126,12 @@ fastfetch ^
 ripgrep ^
 actionlint ^
 hadolint ^
+opentofu ^
+tflint ^
+jq ^
+yq ^
+age ^
+retry ^
 telnet ^
 unzip ^
 vim ^

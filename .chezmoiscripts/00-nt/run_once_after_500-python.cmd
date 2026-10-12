@@ -11,9 +11,17 @@ REM The interpreter pins mirror the unix scripts; see the long NOTE in
 REM 00-linux/100-python-tooling.sh for why each tool is pinned to a specific
 REM CPython (or PyPy) rather than whatever uv would pick on its own.
 REM
-REM Differences from unix, both because the unix side gets these elsewhere:
+REM Differences from unix. The first two because the unix side gets them
+REM elsewhere:
 REM   poetry - apt's python3-poetry / brew there, no NT package, so uv here
 REM   hf     - brew (030-brew-extras) there, so uv here
+REM and one the other way round:
+REM   ansible-core, ansible-lint - not here at all. The Ansible controller is
+REM            POSIX-only: ansible.utils.display imports fcntl and termios, so
+REM            every ansible-* command (ansible-galaxy included) dies at import
+REM            on Windows, and Ansible's docs say a Windows control node needs
+REM            WSL. The WSL distro's own apply installs them, along with the
+REM            collections (00-linux/105-ansible-collections).
 
 REM the unix scripts run under `bash -e`, so a failing `uv tool install` aborts
 REM the apply there. cmd carries on regardless, so check each one explicitly.
@@ -49,6 +57,9 @@ call :uvinstall --python cp313 -q --with "rendercv-fonts<0.5" --with "click<8.2"
 
 call :uvinstall --python cp314 -q "pymobiledevice3" || goto :uv_install_failed
 call :uvinstall --python cp314 -q "claude-swap" || goto :uv_install_failed
+
+REM yamllint's CI covers 3.14; see the Ansible NOTE in the unix script.
+call :uvinstall --python cp314 -q "yamllint" || goto :uv_install_failed
 
 call :uvinstall -q "hatch" || goto :uv_install_failed
 call :uvinstall -q "autopep8" || goto :uv_install_failed

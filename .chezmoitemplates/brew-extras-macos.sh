@@ -17,6 +17,7 @@
 {{- end }}
 {{- /* eras whose tap checkout predates the given year */ -}}
 {{- $pre2023 := has $brewEra (list "catalina") }}
+{{- $pre2024 := has $brewEra (list "catalina" "bigsur") }}
 {{- $pre2025 := has $brewEra (list "catalina" "bigsur" "monterey") }}
 {{- $pre2026 := has $brewEra (list "catalina" "bigsur" "monterey" "ventura") }}
 # user-level binary dependencies
@@ -72,6 +73,19 @@ SECONDARY_BINARY_DEPENDENCIES=(
 {{- if not $pre2026 }}
 	"git-xet"  # not in homebrew-core until 2026
 {{- end }}
+	# Infrastructure as code. age, jq and retry are in 020; ansible-core,
+	# ansible-lint and yamllint are uv tools (100).
+{{- if not $pre2024 }}
+	"opentofu"  # not in homebrew-core until late 2023
+{{- end }}
+	"sops"
+	"yq"  # mikefarah's Go yq; kislyuk's Python one is the python-yq formula
+{{- if $pre2026 }}
+	# homebrew-core dropped tflint on 2026-05-13, when it went BUSL; these
+	# checkouts predate that and still bottle it. Everywhere else it is
+	# upstream's cask, installed below.
+	"tflint"
+{{- end }}
 {{- if $pre2023 }}
 {{- /* huggingface-cli itself only reached homebrew-core in 2023 */ -}}
 {{- else if $pre2026 }}
@@ -102,6 +116,15 @@ if [ "$HAS_BREW" = "true" ]; then
 	# prebuilt zip from NSA's releases), so it cannot ride the --formula
 	# install above.
 	brew install -q --cask ghidra
+{{- else }}
+	# tflint: the cask in terraform-linters' own tap (015 taps it), which is
+	# how upstream ships it since it left homebrew-core. A CLI, so it is here
+	# rather than among 040's GUI casks, which a headless host skips. Trusted
+	# first, as 040 does for its taps.
+	brew_trust --tap terraform-linters/tap
+	if ! brew list --cask terraform-linters/tap/tflint &>/dev/null; then
+		brew install -q --cask terraform-linters/tap/tflint
+	fi
 {{- end }}
 	# brew-gem global gems (like cargo/go/uv)
 	# `brew trust` first: the install itself passes on argv, but every later
