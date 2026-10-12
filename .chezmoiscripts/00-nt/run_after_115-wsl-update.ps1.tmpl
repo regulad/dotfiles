@@ -72,7 +72,7 @@ if (-not (Get-WslInstall)) {
 Write-Host 'debug: updating WSL'
 & wsl.exe --update
 if ($LASTEXITCODE -ne 0) {
-    Write-Host 'error: wsl --update failed'
+    Write-Host "error: wsl --update failed (exit $LASTEXITCODE)"
     exit 1
 }
 
