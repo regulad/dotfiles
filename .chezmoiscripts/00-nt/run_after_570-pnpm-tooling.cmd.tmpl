@@ -56,11 +56,28 @@ REM every other package unlinked. On Windows npm's prefix *is* the bin directory
 REM so point it at pnpm's. Kept local to this script; npm shouldn't inherit it.
 set "npm_config_prefix=%PNPM_BIN%"
 
+REM go-ios 1.3.2's npm tarball has only a Windows amd64 executable, but its
+REM postinstall asks for a nonexistent arm64 executable under native ARM Node.
+REM Build the same tool with Go on that architecture and keep the npm command
+REM name, ios.exe, in pnpm's bin directory. Go was installed before this script.
+set "GO_IOS_PACKAGE=go-ios@latest"
+set "NODE_ARCH="
+for /f "delims=" %%i in ('node -p process.arch') do set "NODE_ARCH=%%i"
+if "%NODE_ARCH%"=="arm64" (
+    echo notice: building go-ios with Go because its npm package has no Windows ARM binary
+    set "GOBIN=%PNPM_BIN%"
+    call go install github.com/danielpaulus/go-ios@latest
+    if errorlevel 1 goto :go_ios_build_failed
+    copy /y "%PNPM_BIN%\go-ios.exe" "%PNPM_BIN%\ios.exe" >nul
+    if errorlevel 1 goto :go_ios_copy_failed
+    set "GO_IOS_PACKAGE="
+)
+
 REM vercel, wrangler and cf are the CLIs behind the vercel and cloudflare agent
 REM plugins' skills; on macOS and Linux wrangler comes from brew instead.
 set pnpm_packages=^
 @mermaid-js/mermaid-cli@latest ^
-go-ios@latest ^
+%GO_IOS_PACKAGE% ^
 typescript@latest ^
 typescript-language-server@latest ^
 bash-language-server@latest ^
@@ -85,4 +102,13 @@ if errorlevel 1 (
 )
 
 goto :eof
+
+:go_ios_build_failed
+echo error: go-ios ARM build failed 1>&2
+exit /b 1
+
+:go_ios_copy_failed
+echo error: could not install ios.exe in pnpm's bin directory 1>&2
+exit /b 1
+
 {{ template "neosetx.cmd" . }}
