@@ -126,7 +126,7 @@ Longer write-ups live in `docs/` (not deployed to `$HOME`):
 - [Bottle mirror](docs/brew-mirror.md) -- every brew fetches bottles through a Nexus proxy of ghcr.io, except on GitHub-hosted runners.
 - [Theos](docs/theos.md)
 - [SSH server on Windows](docs/windows-sshd.md) -- the user-session `sshd`.
-- [WSL](docs/wsl.md) -- `wsl-deploy` and `wsl-enter`.
+- [WSL](docs/wsl.md) -- `wsl-deploy`, `wsl-enter` and `wsl-update`.
 - [Containers](docs/containers.md) -- which engine each host runs (wslc, apple/container, colima, podman) and the Docker Desktop and macOS podman removal.
 
 ## TODOs

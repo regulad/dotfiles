@@ -1,6 +1,6 @@
-# WSL: `wsl-deploy` and `wsl-enter`
+# WSL: `wsl-deploy`, `wsl-enter` and `wsl-update`
 
-Two Windows-side helpers in `~/.local/bin`, exposed to `cmd` by doskey macros in `.doskey.mac`. They invoke by full path on purpose: `~/.local/bin` is only put on `PATH` by `.commonprofile`, which is POSIX shells only.
+Three Windows-side helpers in `~/.local/bin`, exposed to `cmd` by doskey macros in `.doskey.mac`. They invoke by full path on purpose: `~/.local/bin` is only put on `PATH` by `.commonprofile`, which is POSIX shells only.
 
 `wsl-deploy [fedora|ubuntu]` installs the newest built image as `regulad-<flavor>`:
 
@@ -25,3 +25,20 @@ D:\repositories\foo> wsl-enter        # lands in /mnt/d/repositories/foo
 ```
 
 It installs nothing and destroys nothing. Where the current directory is something WSL cannot see — a UNC path, a mapped network drive, or a non-filesystem PowerShell provider like `HKLM:` — it starts at `$HOME` and says so, rather than failing the launch and leaving you with no shell. `-NoCd` always starts at `$HOME`.
+
+`wsl-update [fedora|ubuntu]` brings an installed instance's dotfiles up to HEAD of the chezmoi source on the Windows side, without redeploying:
+
+```console
+wsl-update                    # ubuntu: patch to HEAD, then a full apply
+wsl-update fedora
+wsl-update.ps1 -DryRun        # show the patch and check it applies; change nothing
+wsl-update.ps1 -NoApply       # patch and re-init now, apply later
+```
+
+An instance's chezmoi source is a plain copy of the tree its image was built from (a git repository with no commits), and `/etc/dotfiles-commit` names that commit. `wsl-update` reads the file the way `wsl-deploy` does, builds the patch from that commit to HEAD with git on the Windows side (fetching first if the image's commit is not in the clone), checks it with `git apply --check` inside the instance and applies it. It then writes HEAD to `/etc/dotfiles-commit`, re-renders the chezmoi config with `chezmoi init`, keeping the instance's `useDummySecrets` and `useHeadless` as they are, and runs the full `chezmoi apply`, interactively, since it may ask for the Bitwarden master password. Notable behaviour:
+
+- **The commit is recorded before the apply**, as soon as the patch is in, because the file says what the source tree is. If the apply fails, running `wsl-update` again finds nothing to patch and retries the apply.
+- **Only HEAD travels.** Uncommitted changes on the Windows side are left out, with a note.
+- **A patch that does not apply changes nothing**: `git apply` is all or nothing, and the check runs first. That happens when the instance's source was edited where the patch touches it.
+- **HEAD behind or beside the instance's commit** (a rollback, a diverged branch) still works, since the patch makes the instance's tree HEAD's, but that undoes whatever the instance has that HEAD lacks, so it asks first; `-Force` skips the question.
+- The patch is written by git itself (`--output`), never through PowerShell's pipeline, so the binary hunks for the age-encrypted files survive, and it is built with CRLF conversion, textconv and external diff tools off and `a/`/`b/` prefixes fixed, whatever the local git config says.
