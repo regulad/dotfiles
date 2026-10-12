@@ -2,6 +2,10 @@
 
 Operational conventions for any agent working in this chezmoi source directory. Not deployed to `$HOME` (see `.chezmoiignore.tmpl`).
 
+## Worktrees
+
+- Keep worktrees outside the chezmoi source directory, for example in sibling `../chezmoi-worktrees/`. Chezmoi loads `.chezmoitemplates` and `.chezmoidata` from nested worktrees too, even under `.claude/`, before applying `.chezmoiignore`; their older copies can silently override the main source's templates and data. Verify changes using the main source after moving any nested worktrees with `git worktree move`.
+
 ## Applying changes
 
 - After changing a file in this source directory, if the current system is chezmoi-managed, you may run a scoped apply for just that file: `chezmoi apply <target-path>` (e.g. `chezmoi apply "$env:USERPROFILE\.config\vlc\vlcrc"`). This avoids rendering unrelated templates -- a full `chezmoi apply` requires the Bitwarden vault to be unlocked, which only the user can do.
