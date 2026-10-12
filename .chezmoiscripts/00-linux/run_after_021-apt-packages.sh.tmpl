@@ -8,7 +8,6 @@ APT_PACKAGES=(
 	bash
 	tmux
 	fastfetch
-	telnet
 	retry
 	zsh
 	xxd
@@ -77,6 +76,9 @@ APT_PACKAGES=(
 	direnv
 	jq
 	socat
+	# The telnet client. The `telnet` package this list also used to carry is
+	# only a transitional dummy for it on resolute ("transitional dummy package
+	# for inetutils-telnet default switch").
 	inetutils-telnet
 	# iputils-ping, NOT inetutils-ping. Both provide the `ping` virtual package
 	# and inetutils-ping declares Conflicts:/Replaces: against iputils-ping, so

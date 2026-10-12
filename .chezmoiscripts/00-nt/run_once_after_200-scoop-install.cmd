@@ -89,12 +89,22 @@ REM
 REM retry is the regulad bucket's: minfrin/retry, the tool apt, dnf and brew
 REM ship as retry, built against the MSYS2 runtime since it has no native port
 REM (https://github.com/regulad/retry/tree/main/windows). age is extras'.
+REM
+REM telnet is not in the list: it is Windows' own Telnet Client, enabled by
+REM 040-telnet-client. scoop's telnet was GNU inetutils 1.7 from 2009 on
+REM MinGW's abandoned MSYS1 runtime; 206-scoop-telnet-remove uninstalls it.
+REM
+REM Order matters where shims collide: the package installed last owns the
+REM shim. gow ships old GNU builds of many tools (make 3.81 among them), so
+REM make comes after it, as grep and coreutils already did. It used to sit
+REM before gow, which went unnoticed because make was never installed at all:
+REM the old installed-check (see :check_install_user) took cmake's row,
+REM "cmake  4.x", for make.
 set user_packages=^
 maven ^
 tesseract ^
 tesseract-languages ^
 cmake ^
-make ^
 whisper-cpp ^
 iperf3 ^
 tinyxnb ^
@@ -132,7 +142,6 @@ jq ^
 yq ^
 age ^
 retry ^
-telnet ^
 unzip ^
 vim ^
 neovim ^
@@ -148,6 +157,7 @@ msys2 ^
 uv ^
 file ^
 dos2unix ^
+make ^
 grep ^
 coreutils ^
 openssl ^
@@ -165,8 +175,13 @@ echo debug: installing new scoop user packages
 for %%p in (%user_packages%) do call :check_install_user %%p || goto :scoop_install_failed
 goto :after_check_install_user
 
+REM Installed means a `scoop list` row that starts with the exact name. The
+REM query is a substring match (`scoop list age` also lists imagemagick and
+REM tesseract-languages), so the name has to be anchored to the start of the
+REM row, and a version need not start with a digit: matching "name, spaces,
+REM digit" read telnet's msys-inetutils-1.7-1 as missing on every run.
 :check_install_user
-scoop list %1 2>nul | findstr /r /c:"%1  *[0-9]" >nul 2>&1
+scoop list %1 2>nul | findstr /b /l /c:"%1 " >nul 2>&1
 if errorlevel 1 (
     echo debug: %1 not installed, installing...
     scoop install %1
@@ -202,8 +217,9 @@ echo debug: installing new scoop admin packages
 for %%p in (%admin_packages%) do call :check_install_admin %%p || goto :scoop_install_failed
 goto :after_check_install_admin
 
+REM Same test as :check_install_user.
 :check_install_admin
-scoop list %1 2>nul | findstr /r /c:"%1  *[0-9]" >nul 2>&1
+scoop list %1 2>nul | findstr /b /l /c:"%1 " >nul 2>&1
 if errorlevel 1 (
     echo debug: %1 not installed, installing...
     sudo scoop install %1
