@@ -15,7 +15,11 @@ REM Windows 11 install whether or not WSL is actually there, so `where wsl`
 REM would always succeed; --version only exits 0 once the real package is in.
 REM Use the inbox launcher explicitly: a WindowsApps execution alias earlier
 REM on PATH can fail even when the System32 launcher works.
-call "%SystemRoot%\System32\wsl.exe" --version >nul 2>&1
+REM Sysnative bypasses System32 redirection when this shell is emulated,
+REM including x64 PowerShell/cmd on Windows ARM. Native shells use System32.
+set "WSL_EXE=%SystemRoot%\System32\wsl.exe"
+if exist "%SystemRoot%\Sysnative\wsl.exe" set "WSL_EXE=%SystemRoot%\Sysnative\wsl.exe"
+call "%WSL_EXE%" --version >nul 2>&1
 if %errorLevel% equ 0 (
     echo debug: WSL already installed, skipping
     exit /b 0
@@ -25,7 +29,7 @@ REM --no-distribution: this repo ships its own images (see
 REM .github/workflows/wsl-package.yml), so there is no reason to drag in the
 REM default Ubuntu and then have to unregister it.
 echo debug: installing WSL ^(optional components only, no distribution^)
-call sudo "%SystemRoot%\System32\wsl.exe" --install --no-distribution
+call sudo "%WSL_EXE%" --install --no-distribution
 if errorlevel 1 (
     echo error: wsl --install --no-distribution failed 1>&2
     exit /b 1

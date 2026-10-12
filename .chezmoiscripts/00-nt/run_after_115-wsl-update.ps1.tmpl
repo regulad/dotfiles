@@ -72,7 +72,12 @@ if (-not (Get-WslInstall)) {
 Write-Host 'debug: updating WSL'
 # Bypass the WindowsApps execution alias: it can fail silently while the
 # inbox launcher works. Version detection above still reads the MSI binary.
-& "$env:SystemRoot\System32\wsl.exe" --update
+# An emulated shell sees a redirected System32 (including x64 on Windows
+# ARM); Sysnative reaches the native launcher and exists only in that case.
+$WslExe = Join-Path $env:SystemRoot 'System32\wsl.exe'
+$NativeWsl = Join-Path $env:SystemRoot 'Sysnative\wsl.exe'
+if (Test-Path -LiteralPath $NativeWsl) { $WslExe = $NativeWsl }
+& $WslExe --update
 if ($LASTEXITCODE -ne 0) {
     Write-Host "error: wsl --update failed (exit $LASTEXITCODE)"
     exit 1

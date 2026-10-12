@@ -290,10 +290,13 @@ jobs:
           Write-Host '--- the sudo pass-through and what it starts'
           sudo powershell -NoProfile -Command "[Environment]::Is64BitProcess; `$env:PROCESSOR_ARCHITECTURE; (Get-Process -Id `$PID).Path"
           sudo cmd /c "echo %PROCESSOR_ARCHITECTURE% & where wsl"
+          $wslExe = "$env:SystemRoot\System32\wsl.exe"
+          if (Test-Path "$env:SystemRoot\Sysnative\wsl.exe") { $wslExe = "$env:SystemRoot\Sysnative\wsl.exe" }
+          Write-Host "--- native WSL launcher: $wslExe"
           foreach ($line in '--version', '--status', '--update', '--update --web-download', '--install --no-distribution') {
             Write-Host "--- wsl $line"
             $wslArgs = $line -split ' '
-            & "$env:SystemRoot\System32\wsl.exe" @wslArgs 2>&1 | Out-String | Write-Host
+            & $wslExe @wslArgs 2>&1 | Out-String | Write-Host
             Write-Host "exit $LASTEXITCODE"
           }
 
