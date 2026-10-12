@@ -11,6 +11,7 @@ setlocal
 call :check_claude
 call :check_codex
 call :check_cf
+call :check_oci
 endlocal
 exit /b 0
 
@@ -67,5 +68,22 @@ if errorlevel 1 (
     echo notice: cf is not signed in; run cf auth login 1>&2
 ) else (
     echo debug: cf is signed in 1>&2
+)
+goto :eof
+
+REM Its config file is the check, as on unix: every way of signing oci in
+REM writes it, and the CLI itself is slow to start.
+:check_oci
+where oci >nul 2>nul
+if errorlevel 1 (
+    echo debug: oci is not installed, skipping its sign-in reminder 1>&2
+    goto :eof
+)
+set "OCI_CONFIG=%OCI_CLI_CONFIG_FILE%"
+if not defined OCI_CONFIG set "OCI_CONFIG=%USERPROFILE%\.oci\config"
+if exist "%OCI_CONFIG%" (
+    echo debug: oci has a config 1>&2
+) else (
+    echo notice: log into `oci` 1>&2
 )
 goto :eof

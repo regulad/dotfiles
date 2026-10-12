@@ -51,3 +51,17 @@ if command -v cf &>/dev/null; then
 else
 	echo "debug: cf is not installed, skipping its sign-in reminder" >&2
 fi
+
+# Every way of signing oci in -- setup bootstrap, setup config, session
+# authenticate -- writes its config file, ~/.oci/config unless
+# OCI_CLI_CONFIG_FILE points elsewhere, so that file is the check. No `oci`
+# call: the CLI takes a couple of seconds just to start.
+if command -v oci &>/dev/null; then
+	if [ -s "${OCI_CLI_CONFIG_FILE:-$HOME/.oci/config}" ]; then
+		echo "debug: oci has a config" >&2
+	else
+		echo "notice: log into \`oci\`" >&2
+	fi
+else
+	echo "debug: oci is not installed, skipping its sign-in reminder" >&2
+fi

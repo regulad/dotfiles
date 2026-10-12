@@ -61,6 +61,10 @@ call :uvinstall --python cp314 -q "claude-swap" || goto :uv_install_failed
 REM yamllint's CI covers 3.14; see the Ansible NOTE in the unix script.
 call :uvinstall --python cp314 -q "yamllint" || goto :uv_install_failed
 
+REM Oracle Cloud's CLI, `oci`; its classifiers stop at 3.13. 999-reminders says
+REM to sign in until %USERPROFILE%\.oci\config exists.
+call :uvinstall --python cp313 -q "oci-cli" || goto :uv_install_failed
+
 call :uvinstall -q "hatch" || goto :uv_install_failed
 call :uvinstall -q "autopep8" || goto :uv_install_failed
 

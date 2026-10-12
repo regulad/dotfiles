@@ -92,6 +92,9 @@ uv tool install --python cp314 -q claude-swap
 uv tool install --python cp314 -q ansible-core
 uv tool install --python cp313 -q ansible-lint
 uv tool install --python cp314 -q yamllint
+
+# Oracle Cloud's CLI, `oci`; see 00-linux/run_after_100-python-tooling.sh.tmpl.
+uv tool install --python cp313 -q oci-cli
 {{- end }}
 
 # like in the JS ecosystem, some python tools are available as tools/bottles from brew

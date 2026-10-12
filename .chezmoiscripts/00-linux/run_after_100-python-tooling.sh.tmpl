@@ -164,6 +164,10 @@ uv tool install --python cp314 -q ansible-core
 uv tool install --python cp313 -q ansible-lint
 uv tool install --python cp314 -q yamllint
 
+# Oracle Cloud's CLI, `oci`. Its classifiers stop at 3.13. Signing in is
+# per machine; 999-reminders says so until ~/.oci/config exists.
+uv tool install --python cp313 -q oci-cli
+
 # like in the JS ecosystem, some python tools are available as tools/bottles from brew
 if [ "$HAS_BREW" = "true" ]; then
 	brew install -q \
