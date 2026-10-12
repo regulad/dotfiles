@@ -7,9 +7,10 @@ REM below changes the hash and this re-runs -- the list stays self-healing
 REM without reinstalling everything on every apply. Upgrading what is already
 REM installed lives in 501-python.cmd, which runs on every apply.
 REM
-REM The interpreter pins mirror the unix scripts; see the long NOTE in
+REM The interpreter pins generally follow the unix scripts; see the long NOTE in
 REM 00-linux/100-python-tooling.sh for why each tool is pinned to a specific
 REM CPython (or PyPy) rather than whatever uv would pick on its own.
+REM Windows wheel availability requires the exceptions documented below.
 REM
 REM Differences from unix. The first two because the unix side gets them
 REM elsewhere:
@@ -39,7 +40,10 @@ REM too: these wheels are x64-only, running under the same emulation PyPy used.
 call :uvinstall --python "cpython-3.13-windows-x86_64-none" -q --with "bgutil-ytdlp-pot-provider" "yt-dlp[pin,pin-curl-cffi,pin-secretstorage,pin-deno]" || goto :uv_install_failed
 call :uvinstall --python cp314 -q "keydive" || goto :uv_install_failed
 call :uvinstall --python cp313 -q "pre-commit" || goto :uv_install_failed
-call :uvinstall --python cp313 -q "mangadex-downloader[optional]" || goto :uv_install_failed
+REM The optional archive support pins py7zr 0.22 / pyppmd 1.1, whose Windows
+REM wheels stop at CPython 3.12 x64. Keep optional features without requiring
+REM a local compiler, including on ARM through x64 emulation.
+call :uvinstall --python "cpython-3.12-windows-x86_64-none" -q "mangadex-downloader[optional]" || goto :uv_install_failed
 call :uvinstall --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master" || goto :uv_install_failed
 
 REM pinned to the frida-server version the device actually runs -- the binding
@@ -60,7 +64,10 @@ REM the long NOTE in 00-linux/run_after_100-python-tooling.sh.tmpl for what each
 REM cap prevents.
 call :uvinstall --python cp313 -q --with "rendercv-fonts<0.5" --with "click<8.2" --with "rich<11" --with "jinja2<4" "rendercv[full]@2.2" || goto :uv_install_failed
 
-call :uvinstall --python cp314 -q "pymobiledevice3" || goto :uv_install_failed
+REM pyimg4's lzfse 0.4.2 has Windows wheels through CPython 3.12 x64; the
+REM newer interpreters need a compiler. This keeps the full pymobiledevice3
+REM install usable on a fresh x64 or ARM workstation.
+call :uvinstall --python "cpython-3.12-windows-x86_64-none" -q "pymobiledevice3" || goto :uv_install_failed
 call :uvinstall --python cp314 -q "claude-swap" || goto :uv_install_failed
 
 REM yamllint's CI covers 3.14; see the Ansible NOTE in the unix script.
