@@ -160,24 +160,28 @@ _brew_source_pick() {
 # a source that dies partway through, or a single bottle it cannot serve.
 # Everything else (list, --prefix, shellenv, services, trust, gem, ...) goes
 # straight to brew.
+# `env` bypasses our shell function without bash 3.2's `command` builtin:
+# under `set -e`, that builtin can exit on a failed brew even in an `if`
+# condition or an && list, breaking absent-package checks and the retry.
+# Handle nonzero exits explicitly here too, for nested bash 3.2 functions.
 _brew_fetching() {
     case "${1:-}" in
     install | reinstall | upgrade | fetch | bundle) ;;
     *)
-        command brew "$@"
-        return
+        env brew "$@" || return $?
+        return 0
         ;;
     esac
     _brew_source_pick
-    command brew "$@" && return 0
+    env brew "$@" && return 0
     local rc=$? other="$_BREW_SOURCE_SECONDARY"
     [ "$_BREW_SOURCE" = "$_BREW_SOURCE_SECONDARY" ] && other="$_BREW_SOURCE_PRIMARY"
     if _brew_source_up "$other"; then
         echo "warning: brew $1 failed with bottles from $(_brew_source_name "$_BREW_SOURCE"); retrying with $(_brew_source_name "$other")" >&2
         _brew_source_use "$other"
         _brew_source_save
-        command brew "$@"
-        return
+        env brew "$@" || return $?
+        return 0
     fi
     return "$rc"
 }

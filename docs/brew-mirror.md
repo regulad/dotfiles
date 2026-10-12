@@ -39,6 +39,8 @@ So no brew in use falls back on its own: the old ones never try ghcr.io, and the
 
 The wrapper is a `brew` function: `posix-preamble.sh` defines it for hookscripts once `HAS_BREW` is known (a function named `brew` would satisfy `command -v brew` whether or not brew is installed), and `.commonprofile` for interactive shells, where an era-pinned Mac's `brew update` guard (`brew-profile-env.sh`) calls it too. `brew!` on those Macs, and anything that runs the brew binary by path, still sees a source but gets no fallback.
 
+The wrapper invokes the executable with `env brew` and handles failures explicitly. Bash 3.2's `command brew` can abort a script under `set -e` even when the caller tests the result, which broke the absent-Podman check on macOS 14 and prevented failed downloads from reaching the fallback. `bash tools/test-brew-mirror.sh /bin/bash` checks absent-package probes, both fallback directions, failure exit codes and credential switching with stub commands and no network or package installs. Pass another shell's path to check it too (Bash 3.2, current Bash and zsh).
+
 By hand, the ghcr.io half of the switch is:
 
 ```sh
