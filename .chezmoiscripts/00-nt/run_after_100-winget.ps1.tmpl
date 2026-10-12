@@ -15,19 +15,42 @@
 # PATH and cope with being upgraded while running, so they are never held back.
 
 $WingetPackages = @(
+    # Every host, headless or not: CLIs, SDKs and runtimes, drivers, the
+    # tailnet and the sync daemon -- the same split 00-macos/040-macos-casks
+    # makes.
     # Interactive `codex` fails from this package since 0.157.1 ("the CLI
     # package does not match this platform or executable"): its flat layout is
     # not one the background server can install itself from. `codex
     # --no-daemon` works meanwhile; https://github.com/openai/codex/issues/48366
     'OpenAI.Codex'
-    'uvncbvba.UltraVNC'
     'Swift.Toolchain'
-    'Posit.RStudio'
     'dorssel.usbipd-win'
     'Apple.AppleMobileDeviceSupport'
     'KhronosGroup.VulkanSDK'
-    'ETHZurich.SafeExamBrowser'
     'WireGuard.WireGuard'
+    'Anthropic.ClaudeCode'
+    'GnuPG.Gpg4win'
+    # sops from here, not scoop: scoop's manifest pulls in scoop's own gpg
+    # beside Gpg4win (see 200-scoop-install).
+    'SecretsOPerationS.SOPS'
+    'EclipseAdoptium.Temurin.25.JDK'
+    'EclipseAdoptium.Temurin.21.JDK'
+    'Microsoft.DotNet.SDK.8'
+    'OpenJS.NodeJS.LTS'
+    'Microsoft.PowerShell'
+    'WinFsp.WinFsp'
+    'Microsoft.Sysinternals.Suite'
+    '7zip.7zip'
+    'Tailscale.Tailscale'
+    'BillStewart.SyncthingWindowsSetup'
+{{- /* GUI apps: only for a host someone sits at, i.e. not under useHeadless
+       (CHEZMOI_USE_HEADLESS at init). The windows-apply CI run is headless:
+       its runners have no one at the screen, no Microsoft Store on Server,
+       and nothing to gain from GUI installers that depend on vendor sites. */}}
+{{- if not .useHeadless }}
+    'uvncbvba.UltraVNC'
+    'Posit.RStudio'
+    'ETHZurich.SafeExamBrowser'
     'NirSoft.ShellExView'
     'NirSoft.USBDeview'
     'UrBackup.UrBackup.Client'
@@ -44,36 +67,23 @@ $WingetPackages = @(
     'Bitwarden.Bitwarden'
     'Jellyfin.JellyfinMediaPlayer'
     'Anthropic.Claude'
-    'Anthropic.ClaudeCode'
     'WinSCP.WinSCP'
-    'GnuPG.Gpg4win'
-    # sops from here, not scoop: scoop's manifest pulls in scoop's own gpg
-    # beside Gpg4win (see 200-scoop-install).
-    'SecretsOPerationS.SOPS'
     'MHNexus.HxD'
     'VideoLAN.VLC'
     'Prusa3D.PrusaSlicer'
     'PuTTY.PuTTY'
     'REALiX.HWiNFO'
     'VB-Audio.Voicemeeter.Potato'
-    'EclipseAdoptium.Temurin.25.JDK'
-    'EclipseAdoptium.Temurin.21.JDK'
-    'Microsoft.DotNet.SDK.8'
-    'OpenJS.NodeJS.LTS'
     'Vencord.Vesktop'
     'Microsoft.VisualStudioCode'
     'TeamViewer.TeamViewer'
-    'Microsoft.PowerShell'
     'Mozilla.Firefox'
-    'WinFsp.WinFsp'
-    'Microsoft.Sysinternals.Suite'
     'dotPDN.PaintDotNet'
     'GlavSoft.TightVNC'
     'Autodesk.Fusion360'
     'Wakatime.DesktopWakatime'
     'Logitech.GHUB'
     'Adobe.Acrobat.Reader.64-bit'
-    '7zip.7zip'
     'Audacity.Audacity'
     'CrystalDewWorld.CrystalDiskInfo'
     'CrystalDewWorld.CrystalDiskMark'
@@ -88,7 +98,6 @@ $WingetPackages = @(
     'Oracle.VirtualBox'
     'WinDirStat.WinDirStat'
     'IDRIX.VeraCrypt'
-    'Tailscale.Tailscale'
     'Inkscape.Inkscape'
     'Google.Chrome.EXE'
     'HandBrake.HandBrake'
@@ -100,9 +109,9 @@ $WingetPackages = @(
     'KDE.Kdenlive'
     'EpicGames.EpicGamesLauncher'
     'TexasInstruments.TIConnect'
-    'BillStewart.SyncthingWindowsSetup'
     '9PKTQ5699M62' # iCloud
     '9PC3H3V7Q9CH' # Rufus
+{{- end }}
 )
 
 # following winget packages are not installed even though I would like them:
@@ -184,10 +193,15 @@ function Get-ProcessesRunning([string[]]$Files) {
 
 Write-Host 'debug: installing winget packages'
 foreach ($Package in $WingetPackages) {
-    & winget list --id $Package --exact *> $null
+    # --accept-source-agreements on `list` too: on a host where winget has
+    # never run (a fresh install, a CI runner) the first command to touch the
+    # sources stops on the agreement prompt, and here its output is discarded,
+    # so it would sit there unseen. --disable-interactivity makes any other
+    # prompt fail instead of wait.
+    & winget list --id $Package --exact --accept-source-agreements --disable-interactivity *> $null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "debug: winget installing $Package..."
-        & winget install --id $Package --silent --accept-source-agreements --accept-package-agreements
+        & winget install --id $Package --silent --accept-source-agreements --accept-package-agreements --disable-interactivity
         continue
     }
 
@@ -201,5 +215,5 @@ foreach ($Package in $WingetPackages) {
     }
 
     Write-Host "debug: winget updating $Package..."
-    & winget upgrade --id $Package --silent --accept-source-agreements --accept-package-agreements
+    & winget upgrade --id $Package --silent --accept-source-agreements --accept-package-agreements --disable-interactivity
 }

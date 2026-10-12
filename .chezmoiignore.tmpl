@@ -90,6 +90,12 @@ AppData/Roaming/xdg.data/com.vercel.cli
 # App Store apps 060 installs are all GUI ones.
 .chezmoiscripts/00-macos/060-mac-app-store.sh
 .chezmoiscripts/00-macos/160-install-vscode-ext.sh
+# The Windows side of the same: 100-winget leaves its GUI packages out under
+# useHeadless, VS Code included, so 800 has nothing to install extensions
+# into; 700 sideloads the Windows Subsystem for Android, an app platform with
+# nothing to run headless.
+.chezmoiscripts/00-nt/700-out-of-band-appx.ps1
+.chezmoiscripts/00-nt/800-install-vscode-ext.ps1
 {{- end }}
 
 # Tailnet
