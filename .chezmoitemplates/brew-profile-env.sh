@@ -24,7 +24,8 @@ brew() {
         echo "(the pinned checkouts are single-commit: brew, homebrew/core and homebrew/cask each need \`git fetch --unshallow\` first)" >&2
         return 1
     fi
-    command brew "$@"
+    # bottle-source fallback, as the plain wrapper in .commonprofile does
+    _brew_fetching "$@"
 }
 alias brew!='command brew'
 {{- end }}

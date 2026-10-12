@@ -10,6 +10,15 @@
 # *prefer* brew and have a fallback (js-tooling, python-tooling on Linux) keep
 # the plain preamble and branch on HAS_BREW instead.
 require_brew "$(basename "$0")"
-# brew's download queue does not print URLs, so this is the one place an
-# apply's output says which host the bottles come from (brew-mirror-env.sh).
-echo "debug: brew bottles from ${HOMEBREW_ARTIFACT_DOMAIN:-ghcr.io (no mirror)}" >&2
+# These scripts are about to fetch bottles, so the source is picked (asked)
+# now rather than at their first `brew install` (brew-mirror-env.sh). brew's
+# download queue does not print URLs, so this is the one place an apply's
+# output says which host the bottles come from.
+_brew_source_pick
+if [ "$_BREW_SOURCE" = mirror ]; then
+	echo "debug: brew bottles from $HOMEBREW_ARTIFACT_DOMAIN" >&2
+elif [ -n "${HOMEBREW_DOCKER_REGISTRY_TOKEN:-}" ]; then
+	echo "debug: brew bottles from ghcr.io, authenticated with DOTFILES_GITHUB_TOKEN" >&2
+else
+	echo "debug: brew bottles from ghcr.io, anonymously" >&2
+fi

@@ -316,8 +316,10 @@ BREW_ERA_CASK_COMMIT=
 BREW_ERA_SERVICES_COMMIT=
 {{- end }}
 
-# Every host, pinned or not, Linux included. Set before load_brew, so that
-# even the first brew invocation (which may fetch portable-ruby) uses it.
+# Every host, pinned or not, Linux included: the bottle source, mirror or
+# ghcr.io. Set before load_brew, so that even the first brew invocation (which
+# may fetch portable-ruby) has one. The `brew` wrapper that falls back between
+# the two is defined further down, once HAS_BREW is known.
 {{ template "brew-mirror-env.sh" .brewMirror }}
 
 # The package lists adapt themselves to the era: each of 020-brew-packages,
@@ -414,6 +416,16 @@ export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:$PATH"
 [ -d /opt/local/bin ] && export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
 
 command -v brew &>/dev/null && HAS_BREW=true || HAS_BREW=false
+
+# Every `brew` a hookscript runs goes through _brew_fetching
+# (brew-mirror-env.sh): the commands that fetch bottles pick a source that
+# answers and retry once from the other. Defined only now, and only with brew
+# present: once a function by that name exists, `command -v brew` above would
+# find it whether or not brew is installed. 005-homebrew, which can start
+# without brew, picks the source itself before installing.
+if [ "$HAS_BREW" = true ]; then
+	brew() { _brew_fetching "$@"; }
+fi
 
 if [ "$IS_ATOMIC" -eq 1 ]; then
 	# /usr belongs to the bootc image and is mounted read-only, so no system

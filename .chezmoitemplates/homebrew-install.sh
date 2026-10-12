@@ -214,6 +214,11 @@ fi
 
 require_sudo "005-homebrew (installing brew)"
 echo "debug: installing brew into $CHEZMOI_HOMEBREW_PREFIX" >&2
+# The new brew's first run fetches portable-ruby, a bottle like any other, and
+# neither the upstream installer nor the bare brew below goes through the
+# preamble's `brew` wrapper (there was no brew when it ran): pick a source that
+# answers now (brew-mirror-env.sh).
+_brew_source_pick
 
 if [ "$BREW_ERA_PINNED" -eq 1 ]; then
 	if [ "$(uname -s)" != "Darwin" ]; then

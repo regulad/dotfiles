@@ -88,9 +88,11 @@ COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 # GIT_AUTH_TOKEN: the runner's own short-lived GITHUB_TOKEN, which
 # docker/github-builder passes to every build as a BuildKit secret (it fetches
 # the git context with it). It reaches the apply as DOTFILES_GITHUB_TOKEN, a
-# name only 00-linux/125-theos reads, for Theos's api.github.com request. A
-# secret mount never lands in a layer, and without the secret (a local build)
-# the variable is simply unset.
+# name only this repo reads: 00-linux/125-theos, for Theos's api.github.com
+# request, and the bottle-source picker (.chezmoitemplates/brew-mirror-env.sh),
+# which authenticates brew's ghcr.io pulls with it, as the two bootstrap brew
+# commands below also do. A secret mount never lands in a layer, and without
+# the secret (a local build) the variable is simply unset.
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     --mount=type=cache,target=/var/cache/buildkit/uv,uid=${UID},gid=${GID} \
     --mount=type=cache,target=/var/cache/buildkit/pip,uid=${UID},gid=${GID} \
@@ -134,9 +136,9 @@ RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
   \
   && visudo -c && for f in /etc/sudoers.d/*; do visudo -c -f "$f"; done \
   \
-  && su -l ${USERNAME} -c 'NONINTERACTIVE=1 CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' \
+  && su -l -w DOTFILES_GITHUB_TOKEN ${USERNAME} -c '[ -n "${DOTFILES_GITHUB_TOKEN:-}" ] && export HOMEBREW_DOCKER_REGISTRY_TOKEN="$(printf %s "$DOTFILES_GITHUB_TOKEN" | base64 | tr -d "\n")"; NONINTERACTIVE=1 CI=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"' \
   && npm install -g pnpm \
-  && su -l ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; brew install chezmoi' \
+  && su -l -w DOTFILES_GITHUB_TOKEN ${USERNAME} -c '[ -n "${DOTFILES_GITHUB_TOKEN:-}" ] && export HOMEBREW_DOCKER_REGISTRY_TOKEN="$(printf %s "$DOTFILES_GITHUB_TOKEN" | base64 | tr -d "\n")"; eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; brew install chezmoi' \
   && su -l -w RUNNER_ENVIRONMENT,DOTFILES_GITHUB_TOKEN ${USERNAME} -c 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; CHEZMOI_USE_DUMMY=1 CHEZMOI_USE_HEADLESS=1 chezmoi init; chezmoi apply --exclude encrypted' \
   \
   && rm -rf /home/${USERNAME}/.cache/*

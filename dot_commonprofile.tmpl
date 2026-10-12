@@ -10,6 +10,13 @@ export PATH="$HOME/.local/bin:$PATH"
 export HOMEBREW_NO_ASK=1
 
 {{ template "brew-mirror-env.sh" .brewMirror }}
+# Interactive brew falls back between the mirror and ghcr.io like the
+# hookscripts' does: install/upgrade/reinstall/fetch/bundle ask which source
+# answers (at most every ten minutes) and retry once from the other on
+# failure. No round trip at login: until then, brew gets the last pick or the
+# mirror. An era-pinned Mac redefines this in brew-profile-env.sh, on top of
+# the same function.
+brew() { _brew_fetching "$@"; }
 # WSL stubs
 export DONT_PROMPT_WSL_INSTALL=1
 

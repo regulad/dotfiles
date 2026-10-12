@@ -7,8 +7,9 @@
 # Rendered into HOMEBREW_ARTIFACT_DOMAIN and, joined by ":" and base64d,
 # HOMEBREW_DOCKER_REGISTRY_BASIC_AUTH_TOKEN by
 # .chezmoitemplates/brew-mirror-env.sh, which posix-preamble.sh and
-# dot_commonprofile.tmpl include on every host. It exports them at run time
-# everywhere but on a GitHub-hosted Actions runner.
+# dot_commonprofile.tmpl include on every host. Hosts start on the mirror and
+# fall back to ghcr.io when it is not answering; GitHub-hosted Actions runners
+# start on ghcr.io and fall back to the mirror (docs/brew-mirror.md).
 #
 # The account is read-only on the proxy (pull only, nothing else on the
 # server) and the only way in -- anonymous access is off -- created for
