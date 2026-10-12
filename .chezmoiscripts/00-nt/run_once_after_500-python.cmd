@@ -31,7 +31,12 @@ call :uvinstall -q "hf" || goto :uv_install_failed
 call :uvinstall -q "ruff" || goto :uv_install_failed
 call :uvinstall -q "ty" || goto :uv_install_failed
 
-call :uvinstall --python "pypy@3.11" -q --with "bgutil-ytdlp-pot-provider" "yt-dlp[pin,pin-curl-cffi,pin-secretstorage,pin-deno]" || goto :uv_install_failed
+REM yt-dlp's pinned dependencies have Windows CPython wheels. The current
+REM PyPy 8 ABI does not match its cryptography pin, and even PyPy 7 needs a
+REM compiler for cffi/pycryptodomex. Use CPython 3.13 here so a fresh machine
+REM does not need an OpenSSL/MSVC build environment. Keep x64 on Windows ARM
+REM too: these wheels are x64-only, running under the same emulation PyPy used.
+call :uvinstall --python "cpython-3.13-windows-x86_64-none" -q --with "bgutil-ytdlp-pot-provider" "yt-dlp[pin,pin-curl-cffi,pin-secretstorage,pin-deno]" || goto :uv_install_failed
 call :uvinstall --python cp314 -q "keydive" || goto :uv_install_failed
 call :uvinstall --python cp313 -q "pre-commit" || goto :uv_install_failed
 call :uvinstall --python cp313 -q "mangadex-downloader[optional]" || goto :uv_install_failed
