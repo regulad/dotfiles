@@ -50,6 +50,12 @@
 #     dot_config/sshd/sshd_config.tmpl {{ include $cfgTmpl | sha256sum }}
 #     dot_local/bin/sshd-user-session.ps1.tmpl {{ include $launcherTmpl | sha256sum }}
 #
+# Ordered after 100-winget, which installs Tailscale: the firewall rule in
+# step 8 is scoped to the Tailscale interface, and New-NetFirewallRule refuses
+# an -InterfaceAlias that does not exist yet. This used to run as 035, ahead
+# of it, so a fresh host's first apply stopped here -- before Tailscale could
+# ever be installed -- and every later apply stopped in the same place.
+#
 # This script deliberately does NOT self-elevate the way 050-dev-drive.ps1 and
 # 700-out-of-band-appx.ps1 do. It follows 170-firefox-policies.ps1 instead:
 # stay unelevated, shell out to `sudo` for the four things that genuinely need

@@ -3,10 +3,10 @@ Windows Registry Editor Version 5.00
 ; Every static machine-wide registry value this repo sets on Windows, imported
 ; by .chezmoiscripts/00-nt/run_onchange_after_000-registry.cmd ahead of every
 ; other NT hookscript. Only values that can be stated outright belong here. A
-; value that is read-modify-written (035-sshd's IFEO MitigationOptions bits,
+; value that is read-modify-written (102-sshd's IFEO MitigationOptions bits,
 ; the PATH appends in 224 and neosetx), computed at run time (225's native
 ; messaging host paths) or owned by a tool that has to be told about it (nssm
-; in 215, sc.exe in 030 and 035) stays with its script.
+; in 215, sc.exe in 030 and 102) stays with its script.
 ;
 ; A chezmoi template, kept in UTF-8 like every other file here. 000-registry
 ; carries it inline and converts it to UTF-16LE -- the encoding "Version 5.00"

@@ -18,7 +18,7 @@
 #
 #     dot_local/bin/languagetool-server.ps1 {{ include $launcherSrc | sha256sum }}
 #
-# Stays unelevated, following 035-sshd-user-session.ps1 and 170-firefox-
+# Stays unelevated, following 102-sshd-user-session.ps1 and 170-firefox-
 # policies.ps1: the comparison is done here against the registry, only the fix
 # goes through `sudo`, and the fix is verified by reading state back. sudo is
 # pinned to Force New Window mode on this machine (see 030-w32time.cmd), which
@@ -41,7 +41,7 @@ $PowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powersh
 $LogDir = Join-Path $HOME '.local\state\languagetool'
 $Log = Join-Path $LogDir 'service.log'
 
-# Same shape as 035-sshd-user-session.ps1: every elevated action is confirmed
+# Same shape as 102-sshd-user-session.ps1: every elevated action is confirmed
 # by polling for its effect, because sudo returns before the elevated command
 # has necessarily finished.
 function Wait-Until {

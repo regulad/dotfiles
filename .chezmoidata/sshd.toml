@@ -1,5 +1,5 @@
 # Knobs for the user-session OpenSSH server on Windows -- see
-# .chezmoiscripts/00-nt/run_onchange_after_035-sshd-user-session.ps1.tmpl for
+# .chezmoiscripts/00-nt/run_onchange_after_102-sshd-user-session.ps1.tmpl for
 # what consumes these and why the whole arrangement exists.
 #
 # .chezmoidata/ rather than a [data.sshd] block in .chezmoi.toml.tmpl, where
@@ -12,7 +12,7 @@
 # This is the first .chezmoidata entry in the repository.
 
 [sshd]
-    # The stock sshd service is disabled by the 035 script, so 22 is free and
+    # The stock sshd service is disabled by the 102 script, so 22 is free and
     # Windows imposes no privileged-port restriction on unelevated processes.
     # 2222 is chosen anyway, so that a Windows feature update quietly
     # reinstating the stock service on 22 collides with nothing.

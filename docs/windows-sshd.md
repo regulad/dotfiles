@@ -1,6 +1,6 @@
 # SSH server on Windows: user-session `sshd`
 
-`.chezmoiscripts/00-nt/035-sshd-user-session` disables the stock `sshd` service and runs `sshd.exe` inside the interactive desktop session instead, under a Task Scheduler at-logon task. Knobs (port, interface, task name) are in `.chezmoidata/sshd.toml`; the config is `~/.config/sshd/sshd_config` and the launcher is `~/.local/bin/sshd-user-session.ps1`.
+`.chezmoiscripts/00-nt/102-sshd-user-session` disables the stock `sshd` service and runs `sshd.exe` inside the interactive desktop session instead, under a Task Scheduler at-logon task. Knobs (port, interface, task name) are in `.chezmoidata/sshd.toml`; the config is `~/.config/sshd/sshd_config` and the launcher is `~/.local/bin/sshd-user-session.ps1`.
 
 The point is that **mapped network drive letters and virtual filesystem providers are visible over `scp`**. The stock service can't do that, for structural reasons: it runs as SYSTEM in session 0 and mints a fresh token per connection, and drive mappings hang off the logon session, so a new LUID means an empty drive-letter view. Win32-OpenSSH skips the token minting entirely when sshd isn't SYSTEM and the authenticating user's SID matches the process SID — it hands the child its own process token instead — so an sshd launched from the desktop session passes that session's mappings straight through. Upstream-supported, not a hack.
 

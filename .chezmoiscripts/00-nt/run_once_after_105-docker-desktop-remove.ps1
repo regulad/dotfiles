@@ -13,7 +13,7 @@
 # UAC prompt (exit 1 below) means the next apply tries again. Every step is
 # guarded on the thing it removes, so a re-run finds nothing to do.
 #
-# Same elevation shape as 170-firefox-policies.ps1 and 035-sshd-user-session:
+# Same elevation shape as 170-firefox-policies.ps1 and 102-sshd-user-session:
 # stay unelevated, hand the one privileged step to sudo, and confirm it by
 # polling for its effect -- sudo is pinned to Force New Window mode here (see
 # 030-w32time.cmd), which returns early and drops the child's exit code.

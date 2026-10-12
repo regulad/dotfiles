@@ -15,7 +15,7 @@
 # LogonType Interactive, not S4U/Password: pinentry needs to show a real GUI
 # dialog for passphrase prompts, which requires binding the task to the actual
 # desktop logon session -- same reasoning as
-# run_onchange_after_035-sshd-user-session.ps1.tmpl's Interactive requirement,
+# run_onchange_after_102-sshd-user-session.ps1.tmpl's Interactive requirement,
 # different underlying reason (there it was drive-letter visibility).
 #
 # RunLevel Limited, not elevated: gpg-agent has no reason to run as admin, and
