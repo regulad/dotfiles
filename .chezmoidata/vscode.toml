@@ -17,6 +17,7 @@ extensions = [
     "EditorConfig.EditorConfig",
     "GregorBiswanger.json2ts",
     "MS-vsliveshare.vsliveshare",
+    "OpenTofu.vscode-opentofu",
     "Vendicated.vencord-companion",
     "anthropic.claude-code",
     "asvetliakov.vscode-neovim",
