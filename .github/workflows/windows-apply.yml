@@ -214,62 +214,30 @@ jobs:
             param($Source, $Output)
             Add-Type -TypeDefinition $Source -OutputAssembly $Output -OutputType ConsoleApplication
           } -args $sudoSource, "$sudoDir\sudo.exe"
-          $machinePath = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
-          [Environment]::SetEnvironmentVariable('PATH', "$sudoDir;$machinePath", 'Machine')
           $env:PATH = "$sudoDir;$env:PATH"
           sudo cmd /c "echo sudo pass-through works"
+
+          # The Machine PATH. The image's runs to thousands of characters with
+          # the toolchains it ships; a fresh Windows has the System32-rooted
+          # five. GnuPG's installer, which Gpg4win runs, refuses to add itself
+          # to a Machine PATH longer than 2047 characters, with a message box
+          # that /S does not suppress (g4wihelp.c, PATH_LENGTH_LIMIT), and the
+          # apply hung there. Rebuilt to a fresh install's (PowerShell 7 kept:
+          # the image registered it, so winget only ever upgrades it in place
+          # and would not put it back), with the sudo pass-through first. This
+          # job's steps keep the PATH they started with; refreshenv and a new
+          # logon see this one.
+          $envKey = 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Environment'
+          $imagePath = (Get-Item $envKey).GetValue('Path', '', 'DoNotExpandEnvironmentNames')
+          Write-Host "image Machine PATH ($($imagePath.Length) characters): $imagePath"
+          $freshPath = '%SystemRoot%\system32;%SystemRoot%;%SystemRoot%\System32\Wbem;%SYSTEMROOT%\System32\WindowsPowerShell\v1.0\;%SYSTEMROOT%\System32\OpenSSH\;%ProgramFiles%\PowerShell\7\'
+          Set-ItemProperty -Path $envKey -Name Path -Value "$sudoDir;$freshPath" -Type ExpandString
+          Write-Host "User PATH: $([Environment]::GetEnvironmentVariable('PATH', 'User'))"
 
           # A logon would put these on PATH from the registry; later steps
           # only see what is added here.
           $shims, $wingetLinks, $windowsApps, $sudoDir | Add-Content -Path $env:GITHUB_PATH
           Get-PSDrive -PSProvider FileSystem | Format-Table Name, Root, @{ n = 'FreeGiB'; e = { [math]::Round($_.Free / 1GB, 1) } }
-
-      # TEMPORARY (ci/windows-apply iteration): Gpg4win's silent install never
-      # returned on either runner: its bundled gnupg-w32 installer (/S) sits
-      # behind a window titled "Error". Time-boxed here, and the text of
-      # every window the new processes own is read out.
-      - name: "Diagnose: Gpg4win silent install"
-        continue-on-error: true
-        run: |
-          Add-Type -Namespace Diag -Name Win -MemberDefinition @'
-          public delegate bool EnumProc(System.IntPtr h, System.IntPtr l);
-          [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc f, System.IntPtr l);
-          [DllImport("user32.dll")] public static extern bool EnumChildWindows(System.IntPtr p, EnumProc f, System.IntPtr l);
-          [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(System.IntPtr h, out uint pid);
-          [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern System.IntPtr SendMessage(System.IntPtr h, uint msg, System.IntPtr w, System.Text.StringBuilder l);
-          static string Text(System.IntPtr h) { var s = new System.Text.StringBuilder(8192); SendMessage(h, 0x000D, (System.IntPtr)8192, s); return s.ToString(); }
-          public static System.Collections.Generic.List<string> Texts(uint pid) {
-            var r = new System.Collections.Generic.List<string>();
-            EnumWindows((h, l) => {
-              uint p; GetWindowThreadProcessId(h, out p);
-              if (p == pid) {
-                r.Add("window: " + Text(h));
-                EnumChildWindows(h, (c, l2) => { string t = Text(c); if (t.Length > 0) r.Add("  child: " + t); return true; }, System.IntPtr.Zero);
-              }
-              return true;
-            }, System.IntPtr.Zero);
-            return r;
-          }
-          '@
-          $log = Join-Path $env:RUNNER_TEMP 'gpg4win-winget.log'
-          $since = Get-Date
-          $p = Start-Process -FilePath winget -NoNewWindow -PassThru -ArgumentList 'install', '--id', 'GnuPG.Gpg4win', '--exact', '--silent', '--accept-source-agreements', '--accept-package-agreements', '--disable-interactivity', '--verbose-logs', '--log', $log
-          if (-not $p.WaitForExit(600000)) {
-            Write-Host 'warning: winget install GnuPG.Gpg4win still running after 10 minutes'
-            $new = Get-CimInstance Win32_Process | Where-Object { $_.CreationDate -ge $since } | Sort-Object CreationDate
-            $new | Format-Table ProcessId, ParentProcessId, Name, CommandLine -Wrap | Out-String -Width 400 | Write-Host
-            foreach ($proc in $new) {
-              $texts = [Diag.Win]::Texts([uint32]$proc.ProcessId)
-              if ($texts.Count) { Write-Host "--- windows of $($proc.Name) ($($proc.ProcessId))"; $texts | Write-Host }
-            }
-            Get-ChildItem 'C:\Program Files\GnuPG', 'C:\Program Files (x86)\GnuPG', 'C:\Program Files\Gpg4win' -ErrorAction SilentlyContinue | Format-Table FullName, LastWriteTime | Out-String | Write-Host
-            taskkill /T /F /PID $p.Id
-          } else {
-            Write-Host "winget exited $($p.ExitCode)"
-          }
-          if (Test-Path $log) { Get-Content $log | Select-Object -Last 60 }
-          Get-ChildItem $env:TEMP -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.LastWriteTime -ge $since -and $_.Extension -in '.log', '.txt' } |
-            ForEach-Object { Write-Host "--- $($_.FullName)"; Get-Content $_.FullName -Tail 30 }
 
       - name: Apply
         env:
