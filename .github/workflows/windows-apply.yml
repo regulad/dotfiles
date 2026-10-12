@@ -290,15 +290,20 @@ jobs:
             return $true
           }
           $missing = @()
-          foreach ($tool in 'chezmoi', 'scoop', 'git', 'winget', 'pwsh', 'gpg', 'uv', 'pre-commit', 'pnpm', 'node', 'go', 'cargo', 'java', 'vim', 'nvim', 'claude') {
+          $tools = @(
+            'chezmoi', 'scoop', 'git', 'winget', 'pwsh', 'gpg', 'uv', 'pnpm', 'node', 'go', 'cargo', 'java', 'vim', 'nvim', 'claude'
+            # the IaC/YAML set
+            'tofu', 'sops', 'age', 'age-keygen', 'tflint', 'jq', 'yq', 'yamllint', 'pre-commit', 'retry'
+          )
+          foreach ($tool in $tools) {
             if (-not (Show-Tool $tool)) { $missing += $tool }
           }
-          # PENDING: the IaC tool set (tofu, sops, age, tflint, jq, yq,
-          # yamllint, retry) lands in a separate change; reported here, not
-          # yet required. Move these into the list above once it is in.
-          foreach ($tool in 'tofu', 'sops', 'age', 'tflint', 'jq', 'yq', 'yamllint', 'retry') {
-            if (-not (Show-Tool $tool)) { Write-Host "notice: $tool is not installed (not yet required)" }
-          }
+          # telnet is Windows' own Telnet Client (040-telnet-client), not a
+          # scoop package. Only its location is checked: run, it would wait
+          # for input.
+          $telnet = (Get-Command telnet -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+          Write-Host ("{0,-12} {1}" -f 'telnet', $telnet)
+          if ($telnet -ne "$env:SystemRoot\System32\telnet.exe") { $missing += "telnet (System32)" }
           Get-PSDrive -PSProvider FileSystem | Format-Table Name, Root, @{ n = 'FreeGiB'; e = { [math]::Round($_.Free / 1GB, 1) } }
           if ($missing) {
             Write-Host "error: not on a new logon's PATH: $($missing -join ', ')"
