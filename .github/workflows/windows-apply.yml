@@ -1,0 +1,170 @@
+name: Windows apply
+
+# Applies the dotfiles to GitHub's hosted Windows runners and fails if the
+# apply does. Nothing is published: this is the Windows counterpart of
+# macos-apply.yml -- that a fresh apply goes through clean, hookscripts and
+# all.
+#
+# Two runners. windows-2025 is Windows Server 2025 on x64, build 26100: the
+# same codebase as Windows 11 24H2, which is why 010-version-check's floor is
+# 26100. There is no hosted x64 Windows 11 image. windows-11-arm is a real
+# Windows 11 (25H2) on Arm64, so it also covers what has no win-arm64 build.
+# Both run the job as an administrator with UAC prompts off, which a
+# workstation does not; the prep step below makes up the rest of the
+# difference.
+#
+# Headless and with dummy secrets, as on macOS: CHEZMOI_USE_HEADLESS leaves
+# out the GUI winget packages (100, Store apps included), the Windows
+# Subsystem for Android (700) and VS Code's extensions (800). CHEZMOI_USE_DUMMY
+# masks every Bitwarden-backed file and the scripts that read them, and the
+# apply runs with --exclude encrypted.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Same cadence as macos-apply.yml, for the same reason: slow upstream
+    # drift, long jobs, nothing published.
+    - cron: "28 4 1,15 * *"
+  push:
+    branches: ["master", "ci/windows-apply"]
+
+# A newer run cancels the one it supersedes, as in macos-apply.yml.
+concurrency:
+  group: windows-apply
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  apply:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+          - runner: windows-11-arm
+    runs-on: ${{ matrix.runner }}
+    # ~60 scoop packages, the headless winget set, uv/pnpm/cargo/go installs.
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the dotfiles
+        uses: actions/checkout@v5.0.0
+
+      - name: Make the runner look like a fresh Windows 11 workstation
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          $os = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+          Write-Host "$($os.ProductName) $($os.DisplayVersion), build $($os.CurrentBuildNumber).$($os.UBR), $($os.InstallationType), $env:PROCESSOR_ARCHITECTURE"
+          Get-PSDrive -PSProvider FileSystem | Format-Table Name, Root, @{ n = 'FreeGiB'; e = { [math]::Round($_.Free / 1GB, 1) } }
+
+          # The image appends `$ErrorActionPreference = "Stop"` to the
+          # machine-wide PowerShell profiles. A workstation has no such line,
+          # and chezmoi runs .ps1 hookscripts through Windows PowerShell
+          # without -NoProfile, so with it in place every non-terminating
+          # error in them would stop the script.
+          foreach ($profilePath in "$env:SystemRoot\System32\WindowsPowerShell\v1.0\profile.ps1", "$PSHOME\profile.ps1") {
+            if (Test-Path $profilePath) {
+              Write-Host "--- $profilePath"
+              Get-Content $profilePath | Write-Host
+              (Get-Content $profilePath) | Where-Object { $_ -notmatch 'ErrorActionPreference' } | Set-Content $profilePath
+            }
+          }
+
+          # Room on C:, which windows-2025 has little of (~30 GiB free) and
+          # where scoop, the winget packages and the uv/pnpm trees all land.
+          # The Android SDK is the biggest thing the image ships that a fresh
+          # Windows has no trace of.
+          if (Test-Path C:\Android) {
+            cmd /c rmdir /s /q C:\Android
+          }
+
+          # winget: windows-2025 has the one Server shipped with, too old to
+          # be what a current Windows 11 has; windows-11-arm has none.
+          # Microsoft's own module installs or updates it, dependencies
+          # included.
+          if (-not (Get-PSRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
+            Register-PSRepository -Default
+          }
+          Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Microsoft.WinGet.Client -Repository PSGallery -Force -Scope AllUsers
+          Repair-WinGetPackageManager -Latest -Force
+          $windowsApps = Join-Path $env:LOCALAPPDATA 'Microsoft\WindowsApps'
+          $wingetLinks = Join-Path $env:LOCALAPPDATA 'Microsoft\WinGet\Links'
+          $env:PATH = "$windowsApps;$wingetLinks;$env:PATH"
+          winget --version
+
+          # README's NT install: scoop first, then chezmoi and git from it.
+          # get.scoop.sh refuses an elevated shell without -RunAsAdmin.
+          $installer = Join-Path $env:RUNNER_TEMP 'install-scoop.ps1'
+          Invoke-RestMethod -Uri https://get.scoop.sh -OutFile $installer
+          & $installer -RunAsAdmin
+          $shims = Join-Path $HOME 'scoop\shims'
+          $env:PATH = "$shims;$env:PATH"
+          scoop install chezmoi git
+
+          # The hookscripts elevate with Windows' own sudo, which Windows 11
+          # has (000-registry turns it on) and Windows Server does not. gsudo
+          # stands in where it is missing: its scoop manifest shims it as
+          # `sudo`.
+          if (-not (Test-Path "$env:SystemRoot\System32\sudo.exe")) {
+            scoop install gsudo
+          }
+
+          # A logon would put all three on PATH from the registry; later steps
+          # only see what is added here.
+          $shims, $wingetLinks, $windowsApps | Add-Content -Path $env:GITHUB_PATH
+          Get-PSDrive -PSProvider FileSystem | Format-Table Name, Root, @{ n = 'FreeGiB'; e = { [math]::Round($_.Free / 1GB, 1) } }
+
+      - name: Apply
+        env:
+          CHEZMOI_USE_DUMMY: "1"
+          CHEZMOI_USE_HEADLESS: "1"
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $source = Join-Path $HOME '.local\share\chezmoi'
+          New-Item -ItemType Directory -Force -Path (Split-Path $source) | Out-Null
+          Copy-Item -Recurse -Path $env:GITHUB_WORKSPACE -Destination $source
+          chezmoi init
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # --force: no TTY to ask on about files the image already has.
+          # --keep-going: every failing hookscript in one run, not just the
+          # first; the apply still exits non-zero if any failed.
+          chezmoi apply --force --keep-going --exclude encrypted
+          exit $LASTEXITCODE
+
+      - name: Check what a new logon would find
+        if: ${{ !cancelled() }}
+        run: |
+          # PATH as a fresh logon builds it, from the registry, rather than
+          # the one this job started with: installers write there, not here.
+          $env:PATH = [Environment]::GetEnvironmentVariable('PATH', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('PATH', 'User')
+          $versionArgs = @{ go = 'version'; java = '-version' }
+          function Show-Tool([string]$Name) {
+            $command = Get-Command $Name -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $command) { return $false }
+            $arg = if ($versionArgs.ContainsKey($Name)) { $versionArgs[$Name] } else { '--version' }
+            $line = (& $command.Source $arg 2>&1 | Select-Object -First 1) -as [string]
+            Write-Host ("{0,-12} {1}  ({2})" -f $Name, $line, $command.Source)
+            return $true
+          }
+          $missing = @()
+          foreach ($tool in 'chezmoi', 'scoop', 'git', 'winget', 'pwsh', 'gpg', 'uv', 'pre-commit', 'pnpm', 'node', 'go', 'cargo', 'java', 'vim', 'nvim', 'claude') {
+            if (-not (Show-Tool $tool)) { $missing += $tool }
+          }
+          # PENDING: the IaC tool set (tofu, sops, age, tflint, jq, yq,
+          # yamllint, retry) lands in a separate change; reported here, not
+          # yet required. Move these into the list above once it is in.
+          foreach ($tool in 'tofu', 'sops', 'age', 'tflint', 'jq', 'yq', 'yamllint', 'retry') {
+            if (-not (Show-Tool $tool)) { Write-Host "notice: $tool is not installed (not yet required)" }
+          }
+          Get-PSDrive -PSProvider FileSystem | Format-Table Name, Root, @{ n = 'FreeGiB'; e = { [math]::Round($_.Free / 1GB, 1) } }
+          if ($missing) {
+            Write-Host "error: not on a new logon's PATH: $($missing -join ', ')"
+            exit 1
+          }
