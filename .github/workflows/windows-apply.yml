@@ -26,7 +26,7 @@ on:
     # drift, long jobs, nothing published.
     - cron: "28 4 1,15 * *"
   push:
-    branches: ["master", "ci/windows-apply"]
+    branches: ["master"]
 
 # A newer run cancels the one it supersedes, as in macos-apply.yml.
 concurrency:
