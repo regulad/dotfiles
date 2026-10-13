@@ -323,32 +323,6 @@ jobs:
           Stop-Process -Id $watchdog.Id -ErrorAction SilentlyContinue
           exit $code
 
-      # TEMPORARY (ci/windows-apply iteration): 115's `wsl --update` failed
-      # silently on windows-2025, and 110's `sudo wsl.exe --install
-      # --no-distribution` got the inbox stub's "not installed" reply on
-      # windows-11-arm. After the apply, so it cannot change what the apply
-      # saw.
-      - name: "Diagnose: WSL"
-        if: ${{ !cancelled() }}
-        continue-on-error: true
-        run: |
-          $env:WSL_UTF8 = '1'
-          Get-CimInstance Win32_ComputerSystem | Format-List HypervisorPresent | Out-String | Write-Host
-          Get-CimInstance Win32_Processor | Format-List VirtualizationFirmwareEnabled, SecondLevelAddressTranslationExtensions, VMMonitorModeExtensions | Out-String | Write-Host
-          Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Lxss\MSI' -ErrorAction SilentlyContinue | Format-List | Out-String | Write-Host
-          Write-Host '--- the sudo pass-through and what it starts'
-          sudo powershell -NoProfile -Command "[Environment]::Is64BitProcess; `$env:PROCESSOR_ARCHITECTURE; (Get-Process -Id `$PID).Path"
-          sudo cmd /c "echo %PROCESSOR_ARCHITECTURE% & where wsl"
-          $wslExe = "$env:SystemRoot\System32\wsl.exe"
-          if (Test-Path "$env:SystemRoot\Sysnative\wsl.exe") { $wslExe = "$env:SystemRoot\Sysnative\wsl.exe" }
-          Write-Host "--- native WSL launcher: $wslExe"
-          foreach ($line in '--version', '--status', '--update', '--update --web-download', '--install --no-distribution') {
-            Write-Host "--- wsl $line"
-            $wslArgs = $line -split ' '
-            & $wslExe @wslArgs 2>&1 | Out-String | Write-Host
-            Write-Host "exit $LASTEXITCODE"
-          }
-
       - name: Check what a new logon would find
         if: ${{ !cancelled() }}
         run: |
