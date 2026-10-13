@@ -361,7 +361,8 @@ jobs:
           $tools = @(
             'chezmoi', 'scoop', 'git', 'winget', 'pwsh', 'gpg', 'uv', 'pnpm', 'node', 'go', 'cargo', 'java', 'vim', 'nvim', 'claude'
             # the IaC/YAML set
-            'tofu', 'sops', 'age', 'age-keygen', 'tflint', 'jq', 'yq', 'yamllint', 'pre-commit', 'retry'
+            'tofu', 'terraform', 'sops', 'age', 'age-keygen', 'tflint', 'jq', 'yq', 'yamllint', 'pre-commit', 'retry'
+            'golangci-lint'
           )
           foreach ($tool in $tools) {
             if (-not (Show-Tool $tool)) { $missing += $tool }
