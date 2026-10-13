@@ -185,8 +185,12 @@ REM digit" read telnet's msys-inetutils-1.7-1 as missing on every run. A
 REM download that failed leaves the app's directory behind, which `scoop list`
 REM still shows, marked "Install failed"; that row does not count, and the next
 REM `scoop install` purges it before trying again.
-:check_install_user
+:scoop_installed
 scoop list %1 2>nul | findstr /b /l /c:"%1 " | findstr /v /l /c:"Install failed" >nul 2>&1
+exit /b
+
+:check_install_user
+call :scoop_installed %1
 if errorlevel 1 (
     echo debug: %1 not installed, installing...
     call :scoop_install %1
@@ -203,13 +207,16 @@ REM `scoop install %1`, run through %2 (sudo) when given. Each app downloads
 REM from its own publisher's server, and some of those fail now and then:
 REM nssm.cc answers 503 on and off. Three tries, half a minute apart. `call`
 REM because scoop is scoop.cmd, and a batch file run without it never hands
-REM control back -- the check after it never ran, so a failed install went by
-REM without stopping this script.
+REM control back. Each try is judged by :scoop_installed, not by scoop's exit
+REM status, which is 0 even when the download failed: bin/scoop.ps1 runs the
+REM subcommand with `&` and never passes its exit code on, so the `exit 1` in
+REM scoop-install's abort ends only the subcommand's script.
 :scoop_install
 set /a scoop_try=0
 :scoop_install_try
 set /a scoop_try+=1
 call %~2 scoop install %1
+call :scoop_installed %1
 if not errorlevel 1 exit /b 0
 if %scoop_try% geq 3 exit /b 1
 echo warning: scoop install %1 failed ^(try %scoop_try% of 3^), retrying in 30 seconds 1>&2
@@ -241,7 +248,7 @@ goto :after_check_install_admin
 
 REM Same test and install as :check_install_user, elevated.
 :check_install_admin
-scoop list %1 2>nul | findstr /b /l /c:"%1 " | findstr /v /l /c:"Install failed" >nul 2>&1
+call :scoop_installed %1
 if errorlevel 1 (
     echo debug: %1 not installed, installing...
     call :scoop_install %1 sudo
