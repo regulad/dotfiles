@@ -132,11 +132,13 @@ nmap ^
 npiperelay ^
 rust ^
 go ^
+golangci-lint ^
 fastfetch ^
 ripgrep ^
 actionlint ^
 hadolint ^
 opentofu ^
+terraform ^
 tflint ^
 jq ^
 yq ^

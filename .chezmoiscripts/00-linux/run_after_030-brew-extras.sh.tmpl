@@ -8,6 +8,9 @@
 SECONDARY_BINARY_DEPENDENCIES=(
 	"awscli"
 	"go"  # needed for newer versions of toolchain
+	# golangci-lint from brew, not 120-go-tooling's `go install`: upstream
+	# says a source install is not guaranteed to work and ships binaries.
+	"golangci-lint"
 	"languagetool"
 	"cloudflared"
 	"wakatime-cli"
@@ -35,8 +38,9 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	# neither Fedora nor Ubuntu packages sops, Ubuntu has no opentofu and
 	# Fedora's lags upstream, and Ubuntu's `yq` is kislyuk's Python wrapper,
 	# not mikefarah's Go yq that this formula (and Fedora's package) is. tflint
-	# is a cask now, installed below. age, jq and retry come from the system
-	# lists; ansible-core, ansible-lint and yamllint are uv tools (100).
+	# and terraform come from their upstream taps, installed below. age, jq and
+	# retry come from the system lists; ansible-core, ansible-lint and yamllint
+	# are uv tools (100).
 	"opentofu"
 	"sops"
 	"yq"
@@ -81,6 +85,13 @@ if [ "$HAS_BREW" = "true" ]; then
 	if ! brew list --cask terraform-linters/tap/tflint &>/dev/null; then
 		brew install -q --cask terraform-linters/tap/tflint
 	fi
+
+	# terraform likewise: homebrew-core disabled its last MPL release, 1.5.7,
+	# on 2025-04-12 and has since removed it, and neither Fedora nor Ubuntu
+	# packages it. HashiCorp's own tap has a formula that installs their
+	# prebuilt Linux zip; trusted and tapped the same way as tflint's.
+	brew_trust --tap hashicorp/tap
+	brew install -q --formula hashicorp/tap/terraform
 
 	# rclone above pulls in libfuse as a Linux dependency, and brew links it
 	# unless told otherwise. Its fusermount3 is not setuid -- brew never marks

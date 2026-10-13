@@ -29,6 +29,9 @@
 SECONDARY_BINARY_DEPENDENCIES=(
 	"awscli"
 	"go"  # needed for newer versions of toolchain
+	# golangci-lint from brew, not 120-go-tooling's `go install`: upstream
+	# says a source install is not guaranteed to work and ships binaries.
+	"golangci-lint"
 	"languagetool"
 	"cloudflared"
 	"wakatime-cli"
@@ -86,6 +89,13 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	# upstream's cask, installed below.
 	"tflint"
 {{- end }}
+{{- if $pre2025 }}
+	# homebrew-core kept terraform's last MPL release, 1.5.7 (1.3.3 at
+	# catalina's checkout), until disabling it on 2025-04-12 for BUSL; these
+	# checkouts predate that and still bottle it. Everywhere else it is
+	# HashiCorp's tap, installed below.
+	"terraform"
+{{- end }}
 {{- if $pre2023 }}
 {{- /* huggingface-cli itself only reached homebrew-core in 2023 */ -}}
 {{- else if $pre2026 }}
@@ -125,6 +135,14 @@ if [ "$HAS_BREW" = "true" ]; then
 	if ! brew list --cask terraform-linters/tap/tflint &>/dev/null; then
 		brew install -q --cask terraform-linters/tap/tflint
 	fi
+{{- end }}
+{{- if not $pre2025 }}
+	# terraform: the formula in HashiCorp's own tap (015 taps it), which
+	# installs their prebuilt release zip. homebrew-core has none past the
+	# disabled 1.5.7. Native brew only, like the tflint cask; 020's
+	# `brew upgrade` keeps it current.
+	brew_trust --tap hashicorp/tap
+	brew install -q --formula hashicorp/tap/terraform
 {{- end }}
 	# brew-gem global gems (like cargo/go/uv)
 	# `brew trust` first: the install itself passes on argv, but every later
