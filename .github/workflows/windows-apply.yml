@@ -81,12 +81,34 @@ jobs:
             }
           }
 
-          # Room on C:, which windows-2025 has little of (~30 GiB free) and
-          # where scoop, the winget packages and the uv/pnpm trees all land.
-          # The Android SDK is the biggest thing the image ships that a fresh
-          # Windows has no trace of.
-          if (Test-Path C:\Android) {
-            cmd /c rmdir /s /q C:\Android
+          # Room on C:, which windows-2025 has little of (~31 GiB free) and
+          # where scoop, the winget packages and the uv/pnpm trees all land. A
+          # fresh apply writes ~30 GiB there: x64 finished with 2.8, then 1.8
+          # GiB left, and the next x64 runner stopped answering mid-apply
+          # without ever uploading its log. These are toolchains the image
+          # ships that a fresh Windows has no trace of and that nothing here
+          # installs its own copy of; each is measured, so the log says what it
+          # was worth. (The dotfiles bring their own .NET SDK, Rust, MSYS2 and
+          # Perl, so the image's copies of those stay.)
+          $imageOnly = @(
+            'C:\Android'             # the Android SDK
+            $env:RUNNER_TOOL_CACHE   # actions/setup-* versions, the CodeQL bundle
+            'C:\ghcup'               # GHC, cabal, stack
+            $env:CONDA               # Miniconda
+          )
+          foreach ($dir in $imageOnly) {
+            if (-not $dir -or -not (Test-Path $dir)) { continue }
+            $before = (Get-PSDrive C).Free
+            try { cmd /c rmdir /s /q $dir } catch { Write-Host "warning: $dir only partly removed: $_" }
+            Write-Host ("removed {0}: {1:N1} GiB" -f $dir, (((Get-PSDrive C).Free - $before) / 1GB))
+          }
+
+          # Scoop keeps every archive it downloads, 2.4 GiB of them for a fresh
+          # apply. windows-2025 has a D: with room; on windows-11-arm D: is the
+          # Dev Drive 050 makes, inside a VHDX on C:, and C: has the room.
+          if (Test-Path D:\) {
+            New-Item -ItemType Directory -Force -Path D:\scoop-cache | Out-Null
+            'SCOOP_CACHE=D:\scoop-cache' | Add-Content -Path $env:GITHUB_ENV
           }
 
           # winget: windows-2025 has the one Server shipped with, too old to
@@ -263,14 +285,24 @@ jobs:
           # An installer that waits on a prompt nobody can see stalls the
           # apply with no output until the job times out. Every 15 minutes
           # this lists the newest processes, so the log says what it was
-          # stuck on.
+          # stuck on, and C:'s free space. A runner that stops answering
+          # never uploads the log at all, so each round is also an annotation:
+          # those reach GitHub as they happen, and outlive the runner. A
+          # low-disk warning goes up as soon as C: drops under 3 GiB.
           $watch = @'
-          $start = Get-Date
-          while ($true) {
-            Start-Sleep -Seconds 900
-            [Console]::Out.WriteLine("watchdog: still applying after $([int]((Get-Date) - $start).TotalMinutes) minutes; newest processes:")
-            [Console]::Out.WriteLine((Get-CimInstance Win32_Process | Sort-Object CreationDate -Descending | Select-Object -First 15 |
-              Format-Table ProcessId, ParentProcessId, Name, CommandLine -Wrap | Out-String -Width 400))
+          $warned = $false
+          for ($minute = 1; ; $minute++) {
+            Start-Sleep -Seconds 60
+            $freeGiB = [math]::Round((Get-PSDrive C).Free / 1GB, 1)
+            if (-not $warned -and $freeGiB -lt 3) {
+              [Console]::Out.WriteLine("::warning title=watchdog::C: is down to $freeGiB GiB free after $minute minutes")
+              $warned = $true
+            }
+            if ($minute % 15) { continue }
+            $newest = Get-CimInstance Win32_Process | Sort-Object CreationDate -Descending | Select-Object -First 15
+            [Console]::Out.WriteLine("::notice title=watchdog::$minute minutes, C: $freeGiB GiB free; newest: $(($newest | Select-Object -First 5 -ExpandProperty Name) -join ', ')")
+            [Console]::Out.WriteLine("watchdog: still applying after $minute minutes, C: $freeGiB GiB free; newest processes:")
+            [Console]::Out.WriteLine(($newest | Format-Table ProcessId, ParentProcessId, Name, CommandLine -Wrap | Out-String -Width 400))
           }
           '@
           # -OutputFormat Text: with -EncodedCommand and no console on stdout,
