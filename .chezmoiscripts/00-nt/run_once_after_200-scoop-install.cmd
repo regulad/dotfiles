@@ -181,12 +181,15 @@ REM Installed means a `scoop list` row that starts with the exact name. The
 REM query is a substring match (`scoop list age` also lists imagemagick and
 REM tesseract-languages), so the name has to be anchored to the start of the
 REM row, and a version need not start with a digit: matching "name, spaces,
-REM digit" read telnet's msys-inetutils-1.7-1 as missing on every run.
+REM digit" read telnet's msys-inetutils-1.7-1 as missing on every run. A
+REM download that failed leaves the app's directory behind, which `scoop list`
+REM still shows, marked "Install failed"; that row does not count, and the next
+REM `scoop install` purges it before trying again.
 :check_install_user
-scoop list %1 2>nul | findstr /b /l /c:"%1 " >nul 2>&1
+scoop list %1 2>nul | findstr /b /l /c:"%1 " | findstr /v /l /c:"Install failed" >nul 2>&1
 if errorlevel 1 (
     echo debug: %1 not installed, installing...
-    scoop install %1
+    call :scoop_install %1
     if errorlevel 1 (
         echo error: failed to install scoop package %1 1>&2
         exit /b 1
@@ -195,6 +198,23 @@ if errorlevel 1 (
     echo debug: %1 already installed, skipping
 )
 exit /b 0
+
+REM `scoop install %1`, run through %2 (sudo) when given. Each app downloads
+REM from its own publisher's server, and some of those fail now and then:
+REM nssm.cc answers 503 on and off. Three tries, half a minute apart. `call`
+REM because scoop is scoop.cmd, and a batch file run without it never hands
+REM control back -- the check after it never ran, so a failed install went by
+REM without stopping this script.
+:scoop_install
+set /a scoop_try=0
+:scoop_install_try
+set /a scoop_try+=1
+call %~2 scoop install %1
+if not errorlevel 1 exit /b 0
+if %scoop_try% geq 3 exit /b 1
+echo warning: scoop install %1 failed ^(try %scoop_try% of 3^), retrying in 30 seconds 1>&2
+powershell -NoProfile -NonInteractive -Command "Start-Sleep -Seconds 30"
+goto :scoop_install_try
 
 :after_check_install_user
 
@@ -219,12 +239,12 @@ echo debug: installing new scoop admin packages
 for %%p in (%admin_packages%) do call :check_install_admin %%p || goto :scoop_install_failed
 goto :after_check_install_admin
 
-REM Same test as :check_install_user.
+REM Same test and install as :check_install_user, elevated.
 :check_install_admin
-scoop list %1 2>nul | findstr /b /l /c:"%1 " >nul 2>&1
+scoop list %1 2>nul | findstr /b /l /c:"%1 " | findstr /v /l /c:"Install failed" >nul 2>&1
 if errorlevel 1 (
     echo debug: %1 not installed, installing...
-    sudo scoop install %1
+    call :scoop_install %1 sudo
     if errorlevel 1 (
         echo error: failed to install scoop package %1 1>&2
         exit /b 1
