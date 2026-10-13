@@ -17,6 +17,10 @@
   "worktree": {
     "baseRef": "fresh"
   },
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline-command.sh"
+  },
   "theme": "auto",
   "editorMode": "vim",
   "autoCompactEnabled": true,
