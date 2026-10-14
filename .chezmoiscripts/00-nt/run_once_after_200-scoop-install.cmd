@@ -129,7 +129,6 @@ gow ^
 bind ^
 pnpm ^
 nmap ^
-npiperelay ^
 rust ^
 go ^
 golangci-lint ^

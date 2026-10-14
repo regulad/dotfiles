@@ -1,6 +1,6 @@
 [Unit]
 Description=Relay the Windows OpenSSH agent named pipe into a WSL2 Unix socket
-Documentation=https://github.com/jstarks/npiperelay
+Documentation=https://github.com/albertony/npiperelay
 
 [Service]
 Type=simple

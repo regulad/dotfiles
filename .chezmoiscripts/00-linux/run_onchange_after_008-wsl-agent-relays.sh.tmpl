@@ -1,0 +1,39 @@
+{{ template "posix-preamble.sh" . }}
+# The Windows agents, relayed into WSL (masked outside a genuine WSL distro in
+# .chezmoiignore): ssh-agent-relay.service, which 007 enables, and
+# gpg-agent-relay.service, enabled here in place of the local
+# gpg-agent.socket that 150-user-services enables on every other Linux host.
+# Both run ~/.local/bin/wsl-npiperelay, the npiperelay fork 00-nt/100-winget
+# installs on the Windows side.
+#
+# run_onchange_, keyed on the files below, because a running relay keeps the
+# code it started with: a change to any of them restarts both. That is also
+# how the SSH relay moves off scoop's npiperelay (00-nt/207 removes it) onto
+# winget's -- until this runs, it still resolves scoop's.
+#
+# Relay files:
+#     dot_local/bin/executable_wsl-npiperelay {{ include "dot_local/bin/executable_wsl-npiperelay" | sha256sum }}
+#     dot_local/bin/executable_wsl-ssh-agent-relay {{ include "dot_local/bin/executable_wsl-ssh-agent-relay" | sha256sum }}
+#     dot_local/bin/executable_wsl-gpg-agent-relay {{ include "dot_local/bin/executable_wsl-gpg-agent-relay" | sha256sum }}
+#     dot_config/systemd/user/ssh-agent-relay.service {{ include "dot_config/systemd/user/ssh-agent-relay.service" | sha256sum }}
+#     dot_config/systemd/user/gpg-agent-relay.service {{ include "dot_config/systemd/user/gpg-agent-relay.service" | sha256sum }}
+if [ "$IS_WSL" -ne 1 ]; then
+	echo "notice: not a WSL session, skipping the agent relays" >&2
+	exit 0
+fi
+if ! systemctl --user status &>/dev/null; then
+	echo "error: user session broken (couldn't run systemd --user)" >&2
+	exit 1
+fi
+
+systemctl --user daemon-reload
+
+# WSL's own gpg-agent would take the same socket. Masked rather than disabled,
+# so neither an apply nor a stray `systemctl --user start` brings it back; gpg's
+# autospawn does not go through systemd, and only happens when nothing answers
+# on the socket. --now stops the agent running now.
+systemctl --user mask --now gpg-agent.socket gpg-agent.service
+systemctl --user enable gpg-agent-relay.service
+
+systemctl --user restart ssh-agent-relay.service gpg-agent-relay.service
+echo "notice: (re)started the SSH and GPG agent relays to Windows" >&2

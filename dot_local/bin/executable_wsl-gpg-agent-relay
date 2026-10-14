@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Relays the Windows gpg-agent -- Gpg4win's, which 00-nt/227 starts at logon --
+# into the socket WSL's gpg uses, so gpg here signs and decrypts with the keys
+# and the passphrase cache on the Windows side, and asks for a passphrase
+# through Gpg4win's pinentry instead of a terminal one. The GPG twin of
+# wsl-ssh-agent-relay; run by gpg-agent-relay.service, which
+# 008-wsl-agent-relays enables on WSL in place of the local gpg-agent.socket.
+#
+# Gpg4win's sockets are not named pipes but Assuan socket files: a localhost
+# TCP port and a nonce, which npiperelay -a (albertony's fork) reads and
+# connects to, once per connection. This relays the main socket. Should a WSL
+# gpg ever disagree with a newer Gpg4win agent over it, the restricted socket
+# meant for forwarding (agent-extra-socket) is the fallback.
+#
+# The Windows socket's path reaches each connection through the environment,
+# not socat's command line, whose address syntax would take the drive letter's
+# colon apart.
+set -euo pipefail
+
+if [ "${1:-}" = --connect ]; then
+	exec "$HOME/.local/bin/wsl-npiperelay" -ei -ep -s -a "$WSL_GPG_AGENT_WINDOWS_SOCKET"
+fi
+
+win_gpgconf="/mnt/c/Program Files/GnuPG/bin/gpgconf.exe"
+if [ ! -x "$win_gpgconf" ]; then
+	echo "error: $win_gpgconf not found; Gpg4win comes from 00-nt/100-winget" >&2
+	exit 1
+fi
+# gpgconf percent-escapes the drive letter's colon: C%3a\Users\...
+win_sock="$("$win_gpgconf" --list-dirs agent-socket | tr -d '\r' | sed 's/%3[aA]/:/g')"
+if [ -z "$win_sock" ]; then
+	echo "error: $win_gpgconf named no agent-socket" >&2
+	exit 1
+fi
+export WSL_GPG_AGENT_WINDOWS_SOCKET="$win_sock"
+
+sock="$(gpgconf --list-dirs agent-socket)"
+
+# A local gpg-agent on this socket -- one that gpg started on its own while
+# nothing answered there -- notices the socket being replaced, shuts down, and
+# removes the path on its way out, by then the relay's. So none may be running
+# when the relay binds. Every gpg-agent process in WSL is a local one: the
+# Windows agent is not a Linux process, so this never reaches it, where
+# `gpgconf --kill gpg-agent` would ask whichever agent answers the socket.
+if pkill -u "$(id -u)" -x gpg-agent; then
+	for _ in 1 2 3 4 5 6 7 8 9 10; do
+		pgrep -u "$(id -u)" -x gpg-agent >/dev/null || break
+		sleep 0.3
+	done
+fi
+
+mkdir -p -m 700 "$(dirname "$sock")"
+rm -f "$sock"
+exec socat UNIX-LISTEN:"$sock",fork,mode=0600 EXEC:"$0 --connect",nofork

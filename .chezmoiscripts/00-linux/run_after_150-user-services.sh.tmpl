@@ -11,7 +11,13 @@ if ! [ "$CONTAINERIZED" -eq 1 ]; then
 		# persist it for the next login; `--now` also creates the listening
 		# socket in this session immediately rather than waiting for the
 		# first gpg/ssh invocation to trigger gpg's own autospawn.
-		systemctl --user enable --now gpg-agent.socket
+		#
+		# Not on WSL, where gpg uses the Windows agent through
+		# gpg-agent-relay.service on the same socket, and
+		# 008-wsl-agent-relays has masked these.
+		if [ "$IS_WSL" -eq 0 ]; then
+			systemctl --user enable --now gpg-agent.socket
+		fi
 		# NOTE: tailscale-ephemeral.service is deliberately NOT enabled here.
 		# It is shipped inside WSL as an option, not as a default: joining a
 		# tailnet is a side effect nobody should get merely from running an

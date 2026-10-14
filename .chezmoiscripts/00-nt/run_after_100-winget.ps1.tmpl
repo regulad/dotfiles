@@ -30,6 +30,13 @@ $WingetPackages = @(
     'WireGuard.WireGuard'
     'Anthropic.ClaudeCode'
     'GnuPG.Gpg4win'
+    # albertony's npiperelay fork, not jstarks' original (scoop extras, frozen
+    # at 0.1.0 since 2020): its -a reaches Gpg4win's agent, whose sockets are
+    # Assuan socket files (a localhost port and a nonce) rather than named
+    # pipes. The WSL agent relays run it, both the GPG one and the SSH one
+    # (dot_local/bin/executable_wsl-npiperelay). x86 and x64 builds only; an
+    # ARM host runs the x64 one emulated.
+    'albertony.npiperelay'
     # sops from here, not scoop: scoop's manifest pulls in scoop's own gpg
     # beside Gpg4win (see 200-scoop-install).
     'SecretsOPerationS.SOPS'

@@ -1,0 +1,15 @@
+[Unit]
+Description=Relay the Windows (Gpg4win) gpg-agent into WSL2's gpg-agent socket
+Documentation=https://github.com/albertony/npiperelay
+# Both want $(gpgconf --list-dirs agent-socket). 008-wsl-agent-relays masks
+# the local ones on WSL; this keeps them from running alongside regardless.
+Conflicts=gpg-agent.socket gpg-agent.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/wsl-gpg-agent-relay
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

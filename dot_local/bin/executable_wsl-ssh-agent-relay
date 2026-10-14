@@ -1,24 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# systemd --user units don't inherit WSL's interop-extended Windows PATH, so
-# npiperelay.exe (installed via scoop) has to be located explicitly here
-# rather than left to socat's own execvp PATH lookup.
-resolve_npiperelay() {
-	if command -v npiperelay.exe &>/dev/null; then
-		command -v npiperelay.exe
-		return
-	fi
-	local candidate
-	for candidate in /mnt/c/Users/*/scoop/shims/npiperelay.exe; do
-		[ -x "$candidate" ] && { printf '%s\n' "$candidate"; return; }
-	done
-	echo "error: npiperelay.exe not found (expected via scoop: 'scoop install npiperelay')" >&2
-	exit 1
-}
-
-npiperelay="$(resolve_npiperelay)"
+# Relays the Windows OpenSSH agent's named pipe into ~/.wsl-ssh-agent.sock
+# (SSH_AUTH_SOCK in .commonprofile), one npiperelay per connection. Run by
+# ssh-agent-relay.service; wsl-npiperelay finds npiperelay.exe on the Windows
+# side.
 sock="$HOME/.wsl-ssh-agent.sock"
 
 rm -f "$sock"
-exec socat UNIX-LISTEN:"$sock",fork,mode=0600 EXEC:"$npiperelay -ei -s //./pipe/openssh-ssh-agent",nofork
+exec socat UNIX-LISTEN:"$sock",fork,mode=0600 EXEC:"$HOME/.local/bin/wsl-npiperelay -ei -s //./pipe/openssh-ssh-agent",nofork

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Runs the Windows side's npiperelay.exe with these arguments, for the WSL agent
+# relays (wsl-ssh-agent-relay, wsl-gpg-agent-relay). It is albertony's fork,
+# which 00-nt/100-winget installs: its -a reaches Gpg4win's agent sockets, and
+# it is a drop-in for jstarks' original on named pipes.
+#
+# Located explicitly: systemd --user units get no Windows PATH, and
+# .github/wsl/wsl.conf keeps it out of the interactive one too
+# (appendWindowsPath=false). winget's Links entry first, since it survives
+# upgrades; it is an NTFS symlink, which WSL follows. The package directory it
+# points into is the fallback.
+set -euo pipefail
+
+for candidate in \
+	/mnt/c/Users/*/AppData/Local/Microsoft/WinGet/Links/npiperelay.exe \
+	/mnt/c/Users/*/AppData/Local/Microsoft/WinGet/Packages/albertony.npiperelay_*/npiperelay.exe; do
+	if [ -x "$candidate" ]; then
+		exec "$candidate" "$@"
+	fi
+done
+echo "error: npiperelay.exe not found on the Windows side; 00-nt/100-winget installs it (winget install albertony.npiperelay)" >&2
+exit 1
