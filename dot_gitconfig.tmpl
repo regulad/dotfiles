@@ -5,8 +5,10 @@
        treats that value as fatal for EVERY git command, chezmoi's own
        included. So an older git signs with the managed GPG key
        (private_dot_gnupg/*.asc, imported by the 145-gpg-keys hooks) through
-       gpg-agent instead. The file is re-rendered on every apply, so once
-       brew's newer git is on PATH the SSH branch takes over by itself. */ -}}
+       gpg-agent instead. The file is re-rendered on every apply, so it
+       follows whichever git that is. On macOS it is always Apple's (brew's is
+       kept unlinked, see brew-packages-macos.sh), so a Mac on Big Sur or
+       older stays on GPG signing. */ -}}
 {{- $gitVersion := output "git" "--version" | regexFind "[0-9]+\\.[0-9]+" -}}
 {{- $sshSigning := semverCompare ">=2.34.0" (printf "%s.0" $gitVersion) -}}
 {{- /* hook.<name>.event/command (hooks defined in config) arrived in git 2.54. */ -}}
@@ -96,4 +98,36 @@
 	helper = !gh auth git-credential
 [credential "https://github.com"]
 	helper = !gh auth git-credential
+{{-   $smtpLogin := (bitwarden "item" .smtp.bitwardenItem).login }}
+# git send-email, through the server in .chezmoidata/smtp.toml. From: is
+# user.name <user.email> above. There is deliberately no smtpPass: send-email
+# asks the credential helpers below for the password instead, and the
+# git-smtp-credential hookscripts put it there from Bitwarden.
+[sendemail]
+	smtpServer = {{ .smtp.host }}
+	smtpServerPort = {{ .smtp.port }}
+	smtpEncryption = ssl
+	smtpUser = {{ $smtpLogin.username }}
+{{- /* The helper that holds the SMTP password, per platform: Git Credential
+       Manager on Windows (Windows Credential Manager), and the same Windows
+       GCM from WSL, found through /mnt/c the way wsl-ssh-agent-relay finds
+       npiperelay, so WSL reads the entry 00-nt/240 stored without one of its
+       own. osxkeychain on macOS (the login keychain), where git is Apple's.
+       Native Linux has none yet (README TODOs), so send-email prompts there.
+       An empty helper first clears the list for this URL, dropping the one
+       the git package registers in its own system gitconfig, so the store
+       the hookscripts fill is the only one asked. */ -}}
+{{-   $smtpHelper := "" }}
+{{-   if eq .chezmoi.os "windows" }}
+{{-     $smtpHelper = "manager" }}
+{{-   else if eq .chezmoi.os "darwin" }}
+{{-     $smtpHelper = "osxkeychain" }}
+{{-   else if and (eq .chezmoi.os "linux") (ne (env "WSL_DISTRO_NAME") "") }}
+{{-     $smtpHelper = output "sh" "-c" "for f in /mnt/c/Users/*/scoop/apps/git/current/*/bin/git-credential-manager.exe; do if [ -f \"$f\" ]; then printf '%s' \"$f\"; break; fi; done; true" | trim }}
+{{-   end }}
+{{-   if $smtpHelper }}
+[credential "smtp://{{ .smtp.host }}:{{ .smtp.port }}"]
+	helper =
+	helper = {{ $smtpHelper }}
+{{-   end }}
 {{- end }}

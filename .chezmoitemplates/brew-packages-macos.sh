@@ -128,7 +128,6 @@ BREW_PACKAGES=(
 {{- if not $pre2024 }}
 	sshpass  # not in homebrew-core until 2024; MacPorts supplies it on the older eras (017)
 {{- end }}
-	git
 	git-lfs
 	git-filter-repo
 	gnupg # gpg
@@ -185,6 +184,9 @@ BREW_PACKAGES=(
 #       030-brew-extras; rclone, awscli and s3cmd cover the same S3 workflows.
 #   conflicts with a formula we want more:
 #     inetutils -- conflicts_with telnet; see the note in the UTILS section.
+#   deliberately host-owned:
+#     git -- Apple's, from the Command Line Tools or Xcode; see the unlink
+#       after the install below.
 
 # Migration for a host that got inetutils before the list switched to telnet:
 # the conflict is symmetric, so `brew install telnet` would fail the same way.
@@ -233,6 +235,21 @@ brew_trust --tap openai/tools
 # GUI apps -- and without it brew guesses formula with a warning each time.
 brew install -q --formula "${BREW_PACKAGES[@]}"
 brew upgrade -q
+
+# git is Apple's (/usr/bin/git, the Command Line Tools' or Xcode's), the way
+# the image's podman is on Linux (00-linux/030-brew-extras): out of the list
+# above, and a brew git that an earlier apply installed is unlinked so it no
+# longer shadows /usr/bin on PATH. Nothing in the list depends on brew's git
+# on macOS (git-filter-repo uses the system git here, unlike on Linux); this
+# sits after the install anyway, in case a formula ever pulls it back in.
+# send-email then runs under Apple's git as well, which keeps it on the
+# git-credential-osxkeychain 146-git-smtp-credential stored its password
+# through. .gitconfig renders against Apple's git too, so a Mac on Big Sur or
+# older signs with GPG, and the config-defined hook waits for Apple's git to
+# reach 2.54.
+if brew list --formula git &>/dev/null; then
+	brew unlink git
+fi
 {{- if $secondary }}
 
 # The rest is the native brew's: ~/.cargo is shared by both arches, and

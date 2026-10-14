@@ -77,6 +77,11 @@ AppData/Roaming/xdg.data/com.vercel.cli
 .chezmoiscripts/00-linux/145-gpg-keys.sh
 .chezmoiscripts/00-macos/145-gpg-keys.sh
 .chezmoiscripts/00-nt/145-gpg-keys.ps1
+
+# git send-email's SMTP password, from Bitwarden into the OS keychain. With
+# dummy secrets .gitconfig has no [sendemail] for it to serve anyway.
+.chezmoiscripts/00-macos/146-git-smtp-credential.sh
+.chezmoiscripts/00-nt/240-git-smtp-credential.ps1
 {{- end }}
 
 # Head

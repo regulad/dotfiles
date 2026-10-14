@@ -1,0 +1,17 @@
+# The SMTP submission server `git send-email` sends through, and the Bitwarden
+# login it authenticates as. Read by dot_gitconfig.tmpl ([sendemail] and the
+# credential helper pinned for smtp://<host>:<port>) and by the hookscripts
+# that put the password into that helper's store from Bitwarden
+# (00-nt/240-git-smtp-credential.ps1, 00-macos/146-git-smtp-credential.sh).
+# They have to agree exactly: send-email asks the helpers for
+# protocol=smtp, host=<host>:<port>, so a credential stored under any other
+# host or port is never found.
+
+[smtp]
+    host = "mail.regulad.xyz"
+    # SMTPS, TLS from the first byte; [sendemail] sets smtpEncryption = ssl to
+    # match. (587 with STARTTLS would be smtpEncryption = tls.)
+    port = 465
+    # The FreeIPA account: .login.username is the SMTP user, .login.password
+    # its password.
+    bitwardenItem = "freeipa.regulad-verizon-livingston.internal"
