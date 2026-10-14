@@ -150,6 +150,8 @@ repositories  # symlink
 .zprofile
 .zshrc
 .zshenv
+# The fragments .zshrc sources; there is no zsh here.
+.config/zsh/
 # Cargo's and Gradle's homes exist only on the D: Dev Drive on Windows, named by
 # CARGO_HOME and GRADLE_USER_HOME (registry-system.reg); ~/.cargo and ~/.gradle
 # are not used there at all. 00-nt/065-tool-homes writes the managed files into
@@ -224,6 +226,14 @@ Library
 # The Vercel CLI keeps its data under ~/.local/share on Linux only; macOS and
 # Windows get their own copies under Library and AppData.
 .local/share/com.vercel.cli
+# Linux-only helpers in ~/.local/bin: the agent relays and wslview run inside
+# a WSL distro, and veracrypt-hc-mount belongs to Bluefin's VeraCrypt chain
+# (02-bluefin). The linux branch below scopes each to its own hosts.
+.local/bin/wsl-npiperelay
+.local/bin/wsl-ssh-agent-relay
+.local/bin/wsl-gpg-agent-relay
+.local/bin/wslview
+.local/bin/veracrypt-hc-mount
 {{- else }}
 # only one package manager's script applies per distro
 # NOTE: chezmoiignore patterns match the target-relative path, i.e. with the
@@ -263,8 +273,11 @@ Library
 # desktop-session property every distro has -- the reason this is Bluefin-only
 # is narrower: it's where the AIRGAP-style USB drives actually get plugged in,
 # and keeping it scoped avoids standing up an unused udev rule + root service
-# on every other Linux box this repo targets.
+# on every other Linux box this repo targets. Its pieces in $HOME go with it:
+# the mount helper the user unit runs, and the user unit itself.
 .chezmoiscripts/02-bluefin/*
+.local/bin/veracrypt-hc-mount
+.config/systemd/user/veracrypt-hc@.service
 {{-     end }}
 {{-     if stat "/run/ostree-booted" }}
 # Theos cannot be installed on an atomic host, and unlike the dnf/brew split
@@ -329,6 +342,11 @@ Library
 .chezmoiscripts/00-linux/008-wsl-agent-relays.sh
 .config/systemd/user/ssh-agent-relay.service
 .config/systemd/user/gpg-agent-relay.service
+.local/bin/wsl-npiperelay
+.local/bin/wsl-ssh-agent-relay
+.local/bin/wsl-gpg-agent-relay
+# BROWSER=wslview in .commonprofile; it hands URLs to Windows' explorer.exe.
+.local/bin/wslview
 {{-     end }}
 {{- end }}
 
