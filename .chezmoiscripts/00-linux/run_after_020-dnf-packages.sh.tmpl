@@ -135,6 +135,58 @@ if [ "$IS_WSL" -ne 1 ]; then
 	DNF_PACKAGES+=(keychain)
 fi
 
+# Since WSL 3.0.2 (a pre-release; 3.0.3 is the first stable one), WSL
+# bind-mounts a perf built for its own kernel read-only over /usr/bin/perf,
+# from its system disk (/dev/sdb[/<kernel>/perf/bin/perf]). It came with
+#   https://github.com/microsoft/WSL/pull/41400
+# ("Expose kernel headers and perf to distributions"), which 3.0.1 does not
+# contain. rpm can never replace that path -- the rename onto the mount fails
+# with "cpio: rename failed - No data available" -- so every update to
+# Fedora's perf (from the image's c-development group; nothing here asks for
+# it) failed the `dnf upgrade` below, and the apply with it. While the mount
+# is there, dnf leaves perf alone, for every dnf command rather than just this
+# script's, by way of a libdnf5 drop-in; WSL's perf is the one matching the
+# running kernel anyway. The fix upstream, open as of 2026-10-14, moves it to
+# a WSL-owned path instead:
+#   https://github.com/microsoft/WSL/pull/41904
+# Once WSL stops mounting it, the drop-in goes and Fedora's perf is upgraded
+# as before.
+#
+# The WSL version comes from wslinfo: --version since 3.0.x, --wsl-version (now
+# a legacy alias) since 2.2.3. Anything that is not a version -- an older
+# wslinfo's "Invalid command line argument" -- counts as older than 3.0.2.
+WSL_PERF_DROPIN=/etc/dnf/libdnf5.conf.d/90-wsl-perf.conf
+wsl_version=""
+if [ "$IS_WSL" -eq 1 ]; then
+	for flag in --version --wsl-version; do
+		wsl_version="$(wslinfo "$flag" 2>/dev/null)" || wsl_version=""
+		case "$wsl_version" in
+		'' | *[!0-9.]*) wsl_version="" ;;
+		*) break ;;
+		esac
+	done
+fi
+wsl_version_at_least() { # $1: minimum, e.g. 3.0.2.0
+	[ -n "$wsl_version" ] &&
+		[ "$(printf '%s\n%s\n' "$1" "$wsl_version" | sort -V | head -n1)" = "$1" ]
+}
+if [ "$IS_WSL" -eq 1 ] && wsl_version_at_least 3.0.2.0 && mountpoint -q /usr/bin/perf; then
+	wsl_perf_conf="$(printf '%s\n' \
+		'# Written by chezmoi (00-linux/020-dnf-packages): WSL mounts its own perf' \
+		'# read-only over /usr/bin/perf, which rpm can never replace.' \
+		'[main]' \
+		'excludepkgs=perf')"
+	if [ "$(cat "$WSL_PERF_DROPIN" 2>/dev/null)" = "$wsl_perf_conf" ]; then
+		echo "debug: dnf already excludes perf, which WSL mounts over /usr/bin/perf" >&2
+	else
+		printf '%s\n' "$wsl_perf_conf" | sudo tee "$WSL_PERF_DROPIN" >/dev/null
+		echo "notice: WSL mounts its own perf over /usr/bin/perf, so dnf now excludes the perf package ($WSL_PERF_DROPIN)" >&2
+	fi
+elif [ -f "$WSL_PERF_DROPIN" ]; then
+	sudo rm -f "$WSL_PERF_DROPIN"
+	echo "notice: removed $WSL_PERF_DROPIN (WSL ${wsl_version:-version unknown}, not 3.0.2+ with perf mounted over /usr/bin/perf); dnf upgrades the perf package again" >&2
+fi
+
 sudo dnf group install -q -y "development-tools"
 sudo dnf install -q -y "${DNF_PACKAGES[@]}"
 
