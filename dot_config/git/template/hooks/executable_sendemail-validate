@@ -1,0 +1,22 @@
+#!/bin/sh
+# Signs each patch git send-email is about to send with patatt, which adds an
+# X-Developer-Signature header made with the key in ~/.gitconfig's [patatt]
+# section. Nothing goes out unsigned: when this exits non-zero, send-email
+# sends no patches at all.
+#
+# Every repository created or cloned gets a copy through init.templateDir;
+# `git init` inside an older one adds it without touching anything else.
+# The original is chezmoi's dot_config/git/template/hooks/executable_sendemail-validate.
+
+# A cover letter from send-email --compose is still a template at this point
+# (its GIT: lines are rewritten at send time), so a signature made now would
+# not match what is sent. patatt's own sendemail-validate-hook skips it too.
+if grep -q '^GIT: ' "$1"; then
+	exit 0
+fi
+
+if ! command -v patatt >/dev/null 2>&1; then
+	echo "error: patatt is not on PATH, so this patch would go out unsigned. Install it (uv tool install patatt), or pass --no-validate to send it unsigned anyway" >&2
+	exit 1
+fi
+exec patatt sign --hook "$1"

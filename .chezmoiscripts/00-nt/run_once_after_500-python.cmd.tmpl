@@ -75,6 +75,10 @@ REM install usable on a fresh x64 or ARM workstation.
 call :uvinstall --python "cpython-3.12-windows-x86_64-none" -q "pymobiledevice3" || goto :uv_install_failed
 call :uvinstall --python cp314 -q "claude-swap" || goto :uv_install_failed
 
+REM patatt, for signing git send-email patches; see the unix script. PyNaCl's
+REM abi3 wheels cover Windows x64 and ARM.
+call :uvinstall --python cp314 -q "patatt" || goto :uv_install_failed
+
 REM yamllint's CI covers 3.14; see the Ansible NOTE in the unix script.
 call :uvinstall --python cp314 -q "yamllint" || goto :uv_install_failed
 

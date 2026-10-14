@@ -1,1 +1,7 @@
 * text=auto
+
+# The git template hooks chezmoi deploys from this checkout stay LF on every
+# platform. This repository's Windows checkouts use core.autocrlf = true, and
+# Git for Windows misreads a CRLF hook: the sendemail-validate one reported
+# patatt missing with patatt on PATH.
+dot_config/git/template/hooks/* text eol=lf
