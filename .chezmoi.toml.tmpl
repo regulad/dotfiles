@@ -11,7 +11,13 @@
 {{- else if and (eq .chezmoi.os "linux") (eq (trimAll "\n" (output "sh" "-c" "systemd-detect-virt --container; true")) "none") }}
 {{-   $chassisType = (output "hostnamectl" "--json=short" | mustFromJson).Chassis }}
 {{- else if eq .chezmoi.os "windows" }}
-{{-   $chassisType = (output "pwsh.exe" "-NoProfile" "-NonInteractive" "-Command" "if ((Get-CimInstance -Class Win32_Battery | Measure-Object).Count -gt 0) { Write-Output 'laptop' } else { Write-Output 'desktop' }") | trim }}
+{{- /* The Windows probes in this file run under powershell.exe, the
+       Windows PowerShell 5.1 every Windows install ships, not pwsh.exe:
+       PowerShell 7 comes from 00-nt/100-winget, which runs after
+       `chezmoi init` renders this file, so a fresh machine has none yet and
+       init failed there (GitHub's runners ship pwsh, which hid it).
+       Get-CimInstance and ConvertTo-Json give the same output in both. */ -}}
+{{-   $chassisType = (output "powershell.exe" "-NoProfile" "-NonInteractive" "-Command" "if ((Get-CimInstance -Class Win32_Battery | Measure-Object).Count -gt 0) { Write-Output 'laptop' } else { Write-Output 'desktop' }") | trim }}
 {{- end }}
 
 # https://www.chezmoi.io/user-guide/machines/general/#determine-whether-the-current-machine-is-a-laptop-or-desktop:~:text=Table%20of%20contents-,Determine%20whether%20the%20current%20machine%20is%20a%20laptop%20or%20desktop,-Determine%20how%20many
@@ -24,8 +30,8 @@
 {{-   $cpuCores = (output "sh" "-c" "lscpu --online --parse | grep --invert-match '^#' | sort --field-separator=',' --key='2,4' --unique | wc --lines") | trim | atoi }}
 {{-   $cpuThreads = (output "sh" "-c" "lscpu --online --parse | grep --invert-match '^#' | wc --lines") | trim | atoi }}
 {{- else if eq .chezmoi.os "windows" }}
-{{-   $cpuCores = (output "pwsh.exe" "-NoProfile" "-NonInteractive" "-Command" "(Get-CimInstance -ClassName 'Win32_Processor').NumberOfCores") | trim | atoi }}
-{{-   $cpuThreads = (output "pwsh.exe" "-NoProfile" "-NonInteractive" "-Command" "(Get-CimInstance -ClassName 'Win32_Processor').NumberOfLogicalProcessors") | trim | atoi }}
+{{-   $cpuCores = (output "powershell.exe" "-NoProfile" "-NonInteractive" "-Command" "(Get-CimInstance -ClassName 'Win32_Processor').NumberOfCores") | trim | atoi }}
+{{-   $cpuThreads = (output "powershell.exe" "-NoProfile" "-NonInteractive" "-Command" "(Get-CimInstance -ClassName 'Win32_Processor').NumberOfLogicalProcessors") | trim | atoi }}
 {{- end }}
 
 # Where brew lives. Static config files (pam, tmux, gpg-agent, the Chrome
@@ -81,7 +87,7 @@
 {{-   $goarch := get (dict "x86_64" "amd64" "aarch64" "arm64" "armv7l" "arm" "i686" "386" "riscv64" "riscv64") $machine | default $machine }}
 {{-   $nativeArch = eq $goarch .chezmoi.arch }}
 {{- else if eq .chezmoi.os "windows" }}
-{{-   $cpuArch := output "pwsh.exe" "-NoProfile" "-NonInteractive" "-Command" "(Get-CimInstance -ClassName 'Win32_Processor' | Select-Object -First 1).Architecture" | trim }}
+{{-   $cpuArch := output "powershell.exe" "-NoProfile" "-NonInteractive" "-Command" "(Get-CimInstance -ClassName 'Win32_Processor' | Select-Object -First 1).Architecture" | trim }}
 {{-   $goarch := get (dict "9" "amd64" "12" "arm64" "0" "386" "5" "arm") $cpuArch | default $cpuArch }}
 {{-   $nativeArch = eq $goarch .chezmoi.arch }}
 {{- end }}
@@ -104,7 +110,7 @@
 {{-   $machineMake = output "sh" "-c" "cat /sys/class/dmi/id/sys_vendor 2>/dev/null; true" | trim }}
 {{-   $machineModel = output "sh" "-c" "cat /sys/class/dmi/id/product_name 2>/dev/null; true" | trim }}
 {{- else if eq .chezmoi.os "windows" }}
-{{-   $system := output "pwsh.exe" "-NoProfile" "-NonInteractive" "-Command" "Get-CimInstance -ClassName 'Win32_ComputerSystem' | Select-Object Manufacturer, Model | ConvertTo-Json -Compress" | mustFromJson }}
+{{-   $system := output "powershell.exe" "-NoProfile" "-NonInteractive" "-Command" "Get-CimInstance -ClassName 'Win32_ComputerSystem' | Select-Object Manufacturer, Model | ConvertTo-Json -Compress" | mustFromJson }}
 {{-   $machineMake = $system.Manufacturer | default "" | trim }}
 {{-   $machineModel = $system.Model | default "" | trim }}
 {{- end }}
