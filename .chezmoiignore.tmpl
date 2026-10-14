@@ -7,6 +7,12 @@ tools/  # maintenance scripts, run by hand from the source dir
 # general ignores
 .pycalc3/.venv/
 .config/nvim/lazy-lock.json
+# Claude Code's global instructions belong to each machine: they are edited in
+# place, and on 2026-10-14 an apply overwrote local sections with the short
+# copy this repository then carried (private_dot_claude/CLAUDE.md, since
+# deleted). Ignored, chezmoi neither writes the file nor takes its local text
+# into this public repository through add or re-add.
+.claude/CLAUDE.md
 
 # Credentialfiles
 {{- if .useDummySecrets }}

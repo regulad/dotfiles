@@ -140,6 +140,7 @@ Longer write-ups live in `docs/` (not deployed to `$HOME`):
 - [x] Nvim: Addl. language server configurations in nvim
 - [x] Hook: Break java LTS and minimum fedora version into separate vars
 - [ ] Shell: direnv-style watcher script executor with script verification
+- [ ] Repo: adopt `.chezmoiroot` and reorganize, so the source state lives in its own subdirectory and repository files (README, docs, CI, tools, Dockerfiles) need no `.chezmoiignore` entries to stay out of `$HOME`.
 - [ ] Git: Linux GCM. `git send-email` gets its SMTP password from the OS keychain on Windows, WSL (through the Windows GCM) and macOS, loaded there from Bitwarden on every apply, but native Linux has no helper for it and prompts on each send. Bluefin's image has gnome-keyring and `git-credential-libsecret` but no `git-email`, and brew's git has `send-email` but no libsecret helper.
 - [ ] Containers: no Docker Engine API socket shim exists for Windows yet. wslc keeps its dockerd inside its VM and exposes no socket or pipe to Windows (microsoft/WSL#40976), and has no compose (microsoft/WSL#40948), so `act`, testcontainers, `docker compose` and compose-based devcontainers have nothing to target on Windows. Revisit when wslc or a third-party shim serves one.
 - [ ] WSL: IPv6 default route via a localhost-bound WireGuard server on the Windows side, with a host-deterministic ULA and NAT66. Mirrored networking was the only mode that gave WSL IPv6, and `.wslconfig` moved to NAT; NAT provides no routable IPv6 and there is no setting that adds it.
