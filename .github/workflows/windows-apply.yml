@@ -271,57 +271,21 @@ jobs:
           $shims, $wingetLinks, $windowsApps, $sudoDir | Add-Content -Path $env:GITHUB_PATH
           Get-PSDrive -PSProvider FileSystem | Format-Table Name, Root, @{ n = 'FreeGiB'; e = { [math]::Round($_.Free / 1GB, 1) } }
 
+      # From cmd, not pwsh, as on a workstation. PowerShell's installer closes
+      # every running pwsh.exe, so in pwsh this step was killed mid-install
+      # when 100-winget upgraded PowerShell to 7.6.7 (run 38653390692).
       - name: Apply
+        shell: cmd
         env:
           CHEZMOI_USE_DUMMY: "1"
           CHEZMOI_USE_HEADLESS: "1"
         run: |
-          $ErrorActionPreference = 'Stop'
-          $source = Join-Path $HOME '.local\share\chezmoi'
-          New-Item -ItemType Directory -Force -Path (Split-Path $source) | Out-Null
-          Copy-Item -Recurse -Path $env:GITHUB_WORKSPACE -Destination $source
+          xcopy "%GITHUB_WORKSPACE%" "%USERPROFILE%\.local\share\chezmoi\" /E /I /H /Q /Y >nul
+          if errorlevel 1 exit /b %ERRORLEVEL%
           chezmoi init
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          # An installer that waits on a prompt nobody can see stalls the
-          # apply with no output until the job times out. Every 15 minutes
-          # this lists the newest processes, so the log says what it was
-          # stuck on, and C:'s free space. Each round is also an annotation,
-          # for the run's summary page, and a low-disk warning goes up as soon
-          # as C: drops under 3 GiB. Annotations reach the API only once the
-          # job ends (none showed mid-run on 38344408432), so they do not
-          # outlive a runner that dies; the job's live log in the web UI does
-          # show these lines as they are written.
-          #
-          # The watchdog shares the apply's console, and an installer's
-          # progress line ("Extracting x.zip... ") can still be open when a
-          # round fires; a workflow command only counts at the start of a
-          # line, so each round starts on a fresh one.
-          $watch = @'
-          $warned = $false
-          for ($minute = 1; ; $minute++) {
-            Start-Sleep -Seconds 60
-            $freeGiB = [math]::Round((Get-PSDrive C).Free / 1GB, 1)
-            if (-not $warned -and $freeGiB -lt 3) {
-              [Console]::Out.WriteLine("`n::warning title=watchdog::C: is down to $freeGiB GiB free after $minute minutes")
-              $warned = $true
-            }
-            if ($minute % 15) { continue }
-            $newest = Get-CimInstance Win32_Process | Sort-Object CreationDate -Descending | Select-Object -First 15
-            [Console]::Out.WriteLine("`n::notice title=watchdog::$minute minutes, C: $freeGiB GiB free; newest: $(($newest | Select-Object -First 5 -ExpandProperty Name) -join ', ')")
-            [Console]::Out.WriteLine("watchdog: still applying after $minute minutes, C: $freeGiB GiB free; newest processes:")
-            [Console]::Out.WriteLine(($newest | Format-Table ProcessId, ParentProcessId, Name, CommandLine -Wrap | Out-String -Width 400))
-          }
-          '@
-          # -OutputFormat Text: with -EncodedCommand and no console on stdout,
-          # pwsh otherwise writes CLIXML.
-          $watchdog = Start-Process -FilePath pwsh -NoNewWindow -PassThru -ArgumentList '-NoProfile', '-OutputFormat', 'Text', '-EncodedCommand', ([Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($watch)))
-          # --force: no TTY to ask on about files the image already has.
-          # --keep-going: every failing hookscript in one run, not just the
-          # first; the apply still exits non-zero if any failed.
-          chezmoi apply --force --keep-going --exclude encrypted
-          $code = $LASTEXITCODE
-          Stop-Process -Id $watchdog.Id -ErrorAction SilentlyContinue
-          exit $code
+          if errorlevel 1 exit /b %ERRORLEVEL%
+          rem --force: no TTY to ask on about files the image already has.
+          chezmoi apply --force --exclude encrypted
 
       - name: Check what a new logon would find
         if: ${{ !cancelled() }}
