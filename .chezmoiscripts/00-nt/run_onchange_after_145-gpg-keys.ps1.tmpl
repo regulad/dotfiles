@@ -35,11 +35,9 @@ exit 0
 {{- else }}
 # The two .asc files below live under $HOME\.gnupg because that is where
 # chezmoi's home-relative mapping for private_dot_gnupg always lands them, on
-# every OS -- it is just a staging location for this script's input, not
-# GNUPGHOME. GnuPG on Windows keeps that split by default (see `gpgconf
-# --list-dirs`): the real homedir is %APPDATA%\gnupg, so `gpg --import` below
-# still lands the keys in the right, actual keychain regardless of where the
-# source .asc files happen to sit.
+# every OS. GnuPG on Windows uses %APPDATA%\gnupg as its homedir (see `gpgconf
+# --list-dirs`), which AppData/Roaming/symlink_gnupg links to $HOME\.gnupg, so
+# the keys are imported into the directory the .asc files sit in.
 $PublicAsc = Join-Path $HOME '.gnupg' 'public_regulad@regulad.xyz.asc'
 $SecretAsc = Join-Path $HOME '.gnupg' 'secret_regulad@regulad.xyz.asc'
 
@@ -49,10 +47,9 @@ if (-not (Get-Command gpg -ErrorAction SilentlyContinue)) {
 }
 
 # Unlike the Linux script, this does not gate on a pubring.kbx existence check
-# first: that check mirrors $HOME/.gnupg being the real homedir on Linux, which
-# it is not here (see the note above), so the file it would look for is never
-# created there. `gpg --batch --list-keys` against the real homedir is cheap
-# enough to just always run.
+# first: Gpg4win keeps public keys in keyboxd's public-keys.d (common.conf's
+# use-keyboxd), so that file is never created. `gpg --batch --list-keys` is
+# cheap enough to just always run.
 gpg --batch --list-keys *> $null
 
 # Re-importing an already-present public key is a documented GnuPG no-op
