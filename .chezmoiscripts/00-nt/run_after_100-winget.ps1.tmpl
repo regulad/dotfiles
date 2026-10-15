@@ -142,6 +142,15 @@ $LinkDirs = @(
 # package's uninstall entry names its symlink only for a single exe -- an
 # archive keeps its list in a database in the package directory -- so the Links
 # directories are scanned for symlinks into the package instead.
+# Packages with a real installer that still must not run under their own
+# running commands, named here since winget registered none for them.
+# PowerShell's installer closes every running pwsh.exe as it upgrades: the
+# shell an apply was started from, and in CI the step running `chezmoi apply`
+# (windows-apply run 38653390692, the day 7.6.7 came out).
+$ClosingInstallers = @{
+    'Microsoft.PowerShell' = @(Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe')
+}
+
 function Get-WingetCommandTargets([string]$Id) {
     $Entries = foreach ($Hive in 'HKCU:', 'HKLM:') {
         Get-ChildItem -LiteralPath "$Hive\$Uninstall" -ErrorAction SilentlyContinue |
@@ -212,12 +221,14 @@ foreach ($Package in $WingetPackages) {
         continue
     }
 
-    $Targets = @(Get-WingetCommandTargets $Package | Sort-Object -Unique)
+    $Closing = $ClosingInstallers.ContainsKey($Package)
+    $Targets = @(@(Get-WingetCommandTargets $Package) + @($ClosingInstallers[$Package]) | Where-Object { $_ } | Sort-Object -Unique)
     $Running = @(if ($Targets.Count) { Get-ProcessesRunning $Targets })
     if ($Running.Count) {
         $Names = ($Running | ForEach-Object Name | Sort-Object -Unique) -join ', '
         $Ids = ($Running | ForEach-Object Id) -join ', '
-        Write-Host "warning: not touching $Package while $Names is running (PID $Ids): winget would unregister its commands, then fail to replace the running exe; close it and apply again"
+        $Why = if ($Closing) { 'its installer would close it' } else { 'winget would unregister its commands, then fail to replace the running exe' }
+        Write-Host "warning: not touching $Package while $Names is running (PID $Ids): $Why; close it and apply again"
         continue
     }
 
