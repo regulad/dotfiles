@@ -13,7 +13,7 @@
 {{- if $brewPin }}
 echo "notice: era-pinned brew ({{ $brewPin.era }}); cargo is installed but no tools are installed through it on this host" >&2
 {{- else }}
-cargo install cargo-disasm
-cargo install vtracer
-cargo install apple-codesign
+cargo install --locked cargo-disasm
+cargo install --locked vtracer
+cargo install --locked apple-codesign
 {{- end }}

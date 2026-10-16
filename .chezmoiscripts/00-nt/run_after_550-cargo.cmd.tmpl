@@ -48,7 +48,7 @@ call :cargoinstall binwalk || goto :cargo_install_failed
 goto :eof
 
 :cargoinstall
-cargo install %1
+cargo install --locked %1
 if errorlevel 1 (
     echo error: cargo install %1 failed 1>&2
     exit /b 1
