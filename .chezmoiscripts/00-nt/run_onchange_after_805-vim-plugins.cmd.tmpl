@@ -12,13 +12,12 @@ REM 806-vim-plugin-update.cmd.
 REM
 REM Re-run whenever the Plugin list or the coc extension list changes:
 REM {{ include "dot_vimrc" | sha256sum }}
-REM {{ include "dot_coc-extensions.txt" | sha256sum }}
+REM {{ toJson .vim.cocExtensions | sha256sum }}
 
 setlocal enabledelayedexpansion
 
 set "BUNDLE_DIR=%USERPROFILE%\.vim\bundle"
 set "VIMRC=%USERPROFILE%\.vimrc"
-set "COC_EXTENSIONS_FILE=%USERPROFILE%\.coc-extensions.txt"
 
 where vim >nul 2>nul
 if errorlevel 1 (
@@ -57,28 +56,22 @@ if errorlevel 1 (
     exit /b 0
 )
 
-REM Bail rather than carry on with an empty list: zero entries here would read
-REM to the prune below as "nothing is wanted" and uninstall every extension coc
-REM has.
-if not exist "%COC_EXTENSIONS_FILE%" (
-    echo error: %COC_EXTENSIONS_FILE% is missing; refusing to prune coc extensions against an empty list 1>&2
+REM The desired extensions are rendered from source-only data.
+set "COC_WANTED={{ join " " .vim.cocExtensions }}"
+if not defined COC_WANTED (
+    echo error: empty CoC extension list; refusing to prune extensions 1>&2
     exit /b 1
-)
-
-set "COC_WANTED="
-for /F "usebackq tokens=* delims=" %%A in ("%COC_EXTENSIONS_FILE%") do (
-    if not "%%A"=="" set "COC_WANTED=!COC_WANTED! %%A"
 )
 
 if defined COC_WANTED (
     REM -sync so the download finishes before Vim exits; :CocInstall is
     REM otherwise fire-and-forget and qall! would kill it mid-flight.
     echo debug: installing coc extensions:!COC_WANTED! 1>&2
-    vim -E -s -N -u "%VIMRC%" -c "CocInstall -sync!COC_WANTED!" -c "qall!" <nul >nul 2>nul
+    vim -E -s -N -u "%VIMRC%" -c "CocInstall -sync !COC_WANTED!" -c "qall!" <nul >nul 2>nul
 )
 
 REM Uninstall anything coc is carrying that the list no longer asks for, so
-REM dot_coc-extensions.txt is the whole truth rather than an append-only
+REM .chezmoidata/vim.toml is the whole truth rather than an append-only
 REM wishlist -- same contract as the VS Code extension list
 REM (.chezmoidata/vscode.toml).
 REM
@@ -100,8 +93,9 @@ set "COC_PKG=%COC_DATA_HOME%\extensions\package.json"
 if exist "%COC_PKG%" (
     set "COC_UNWANTED="
     for /F "usebackq tokens=* delims=" %%B in (`node -e "var d=require(process.argv[1]).dependencies; if(d) for(var k in d) console.log(k);" "%COC_PKG%"`) do (
-        findstr /I /X /C:"%%B" "%COC_EXTENSIONS_FILE%" >nul 2>nul
-        if errorlevel 1 set "COC_UNWANTED=!COC_UNWANTED! %%B"
+        set "COC_KEEP="
+        for %%W in (!COC_WANTED!) do if /I "%%W"=="%%B" set "COC_KEEP=1"
+        if not defined COC_KEEP set "COC_UNWANTED=!COC_UNWANTED! %%B"
     )
     if defined COC_UNWANTED (
         echo notice: removing unlisted coc extensions:!COC_UNWANTED! 1>&2

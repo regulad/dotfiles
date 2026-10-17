@@ -63,23 +63,18 @@ AppData/Roaming/xdg.data/com.vercel.cli
 # are public trust anchors, not secrets, so they and their install scripts stay
 # in place -- images built with CHEZMOI_USE_DUMMY still trust home.arpa et al.
 #
-# The client cert's install scripts have to be masked alongside the .p12
-# itself: the images apply with `--exclude encrypted`, which drops the
-# decrypted file but not the scripts, and importing a nonexistent .p12 fails
-# hard (pk12util: PR_FILE_NOT_FOUND_ERROR), which previously took a whole image
-# build down ~11 minutes in.
+# Import hooks decrypt source-only ciphertext at runtime. Dummy hosts must
+# skip them as well as the remaining client files; template guards also prevent
+# decryption and Bitwarden evaluation when rendering the hooks directly.
 .x509/client/
 .chezmoiscripts/00-linux/141-client-cert.sh
 .chezmoiscripts/00-linux/171-firefox-client-cert.sh
 .chezmoiscripts/00-macos/141-client-cert.sh
-.chezmoiscripts/00-nt/021-x509-client.cmd
+.chezmoiscripts/00-nt/021-x509-client.ps1
 
 .x509/codesign/
 
-# Same shape of hazard as the client cert above: the dummy-secrets images
-# apply with `--exclude encrypted`, so the decrypted .asc keypair never lands
-# in ~/.gnupg there. Both platforms' import scripts have to be masked
-# alongside it, or gpg --import fails hard against files that don't exist.
+# GPG imports likewise use temporary decrypted files, never deployed .asc files.
 .gnupg/*.asc
 .chezmoiscripts/00-linux/145-gpg-keys.sh
 .chezmoiscripts/00-macos/145-gpg-keys.sh

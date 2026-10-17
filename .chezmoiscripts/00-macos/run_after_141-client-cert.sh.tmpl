@@ -1,4 +1,7 @@
 {{ template "posix-preamble-brew.sh" . }}
+{{- if .useDummySecrets }}
+echo "debug: useDummySecrets is set, skipping client certificate import" >&2
+{{- else }}
 # Client certificate (matches the "My" store import on NT).
 #
 # Split out from the CA install (140-ca-certs) so the two re-run independently
@@ -28,7 +31,9 @@
 # lock is checked first. Locked is a warning, leaving the import for an
 # apply after `security unlock-keychain` or from the Mac's own session; any
 # other failure stops the apply.
-P12="$HOME/.x509/client/dotfiles.p12"
+{{ template "private-import-temp.sh" . }}
+{{ template "decrypt-import.sh" (dict "root" . "name" "client.p12.age") }}
+P12="$private_import_dir/client.p12"
 KEYCHAIN="$HOME/Library/Keychains/login.keychain-db"
 
 OPENSSL=
@@ -61,8 +66,6 @@ if security show-keychain-info "$KEYCHAIN" 2>&1 | grep -q "User interaction is n
 	exit 0
 fi
 
-tmp="$(mktemp -d)"
-trap 'rm -rf "$tmp"' EXIT
 export P12_PASS
 P12_PASS="$("$OPENSSL" rand -hex 16)"
 # The bag's friendlyName is the identity's label in the keychain; -export
@@ -79,10 +82,10 @@ fi
 	-inkey <("$OPENSSL" pkcs12 -in "$P12" -passin pass: -nocerts -nodes) \
 	"${name_args[@]}" \
 	-keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1 \
-	-passout env:P12_PASS -out "$tmp/dotfiles.p12"
+	-passout env:P12_PASS -out "$private_import_dir/legacy.p12"
 
 import_status=0
-import_output="$(security import "$tmp/dotfiles.p12" -k "$KEYCHAIN" -f pkcs12 -P "$P12_PASS" 2>&1)" || import_status=$?
+import_output="$(security import "$private_import_dir/legacy.p12" -k "$KEYCHAIN" -f pkcs12 -P "$P12_PASS" 2>&1)" || import_status=$?
 
 # 45 is errSecDuplicateItem (-25299 truncated to an exit status): another
 # import got there between the lookup above and this one.
@@ -95,3 +98,5 @@ else
 	echo "error: failed to import client certificate (exit $import_status)" >&2
 	exit 1
 fi
+
+{{- end }}

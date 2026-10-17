@@ -1,9 +1,12 @@
 {{ template "posix-preamble.sh" . }}
+{{- if .useDummySecrets }}
+echo "debug: useDummySecrets is set, skipping firefox client certificate import" >&2
+{{- else }}
 # Firefox keeps its own NSS database inside each profile and never reads
 # ~/.pki/nssdb, so the import 141-client-cert does covers Chrome and leaves
 # Firefox without the certificate entirely. There is no OS keystore to fall
 # back on here either: security.osclientcerts.autoload (set in
-# dot_firefox-policies.json) picks the identity straight out of the Windows
+# .chezmoitemplates/firefox-policies.json) picks the identity straight out of the Windows
 # "My" store and the macOS keychain that 021-x509-client and 141-client-cert
 # already populate, but the osclientcerts module has no GNU/Linux backend. So
 # on this platform the .p12 has to be pushed into each profile's cert9.db.
@@ -14,13 +17,6 @@
 # fresh box never imports anything -- apply (no profile yet), launch Firefox
 # (profile appears), apply again (digest unchanged, script skipped). Importing
 # is cheap and idempotent, so this just runs every time instead.
-CLIENT_P12="$HOME/.x509/client/dotfiles.p12"
-
-if [ ! -f "$CLIENT_P12" ]; then
-	echo "warning: $CLIENT_P12 not found, skipping firefox client cert import" >&2
-	exit 0
-fi
-
 if ! command -v pk12util &>/dev/null; then
 	echo "error: pk12util not available, can't import client certificate" >&2
 	exit 1
@@ -64,9 +60,15 @@ if [ "${#PROFILE_DIRS[@]}" -eq 0 ]; then
 	exit 0
 fi
 
+{{ template "private-import-temp.sh" . }}
+{{ template "decrypt-import.sh" (dict "root" . "name" "client.p12.age") }}
+CLIENT_P12="$private_import_dir/client.p12"
+
 for PROFILE_DIR in "${PROFILE_DIRS[@]}"; do
 	# Re-importing a cert+key already in the database is a verified no-op
 	# (exit 0, no output), the same property 141-client-cert relies on.
 	pk12util -d "sql:$PROFILE_DIR" -i "$CLIENT_P12" -W ""
 	echo "notice: imported client certificate into $PROFILE_DIR" >&2
 done
+
+{{- end }}

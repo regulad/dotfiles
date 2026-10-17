@@ -23,7 +23,7 @@ if command -v nvim &>/dev/null; then
 	# the rest, and delete anything no longer declared in lua/plugins.lua --
 	# the plugin list is the whole truth on every apply, the same contract as
 	# the VS Code extension list (.chezmoidata/vscode.toml) and
-	# dot_coc-extensions.txt. The bang makes
+	# .chezmoidata/vim.toml. The bang makes
 	# headless nvim block until the tasks finish instead of quitting
 	# mid-flight, and a fresh machine's first run also bootstraps lazy.nvim
 	# itself via config.lazy.

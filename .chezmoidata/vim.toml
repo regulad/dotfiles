@@ -1,0 +1,14 @@
+# CoC extension list embedded by the Unix and Windows bootstrap hooks.
+[vim]
+cocExtensions = [
+  "coc-json",
+  "coc-clangd",
+  "coc-tsserver",
+  "coc-pyright",
+  "coc-rust-analyzer",
+  "coc-java",
+  "coc-go",
+  "coc-yaml",
+  "coc-sh",
+  "coc-solargraph",
+]

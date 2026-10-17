@@ -34,3 +34,10 @@
 # so an orphaned copy would keep trying to start it on every Mac that ever
 # applied it. Safe to prune from this file once every Mac has applied once.
 Library/LaunchAgents/xyz.regulad.xmrig.plist
+
+# Hook-only inputs moved to .chezmoidata/vim.toml and encrypted payloads in
+# .chezmoitemplates/secrets. Imports now use private temporary files.
+.coc-extensions.txt
+.x509/client/dotfiles.p12
+.gnupg/public_regulad@regulad.xyz.asc
+.gnupg/secret_regulad@regulad.xyz.asc

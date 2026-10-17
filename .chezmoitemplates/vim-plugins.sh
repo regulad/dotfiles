@@ -27,7 +27,6 @@
 VUNDLE_URI="https://github.com/VundleVim/Vundle.vim.git"
 COC_URI="https://github.com/neoclide/coc.nvim.git"
 BUNDLE_DIR="$HOME/.vim/bundle"
-COC_EXTENSIONS_FILE="$HOME/.coc-extensions.txt"
 
 if ! command -v vim &>/dev/null; then
 	echo "notice: vim is not installed, skipping vim plugin bootstrap" >&2
@@ -85,22 +84,16 @@ if ! command -v node &>/dev/null; then
 	exit 0
 fi
 
-# Bail rather than carry on with an empty list. Reading a missing file is not
-# an error -- it just yields zero entries -- and zero entries here means the
-# prune below reads "nothing is wanted" and uninstalls every extension coc has.
-if [ ! -f "$COC_EXTENSIONS_FILE" ]; then
-	echo "error: $COC_EXTENSIONS_FILE is missing; refusing to prune coc extensions against an empty list" >&2
-	exit 1
+# Embed the desired extensions; no staging list is deployed into HOME.
+wanted=(
+{{- range .vim.cocExtensions }}
+    {{ . | quote }}
+{{- end }}
+)
+if [ "${#wanted[@]}" -eq 0 ]; then
+    echo "error: empty CoC extension list; refusing to prune extensions" >&2
+    exit 1
 fi
-
-# strip \r: the list picks up CRLF line endings on Windows checkouts
-# (core.autocrlf), and a trailing \r turns every entry into a package name npm
-# has never heard of.
-# (read loop, not mapfile: macOS /bin/bash is 3.2, see AGENTS.md.)
-wanted=()
-while IFS= read -r line; do
-	[ -n "$line" ] && wanted+=("$line")
-done < <(tr -d '\r' <"$COC_EXTENSIONS_FILE" | sed '/^[[:space:]]*$/d')
 
 if [ "${#wanted[@]}" -gt 0 ]; then
 	# -sync so the download completes before Vim exits; :CocInstall is
@@ -110,7 +103,7 @@ if [ "${#wanted[@]}" -gt 0 ]; then
 fi
 
 # Uninstall anything coc is carrying that the list no longer asks for, so
-# dot_coc-extensions.txt is the whole truth rather than an append-only wishlist
+# .chezmoidata/vim.toml is the whole truth rather than an append-only wishlist
 # -- same contract as the VS Code extension list (.chezmoidata/vscode.toml).
 #
 # This is done by hand rather than with :CocUninstall because coc has no

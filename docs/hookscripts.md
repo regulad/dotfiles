@@ -45,9 +45,30 @@ Scripts can be applied individually, addressed by their stripped target name, wh
 chezmoi apply ~/.chezmoiscripts/00-macos/005-homebrew.sh
 ```
 
+## Hook inputs
+
+The CoC extension list lives in `.chezmoidata/vim.toml`; bootstrap hooks embed
+that list directly. `dot_vimrc` remains a normal managed dotfile, including
+its Vundle plugin declarations.
+The SSH server configuration and Docker configuration remain normal managed
+application files.
+
+The client certificate bundle and GPG import bundles live as unchanged age
+ciphertext under `.chezmoitemplates/secrets/`. Hooks embed the ciphertext and
+use `chezmoi decrypt` at execution time with the host's configured identity.
+Plaintext is written only into a private temporary directory, removed by an
+EXIT trap on Unix or a `finally` block on Windows. No plaintext bundles are
+embedded in rendered scripts. Ciphertext changes change the rendered import
+hooks, retriggering `run_onchange` imports. `useDummySecrets` prevents both
+runtime decryption and GPG passphrase lookup while rendering.
+
+`.chezmoiremove` retires the old `~/.coc-extensions.txt`, client `.p12`, and
+GPG `.asc` staging files. Existing imported certificates and keyrings remain.
+The ordinary runtime Vim, SSH, and Docker files remain managed.
+
 ## C/C++ language support
 
-Vim installs `coc-clangd` from `dot_coc-extensions.txt` through the plugin
+Vim installs `coc-clangd` from `.chezmoidata/vim.toml` through the plugin
 bootstrap. Neovim enables `clangd` through its native LSP client and
 `nvim-lspconfig`. Both use the `clangd` executable on `PATH`.
 

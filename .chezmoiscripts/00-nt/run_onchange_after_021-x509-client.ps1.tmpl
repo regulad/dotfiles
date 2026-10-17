@@ -1,0 +1,17 @@
+{{- if .useDummySecrets }}
+Write-Host 'debug: useDummySecrets is set, skipping client certificate import'
+{{- else }}
+$ErrorActionPreference = 'Stop'
+{{ template "private-import-temp.ps1" . }}
+try {
+{{ template "decrypt-import.ps1" (dict "root" . "name" "client.p12.age") }}
+    Write-Host 'debug: installing client certificate'
+    # Use the same quoting on PowerShell 7 and Windows PowerShell 5.1.
+    # Legacy argument passing otherwise drops an empty native argument.
+    $PSNativeCommandArgumentPassing = 'Legacy'
+    certutil -user -p '""' -importpfx 'My' (Join-Path $ImportDir 'client.p12')
+    if ($LASTEXITCODE -ne 0) { throw 'error: client certificate import failed' }
+} finally {
+    Remove-Item -LiteralPath $ImportDir -Recurse -Force
+}
+{{- end }}
