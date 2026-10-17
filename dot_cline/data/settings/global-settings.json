@@ -1,0 +1,7 @@
+{
+  "autoUpdateEnabled": false,
+  "telemetryOptOut": true,
+  "compactionStrategy": "agentic",
+  "compactionEnabled": true,
+  "toolAutoApprove": false
+}
