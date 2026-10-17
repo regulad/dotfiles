@@ -1,8 +1,7 @@
 # Ansible collections, shared verbatim by the linux and macos hooks (105).
-# Every apply, with --upgrade, in step with the `uv tool upgrade --all` at the
-# end of 100-python-tooling that moves ansible-core itself forward: collections
-# drop old ansible-cores and new ansible-cores want newer collections, so the
-# two move together.
+# Every apply, with --upgrade. 100-python-tooling supplies ansible from brew,
+# including the host's era-pinned version. Galaxy resolves collection versions
+# separately; its failures remain visible below, including old-core conflicts.
 #
 # There is no Windows half. The Ansible controller is POSIX-only -- every
 # ansible-* command dies at import on Windows (see 00-nt/500-python) -- so a
@@ -10,7 +9,7 @@
 # whose apply runs this script.
 #
 # They land in ansible-galaxy's default path, ~/.ansible/collections, which
-# ansible-core and ansible-lint (each in its own uv tool venv) both read.
+# ansible and ansible-lint (each in its own brew environment) both read.
 # Append-only, like the Claude plugins: ansible-galaxy has no uninstall, so an
 # entry dropped from this list stays installed until its directory is deleted.
 
@@ -20,8 +19,7 @@ ANSIBLE_COLLECTIONS=(
 	ansible.posix
 )
 
-# Absent on an era-pinned Mac, where 100 installs no uv tools, or wherever 100
-# did not get that far.
+# Useful when this script is invoked on its own before 100 has run.
 if ! command -v ansible-galaxy &>/dev/null; then
 	echo "notice: ansible-galaxy is not installed, skipping Ansible collections" >&2
 	exit 0

@@ -1,5 +1,2 @@
 {{ template "posix-preamble.sh" . }}
-# rust
-cargo install --locked cargo-disasm
-cargo install --locked vtracer
-cargo install --locked apple-codesign
+{{ template "rust-tooling.sh" . }}

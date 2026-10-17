@@ -150,8 +150,10 @@ BREW_PACKAGES=(
 	# =+= RUST
 	rustup
 
-	# =+= PYTHON (>= 3.12)
-	python3
+	# =+= PYTHON
+{{- range index .tooling.pythonVersions ($brewEra | default "mainline") }}
+	python@{{ . }}  # explicit versions shared with 100-python-tooling
+{{- end }}
 
 	# =+= GO
 	go

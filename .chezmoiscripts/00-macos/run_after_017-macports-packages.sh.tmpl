@@ -1,11 +1,10 @@
 {{ template "posix-preamble.sh" . }}
-{{- /* Ports that stand in for formulae the era's homebrew-core checkout does
-       not have (see the matching conditionals in 020-brew-packages and
-       030-brew-extras). Only ports with a prebuilt archive on
-       packages.macports.org for that Darwin version are listed -- a source
-       build on an old host is what the era pins exist to avoid. Checked
-       2026-09-28: all three have archives down to darwin_19 (Catalina), and
-       uv also for arm64 from darwin_20 (Big Sur).
+{{- /* Ports that stand in for formulae the era's homebrew-core checkout
+       cannot supply (see 020-brew-packages, 030-brew-extras and the shared
+       python-tooling.sh template). MacPorts supplies modern runtimes for
+       old macOS, using its binary archives where available. Checked
+       2026-10-17: uv and Python 3.14 have archives down to Catalina and
+       earlier. Runtime dependencies are native, not Rosetta substitutes.
        $brewEra is "" on a Tier 1 host, and the array is then empty. */ -}}
 {{- $brewEra := "" }}
 {{- if eq .chezmoi.os "darwin" }}
@@ -13,12 +12,21 @@
 {{-   if $p }}{{ $brewEra = $p.era }}{{ end }}
 {{- end }}
 {{- $pre2024 := has $brewEra (list "catalina" "bigsur") }}
+{{- $pre2025 := has $brewEra (list "catalina" "bigsur" "monterey") }}
+{{- $pre2026 := has $brewEra (list "catalina" "bigsur" "monterey" "ventura") }}
 # MacPorts packages: only what brew cannot provide on this era, nothing else.
 MACPORTS_PACKAGES=(
 {{- if $pre2024 }}
 	retry    # not in homebrew-core until 2024
 	sshpass  # not in homebrew-core until 2024
-	uv       # not in homebrew-core until 2024; installed for the shell, 100-python-tooling installs nothing through it on a pinned era
+	python312  # Frida's runtime; these snapshots stop at Python 3.10/3.11
+{{- end }}
+{{- if $pre2025 }}
+	uv       # Monterey has uv 0.1.21, which predates `uv tool`; earlier eras lack it
+	python313  # RenderCV's runtime; no 3.13 formula in these snapshots
+{{- end }}
+{{- if $pre2026 }}
+	python314  # 100-python-tooling explicitly selects /opt/local/bin/python3.14
 {{- end }}
 )
 

@@ -25,7 +25,7 @@ for g in ~/repositories/*/.git; do [ -e "$g" ] && git -C "${g%/.git}" init -q; d
 
 The hook refuses to send when patatt is missing, rather than send unsigned. `--no-validate` skips it, and sends unsigned. A cover letter from `--compose` is never signed, since its text is still a template when the hook runs.
 
-`.gitconfig` turns this on with real secrets wherever the python-tooling hookscripts (`00-{linux,macos}/100`, `00-nt/500`) install patatt: every host but an era-pinned Mac, which gets no uv tools. That is decided from the same data those scripts use, not by looking for patatt, because `.gitconfig` is applied before the `run_after_` scripts that install it. On a first apply the hook is in place a few scripts before patatt is; nothing sends mail in between, and if the install fails, the hook refuses to send until the next apply has installed patatt.
+`.gitconfig` turns this on with real secrets on every host, including era-pinned Macs: the python-tooling hookscripts (`00-{linux,macos}/100`, `00-nt/500`) all install patatt. This is decided from configuration data, not by looking for patatt, because `.gitconfig` is applied before the `run_after_` scripts that install it. On a first apply the hook is in place a few scripts before patatt is; nothing sends mail in between, and if the install fails, the hook refuses to send until the next apply has installed patatt.
 
 Only the GPG key signs, not the SSH key as well. patatt keeps one signature per message, and its validator picks signatures by sender address alone, so a second signature from the same address shows up as a bad signature to anyone holding both keys. OpenPGP is the one a verifier can check against their ordinary gpg keyring.
 

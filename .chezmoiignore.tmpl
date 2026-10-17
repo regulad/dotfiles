@@ -191,20 +191,6 @@ Library
 .chezmoiscripts/00-macos/021-brew-packages-x86.sh
 .chezmoiscripts/00-macos/031-brew-extras-x86.sh
 {{-   end }}
-{{-   $brewPin := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
-{{-   if $brewPin }}
-# Era-pinned brew (see .chezmoidata/brew-tiers.toml): uv and pnpm themselves
-# are still installed, but nothing is installed *through* them. The uv tools
-# and pnpm global packages are specialised tooling, not part of the general
-# environment an old Mac is brought up for, and each entry carries a
-# Python/node version story of its own. 070-js-tooling and 100-python-tooling
-# skip those parts themselves, as do 110-rust-tooling (cargo) and
-# 120-go-tooling (go) for their from-source installs; vencord is nothing but
-# a pnpm build, and the VS Code extension set is the same kind of thing on
-# top of the editor, so those two go here.
-.chezmoiscripts/00-macos/080-vencord.sh
-.chezmoiscripts/00-macos/160-install-vscode-ext.sh
-{{-   end }}
 {{-   if lt .macos.major 14 }}
 # Touch ID for sudo needs /etc/pam.d/sudo_local, which exists from Sonoma on.
 # The script also refuses to run on older releases; masking it here too means

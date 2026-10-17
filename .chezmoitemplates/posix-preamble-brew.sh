@@ -6,9 +6,8 @@
 #
 # After this line $HOMEBREW_PREFIX is guaranteed set (brew shellenv exports
 # it), brew is on PATH, and on an era-pinned macOS HOMEBREW_NO_AUTO_UPDATE and
-# HOMEBREW_NO_INSTALL_FROM_API are already exported. Scripts that merely
-# *prefer* brew and have a fallback (js-tooling, python-tooling on Linux) keep
-# the plain preamble and branch on HAS_BREW instead.
+# HOMEBREW_NO_INSTALL_FROM_API are already exported. Shared JS and Python
+# tooling use this preamble because their selected providers require brew.
 require_brew "$(basename "$0")"
 # These scripts are about to fetch bottles, so the source is picked (asked)
 # now rather than at their first `brew install` (brew-mirror-env.sh). brew's

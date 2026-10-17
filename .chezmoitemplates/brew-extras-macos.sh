@@ -77,7 +77,7 @@ SECONDARY_BINARY_DEPENDENCIES=(
 	"git-xet"  # not in homebrew-core until 2026
 {{- end }}
 	# Infrastructure as code. age, jq and retry are in 020; ansible-core,
-	# ansible-lint and yamllint are uv tools (100).
+	# ansible-lint and yamllint come from brew in 100-python-tooling.
 {{- if not $pre2024 }}
 	"opentofu"  # not in homebrew-core until late 2023
 {{- end }}

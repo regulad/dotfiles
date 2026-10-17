@@ -1,0 +1,11 @@
+# Audited against the core_commit values in brew-tiers.toml, 2026-10-17.
+# Explicit formula names keep a default-python alias change from changing
+# which interpreter the tooling hooks find. See docs/tooling.md.
+[tooling.pythonVersions]
+mainline = ["3.15", "3.14"]
+catalina = ["3.10"]
+bigsur = ["3.11"]
+monterey = ["3.12"]
+ventura = ["3.13"]
+current = ["3.14"]
+sonoma = ["3.14"]
