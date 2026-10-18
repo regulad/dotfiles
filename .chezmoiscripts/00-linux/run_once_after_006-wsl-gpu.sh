@@ -44,6 +44,14 @@ grep -qxF "GALLIUM_DRIVER=d3d12" /etc/environment || echo "GALLIUM_DRIVER=d3d12"
 grep -qxF "LIBVA_DRIVER_NAME=d3d12" /etc/environment || echo "LIBVA_DRIVER_NAME=d3d12" >> /etc/environment
 '
 
+# The groups come with packages, not the base system: the Ubuntu image has had
+# a render group only since one of 021-apt-packages' GUI packages made it, and
+# a headless image (the WSL images are built from one) leaves those out, while
+# this runs before 021 anyway. So make them first, as system groups.
+for g in render video; do
+	getent group "$g" >/dev/null || sudo groupadd --system "$g"
+done
+
 # Align the render/video GIDs with vgem's device nodes; without the module
 # there are no nodes to align with (an earlier run on a vgem kernel has
 # already done it on existing distros).
