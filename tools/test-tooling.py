@@ -257,7 +257,8 @@ def main():
             for entry in tools[kind]:
                 assert (line(entry) in nt[script]) == ("windows" in entry.get("os", ["windows"])), (kind, entry)
         assert 'call :uvinstall --python "cpython-3.13-windows-x86_64-none" -q --with "bgutil-ytdlp-pot-provider"' in nt["run_once_after_500-python"]
-        assert 'call :uvinstall --python "cp313" -q --with "rendercv-fonts<0.5"' in nt["run_once_after_500-python"]
+        assert 'call :uvinstall --python "cpython-3.13-windows-x86_64-none" -q --with "rendercv-fonts<0.5"' in nt["run_once_after_500-python"]
+        assert 'call :uvinstall --python "cpython-3.13-windows-x86_64-none" -q "oci-cli"' in nt["run_once_after_500-python"]
         assert 'call :uvinstall -q "poetry" ||' in nt["run_once_after_500-python"]
         fixture(data, "linux", "arm64", "26")
         for kind in ("python", "js"):

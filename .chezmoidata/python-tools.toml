@@ -11,6 +11,12 @@
 #                  MacPorts build python-tooling.sh picks per era, and cp3xx on
 #                  Windows. Anything else goes to uv as it is.
 #   pythonWindows  Windows' --python instead, where its wheels need another.
+#                  A plain "3.xx" is the native interpreter, so ARM64 on
+#                  Windows on ARM: a tool with a dependency that has no
+#                  win_arm64 wheel needs an x64 one named here (x64 runs
+#                  emulated there). Do not count on another entry having
+#                  installed an x64 3.xx first: uv may pick that up for a
+#                  "cp3xx", but only when it comes earlier in this list.
 #   brew           the formula that supplies it on macOS and Linux instead.
 #                  A table picks one per brew era (the `era` of
 #                  .chezmoidata/brew-tiers.toml; Linux and every unpinned Mac
@@ -65,6 +71,9 @@ python = "3.14"  # yamllint's CI covers 3.14
 name = "oci-cli"
 brew = "oci-cli"
 python = "3.13"  # its classifiers stop at 3.13
+# cryptography 50's Windows wheels are amd64 only, and building it on ARM
+# fails in openssl-sys.
+pythonWindows = "cpython-3.13-windows-x86_64-none"
 
 [[pythonTools.packages]]
 name = "ruff"
@@ -140,6 +149,8 @@ name = "rendercv"
 spec = "rendercv[full]@2.2"
 with = ["rendercv-fonts<0.5", "click<8.2", "rich<11", "jinja2<4"]
 python = "3.13"  # it wants pydantic-core 2.27.2, which has no 3.14 wheel
+# Its [full] extra pins typst 0.12.3, which has no Windows ARM64 wheel.
+pythonWindows = "cpython-3.13-windows-x86_64-none"
 
 [[pythonTools.packages]]
 name = "pymobiledevice3"
