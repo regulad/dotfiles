@@ -182,6 +182,9 @@ def main():
                     assert 'export GOTOOLCHAIN=auto' in text
                     assert ('go install github.com/roy2220/osc52pty@master' in text) == (platform == "darwin")
                 scripts.append(text)
+            text = render(f".chezmoiscripts/00-{host}/run_after_101-pre-commit-templatedir.sh.tmpl", data)
+            assert 'pre-commit init-templatedir --color never --hook-type pre-commit "$TEMPLATE_DIR"' in text
+            scripts.append(text)
             if platform == "darwin":
                 text = render(".chezmoiscripts/00-macos/run_after_080-vencord.sh.tmpl", data)
                 assert 'pnpm i' in text and 'no tools are installed through it' not in text

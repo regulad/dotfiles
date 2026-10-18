@@ -84,6 +84,11 @@ AppData/Roaming/xdg.data/com.vercel.cli
 # dummy secrets .gitconfig has no [sendemail] for it to serve anyway.
 .chezmoiscripts/00-macos/146-git-smtp-credential.sh
 .chezmoiscripts/00-nt/240-git-smtp-credential.ps1
+# The patatt hook init.templateDir hands out. With dummy secrets .gitconfig
+# has no [patatt] key for it to sign with ($patatt in dot_gitconfig.tmpl).
+# The pre-commit hook the pre-commit-templatedir hookscripts write there
+# stays.
+.config/git/template/hooks/sendemail-validate
 {{- end }}
 
 # Head

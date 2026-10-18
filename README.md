@@ -129,6 +129,7 @@ Longer write-ups live in `docs/` (not deployed to `$HOME`):
 - [SSH server on Windows](docs/windows-sshd.md) -- the user-session `sshd`.
 - [WSL](docs/wsl.md) -- `wsl-deploy`, `wsl-enter` and `wsl-update`.
 - [git send-email](docs/git-send-email.md) -- SMTP passwords from the OS keychain, and patch signing with patatt through `init.templateDir`.
+- [Git hooks](docs/git-hooks.md) -- the hooks `init.templateDir` copies into every new repository: pre-commit, and patatt's.
 - [Containers](docs/containers.md) -- which engine each host runs (wslc, apple/container, colima, podman) and the Docker Desktop and macOS podman removal.
 
 ## TODOs

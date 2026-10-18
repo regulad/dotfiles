@@ -1,0 +1,43 @@
+@echo off
+setlocal enabledelayedexpansion
+
+{{ template "uv-env.cmd" . }}
+
+REM Has pre-commit write its own hooks\pre-commit into git's template
+REM directory (init.templateDir, dot_gitconfig.tmpl), which every `git init`
+REM and `git clone` copies into the new repository. The hook runs pre-commit
+REM where the repository has a .pre-commit-config.yaml and skips it elsewhere.
+REM .chezmoitemplates/pre-commit-templatedir.sh is the unix twin; see it for
+REM why this runs every apply.
+REM
+REM pre-commit is a uv tool (500-python). Its shim is found through uv rather
+REM than PATH: on a first apply this process predates the PATH entry scoop's
+REM uv set up, and uv-env above has imported UV_TOOL_BIN_DIR.
+set "template_dir=%USERPROFILE%\.config\git\template"
+set "uv_bin="
+for /f "delims=" %%D in ('uv tool dir --bin 2^>nul') do set "uv_bin=%%D"
+if not exist "%uv_bin%\pre-commit.exe" (
+    echo error: pre-commit is not installed; 500-python installs it with uv 1>&2
+    exit /b 1
+)
+
+REM --hook-type, or pre-commit reads the hook types from a
+REM .pre-commit-config.yaml in the current directory, wherever the apply was
+REM started from. Its output goes through a file so its exit code survives,
+REM then out under this repo's prefixes.
+set "log=%TEMP%\chezmoi-pre-commit-templatedir-%RANDOM%.log"
+"%uv_bin%\pre-commit.exe" init-templatedir --color never --hook-type pre-commit "%template_dir%" > "%log%" 2>&1
+set "rc=%errorlevel%"
+for /f "usebackq delims=" %%L in ("%log%") do (
+    set "line=%%L"
+    if "!line:~0,10!"=="[WARNING] " (
+        echo warning: pre-commit: !line:~10! 1>&2
+    ) else (
+        echo debug: pre-commit: !line! 1>&2
+    )
+)
+del "%log%" >nul 2>&1
+if not "%rc%"=="0" (
+    echo error: pre-commit init-templatedir failed with exit code %rc% 1>&2
+    exit /b 1
+)
