@@ -46,6 +46,10 @@ In a `run_once_` or `run_onchange_` script, or a template one renders, explain s
 
 Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`. Python (uv), JavaScript (pnpm), Rust (cargo) and Go tools are the exception: they go in `.chezmoidata/{python,pnpm,cargo,go}-tools.toml`, which the hookscripts of every platform read ([Tooling](tooling.md)).
 
+### Scoop downloads
+
+On Windows, `00-nt/200-scoop-install` installs aria2 before any other scoop package. Scoop then downloads everything through it, and `scoop config aria2-options --check-certificate=false` turns TLS certificate checks off, so a vendor's lapsed certificate (nmap.org's, on 2026-10-18) holds no install or update up. Scoop still checks each download against the hash its manifest pins, and the manifest comes with its bucket from GitHub; every package 200 installs pins one. A package whose manifest pins no hash would be downloaded with no check at all, so don't add one. Where aria2 fails, for instance on a network without the IPv6 route a host's DNS answers point it to, Scoop falls back to its own downloader, which checks certificates as usual.
+
 ## Running one script
 
 Scripts can be applied individually, addressed by their stripped target name, which is useful when bringing up a new host in stages:

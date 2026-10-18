@@ -65,6 +65,25 @@ if errorlevel 1 (
     echo psmux bucket already present, skipping.
 )
 
+REM aria2 first: once it is installed scoop downloads everything through it,
+REM and with --check-certificate=false a vendor's lapsed TLS certificate
+REM (nmap.org's, 2026-10-18) holds no install or update up. Every manifest
+REM below pins a hash (a SHA-256; maven's a SHA-512), which comes with its
+REM bucket from GitHub, and scoop checks it after every download, aria2's
+REM included, so the hash vouches for each file instead of the certificate. A
+REM manifest without one would be downloaded unchecked: list none here. Where
+REM aria2 fails, scoop falls back to its own downloader, certificate checks
+REM and all.
+echo debug: installing aria2 for scoop's downloads
+call :check_install_user aria2 || goto :scoop_install_failed
+call scoop config aria2-options --check-certificate=false >nul
+if errorlevel 1 (
+    echo error: could not set scoop's aria2-options 1>&2
+    exit /b 1
+)
+REM Its warning on every scoop command that aria2 is in use.
+call scoop config aria2-warning-enabled false >nul
+
 REM act (nektos/act) is not in the list: it drives a Docker Engine API, and
 REM with Docker Desktop gone nothing on Windows serves one -- wslc keeps its
 REM dockerd private to its VM (see the README TODOs). 105-docker-desktop-remove
