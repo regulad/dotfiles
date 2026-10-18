@@ -115,6 +115,13 @@
 {{-   $machineModel = $system.Model | default "" | trim }}
 {{- end }}
 
+# Whether no one sits at this host's screen, which leaves its GUI apps out
+# (docs/hookscripts.md). Asked for with CHEZMOI_USE_HEADLESS, as the Docker
+# images and the CI applies do. A WSL instance is always headful, whatever
+# the environment says: WSLg puts its windows on the Windows desktop.
+# WSL_DISTRO_NAME is the same test .chezmoiignore.tmpl uses.
+{{- $headless := and (env "CHEZMOI_USE_HEADLESS" | not | not) (eq (env "WSL_DISTRO_NAME") "") }}
+
 encryption = "age"
 [age]
     identity = "{{ .chezmoi.homeDir }}/key.txt"
@@ -127,7 +134,7 @@ encryption = "age"
     unlock = "auto"
 [data]
     useDummySecrets = {{ env "CHEZMOI_USE_DUMMY" | not | not }}
-    useHeadless = {{ env "CHEZMOI_USE_HEADLESS" | not | not }}
+    useHeadless = {{ $headless }}
     homebrewPrefix = "{{ $homebrewPrefix }}"
     nativeArch = {{ $nativeArch }}
 [data.macos]

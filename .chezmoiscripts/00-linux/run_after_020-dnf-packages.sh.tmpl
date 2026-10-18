@@ -42,8 +42,10 @@ DNF_PACKAGES=(
 
 	# =+= MISC
 	nyx
-	libva-utils
-	glx-utils
+	libva-utils  # vainfo; VA-API works on a bare DRM render node, display or not
+{{- if not .useHeadless }}
+	glx-utils  # glxinfo, glxgears: X11 programs
+{{- end }}
 
 	# =+= EDITOR
 	clang-tools-extra  # clangd for Vim/Neovim C/C++ LSP

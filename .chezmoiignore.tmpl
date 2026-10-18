@@ -103,6 +103,34 @@ AppData/Roaming/xdg.data/com.vercel.cli
 # nothing to run headless.
 .chezmoiscripts/00-nt/700-out-of-band-appx.ps1
 .chezmoiscripts/00-nt/800-install-vscode-ext.ps1
+# On Linux VS Code has scripts of its own, the repo and the package (011 on
+# apt, 012 on dnf), so they go whole, and 160 with them as on macOS. WSL keeps
+# them: it is never headless (.chezmoi.toml.tmpl).
+.chezmoiscripts/00-linux/011-vscode-apt-repo.sh
+.chezmoiscripts/00-linux/012-vscode-dnf-repo.sh
+.chezmoiscripts/00-linux/160-install-vscode-ext.sh
+# The Fedora family's GUI media apps, mpv and VLC as flatpaks, and the
+# wiring of their configs into the sandboxes.
+.chezmoiscripts/01-fedora/020-flatpak-packages.sh
+.chezmoiscripts/01-fedora/021-flatpak-media-config.sh
+# The projectM presets are for VLC's visualizer (dot_config/vlc/vlcrc), and
+# VLC is a GUI app every platform leaves out here.
+.chezmoiscripts/00-linux/055-projectm-presets.sh
+.chezmoiscripts/00-macos/055-projectm-presets.sh
+.chezmoiscripts/00-nt/230-projectm-presets.cmd
+# Browser and mail-client setup: Firefox's policies and client certificate,
+# Thunderbird's GnuPG wiring, and gpgme-json for Mailvelope in the browsers.
+# Each finds no app to set up on a headless host, where no platform installs
+# one.
+.chezmoiscripts/00-linux/170-firefox-policies.sh
+.chezmoiscripts/00-linux/171-firefox-client-cert.sh
+.chezmoiscripts/00-linux/172-thunderbird-flatpak-gpg.sh
+.chezmoiscripts/00-linux/173-thunderbird-flatpak-gpgme-version.sh
+.chezmoiscripts/00-macos/170-firefox-policies.sh
+.chezmoiscripts/00-nt/170-firefox-policies.ps1
+.chezmoiscripts/00-nt/224-gpgme-path.ps1
+.chezmoiscripts/00-nt/225-mailvelope-gpgme.ps1
+.chezmoiscripts/00-nt/226-thunderbird-gpgme.ps1
 {{- end }}
 
 # Tailnet
@@ -290,8 +318,9 @@ Library
 # fedora/ubuntu, where the dnf and apt branches both work, so they keep Theos.
 .chezmoiscripts/00-linux/125-theos.sh
 {{-     end }}
-# VS Code and extensions are enabled on native Linux, Docker, and WSL.
-# The distro rules above select the appropriate package installer.
+# VS Code and extensions are enabled on native Linux, Docker, and WSL, minus
+# headless hosts (the Head block above). The distro rules above select the
+# appropriate package installer.
 {{-     if not (or (ne (env "WSL_DISTRO_NAME") "") (eq (output "sh" "-c" "systemd-detect-virt --container --quiet && echo yes || echo no" | trim) "yes")) }}
 # The ephemeral tailnet join is for disposable hosts only: containers -- so it
 # is in every docker build -- and WSL instances. A hardware machine is the

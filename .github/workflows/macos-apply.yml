@@ -16,7 +16,8 @@ name: macOS apply
 #
 # Headless and with dummy secrets, as in the images: CHEZMOI_USE_HEADLESS
 # leaves out the GUI casks (040), the App Store apps (060), VS Code's
-# extensions (160) and vencord (080) -- no one is at the screen, and several
+# extensions (160), vencord (080) and the rest of what useHeadless gates
+# (docs/hookscripts.md) -- no one is at the screen, and several
 # GUI installers depend on vendor sites that have nothing to do with the
 # dotfiles. CHEZMOI_USE_DUMMY masks every Bitwarden-backed file and the scripts
 # that read them, and the apply runs with --exclude encrypted. RUNNER_ENVIRONMENT=github-hosted, which GitHub

@@ -14,8 +14,9 @@ name: Windows apply
 # difference.
 #
 # Headless and with dummy secrets, as on macOS: CHEZMOI_USE_HEADLESS leaves
-# out the GUI winget packages (100, Store apps included), the Windows
-# Subsystem for Android (700) and VS Code's extensions (800). CHEZMOI_USE_DUMMY
+# out the GUI winget packages (100, Store apps included), the GUI scoop apps
+# (200), the Windows Subsystem for Android (700), VS Code's extensions (800)
+# and the rest of what useHeadless gates (docs/hookscripts.md). CHEZMOI_USE_DUMMY
 # masks every Bitwarden-backed file and the scripts that read them, and the
 # apply runs with --exclude encrypted.
 

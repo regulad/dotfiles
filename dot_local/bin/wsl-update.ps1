@@ -76,7 +76,7 @@ $distroName = "regulad-$Flavor"
 # --- preflight -------------------------------------------------------------
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    throw "git is not on PATH. It comes from scoop; see .chezmoiscripts/00-nt/run_once_after_200-scoop-install.cmd"
+    throw "git is not on PATH. It comes from scoop; see .chezmoiscripts/00-nt/run_once_after_200-scoop-install.cmd.tmpl"
 }
 
 wsl.exe --version 2>&1 | Out-Null
@@ -206,17 +206,15 @@ patch)
     ;;
 init)
     # The patch can change .chezmoi.toml.tmpl, which only `chezmoi init`
-    # re-renders. init recomputes useDummySecrets and useHeadless from the
-    # environment (CHEZMOI_USE_DUMMY, CHEZMOI_USE_HEADLESS), so they are handed
-    # in as the instance has them now: still dummy before OOBE has run, real
-    # after.
+    # re-renders. init recomputes useDummySecrets from the environment
+    # (CHEZMOI_USE_DUMMY), so it is handed in as the instance has it now: still
+    # dummy before OOBE has run, real after. useHeadless needs nothing: WSL is
+    # never headless.
     dummy="$(chezmoi execute-template '{{ .useDummySecrets }}')"
-    headless="$(chezmoi execute-template '{{ .useHeadless }}')"
     vars=()
     [ "$dummy" = true ] && vars+=(CHEZMOI_USE_DUMMY=1)
-    [ "$headless" = true ] && vars+=(CHEZMOI_USE_HEADLESS=1)
-    env -u CHEZMOI_USE_DUMMY -u CHEZMOI_USE_HEADLESS "${vars[@]}" chezmoi init
-    echo "chezmoi config re-rendered (useDummySecrets=$dummy, useHeadless=$headless)"
+    env -u CHEZMOI_USE_DUMMY "${vars[@]}" chezmoi init
+    echo "chezmoi config re-rendered (useDummySecrets=$dummy)"
     ;;
 apply)
     chezmoi apply

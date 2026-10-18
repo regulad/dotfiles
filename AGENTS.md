@@ -15,6 +15,10 @@ Operational conventions for any agent working in this chezmoi source directory. 
 
 - Never gate a file's template on whether a tool the hookscripts install is present yet (`lookPath`, `stat`, `output`, `env` probing for it). chezmoi applies files before `run_after_` scripts, and every package install here is one, so on a fresh machine the probe sees the pre-install state: the file renders wrong on its first apply and only corrects itself on the next, and it flips back on any apply where the tool is off PATH. Gate on the data the installing script itself branches on (`.chezmoi.os`, `.useDummySecrets`, the `.chezmoidata` tables such as the brew era) and point the two at each other in comments. Example: `dot_gitconfig.tmpl` turns on patatt signing from `.brewTiers.legacy`, the lookup `00-macos/100-python-tooling` uses to decide whether it installs patatt, not from `lookPath "patatt"`. This has been proposed more than once.
 
+## Headless gates
+
+- Anything GUI-only that a hookscript installs or configures goes behind `.useHeadless`, as a whole script in `.chezmoiignore.tmpl`'s Head block or as `{{ if not .useHeadless }}` around its entry in a package list; see "Headless hosts" in `docs/hookscripts.md`. WSL is always headful; don't special-case it.
+
 ## POSIX hookscripts
 
 - A new `.chezmoiscripts/00-{macos,linux}` script opens with `{{ template "posix-preamble-brew.sh" . }}` if its job needs brew (or `$HOMEBREW_PREFIX`), else `{{ template "posix-preamble.sh" . }}`. Never hardcode `/opt/homebrew`: hookscripts use `$HOMEBREW_PREFIX`, static config templates use `{{ .homebrewPrefix }}`. Use `brew_trust` rather than `brew trust`. See `docs/hookscripts.md` and `docs/homebrew-older-macos.md`. Longer documentation goes in `docs/` (chezmoi-ignored), linked from README.md; keep README.md to the overview and install steps.

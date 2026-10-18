@@ -84,7 +84,7 @@ function Assert-NativeSuccess {
 # --- preflight -------------------------------------------------------------
 
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
-    throw "gh is not on PATH. It comes from scoop; see .chezmoiscripts/00-nt/run_once_after_200-scoop-install.cmd"
+    throw "gh is not on PATH. It comes from scoop; see .chezmoiscripts/00-nt/run_once_after_200-scoop-install.cmd.tmpl"
 }
 
 gh auth status 2>&1 | Out-Null

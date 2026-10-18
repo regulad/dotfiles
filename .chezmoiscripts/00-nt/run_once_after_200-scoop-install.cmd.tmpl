@@ -100,6 +100,11 @@ REM make comes after it, as grep and coreutils already did. It used to sit
 REM before gow, which went unnoticed because make was never installed at all:
 REM the old installed-check (see :check_install_user) took cmake's row,
 REM "cmake  4.x", for make.
+{{- /* The GUI apps are left out under useHeadless, as 100-winget's are:
+       tinyxnb (Explorer thumbnails for .xnb), mongodb-compass, mpv, ffdec,
+       autohotkey, and icaros-np (Explorer thumbnails) further down. In
+       template comments, so the rendered script, and with it this run_once's
+       hash, is the same as before where they are installed. */}}
 set user_packages=^
 maven ^
 tesseract ^
@@ -107,12 +112,16 @@ tesseract-languages ^
 cmake ^
 whisper-cpp ^
 iperf3 ^
+{{- if not .useHeadless }}
 tinyxnb ^
+{{- end }}
 shasum ^
 deno ^
 mongosh ^
+{{- if not .useHeadless }}
 mongodb-compass ^
 mpv ^
+{{- end }}
 git-filter-repo ^
 python27 ^
 dtk ^
@@ -123,7 +132,9 @@ psmux ^
 clink ^
 gh ^
 git ^
+{{- if not .useHeadless }}
 ffdec ^
+{{- end }}
 nodejs ^
 gow ^
 bind ^
@@ -166,7 +177,9 @@ wingetcreate ^
 rclone ^
 less ^
 imagemagick ^
+{{- if not .useHeadless }}
 autohotkey ^
+{{- end }}
 languagetool-java ^
 nssm
 
@@ -223,6 +236,7 @@ powershell -NoProfile -NonInteractive -Command "Start-Sleep -Seconds 30"
 goto :scoop_install_try
 
 :after_check_install_user
+{{- if not .useHeadless }}
 
 REM prompts mpv to use the chezmoi provided config in .config
 REM NOTE: this was a PowerShell Remove-Item line sitting in a .cmd file, so cmd
@@ -243,6 +257,7 @@ icaros-np
 
 echo debug: installing new scoop admin packages
 for %%p in (%admin_packages%) do call :check_install_admin %%p || goto :scoop_install_failed
+{{- end }}
 goto :after_check_install_admin
 
 REM Same test and install as :check_install_user, elevated.

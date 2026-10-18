@@ -23,12 +23,12 @@ def run(args, **kwargs):
     return result
 
 
-def fixture(path, platform, arch, series, *, secondary=False, headless=False):
+def fixture(path, platform, arch, series, *, secondary=False, headless=False, dummy=True):
     prefix = "/home/linuxbrew/.linuxbrew" if platform == "linux" else (
         "/opt/homebrew" if arch == "arm64" else "/usr/local"
     )
     data = [
-        f"homebrewPrefix = {json.dumps(prefix)}", "useDummySecrets = true",
+        f"homebrewPrefix = {json.dumps(prefix)}", f"useDummySecrets = {str(dummy).lower()}",
         f"useHeadless = {str(headless).lower()}",
         f"nativeArch = {str(not secondary).lower()}",
     ]
@@ -193,6 +193,8 @@ def main():
                 ignored = render(".chezmoiignore.tmpl", data)
                 assert '.chezmoiscripts/00-macos/080-vencord.sh' not in ignored
                 assert '.chezmoiscripts/00-macos/160-install-vscode-ext.sh' not in ignored
+                assert '.chezmoiscripts/00-macos/055-projectm-presets.sh' not in ignored
+                assert '\tpinentry-mac\n' in package and '\tmpv\n' in package
             for script in scripts:
                 target = work / "syntax.sh"
                 target.write_text(script, encoding="utf-8", newline="\n")
@@ -206,6 +208,26 @@ def main():
         ignored = render(".chezmoiignore.tmpl", data)
         assert '.chezmoiscripts/00-macos/080-vencord.sh' in ignored
         assert '.chezmoiscripts/00-macos/160-install-vscode-ext.sh' in ignored
+        assert '.chezmoiscripts/00-macos/055-projectm-presets.sh' in ignored
+        assert '.chezmoiscripts/00-macos/170-firefox-policies.sh' in ignored
+        package = render(".chezmoitemplates/brew-packages-macos.sh", data)
+        assert 'pinentry-mac' not in package and '\tmpv\n' not in package
+        agent = render("private_dot_gnupg/private_gpg-agent.conf.tmpl", data)
+        assert 'pinentry-program /opt/homebrew/bin/pinentry\n' in agent and 'pinentry-mac' not in agent
+        for headless in (False, True):
+            fixture(data, "linux", "amd64", "26", headless=headless)
+            apt = render(".chezmoiscripts/00-linux/run_after_021-apt-packages.sh.tmpl", data)
+            dnf = render(".chezmoiscripts/00-linux/run_after_020-dnf-packages.sh.tmpl", data)
+            for gui in ('\tmpv\n', '\tvlc\n', '\tvlc-plugin-visualization\n', '\tmesa-utils  #'):
+                assert (gui in apt) != headless, gui
+            assert ('\tglx-utils  #' in dnf) != headless and '\tvainfo  #' in apt and '\tlibva-utils  #' in dnf
+            scoop = render(".chezmoiscripts/00-nt/run_once_after_200-scoop-install.cmd.tmpl", data)
+            for gui in ('tinyxnb ^', 'mongodb-compass ^', 'mpv ^', 'ffdec ^', 'autohotkey ^', 'icaros-np', 'portable_config'):
+                assert (gui in scoop) != headless, gui
+            assert 'shasum ^\ndeno ^' in scoop and 'languagetool-java ^\nnssm\n' in scoop
+            fixture(data, "linux", "amd64", "26", headless=headless, dummy=False)
+            reg = render(".chezmoitemplates/registry-system.reg", data)
+            assert ('AutoSelectCertificateForUrls' in reg) != headless
         fixture(data, "linux", "arm64", "26")
         for kind in ("python", "js"):
             script = render(f".chezmoitemplates/{kind}-tooling.sh", data)
@@ -217,7 +239,7 @@ def main():
             mock_install(args.bash, work, script, kind, failure="uv" if kind == "python" else "pnpm")
             if kind == "js":
                 mock_install(args.bash, work, script, kind, version="8.15.0")
-        print(f"PASS {rendered_count} rendered scripts, Rosetta/headless gates, and 9 mocked migrations")
+        print(f"PASS {rendered_count} rendered scripts, Rosetta/headless gates (macOS, Linux packages, scoop, registry), and 9 mocked migrations")
 
 
 if __name__ == "__main__":

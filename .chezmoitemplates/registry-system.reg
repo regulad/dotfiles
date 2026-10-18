@@ -112,7 +112,11 @@ Windows Registry Editor Version 5.00
 "SpecialPollInterval"=dword:00000384
 "ResolvePeerBackoffMinutes"=dword:00000001
 "ResolvePeerBackoffMaxTimes"=dword:00000003
-{{- if not .useDummySecrets }}
+{{- /* The Chrome policy below is also left out under useHeadless, where
+       100-winget installs no Chrome. A template comment, so the rendered file,
+       and with it 000-registry's run_onchange hash, is unchanged where the
+       policy is written. */}}
+{{- if and (not .useDummySecrets) (not .useHeadless) }}
 
 ; Chrome: present the client certificate 021-x509-client imports without a
 ; "Select a certificate" prompt on every TLS client-auth handshake. Each

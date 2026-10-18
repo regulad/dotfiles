@@ -42,8 +42,10 @@ APT_PACKAGES=(
 	# =+= MISC
 	thin-provisioning-tools  # not natively available redhat
 	nyx
-	vainfo
-	mesa-utils
+	vainfo  # VA-API works on a bare DRM render node, display or not
+{{- if not .useHeadless }}
+	mesa-utils  # glxinfo, glxgears: X11 programs
+{{- end }}
 
 	# =+= EDITOR
 	clangd  # Vim/Neovim C/C++ LSP
@@ -54,6 +56,8 @@ APT_PACKAGES=(
 	ripgrep
 	imagemagick
 
+{{- if not .useHeadless }}
+
 	# =+= DESKTOP
 	mpv
 	vlc
@@ -62,6 +66,7 @@ APT_PACKAGES=(
 	# (dropped when libprojectM 4 broke VLC's module). The vlcrc in
 	# dot_config/vlc points VLC at projectM regardless -- inert until then.
 	vlc-plugin-visualization
+{{- end }}
 
 	# =+= SERIAL
 	minicom

@@ -33,6 +33,15 @@ chezmoi execute-template '99-nt-{{ urlquery .machine.make }}-{{ urlquery .machin
 
 Windows updates tend to put such workarounds back. A Windows one can be a `run_onchange_` `.tmpl` that renders `{{ output "cmd.exe" "/d" "/c" "ver" | trim }}` into a comment, as `010-hibernate-not-s0ix` does, so that every build, monthly update revision included, re-runs it. That only works if the script is idempotent and checks before it elevates, so that a re-run with nothing to fix raises no UAC prompt.
 
+## Headless hosts
+
+`useHeadless` (`CHEZMOI_USE_HEADLESS` at `chezmoi init`) leaves out what only works with someone at the screen: GUI apps, and what exists only to serve one, like visualizer presets, browser and mail-client setup, pinentry dialogs and Explorer shell extensions. The Docker images and the macOS and Windows CI applies are headless. A WSL instance never is, even with `CHEZMOI_USE_HEADLESS` set: `.chezmoi.toml.tmpl` turns it off wherever `WSL_DISTRO_NAME` is set, so WSL gets the GUI apps, VS Code included.
+
+- A hookscript that is GUI-only as a whole is masked in `.chezmoiignore.tmpl`'s Head block.
+- A GUI package in a list it shares with CLI tools sits in `{{ if not .useHeadless }}` within that list: 040's casks, 100's winget packages, 200's scoop apps, and the apt, dnf and brew lists.
+
+In a `run_once_` or `run_onchange_` script, or a template one renders, explain such a gate in a template comment (`{{/* */}}`), not a shell one. The rendered text is the script's hash, so a desktop that renders it exactly as before does not run it again.
+
 ## Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever
 
 Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`.

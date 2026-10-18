@@ -6,8 +6,13 @@ max-cache-ttl 7200
 # gpg usage -- that still goes through pinentry-program above -- since gpg only
 # requests loopback when a caller asks for it.
 allow-loopback-pinentry
-{{- if eq .chezmoi.os "darwin" }}
+{{- if and (eq .chezmoi.os "darwin") (not .useHeadless) }}
 pinentry-program {{ .homebrewPrefix }}/bin/pinentry-mac
+{{- else if eq .chezmoi.os "darwin" }}
+{{- /* Headless: brew-packages-macos.sh installs no pinentry-mac, whose dialog
+       would open in a console session no one is at. brew's gnupg depends on
+       pinentry, whose bin/pinentry asks in the terminal instead. */}}
+pinentry-program {{ .homebrewPrefix }}/bin/pinentry
 {{- else if and (eq .chezmoi.os "linux") (eq .chezmoi.osRelease.id "bluefin") }}
 pinentry-program /usr/bin/pinentry-gnome3
 {{- end }}

@@ -74,7 +74,11 @@ BREW_PACKAGES=(
 	mas
 	smartmontools
 	pam-reattach
+{{- if not .useHeadless }}
+	# A pinentry dialog in the console session, which no one sees on a headless
+	# Mac; gpg-agent.conf uses gnupg's own terminal pinentry there instead.
 	pinentry-mac
+{{- end }}
 
 	# =+= BUILD TOOLS
 	ninja
@@ -103,9 +107,11 @@ BREW_PACKAGES=(
 {{- end }}
 	ripgrep
 	imagemagick
+{{- if not .useHeadless }}
 
 	# =+= DESKTOP
 	mpv
+{{- end }}
 
 	# =+= SERIAL
 	minicom

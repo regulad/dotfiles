@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
 # Split out of 010-fedora.sh so it can be masked independently in .chezmoiignore:
-# VSCode is installed on native GNU/Linux and in all container types,
-# including WSL.
+# VSCode is installed on native GNU/Linux, in containers and in WSL, but not
+# on a headless host.
 
 # https://code.visualstudio.com/docs/setup/linux
 sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
