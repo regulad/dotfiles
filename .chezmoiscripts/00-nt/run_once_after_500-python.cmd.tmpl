@@ -4,90 +4,29 @@ setlocal enabledelayedexpansion
 {{ template "uv-env.cmd" . }}
 
 echo debug: installing python tooling
-REM matches unix script. run_once keys on the script contents, so adding a tool
-REM below changes the hash and this re-runs -- the list stays self-healing
-REM without reinstalling everything on every apply. Upgrading what is already
-REM installed lives in 501-python.cmd, which runs on every apply.
-REM
-REM The interpreter pins generally follow the unix scripts; see the long NOTE in
-REM 00-linux/100-python-tooling.sh for why each tool is pinned to a specific
-REM CPython (or PyPy) rather than whatever uv would pick on its own.
-REM Windows wheel availability requires the exceptions documented below.
-REM
-REM Differences from unix. The first two because the unix side gets them
-REM elsewhere:
-REM   poetry - apt's python3-poetry / brew there, no NT package, so uv here
-REM   hf     - brew (030-brew-extras) there, so uv here
-REM and one the other way round:
-REM   ansible-core, ansible-lint - not here at all. The Ansible controller is
-REM            POSIX-only: ansible.utils.display imports fcntl and termios, so
-REM            every ansible-* command (ansible-galaxy included) dies at import
-REM            on Windows, and Ansible's docs say a Windows control node needs
-REM            WSL. The WSL distro's own apply installs them, along with the
-REM            collections (00-linux/105-ansible-collections).
+REM The tools are .chezmoidata/python-tools.toml, shared with the unix scripts
+REM (.chezmoitemplates/python-tooling.sh), which take some from brew. Here
+REM every one comes from uv, with the interpreter its entry pins: its
+REM pythonWindows, else cp3xx for a "3.xx" python, else that python as it is.
+REM Why each is pinned, and what Windows does without, is in that file.
+REM run_once keys on the script contents, so a change there changes the hash
+REM and this re-runs -- the list stays self-healing without reinstalling
+REM everything on every apply. Upgrading what is already installed lives in
+REM 501-python.cmd, which runs on every apply.
 
 REM the unix scripts run under `bash -e`, so a failing `uv tool install` aborts
 REM the apply there. cmd carries on regardless, so check each one explicitly.
-call :uvinstall -q "poetry" || goto :uv_install_failed
-call :uvinstall -q "hf" || goto :uv_install_failed
-
-call :uvinstall -q "ruff" || goto :uv_install_failed
-call :uvinstall -q "ty" || goto :uv_install_failed
-
-REM yt-dlp's pinned dependencies have Windows CPython wheels. The current
-REM PyPy 8 ABI does not match its cryptography pin, and even PyPy 7 needs a
-REM compiler for cffi/pycryptodomex. Use CPython 3.13 here so a fresh machine
-REM does not need an OpenSSL/MSVC build environment. Keep x64 on Windows ARM
-REM too: these wheels are x64-only, running under the same emulation PyPy used.
-call :uvinstall --python "cpython-3.13-windows-x86_64-none" -q --with "bgutil-ytdlp-pot-provider" "yt-dlp[pin,pin-curl-cffi,pin-secretstorage,pin-deno]" || goto :uv_install_failed
-REM Current cryptography releases have Windows x64 wheels only. Retain the
-REM current dependency releases on ARM through x64 emulation.
-call :uvinstall --python "cpython-3.14-windows-x86_64-none" -q "keydive" || goto :uv_install_failed
-call :uvinstall --python cp313 -q "pre-commit" || goto :uv_install_failed
-REM The optional archive support pins py7zr 0.22 / pyppmd 1.1, whose Windows
-REM wheels stop at CPython 3.12 x64. Keep optional features without requiring
-REM a local compiler, including on ARM through x64 emulation.
-call :uvinstall --python "cpython-3.12-windows-x86_64-none" -q "mangadex-downloader[optional]" || goto :uv_install_failed
-call :uvinstall --python cp310 -q "git+https://github.com/regulad/keymap-renderer.git@master" || goto :uv_install_failed
-
-REM pinned to the frida-server version the device actually runs -- the binding
-REM and the server only speak to each other at the same version, and 16.7.0 is
-REM the newest re.frida.server hosted for roothide devices at
-REM https://miticollo.github.io/repos/roothide/Packages, since the 17.x major
-REM family has yet to be ported there. frida-tools' own frida>=16.2.2,<17.0.0 is
-REM loose enough to drift to 16.7.19, so the --with is what holds it. See the
-REM long NOTE in 00-linux/run_after_100-python-tooling.sh.tmpl.
-REM This pinned Frida release also predates Windows ARM wheels.
-call :uvinstall --python "cpython-3.12-windows-x86_64-none" -q --with "frida==16.7.0" "frida-tools==13.7.1" || goto :uv_install_failed
-
-REM 2.3 onward are LLM slop, and 2.2 is the last version that didn't change the
-REM schema. cp313 because 2.2 wants pydantic-core 2.27.2, which has no cp314
-REM wheel. The --with pins cap rendercv 2.2's transitive deps that it left loose
-REM -- rendercv-fonts, click, rich and jinja2 -- because 2.2 is frozen while the
-REM `uv tool upgrade --all` in 501-python.cmd re-resolves anything unpinned. See
-REM the long NOTE in 00-linux/run_after_100-python-tooling.sh.tmpl for what each
-REM cap prevents.
-call :uvinstall --python cp313 -q --with "rendercv-fonts<0.5" --with "click<8.2" --with "rich<11" --with "jinja2<4" "rendercv[full]@2.2" || goto :uv_install_failed
-
-REM pyimg4's lzfse 0.4.2 has Windows wheels through CPython 3.12 x64; the
-REM newer interpreters need a compiler. This keeps the full pymobiledevice3
-REM install usable on a fresh x64 or ARM workstation.
-call :uvinstall --python "cpython-3.12-windows-x86_64-none" -q "pymobiledevice3" || goto :uv_install_failed
-call :uvinstall --python cp314 -q "claude-swap" || goto :uv_install_failed
-
-REM patatt, for signing git send-email patches; see the unix script. PyNaCl's
-REM abi3 wheels cover Windows x64 and ARM.
-call :uvinstall --python cp314 -q "patatt" || goto :uv_install_failed
-
-REM yamllint's CI covers 3.14; see the Ansible NOTE in the unix script.
-call :uvinstall --python cp314 -q "yamllint" || goto :uv_install_failed
-
-REM Oracle Cloud's CLI, `oci`; its classifiers stop at 3.13. 999-reminders says
-REM to sign in until %USERPROFILE%\.oci\config exists.
-call :uvinstall --python cp313 -q "oci-cli" || goto :uv_install_failed
-
-call :uvinstall -q "hatch" || goto :uv_install_failed
-call :uvinstall -q "autopep8" || goto :uv_install_failed
+{{- range .pythonTools.packages }}
+{{-   $os := get . "os" }}
+{{-   if or (not $os) (has "windows" $os) }}
+{{-     $python := get . "python" }}
+{{-     if regexMatch "^3\\.[0-9]+$" $python }}
+{{-       $python = printf "cp%s" (replace "." "" $python) }}
+{{-     end }}
+{{-     $python = get . "pythonWindows" | default $python }}
+call :uvinstall{{ if $python }} --python "{{ $python }}"{{ end }} -q{{ range (get . "with" | default list) }} --with "{{ . }}"{{ end }} "{{ get . "spec" | default .name }}" || goto :uv_install_failed
+{{-   end }}
+{{- end }}
 
 goto :eof
 

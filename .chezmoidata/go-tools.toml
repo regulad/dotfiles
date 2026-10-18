@@ -1,0 +1,15 @@
+# Go tools, `go install`ed by .chezmoitemplates/go-tooling.sh
+# (00-{linux,macos}/120-go-tooling) and 00-nt/560-go-tooling, each at the
+# version its module path names. An entry with `os` goes only to hosts whose
+# .chezmoi.os is listed; one without goes everywhere. See docs/tooling.md.
+
+[goTools]
+packages = [
+    { module = "mvdan.cc/sh/v3/cmd/shfmt@latest" },
+    { module = "golang.org/x/tools/gopls@latest" },
+    { module = "golang.org/x/tools/cmd/goimports@latest" },
+    { module = "honnef.co/go/tools/cmd/staticcheck@latest" },
+    { module = "github.com/twpayne/find-duplicates@latest" },
+    { module = "github.com/swaggo/swag/cmd/swag@latest" },
+    { module = "github.com/roy2220/osc52pty@master", os = ["darwin"] },
+]

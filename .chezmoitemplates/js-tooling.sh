@@ -3,9 +3,6 @@
 {{- $pin := index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict }}
 {{- $era = get $pin "era" | default "mainline" }}
 {{- end }}
-{{- $brewMermaid := not (has $era (list "bigsur" "monterey")) }}
-{{- $brewWrangler := has $era (list "mainline" "ventura" "current" "sonoma") }}
-{{- $brewCline := and (has $era (list "mainline" "current" "sonoma")) (not (and (eq .chezmoi.os "darwin") (ge .macos.major 27))) }}
 brew install -q pnpm
 
 # pnpm 11 moved its global binaries into PNPM_HOME/bin. Older pinned pnpm
@@ -27,48 +24,37 @@ case ":$PATH:" in
 esac
 mkdir -p "$PNPM_BIN"
 
-BREW_JS_TOOLS=(bitwarden-cli typescript bash-language-server yaml-language-server)
-BREW_PNPM_REPLACEMENTS=("@bitwarden/cli" typescript bash-language-server yaml-language-server vercel)
-# go-ios has no core formula. Core's `cf` is a different timestamp filter,
-# not Cloudflare's cf CLI. Both therefore stay in pnpm on every era.
-PNPM_CLI_PACKAGES=("go-ios@latest" "cf@latest")
-{{- if eq $era "catalina" }}
-PNPM_CLI_PACKAGES+=("typescript-language-server@latest")
-{{- else }}
-BREW_JS_TOOLS+=(typescript-language-server)
-BREW_PNPM_REPLACEMENTS+=(typescript-language-server)
-{{- end }}
-{{- if $brewMermaid }}
-BREW_JS_TOOLS+=(mermaid-cli)
-BREW_PNPM_REPLACEMENTS+=("@mermaid-js/mermaid-cli")
-{{- else }}
-# Disabled in Big Sur's snapshot and absent from Monterey's.
-PNPM_CLI_PACKAGES+=("@mermaid-js/mermaid-cli@latest")
-{{- end }}
-{{- if $brewWrangler }}
-BREW_JS_TOOLS+=(cloudflare-wrangler)
-BREW_PNPM_REPLACEMENTS+=(wrangler)
-{{- else }}
-# The older formula is wrangler-legacy v1 (disabled in the 2023/24 pins),
-# not the Workers SDK CLI used by our projects.
-PNPM_CLI_PACKAGES+=("wrangler@latest")
-{{- end }}
-{{- if $brewCline }}
-# Core's 3.0.3 is deprecated but still installable; it excludes macOS 27.
-BREW_JS_TOOLS+=(cline)
-BREW_PNPM_REPLACEMENTS+=(cline)
-{{- else }}
-PNPM_CLI_PACKAGES+=("cline@latest")
-{{- end }}
-{{- if eq $era "sonoma" }}
-BREW_JS_TOOLS+=(vercel)
-{{- else if ne $era "mainline" }}
-BREW_JS_TOOLS+=(vercel-cli)
+# The packages are .chezmoidata/pnpm-tools.toml, shared with
+# 00-nt/570-pnpm-tooling: brew's formula or cask where this era has one,
+# pnpm's package otherwise.
+BREW_JS_TOOLS=()
+BREW_PNPM_REPLACEMENTS=()
+PNPM_CLI_PACKAGES=()
+{{- $casks := list }}
+{{- $brewMermaid := false }}
+{{- range .pnpmTools.packages }}
+{{-   $os := get . "os" }}
+{{-   if or (not $os) (has $.chezmoi.os $os) }}
+{{-     $provider := dict "tool" . "era" $era "os" $.chezmoi.os "macosMajor" $.macos.major }}
+{{-     $cask := includeTemplate "tool-brew-provider" (merge (dict "field" "brewCask") $provider) | trim }}
+{{-     $formula := includeTemplate "tool-brew-provider" (merge (dict "field" "brew") $provider) | trim }}
+{{-     if $cask }}
+{{-       $casks = append $casks $cask }}
+BREW_PNPM_REPLACEMENTS+=({{ quote .pnpm }})
+{{-     else if $formula }}
+BREW_JS_TOOLS+=({{ $formula }})
+BREW_PNPM_REPLACEMENTS+=({{ quote .pnpm }})
+{{-       if eq .pnpm "@mermaid-js/mermaid-cli" }}
+{{-         $brewMermaid = true }}
+{{-       end }}
+{{-     else }}
+PNPM_CLI_PACKAGES+=({{ printf "%s@latest" .pnpm | quote }})
+{{-     end }}
+{{-   end }}
 {{- end }}
 brew install -q --formula "${BREW_JS_TOOLS[@]}"
-{{- if eq $era "mainline" }}
-# Vercel moved from a formula to a CLI cask, available on Linux too.
-brew install -q --cask vercel
+{{- if $casks }}
+brew install -q --cask {{ join " " $casks }}
 {{- end }}
 {{- if $brewMermaid }}
 

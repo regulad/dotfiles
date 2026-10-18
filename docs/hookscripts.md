@@ -44,7 +44,7 @@ In a `run_once_` or `run_onchange_` script, or a template one renders, explain s
 
 ## Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever
 
-Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`.
+Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`. Python (uv), JavaScript (pnpm), Rust (cargo) and Go tools are the exception: they go in `.chezmoidata/{python,pnpm,cargo,go}-tools.toml`, which the hookscripts of every platform read ([Tooling](tooling.md)).
 
 ## Running one script
 

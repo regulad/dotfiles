@@ -114,7 +114,7 @@ Make sure you add any extensions you'd like to download to `.chezmoidata/vscode.
 
 ### Packages
 
-Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`. How the hookscripts fit together is in [docs/hookscripts.md](docs/hookscripts.md).
+Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`. Python, JavaScript, Rust and Go tools are shared by every platform instead, in `.chezmoidata/{python,pnpm,cargo,go}-tools.toml`. How the hookscripts fit together is in [docs/hookscripts.md](docs/hookscripts.md).
 
 ## Docs
 

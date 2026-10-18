@@ -1,7 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM matches unix script (pnpm branch; bitwarden-cli covered by scoop instead)
+REM The packages are .chezmoidata/pnpm-tools.toml, shared with the unix
+REM scripts (.chezmoitemplates/js-tooling.sh), which take some from brew.
+REM Here every one comes from pnpm.
 
 call refreshenv >nul 2>&1
 
@@ -74,18 +76,18 @@ if "%NODE_ARCH%"=="arm64" (
 )
 
 REM vercel, wrangler and cf are the CLIs behind the vercel and cloudflare agent
-REM plugins' skills; on macOS and Linux wrangler comes from brew instead.
-set pnpm_packages=^
-@mermaid-js/mermaid-cli@latest ^
-%GO_IOS_PACKAGE% ^
-typescript@latest ^
-typescript-language-server@latest ^
-bash-language-server@latest ^
-yaml-language-server@latest ^
-vercel@latest ^
-wrangler@latest ^
-cf@latest ^
-cline@latest
+REM plugins' skills. go-ios is %GO_IOS_PACKAGE%, empty when built above.
+set "pnpm_packages="
+{{- range .pnpmTools.packages }}
+{{-   $os := get . "os" }}
+{{-   if or (not $os) (has "windows" $os) }}
+{{-     if eq .pnpm "go-ios" }}
+set "pnpm_packages=!pnpm_packages! %GO_IOS_PACKAGE%"
+{{-     else }}
+set "pnpm_packages=!pnpm_packages! {{ .pnpm }}@latest"
+{{-     end }}
+{{-   end }}
+{{- end }}
 
 REM deliberately not --silent: it suppresses fatal errors too, which is how the
 REM failing go-ios postinstall went unnoticed.

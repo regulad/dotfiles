@@ -146,6 +146,12 @@ def main():
     args = parser.parse_args()
     tiers = tomllib.loads((ROOT / ".chezmoidata/brew-tiers.toml").read_text())["brewTiers"]
     versions = tomllib.loads((ROOT / ".chezmoidata/tooling.toml").read_text())["tooling"]["pythonVersions"]
+    tools = {
+        "python": tomllib.loads((ROOT / ".chezmoidata/python-tools.toml").read_text())["pythonTools"]["packages"],
+        "pnpm": tomllib.loads((ROOT / ".chezmoidata/pnpm-tools.toml").read_text())["pnpmTools"]["packages"],
+        "go": tomllib.loads((ROOT / ".chezmoidata/go-tools.toml").read_text())["goTools"]["packages"],
+        "cargo": tomllib.loads((ROOT / ".chezmoidata/cargo-tools.toml").read_text())["cargoTools"]["crates"],
+    }
     cases = [("darwin", *key.rsplit("-", 1), value["era"]) for key, value in tiers["legacy"].items()]
     cases += [("darwin", version, "arm64", "mainline") for version in ("15", "26", "27")]
     cases += [("linux", "26", arch, "mainline") for arch in ("arm64", "amd64")]
@@ -164,8 +170,16 @@ def main():
                 host = "macos" if platform == "darwin" else "linux"
                 text = render(f".chezmoiscripts/00-{host}/run_after_{number}-{kind}-tooling.sh.tmpl", data)
                 scripts.append(text)
+                # Every entry of the shared data reaches this host one way or the other.
+                for entry in tools["python" if kind == "python" else "pnpm"]:
+                    if platform not in entry.get("os", [platform]):
+                        continue
+                    if kind == "python":
+                        assert (f'BREW_UV_REPLACEMENTS+=({entry["name"]})' in text) != (f' "{entry.get("spec", entry["name"])}"\n' in text), entry
+                    else:
+                        assert (f'BREW_PNPM_REPLACEMENTS+=("{entry["pnpm"]}")' in text) != (f'PNPM_CLI_PACKAGES+=("{entry["pnpm"]}@latest")' in text), entry
                 if kind == "python":
-                    assert 'uv tool install --python "$PYTHON314" -q keydive' in text
+                    assert 'uv tool install --python "$PYTHON314" -q "keydive"' in text
                     assert ('PYTHON314=/opt/local/bin/python3.14' in text) == ("3.14" not in versions[era])
                     assert ('BREW_PYTHON_TOOLS+=(ruff)' in text) == (era != "catalina")
                     assert ('BREW_PYTHON_TOOLS+=(ty)' in text) == (era in ("mainline", "current", "sonoma"))
@@ -231,6 +245,20 @@ def main():
             fixture(data, "linux", "amd64", "26", headless=headless, dummy=False)
             reg = render(".chezmoitemplates/registry-system.reg", data)
             assert ('AutoSelectCertificateForUrls' in reg) != headless
+        # Windows renders the same data into its own scripts.
+        fixture(data, "windows", "amd64", "26")
+        nt = {name: render(f".chezmoiscripts/00-nt/{name}.cmd.tmpl", data) for name in (
+            "run_once_after_500-python", "run_after_550-cargo", "run_after_560-go-tooling", "run_after_570-pnpm-tooling")}
+        for kind, script, line in (
+                ("python", "run_once_after_500-python", lambda e: f' "{e.get("spec", e["name"])}" || goto :uv_install_failed'),
+                ("cargo", "run_after_550-cargo", lambda e: f'call :cargoinstall {e["name"]} ||'),
+                ("go", "run_after_560-go-tooling", lambda e: f'call :goinstall {e["module"]} ||'),
+                ("pnpm", "run_after_570-pnpm-tooling", lambda e: "%GO_IOS_PACKAGE%" if e["pnpm"] == "go-ios" else f'! {e["pnpm"]}@latest"')):
+            for entry in tools[kind]:
+                assert (line(entry) in nt[script]) == ("windows" in entry.get("os", ["windows"])), (kind, entry)
+        assert 'call :uvinstall --python "cpython-3.13-windows-x86_64-none" -q --with "bgutil-ytdlp-pot-provider"' in nt["run_once_after_500-python"]
+        assert 'call :uvinstall --python "cp313" -q --with "rendercv-fonts<0.5"' in nt["run_once_after_500-python"]
+        assert 'call :uvinstall -q "poetry" ||' in nt["run_once_after_500-python"]
         fixture(data, "linux", "arm64", "26")
         for kind in ("python", "js"):
             script = render(f".chezmoitemplates/{kind}-tooling.sh", data)
@@ -242,7 +270,7 @@ def main():
             mock_install(args.bash, work, script, kind, failure="uv" if kind == "python" else "pnpm")
             if kind == "js":
                 mock_install(args.bash, work, script, kind, version="8.15.0")
-        print(f"PASS {rendered_count} rendered scripts, Rosetta/headless gates (macOS, Linux packages, scoop, registry), and 9 mocked migrations")
+        print(f"PASS {rendered_count} rendered scripts, shared tool data on every platform, Rosetta/headless gates (macOS, Linux packages, scoop, registry), and 9 mocked migrations")
 
 
 if __name__ == "__main__":

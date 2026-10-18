@@ -1,8 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM matches unix script (plus binwalk, which the unix side gets from the system
-REM package manager instead -- see 020-dnf/021-apt/022-brew-packages)
+REM The crates are .chezmoidata/cargo-tools.toml, shared with the unix
+REM scripts (.chezmoitemplates/rust-tooling.sh).
 
 if defined CARGO_HOME (
     set "CARGO_BIN=%CARGO_HOME%\bin"
@@ -40,10 +40,12 @@ if errorlevel 1 (
 REM the unix scripts run under `bash -e`, so a failing `cargo install` aborts the
 REM apply there. cmd carries on regardless, so check each one explicitly.
 echo debug: installing cargo tooling
-call :cargoinstall cargo-disasm || goto :cargo_install_failed
-call :cargoinstall vtracer || goto :cargo_install_failed
-call :cargoinstall apple-codesign || goto :cargo_install_failed
-call :cargoinstall binwalk || goto :cargo_install_failed
+{{- range .cargoTools.crates }}
+{{-   $os := get . "os" }}
+{{-   if or (not $os) (has "windows" $os) }}
+call :cargoinstall {{ .name }} || goto :cargo_install_failed
+{{-   end }}
+{{- end }}
 
 goto :eof
 

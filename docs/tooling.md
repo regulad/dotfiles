@@ -1,13 +1,21 @@
 # Tooling providers
 
-The Linux and macOS `070-js-tooling` and `100-python-tooling` hooks render the
-shared `js-tooling.sh` and `python-tooling.sh` templates. Homebrew supplies
-equivalent packaged tools; uv and pnpm supply tools absent from the host's
-snapshot, disabled there, or requiring a particular version, fork or extras.
-The `110-rust-tooling` and `120-go-tooling` hooks likewise share
-`rust-tooling.sh` and `go-tooling.sh`. The existing macOS-only `osc52pty`
-install remains conditional in the shared Go template.
-Windows retains its own package-manager choices.
+The Python, JavaScript, Rust and Go tools are listed once, in
+`.chezmoidata/python-tools.toml`, `pnpm-tools.toml`, `cargo-tools.toml` and
+`go-tools.toml`, and every platform's hooks read them: the Linux and macOS
+`070-js-tooling`, `100-python-tooling`, `110-rust-tooling` and
+`120-go-tooling` through the shared `js-tooling.sh`, `python-tooling.sh`,
+`rust-tooling.sh` and `go-tooling.sh` templates, and Windows' `500-python`,
+`550-cargo`, `560-go-tooling` and `570-pnpm-tooling`. Each file's header
+describes its fields; an `os` list keeps an entry to some platforms.
+
+On Linux and macOS Homebrew supplies equivalent packaged tools, where an
+entry's `brew` (or `brewCask`) field names one for the host's brew era; uv
+and pnpm supply tools absent from the host's snapshot, disabled there, or
+requiring a particular version, fork or extras. Windows takes every entry
+from uv or pnpm, with the interpreter a Python entry's `python` or
+`pythonWindows` pins. `.chezmoitemplates/tool-brew-provider` resolves an
+entry's brew provider for both the Python and JavaScript templates.
 
 Every pinned era attempts the remaining language-manager installs, including
 Cargo and Go. Vencord and VS Code extensions are attempted on non-headless

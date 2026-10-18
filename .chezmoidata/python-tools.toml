@@ -1,0 +1,160 @@
+# Python CLIs, for .chezmoitemplates/python-tooling.sh
+# (00-{linux,macos}/100-python-tooling) and 00-nt/500-python. Each entry is
+# a `uv tool install`, unless macOS and Linux take it from Homebrew
+# (docs/tooling.md):
+#
+#   name           the tool as `uv tool list` names it.
+#   spec           what uv installs, when it is not just `name`.
+#   with           extra requirements, each a `--with`.
+#   python         uv's --python. "3.12", "3.13" and "3.14" mean that
+#                  version's own interpreter on each host: the brew or
+#                  MacPorts build python-tooling.sh picks per era, and cp3xx on
+#                  Windows. Anything else goes to uv as it is.
+#   pythonWindows  Windows' --python instead, where its wheels need another.
+#   brew           the formula that supplies it on macOS and Linux instead.
+#                  A table picks one per brew era (the `era` of
+#                  .chezmoidata/brew-tiers.toml; Linux and every unpinned Mac
+#                  are "mainline"), falling back to `default`; "" leaves that
+#                  era on uv.
+#   os             only hosts with one of these .chezmoi.os values get it.
+#
+# Wherever brew supplies a tool, python-tooling.sh removes a uv copy left
+# from before, so it cannot shadow brew's on PATH. 00-nt/500 is run_once, so
+# a change here runs it again on the next apply; 501 upgrades every apply.
+
+[[pythonTools.packages]]
+name = "poetry"
+brew = "poetry"
+
+[[pythonTools.packages]]
+name = "hatch"
+brew = "hatch"
+
+[[pythonTools.packages]]
+name = "autopep8"
+brew = "autopep8"
+
+[[pythonTools.packages]]
+name = "pre-commit"
+brew = "pre-commit"
+python = "3.13"
+
+[[pythonTools.packages]]
+name = "ansible-core"
+brew = "ansible"  # which includes ansible-core
+# The Ansible controller is POSIX-only: ansible.utils.display imports fcntl
+# and termios, so every ansible-* command (ansible-galaxy included) dies at
+# import on Windows, and Ansible's docs say a Windows control node needs
+# WSL. The WSL distro's own apply installs it, along with the collections
+# (00-linux/105-ansible-collections).
+os = ["darwin", "linux"]
+
+[[pythonTools.packages]]
+name = "ansible-lint"
+brew = "ansible-lint"
+os = ["darwin", "linux"]  # as ansible-core
+
+[[pythonTools.packages]]
+name = "yamllint"
+brew = "yamllint"
+python = "3.14"  # yamllint's CI covers 3.14
+
+[[pythonTools.packages]]
+# Oracle Cloud's CLI, `oci`. 999-reminders says to sign in until ~/.oci/config
+# exists.
+name = "oci-cli"
+brew = "oci-cli"
+python = "3.13"  # its classifiers stop at 3.13
+
+[[pythonTools.packages]]
+name = "ruff"
+brew = { default = "ruff", catalina = "" }  # no formula at the Catalina pin
+
+[[pythonTools.packages]]
+name = "ty"
+# Absent from the pre-2026 snapshots.
+brew = { default = "", mainline = "ty", current = "ty", sonoma = "ty" }
+
+[[pythonTools.packages]]
+name = "hf"
+os = ["windows"]  # macOS and Linux have the hf formula, from 030-brew-extras
+
+# The rest come from uv everywhere: Homebrew cannot supply the requested
+# extras, fork or versions, or has no formula for the tool. A failure stops
+# the apply, on older machines too.
+
+[[pythonTools.packages]]
+name = "yt-dlp"
+spec = "yt-dlp[pin,pin-curl-cffi,pin-secretstorage,pin-deno]"
+with = ["bgutil-ytdlp-pot-provider"]
+python = "pypy@3.11"
+# Its pinned dependencies have Windows CPython wheels. The current PyPy 8 ABI
+# does not match its cryptography pin, and even PyPy 7 needs a compiler for
+# cffi/pycryptodomex, so CPython 3.13 keeps a fresh machine from needing an
+# OpenSSL/MSVC build environment. x64 on Windows on ARM too: these wheels are
+# x64-only, and run under the same emulation PyPy used.
+pythonWindows = "cpython-3.13-windows-x86_64-none"
+
+[[pythonTools.packages]]
+name = "keydive"
+python = "3.14"
+# Current cryptography releases have Windows x64 wheels only; ARM keeps the
+# current dependency releases through x64 emulation.
+pythonWindows = "cpython-3.14-windows-x86_64-none"
+
+[[pythonTools.packages]]
+name = "mangadex-downloader"
+spec = "mangadex-downloader[optional]"
+python = "3.13"
+# The optional archive support pins py7zr 0.22 / pyppmd 1.1, whose Windows
+# wheels stop at CPython 3.12 x64. This keeps those features without a local
+# compiler, on ARM through x64 emulation.
+pythonWindows = "cpython-3.12-windows-x86_64-none"
+
+[[pythonTools.packages]]
+name = "keymap-renderer"
+spec = "git+https://github.com/regulad/keymap-renderer.git@master"
+python = "cp310"
+
+[[pythonTools.packages]]
+# The binding must match the device's roothide frida-server 16.7.0, the
+# newest re.frida.server hosted for roothide devices at
+# https://miticollo.github.io/repos/roothide/Packages; Frida 17 has no
+# roothide port. frida-tools' own frida>=16.2.2,<17.0.0 would drift to
+# 16.7.19 without the --with. Both constraints survive
+# `uv tool upgrade --all` in the receipt.
+name = "frida-tools"
+spec = "frida-tools==13.7.1"
+with = ["frida==16.7.0"]
+python = "3.12"
+# This Frida release predates Windows ARM wheels.
+pythonWindows = "cpython-3.12-windows-x86_64-none"
+
+[[pythonTools.packages]]
+# RenderCV 2.2 is the last release that keeps the schema. Its loose
+# dependencies need caps, since `uv tool upgrade --all` re-resolves them:
+# rendercv-fonts 0.5 removed a font it references, Click 8.2 changed
+# make_metavar's signature, Rich <11 matches its declared compatibility
+# range, and Jinja stays on 3.x.
+name = "rendercv"
+spec = "rendercv[full]@2.2"
+with = ["rendercv-fonts<0.5", "click<8.2", "rich<11", "jinja2<4"]
+python = "3.13"  # it wants pydantic-core 2.27.2, which has no 3.14 wheel
+
+[[pythonTools.packages]]
+name = "pymobiledevice3"
+python = "3.14"
+# pyimg4's lzfse 0.4.2 has Windows wheels through CPython 3.12 x64; newer
+# interpreters need a compiler. This keeps the full install usable on a fresh
+# x64 or ARM workstation.
+pythonWindows = "cpython-3.12-windows-x86_64-none"
+
+[[pythonTools.packages]]
+name = "claude-swap"
+python = "3.14"
+
+[[pythonTools.packages]]
+# Signs git send-email patches; dot_gitconfig.tmpl turns that on on every
+# host with real secrets. PyNaCl's abi3 wheels cover Windows x64 and ARM.
+name = "patatt"
+python = "3.14"

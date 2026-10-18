@@ -1,0 +1,74 @@
+# Global JavaScript CLIs, for .chezmoitemplates/js-tooling.sh
+# (00-{linux,macos}/070-js-tooling) and 00-nt/570-pnpm-tooling. Each entry is
+# the npm package `pnpm`, which `pnpm i -g` installs at its latest version,
+# unless macOS and Linux take it from Homebrew (docs/tooling.md):
+#
+#   brew          the formula that supplies it there instead. A table picks
+#                 one per brew era (the `era` of .chezmoidata/brew-tiers.toml;
+#                 Linux and every unpinned Mac are "mainline"), falling back
+#                 to `default`; "" leaves that era on pnpm.
+#   brewCask      the same, for a cask, which wins over `brew`.
+#   brewMacosMax  the newest macOS major the formula supports; newer Macs
+#                 use pnpm.
+#   os            only hosts with one of these .chezmoi.os values get it.
+#
+# Wherever brew supplies a package, js-tooling.sh removes a pnpm copy left
+# from before, so it cannot shadow brew's on PATH.
+
+[[pnpmTools.packages]]
+pnpm = "@bitwarden/cli"
+brew = "bitwarden-cli"
+# Windows has scoop's bitwarden-cli (00-nt/200-scoop-install).
+os = ["darwin", "linux"]
+
+[[pnpmTools.packages]]
+pnpm = "typescript"
+brew = "typescript"
+
+[[pnpmTools.packages]]
+pnpm = "typescript-language-server"
+# Absent from Catalina's snapshot.
+brew = { default = "typescript-language-server", catalina = "" }
+
+[[pnpmTools.packages]]
+pnpm = "bash-language-server"
+brew = "bash-language-server"
+
+[[pnpmTools.packages]]
+pnpm = "yaml-language-server"
+brew = "yaml-language-server"
+
+[[pnpmTools.packages]]
+pnpm = "@mermaid-js/mermaid-cli"
+# Disabled in Big Sur's snapshot and absent from Monterey's. Where the
+# formula is used, js-tooling.sh also runs its bundled Puppeteer installer.
+brew = { default = "mermaid-cli", bigsur = "", monterey = "" }
+
+[[pnpmTools.packages]]
+pnpm = "wrangler"
+# Before Ventura's snapshot the formula is wrangler-legacy v1 (disabled in
+# the 2023/24 pins), not the Workers SDK CLI our projects use.
+brew = { default = "cloudflare-wrangler", catalina = "", bigsur = "", monterey = "" }
+
+[[pnpmTools.packages]]
+pnpm = "cline"
+# Only the 2026 pins and mainline have it. Core's 3.0.3 is deprecated but
+# still installable; it excludes macOS 27.
+brew = { default = "", mainline = "cline", current = "cline", sonoma = "cline" }
+brewMacosMax = 26
+
+[[pnpmTools.packages]]
+pnpm = "vercel"
+# vercel-cli on the older pins and vercel on Sonoma's. Mainline moved it to
+# a CLI cask, which Linux has too.
+brew = { default = "vercel-cli", sonoma = "vercel", mainline = "" }
+brewCask = { mainline = "vercel" }
+
+[[pnpmTools.packages]]
+# No core formula. On Windows on ARM 00-nt/570 builds it with Go instead:
+# its npm package has only an amd64 executable there.
+pnpm = "go-ios"
+
+[[pnpmTools.packages]]
+# Core's `cf` is a different timestamp filter, not Cloudflare's cf CLI.
+pnpm = "cf"

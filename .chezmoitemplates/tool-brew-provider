@@ -1,0 +1,22 @@
+{{- /* The Homebrew formula or cask that supplies one entry of
+       .chezmoidata/{python,pnpm}-tools.toml on this host, or nothing when
+       the entry comes from its own package manager here. Called with
+       includeTemplate and a dict: .tool (the entry), .field ("brew" or
+       "brewCask"), .era (brew-tiers.toml's era, "mainline" unpinned),
+       .os (.chezmoi.os) and .macosMajor (.macos.major). The fields are
+       described at the top of either data file. */ -}}
+{{- $provider := get .tool .field -}}
+{{- if kindIs "map" $provider -}}
+{{-   if hasKey $provider .era -}}
+{{-     $provider = index $provider .era -}}
+{{-   else -}}
+{{-     $provider = get $provider "default" -}}
+{{-   end -}}
+{{- end -}}
+{{- $macosMax := get .tool "brewMacosMax" -}}
+{{- if and $provider $macosMax (eq .os "darwin") -}}
+{{-   if gt (int .macosMajor) (int $macosMax) -}}
+{{-     $provider = "" -}}
+{{-   end -}}
+{{- end -}}
+{{- $provider -}}

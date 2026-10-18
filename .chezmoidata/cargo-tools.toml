@@ -1,0 +1,15 @@
+# Rust tools, `cargo install --locked`ed by .chezmoitemplates/rust-tooling.sh
+# (00-{linux,macos}/110-rust-tooling) and 00-nt/550-cargo. They build from
+# source, era-pinned Macs included, and a failure stops the apply. An entry
+# with `os` goes only to hosts whose .chezmoi.os is listed; one without goes
+# everywhere. See docs/tooling.md.
+
+[cargoTools]
+crates = [
+    { name = "cargo-disasm" },
+    { name = "vtracer" },
+    { name = "apple-codesign" },
+    # macOS and Linux get binwalk from their system package lists
+    # (brew-packages-macos.sh, 020-dnf, 021-apt, 022-brew).
+    { name = "binwalk", os = ["windows"] },
+]
