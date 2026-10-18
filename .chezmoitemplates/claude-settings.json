@@ -15,7 +15,7 @@
     "defaultMode": "auto"
   },
   "worktree": {
-    "baseRef": "fresh"
+    "baseRef": "head"
   },
   "statusLine": {
     "type": "command",
@@ -24,6 +24,5 @@
   "theme": "auto",
   "editorMode": "vim",
   "autoCompactEnabled": true,
-  "agentPushNotifEnabled": true,
-  "model": "fable"
+  "agentPushNotifEnabled": true
 }
