@@ -33,6 +33,12 @@ Operational conventions for any agent working in this chezmoi source directory. 
   ```
 
   Other Claude models follow the same shape with their own name (`Claude Opus 5`, `Claude Sonnet 5`, ...). `git commit --trailer '<the line>'` adds it without hand-editing the message. Commits are GPG-signed by the user's config; do not bypass that. A commit that went in without the trailer is rewritten with `git commit --amend --no-edit --trailer ...` (and cherry-pick plus amend for anything below the tip) and force-pushed with `--force-with-lease`, never a bare `--force`.
+- A commit that cannot change what CI checks (documentation, this file) starts its subject with `[no ci]`, which GitHub Actions skips: a push to `master` otherwise starts all three workflows, Docker's WSL packaging included.
+
+## CI after a push
+
+- After pushing, attach to every workflow run the push started and wait for them: `gh run list --commit <sha>` finds them, and `gh run watch <id> --exit-status --compact` follows each in the background. They take from about 45 minutes (macOS) to well over an hour (Docker). Report each run to the user as it returns, not all of them at the end.
+- When one fails, read the failing job's log (`gh run view <id> --job <job-id> --log-failed`) and find the cause before saying anything about it. Then tell the user what failed and whether the change caused it or something outside it did: an upstream outage, a flaky network, a runner image. Compare the previous run of the same workflow before calling a failure either way. Propose the fix, and commit and push it only once the user agrees, then attach to the runs that push starts. Keep going, one returning run at a time, until everything is green or the user calls it. Do not re-run a job or push a fix on your own: each push starts the whole matrix again.
 
 ## Hookscript messages
 
