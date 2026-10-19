@@ -52,9 +52,9 @@ RELEASES_URL=https://api.github.com/repos/macports/macports-base/releases/latest
 if [ -n "${DOTFILES_GITHUB_TOKEN:-}" ]; then
 	echo "debug: authenticating the GitHub API request with DOTFILES_GITHUB_TOKEN" >&2
 	release_json="$(printf 'header = "Authorization: Bearer %s"\n' "$DOTFILES_GITHUB_TOKEN" \
-		| curl -fsSL -K - "$RELEASES_URL" || true)"
+		| curl -fsSL --retry 3 -K - "$RELEASES_URL" || true)"
 else
-	release_json="$(curl -fsSL "$RELEASES_URL" || true)"
+	release_json="$(curl -fsSL --retry 3 "$RELEASES_URL" || true)"
 fi
 MACPORTS_TAG="$(printf '%s\n' "$release_json" \
 	| sed -n 's/^[[:space:]]*"tag_name":[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
@@ -68,7 +68,7 @@ MACPORTS_PKG="MacPorts-$MACPORTS_VERSION-$VERSION_ID-$MACPORTS_OS_NAME.pkg"
 MACPORTS_URL="https://github.com/macports/macports-base/releases/download/$MACPORTS_TAG/$MACPORTS_PKG"
 tmp="$(mktemp -d)"
 echo "debug: installing MacPorts $MACPORTS_VERSION for macOS $VERSION_ID ($MACPORTS_OS_NAME)" >&2
-curl -fsSL -o "$tmp/$MACPORTS_PKG" "$MACPORTS_URL"
+curl -fsSL --retry 3 -o "$tmp/$MACPORTS_PKG" "$MACPORTS_URL"
 sudo installer -pkg "$tmp/$MACPORTS_PKG" -target /
 rm -rf "$tmp"
 

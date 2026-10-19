@@ -4,17 +4,19 @@ if ! [ -d ~/.oh-my-zsh ]; then
 	# oh my zsh install process mutates the user's ~/.zshrc and there is no way to disable this behaviour
 	touch ~/.zshrc
 	mv ~/.zshrc ~/.zshrc.pre-oh-my-zsh
-	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended >/dev/null
+	sh -c "$(curl -fsSL --retry 3 https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended >/dev/null
 	rm ~/.zshrc
 	mv ~/.zshrc.pre-oh-my-zsh ~/.zshrc
 else
-	~/.oh-my-zsh/tools/upgrade.sh
+	# Three tries for the git pull underneath, as go-tooling.sh's go installs.
+	# retry replays stdin, which neither this nor git below wants.
+	retry -t 3 -d 10,30 -- ~/.oh-my-zsh/tools/upgrade.sh </dev/null
 fi
 
 if [ -d ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions ]; then
-	git -C ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions pull
+	retry -t 3 -d 10,30 -- git -C ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions pull </dev/null
 else
-	git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+	retry -t 3 -d 10,30 -- git clone https://github.com/zsh-users/zsh-autosuggestions ~/.oh-my-zsh/custom/plugins/zsh-autosuggestions </dev/null
 fi
 
 # these commands only run on non-cattle hosts (persistent)

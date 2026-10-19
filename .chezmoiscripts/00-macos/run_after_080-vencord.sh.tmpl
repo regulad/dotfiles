@@ -11,13 +11,16 @@ else
     UP_WAKATIME_REMOTE_URL="git@github.com:wakatime/vencord-wakatime.git"
 fi
 
+# Each clone, fetch and pull gets three tries, as go-tooling.sh's go installs;
+# a failed clone removes the directory it made. retry replays stdin, which git
+# wants none of.
 if [[ ! -d "$VENCORD_DIR" ]]; then
-    git clone "$VENCORD_REMOTE_URL" "$VENCORD_DIR"
+    retry -t 3 -d 10,30 -- git clone "$VENCORD_REMOTE_URL" "$VENCORD_DIR" </dev/null
 else
     git -C "$VENCORD_DIR" remote set-url origin "$VENCORD_REMOTE_URL"
-    git -C "$VENCORD_DIR" fetch origin
+    retry -t 3 -d 10,30 -- git -C "$VENCORD_DIR" fetch origin </dev/null
     git -C "$VENCORD_DIR" checkout main
-    git -C "$VENCORD_DIR" pull origin main
+    retry -t 3 -d 10,30 -- git -C "$VENCORD_DIR" pull origin main </dev/null
 fi
 
 if [[ ! -d "$VENCORD_DIR/src/userplugins" ]]; then
@@ -25,12 +28,12 @@ if [[ ! -d "$VENCORD_DIR/src/userplugins" ]]; then
 fi
 
 if [[ ! -d "$VENCORD_DIR/src/userplugins/vencord-wakatime" ]]; then
-    git clone "$UP_WAKATIME_REMOTE_URL" "$VENCORD_DIR/src/userplugins/vencord-wakatime"
+    retry -t 3 -d 10,30 -- git clone "$UP_WAKATIME_REMOTE_URL" "$VENCORD_DIR/src/userplugins/vencord-wakatime" </dev/null
 else
     git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" remote set-url origin "$UP_WAKATIME_REMOTE_URL"
-    git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" fetch origin
+    retry -t 3 -d 10,30 -- git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" fetch origin </dev/null
     git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" checkout main
-    git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" pull origin main
+    retry -t 3 -d 10,30 -- git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" pull origin main </dev/null
 fi
 
 (cd "$VENCORD_DIR" && pnpm i && pnpm build)

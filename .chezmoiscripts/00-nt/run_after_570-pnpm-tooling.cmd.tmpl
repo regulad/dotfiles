@@ -68,7 +68,7 @@ for /f "delims=" %%i in ('node -p process.arch') do set "NODE_ARCH=%%i"
 if "%NODE_ARCH%"=="arm64" (
     echo notice: building go-ios with Go because its npm package has no Windows ARM binary
     set "GOBIN=%PNPM_BIN%"
-    call go install github.com/danielpaulus/go-ios@latest
+    call :goinstall github.com/danielpaulus/go-ios@latest
     if errorlevel 1 goto :go_ios_build_failed
     copy /y "%PNPM_BIN%\go-ios.exe" "%PNPM_BIN%\ios.exe" >nul
     if errorlevel 1 goto :go_ios_copy_failed
@@ -113,5 +113,7 @@ exit /b 1
 :go_ios_copy_failed
 echo error: could not install ios.exe in pnpm's bin directory 1>&2
 exit /b 1
+
+{{ template "go-install.cmd" . }}
 
 {{ template "neosetx.cmd" . }}

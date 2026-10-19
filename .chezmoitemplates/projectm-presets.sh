@@ -20,7 +20,9 @@ FLAT_DIR="$HOME/.local/share/projectM/presets-flat"
 if [ ! -d "$PRESET_DIR/.git" ]; then
 	echo "debug: cloning projectM presets into $PRESET_DIR" >&2
 	mkdir -p "$(dirname "$PRESET_DIR")"
-	git clone --depth 1 https://github.com/projectM-visualizer/presets-cream-of-the-crop "$PRESET_DIR"
+	# Three tries, as go-tooling.sh's go installs; a failed clone removes the
+	# directory it made. retry replays stdin, which git wants none of.
+	retry -t 3 -d 10,30 -- git clone --depth 1 https://github.com/projectM-visualizer/presets-cream-of-the-crop "$PRESET_DIR" </dev/null
 else
 	echo "debug: projectM presets already present, skipping clone" >&2
 fi

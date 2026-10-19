@@ -48,16 +48,10 @@ call :goinstall {{ .module }} || goto :go_install_failed
 
 goto :eof
 
-:goinstall
-go install %1
-if errorlevel 1 (
-    echo error: go install %1 failed 1>&2
-    exit /b 1
-)
-exit /b 0
-
 :go_install_failed
 echo error: go tooling install failed, aborting 1>&2
 exit /b 1
+
+{{ template "go-install.cmd" . }}
 
 {{ template "neosetx.cmd" . }}

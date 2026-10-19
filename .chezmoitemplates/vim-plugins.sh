@@ -37,6 +37,9 @@ fi
 # branch. The set-branches/reset path is what repairs a coc.nvim that an older
 # apply -- or a bare :PluginInstall run before this script existed -- left
 # sitting on the unbuilt default branch, which a plain `git pull` would not.
+# The fetch and the clone get three tries, as go-tooling.sh's go installs; a
+# failed clone removes the directory it made. retry replays stdin, which git
+# wants none of.
 sync_repo() {
 	local uri="$1" dir="$2" branch="$3"
 	if [ -d "$dir/.git" ]; then
@@ -44,14 +47,14 @@ sync_repo() {
 		# --single-branch clones restrict the fetch refspec, so widen it before
 		# fetching or origin/$branch never materialises for the checkout below.
 		git -C "$dir" remote set-branches origin "$branch"
-		git -C "$dir" fetch -q origin "$branch"
+		retry -t 3 -d 10,30 -- git -C "$dir" fetch -q origin "$branch" </dev/null
 		# -f: a checkout cloned under a different core.autocrlf shows every
 		# file as locally modified, and a plain branch switch refuses to
 		# proceed over that. These trees are manager-owned payloads nobody
 		# edits, so discarding the phantom changes is always right.
 		git -C "$dir" checkout -q -f -B "$branch" "origin/$branch"
 	else
-		git clone -q --branch "$branch" --single-branch "$uri" "$dir"
+		retry -t 3 -d 10,30 -- git clone -q --branch "$branch" --single-branch "$uri" "$dir" </dev/null
 	fi
 }
 

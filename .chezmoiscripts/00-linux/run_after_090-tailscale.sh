@@ -26,7 +26,7 @@ if ! command -v tailscale >/dev/null 2>&1; then
 		echo "warning: tailscale missing on an atomic host; layer it with" >&2
 		echo "warning:   rpm-ostree install tailscale" >&2
 	else
-		curl -fsSL https://tailscale.com/install.sh | sh
+		curl -fsSL --retry 3 https://tailscale.com/install.sh | sh
 	fi
 fi
 

@@ -233,7 +233,7 @@ else
 	# The official installer asks for sudo itself; NONINTERACTIVE skips the
 	# "press RETURN" prompt only. It would install the Command Line Tools
 	# too, but 003-macos-prereqs has already done that, so it finds them.
-	NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+	NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL --retry 3 https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 fi
 
 if [ "$(uname -s)" = "Darwin" ] && [ "$BREW_SECONDARY" -eq 0 ]; then
