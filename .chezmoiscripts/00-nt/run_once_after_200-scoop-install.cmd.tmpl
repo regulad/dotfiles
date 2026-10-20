@@ -105,6 +105,12 @@ REM second GnuPG beside the Gpg4win that 100-winget installs and
 REM 220-gpg-scoop-unlink keeps in charge. winget's SecretsOPerationS.SOPS has no
 REM such dependency, so it comes from there.
 REM
+REM cloudflared is the ProxyCommand of the Cloudflare Access ssh hosts
+REM (dot_ssh/config.d/99-matrix, 99-git--regulad--xyz), which brew-extras
+REM installs on macOS and Linux. From scoop, not winget: winget's is an MSI
+REM that installs machine-wide behind UAC, scoop's a bare exe whose shim is
+REM already on PATH, and `scoop update` skips it while a session holds it open.
+REM
 REM retry is the regulad bucket's: minfrin/retry, the tool apt, dnf and brew
 REM ship as retry, built against the MSYS2 runtime since it has no native port
 REM (https://github.com/regulad/retry/tree/main/windows). age is extras'.
@@ -194,6 +200,7 @@ coreutils ^
 openssl ^
 wingetcreate ^
 rclone ^
+cloudflared ^
 less ^
 imagemagick ^
 {{- if not .useHeadless }}
