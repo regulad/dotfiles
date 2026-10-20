@@ -5,7 +5,18 @@ set -euo pipefail
 # (SSH_AUTH_SOCK in .commonprofile), one npiperelay per connection. Run by
 # ssh-agent-relay.service; wsl-npiperelay finds npiperelay.exe on the Windows
 # side.
+#
+# -p retries the pipe every 200 ms while it is busy or missing, and -l gives up
+# after 300 tries, a minute. The agent behind the pipe is Bitwarden desktop's,
+# which keeps a single pipe instance waiting for the next client and opens the
+# next one only once that client connects (desktop 2026.10.0). A client that
+# comes in between is refused with "All pipe instances are busy", and
+# npiperelay without -p exits on it: in 20 rounds of two `ssh-add -l` started
+# together, 13 of the 40 failed with "error fetching identities: communication
+# with agent failed". Windows' own ssh retries a busy pipe by itself, once a
+# second, so only the relayed clients lost connections. The cost: with
+# Bitwarden not running, ssh here waits out that minute before it fails.
 sock="$HOME/.wsl-ssh-agent.sock"
 
 rm -f "$sock"
-exec socat UNIX-LISTEN:"$sock",fork,mode=0600 EXEC:"$HOME/.local/bin/wsl-npiperelay -ei -s //./pipe/openssh-ssh-agent",nofork
+exec socat UNIX-LISTEN:"$sock",fork,mode=0600 EXEC:"$HOME/.local/bin/wsl-npiperelay -p -l -ei -s //./pipe/openssh-ssh-agent",nofork
