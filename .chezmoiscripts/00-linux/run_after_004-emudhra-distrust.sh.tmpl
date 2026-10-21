@@ -1,0 +1,89 @@
+{{ template "posix-preamble.sh" . }}
+# The eMudhra misissuance, October 2026 (https://emudhra.we-have-a-problem.com/,
+# https://bugzilla.mozilla.org/show_bug.cgi?id=2083449); 00-macos/004 has the
+# details. Here the real fix is the distribution's ca-certificates update
+# (Fedora 2026.2.92_v9.0.319, Ubuntu 20260816ubuntu0.26.04.1 and
+# 0.26.10.1), which 020-dnf-packages and 021-apt-packages upgrade to once it
+# is out and Bluefin gets with its next image. Until then this applies the
+# incident page's Linux workaround (#linux): emSign ECC Root CA - G3 and
+# Comodo AAA Services root (Sectigo's AAA Certificate Services) are
+# distrusted in the system trust store. Mozilla's store carries neither any
+# more, so the update leaves out what this distrusts.
+#
+# Everything that reads the system store follows: openssl, curl, git, dnf,
+# apt, and brew's TLS clients, which .commonprofile points at the system
+# bundle. Brew's own bundle, Mozilla's roots alone on Linux, has carried
+# neither root since ca-certificates 2026-10-20.
+#
+# 004: before 005-homebrew, the package repositories and the package
+# installs download anything. run_after_, every apply: both trust stores are
+# read before sudo, so an apply with nothing to do costs a lookup per root.
+
+EMUDHRA_ROOT_LABELS=("emSign ECC Root CA - G3" "Comodo AAA Services root")
+
+if [ -d /etc/pki/ca-trust/source ]; then
+	# Fedora and Bluefin (p11-kit; Bluefin's /etc is writable). A
+	# certificate extracted into the blocklist directory overrides the
+	# anchor in /usr/share/pki/ca-trust-source, and `trust list` then calls it
+	# distrusted. Older releases call the directory "blacklist". An extract
+	# that matches nothing still exits 0, with an empty file, hence the
+	# check for the anchor first.
+	blocklist=/etc/pki/ca-trust/source/blocklist
+	[ -d "$blocklist" ] || blocklist=/etc/pki/ca-trust/source/blacklist
+	to_block=()
+	for label in "${EMUDHRA_ROOT_LABELS[@]}"; do
+		if trust list --filter="pkcs11:object=${label// /%20};type=cert" | grep -qx '    trust: anchor'; then
+			to_block+=("$label")
+		else
+			echo "debug: $label is not a trust anchor here" >&2
+		fi
+	done
+	if [ "${#to_block[@]}" -gt 0 ]; then
+		require_sudo "004-emudhra-distrust"
+		for label in "${to_block[@]}"; do
+			sudo trust extract --overwrite --format=pem-bundle \
+				--filter="pkcs11:object=${label// /%20};type=cert" \
+				"$blocklist/${label// /_}.pem"
+		done
+		sudo update-ca-trust
+		for label in "${to_block[@]}"; do
+			if trust list --filter="pkcs11:object=${label// /%20};type=cert" | grep -qx '    trust: anchor'; then
+				echo "error: $label is still a trust anchor after blocklisting it in $blocklist" >&2
+				exit 1
+			fi
+			echo "notice: distrusted $label ($blocklist/${label// /_}.pem)" >&2
+		done
+	fi
+elif [ -f /etc/ca-certificates.conf ]; then
+	# Ubuntu (Debian's ca-certificates). A `!` in front of a line in
+	# ca-certificates.conf deselects that certificate, and
+	# update-ca-certificates then takes it out of /etc/ssl/certs and the
+	# bundle. Should a package upgrade select it again, the next apply
+	# deselects it again.
+	to_block=()
+	for label in "${EMUDHRA_ROOT_LABELS[@]}"; do
+		crt="mozilla/${label// /_}.crt"
+		if grep -qxF "$crt" /etc/ca-certificates.conf; then
+			to_block+=("$crt")
+		else
+			echo "debug: $crt is not selected in /etc/ca-certificates.conf" >&2
+		fi
+	done
+	if [ "${#to_block[@]}" -gt 0 ]; then
+		require_sudo "004-emudhra-distrust"
+		for crt in "${to_block[@]}"; do
+			sudo sed -i "s|^$crt\$|!&|" /etc/ca-certificates.conf
+		done
+		sudo update-ca-certificates
+		for crt in "${to_block[@]}"; do
+			linked="/etc/ssl/certs/$(basename "$crt" .crt).pem"
+			if [ -e "$linked" ]; then
+				echo "error: $linked is still trusted after deselecting $crt" >&2
+				exit 1
+			fi
+			echo "notice: distrusted $crt (deselected in /etc/ca-certificates.conf)" >&2
+		done
+	fi
+else
+	echo "warning: found neither p11-kit's /etc/pki/ca-trust nor /etc/ca-certificates.conf; emSign ECC Root CA - G3 and Comodo AAA Services root are still trusted here" >&2
+fi
