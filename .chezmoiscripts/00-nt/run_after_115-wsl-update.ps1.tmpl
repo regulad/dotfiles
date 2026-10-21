@@ -13,7 +13,8 @@
 # 105-docker-desktop-remove). `wsl --update` stays the only installer: it
 # installs GitHub's latest release and cannot be pinned, so the floor is
 # checked after it rather than enforced by fetching a particular release here.
-# A host still below the floor afterwards stops the apply with an error.
+# A host still below the floor afterwards stops the apply with an error; one
+# that meets it carries on even when `wsl --update` itself failed.
 #
 # PowerShell rather than the .cmd this replaced, for the version compare.
 
@@ -63,7 +64,14 @@ if (-not (Get-WslInstall)) {
 
 # Exits 0 both when it updates and when it is already current -- verified
 # against 2.7.11, which prints "The most recent version ... is already
-# installed" and returns 0 -- so a non-zero here is a real failure.
+# installed" and returns 0 -- so a non-zero here is a real failure. Not
+# necessarily ours, though: it looks the release up on api.github.com with
+# no credentials (GetLatestGitHubRelease in microsoft/WSL's wslutil.cpp, a
+# bare HttpClient with a User-Agent and nothing else; there is no token to
+# hand it), and an IP that has used up GitHub's unauthenticated limit is
+# refused with Wsl/UpdatePackage/HTTP_E_STATUS_FORBIDDEN, as the
+# windows-2025 CI runner was on 2026-10-21. A WSL that already meets the
+# floor stays as it is, with a warning.
 #
 # Note this restarts the WSL service when an update actually lands, which
 # terminates every running distro and wslc session. That only happens on a
@@ -78,15 +86,23 @@ $WslExe = Join-Path $env:SystemRoot 'System32\wsl.exe'
 $NativeWsl = Join-Path $env:SystemRoot 'Sysnative\wsl.exe'
 if (Test-Path -LiteralPath $NativeWsl) { $WslExe = $NativeWsl }
 & $WslExe --update
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "error: wsl --update failed (exit $LASTEXITCODE)"
-    exit 1
+$UpdateExit = $LASTEXITCODE
+$Floor = ConvertTo-Version4 $MinVersion
+if ($UpdateExit -ne 0) {
+    # Nothing was installed, so there is nothing to wait for below.
+    $Wsl = Get-WslInstall
+    if (-not ($Wsl -and ((ConvertTo-Version4 $Wsl.Version) -ge $Floor))) {
+        $Found = if ($Wsl) { $Wsl.Version } else { 'none' }
+        Write-Host "error: wsl --update failed (exit $UpdateExit), and WSL $Found is older than $MinVersion, the first stable release with wslc"
+        Write-Host 'error: update WSL from the Microsoft Store or github.com/microsoft/WSL/releases, then apply again'
+        exit 1
+    }
+    Write-Host "warning: wsl --update failed (exit $UpdateExit); keeping WSL $($Wsl.Version), which meets the $MinVersion floor"
 }
 
 # Re-read until the floor shows up, briefly: the MSI that `wsl --update`
 # launches can still be finishing when it returns. An up-to-date host passes
 # on the first read.
-$Floor = ConvertTo-Version4 $MinVersion
 $Deadline = (Get-Date).AddSeconds(120)
 while ($true) {
     $Wsl = Get-WslInstall
