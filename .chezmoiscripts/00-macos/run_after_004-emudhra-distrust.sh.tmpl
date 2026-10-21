@@ -1,0 +1,104 @@
+{{ template "posix-preamble.sh" . }}
+# The eMudhra misissuance, October 2026 (https://emudhra.we-have-a-problem.com/,
+# https://bugzilla.mozilla.org/show_bug.cgi?id=2083449): eight eMudhra
+# intermediates were issued over debug private keys that anyone can recover
+# from the certificates. They chain to emSign ECC Root CA - G3 (through its
+# cross-sign of emSign Root TLS CA - G3) and, through Sectigo's cross-signs,
+# to AAA Certificate Services. macOS's own trust evaluation has blocked them
+# since 2026-10-19, but the Apple-shipped curl, git, python3, perl, ruby and
+# openssl verify against /etc/ssl/cert.pem without checking revocation, and
+# Apple has not updated that file. This applies the incident page's macOS
+# workaround (#macos-curl): both roots come out of that file, and Apple's pip
+# is pointed at it. Mozilla's store carries neither root any more.
+#
+# 004: after 003-macos-prereqs, which installs the Command Line Tools whose
+# python3 the second half patches, and before 005-homebrew fetches brew's
+# installer with Apple's curl. Brew's own TLS clients read brew's
+# ca-certificates bundle instead, which excludes both roots from 2026-09-25_1
+# on; 020-brew-packages' `brew upgrade` brings that in.
+#
+# run_after_, every apply: both halves look before they sudo, so an apply with
+# nothing to do costs a grep per file. A macOS update rewrites
+# /etc/ssl/cert.pem and an Xcode or CLT update replaces the stdlib, and the
+# next apply redoes whatever they undid. Once Apple ships a cert.pem without
+# these roots, the first half has nothing left to do.
+
+CERT_PEM=/etc/ssl/cert.pem
+# In Apple's (LibreSSL's) bundle a `### <organization>` line heads each
+# issuer's group and a `=== <subject>` line each certificate; a certificate's
+# block runs to the next line of either kind.
+DISTRUSTED='^=== .*/CN=(AAA Certificate Services|emSign ECC Root CA - G3)$'
+
+if ! grep -q '^=== ' "$CERT_PEM"; then
+	echo "warning: $CERT_PEM has no '=== <subject>' lines to find AAA Certificate Services and emSign ECC Root CA - G3 by; left as is" >&2
+elif ! grep -qE "$DISTRUSTED" "$CERT_PEM"; then
+	echo "debug: $CERT_PEM carries neither AAA Certificate Services nor emSign ECC Root CA - G3" >&2
+else
+	require_sudo "004-emudhra-distrust"
+	filtered="$(mktemp)"
+	trap 'rm -f "$filtered"' EXIT
+	awk -v drop="$DISTRUSTED" '/^(###|===) /{skip=0} $0 ~ drop {skip=1} !skip' "$CERT_PEM" >"$filtered"
+	# Exactly the matched certificates gone, and nothing else.
+	matched="$(grep -cE "$DISTRUSTED" "$CERT_PEM")"
+	before="$(grep -c 'BEGIN CERTIFICATE' "$CERT_PEM")"
+	after="$(grep -c 'BEGIN CERTIFICATE' "$filtered" || true)"
+	if [ "$((before - after))" -ne "$matched" ]; then
+		echo "error: filtering $CERT_PEM would remove $((before - after)) certificates, not the $matched it should; left as is" >&2
+		exit 1
+	fi
+	# Only a file that still has the roots is backed up, so the backup is
+	# always Apple's latest copy.
+	sudo cp -p "$CERT_PEM" "$CERT_PEM.bak"
+	# Rewritten in place rather than replaced, so it stays root:wheel 0644.
+	sudo tee "$CERT_PEM" <"$filtered" >/dev/null
+	echo "notice: removed AAA Certificate Services and emSign ECC Root CA - G3 from $CERT_PEM (Apple's copy kept as $CERT_PEM.bak)" >&2
+fi
+
+# Apple's pip3, and the pip in a venv made from Apple's python3, verify
+# against pip's own vendored certifi, which predates the fix. A
+# sitecustomize.py in the interpreter's stdlib, which venvs share, points them
+# at the filtered file through PIP_CERT. Every Apple Python is patched: the
+# active developer directory's, which /usr/bin/python3 runs; Xcode.app's,
+# which 125-theos makes active later in a first apply; and the CLT's.
+#
+# Xcode.app's stdlib is inside the app bundle, so writing to it takes App
+# Management, as in 170-firefox-policies (see there): over SSH or in CI a
+# refusal is a warning, and an apply from the Mac's own session finishes it.
+PIP_LINE='import os; os.environ.setdefault("PIP_CERT", "/etc/ssl/cert.pem")'
+seen_dev_dirs=:
+for dev_dir in "$(xcode-select -p 2>/dev/null || true)" /Applications/Xcode.app/Contents/Developer /Library/Developer/CommandLineTools; do
+	# Empty would make this /usr/bin/python3, Apple's shim, which offers to
+	# install the CLT instead of running when there are none.
+	[ -n "$dev_dir" ] || continue
+	case "$seen_dev_dirs" in *":$dev_dir:"*) continue ;; esac
+	seen_dev_dirs="$seen_dev_dirs$dev_dir:"
+	python="$dev_dir/usr/bin/python3"
+	[ -x "$python" ] || continue
+
+	site_customize="$("$python" -E -c 'import sysconfig; print(sysconfig.get_path("stdlib"))')/sitecustomize.py"
+	if grep -qxF "$PIP_LINE" "$site_customize" 2>/dev/null; then
+		echo "debug: $python's pip already verifies against $CERT_PEM" >&2
+		continue
+	fi
+	require_sudo "004-emudhra-distrust"
+	# Appended to a file that doesn't end in a newline, the line would join
+	# its last one.
+	separator=
+	if [ -s "$site_customize" ] && [ -n "$(tail -c 1 "$site_customize")" ]; then
+		separator=$'\n'
+	fi
+	write_status=0
+	write_output="$({
+		printf '%s%s\n' "$separator" "$PIP_LINE" | sudo tee -a "$site_customize" >/dev/null &&
+			sudo chmod 644 "$site_customize"
+	} 2>&1)" || write_status=$?
+	if [ "$write_status" -eq 0 ]; then
+		echo "notice: pointed $python's pip at $CERT_PEM ($site_customize)" >&2
+	elif [ -n "${SSH_CONNECTION:-}${GITHUB_ACTIONS:-}" ] && [[ "$write_output" == *"Operation not permitted"* ]]; then
+		echo "warning: macOS kept this session out of ${dev_dir%/Contents/Developer} (App Management); $python's pip still trusts its own bundled roots. Apply from a Terminal on the Mac's screen, or allow full disk access for remote users under Remote Login in System Settings" >&2
+	else
+		printf '%s\n' "$write_output" >&2
+		echo "error: could not write $site_customize" >&2
+		exit 1
+	fi
+done
