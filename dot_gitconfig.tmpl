@@ -67,6 +67,19 @@
 {{- if $onWindowsScoop }}
 	sshCommand = "\"C:\\Windows\\System32\\OpenSSH\\ssh.exe\""
 {{- end }}
+{{- if eq .chezmoi.os "windows" }}
+# Git for Windows verifies HTTPS with Windows' own chain engine instead of
+# OpenSSL and the ca-bundle.crt it ships. That bundle went on trusting emSign
+# ECC Root CA - G3 after the eMudhra misissuance (October 2026), while Windows
+# already distrusted the compromised intermediates through its automatically
+# updated disallowed list, and it never sees the private CAs 00-nt/020-x509-ca
+# installs into the Windows store. http.schannelCheckRevoke stays at its
+# default, best-effort: revocation is checked, but an unreachable revocation
+# server, or a certificate that names none, does not fail the fetch. `true`
+# would fail both, and certificates under those private CAs may name none.
+[http]
+	sslBackend = schannel
+{{- end }}
 [filter "lfs"]
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
