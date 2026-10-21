@@ -23,19 +23,28 @@ EMUDHRA_ROOT_LABELS=("emSign ECC Root CA - G3" "Comodo AAA Services root")
 
 if [ -d /etc/pki/ca-trust/source ]; then
 	# Fedora and Bluefin (p11-kit; Bluefin's /etc is writable). A
-	# certificate extracted into the blocklist directory overrides the
-	# anchor in /usr/share/pki/ca-trust-source, and `trust list` then calls it
-	# distrusted. Older releases call the directory "blacklist". An extract
-	# that matches nothing still exits 0, with an empty file, hence the
-	# check for the anchor first.
+	# certificate extracted into the blocklist directory is distrusted
+	# wherever else it appears, and update-ca-trust leaves it out of the
+	# bundles it writes. Older releases call the directory "blacklist".
+	#
+	# Whether a root is trusted is read from the TLS bundle update-ca-trust
+	# writes, which heads each certificate with a "# <label>" line, not from
+	# `trust list`: that lists every copy with its own flag, so the original
+	# in /usr/share/pki/ca-trust-source stays "anchor" next to the
+	# blocklisted, "distrusted" one. Fedora 44's bundle carries emSign ECC
+	# Root CA - G3 but not Comodo AAA Services root, which its store does
+	# not trust for server authentication. Only a label the bundle carries is
+	# extracted: an extract that matches nothing still exits 0, with an empty
+	# file.
 	blocklist=/etc/pki/ca-trust/source/blocklist
 	[ -d "$blocklist" ] || blocklist=/etc/pki/ca-trust/source/blacklist
+	tls_bundle=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
 	to_block=()
 	for label in "${EMUDHRA_ROOT_LABELS[@]}"; do
-		if trust list --filter="pkcs11:object=${label// /%20};type=cert" | grep -qx '    trust: anchor'; then
+		if grep -qxF "# $label" "$tls_bundle"; then
 			to_block+=("$label")
 		else
-			echo "debug: $label is not a trust anchor here" >&2
+			echo "debug: $label is not in $tls_bundle" >&2
 		fi
 	done
 	if [ "${#to_block[@]}" -gt 0 ]; then
@@ -47,8 +56,8 @@ if [ -d /etc/pki/ca-trust/source ]; then
 		done
 		sudo update-ca-trust
 		for label in "${to_block[@]}"; do
-			if trust list --filter="pkcs11:object=${label// /%20};type=cert" | grep -qx '    trust: anchor'; then
-				echo "error: $label is still a trust anchor after blocklisting it in $blocklist" >&2
+			if grep -qxF "# $label" "$tls_bundle"; then
+				echo "error: $label is still in $tls_bundle after blocklisting it in $blocklist" >&2
 				exit 1
 			fi
 			echo "notice: distrusted $label ($blocklist/${label// /_}.pem)" >&2
