@@ -1,0 +1,36 @@
+; %USERPROFILE%\.wslgconfig -- settings for WSLg, the Wayland/X11 compositor
+; (Weston, over RDP) that puts Linux GUI apps on the Windows desktop. This is
+; the file WSL from GitHub or the Store reads: it sets WSL2_USER_PROFILE for the
+; system distro WSLg runs in, and WSLGd then reads <that profile>\.wslgconfig
+; instead of C:\ProgramData\Microsoft\WSL\.wslgconfig, which only the inbox WSL
+; reads. Each key under [system-distro-env] becomes an environment variable of
+; that system distro, read once when WSLg starts: `wsl --shutdown` applies an edit.
+;   https://github.com/microsoft/WSL/blob/c90686e3aefc1fa54bd303c296685998dbbef47c/src/linux/init/main.cpp#L1581
+;   https://github.com/microsoft/WSL/blob/c90686e3aefc1fa54bd303c296685998dbbef47c/src/linux/init/main.cpp#L1756
+;   https://github.com/microsoft/wslg/blob/6942bb534b537302a7a22617261d9274db3cfa37/WSLGd/main.cpp#L153-L182
+;
+; Written for the parser WSLGd uses (FreeRDP's WinPR), which is stricter than it
+; looks. A comment is a line with ';' in its first column; any other line
+; without an '=', such as a '#' comment or an indented one, makes it reject the
+; whole file. And no blank lines: under CRLF a blank line is a lone '\r', and the
+; parse silently stops there. .gitattributes keeps this file LF regardless.
+;   https://github.com/microsoft/FreeRDP-mirror/blob/f31f15e7cc3dd3c84916ca5241f67fcb74c915cb/winpr/libwinpr/utils/ini.c#L66-L87
+;   https://github.com/microsoft/FreeRDP-mirror/blob/f31f15e7cc3dd3c84916ca5241f67fcb74c915cb/winpr/libwinpr/utils/ini.c#L428-L452
+;
+[system-distro-env]
+; HiDPI. Weston takes each monitor's scale from Windows (WESTON_RDP_HI_DPI_SCALING,
+; on by default) but rounds it down to a whole number, so a 175% panel and a
+; 150% display both came out at 1x and Linux apps rendered at 100% on both.
+; ROUNDUP rounds to the nearest whole number instead, (scale + 50) / 100: 2x on
+; both, drawn at 2x and so sharp, though larger than Windows' own apps (200%
+; against 175% and 150%). It still follows Windows, per monitor, recomputed
+; whenever the RDP client sends a new monitor layout.
+;
+; Not FRACTIONAL_HI_DPI_SCALING: Weston's output scale stays (int)1.75 = 1, so
+; apps draw at 1x and the client stretches each window to 1.75x, the right size
+; but blurry. Not DEBUG_DESKTOP_SCALING_FACTOR either: a fixed scale that ignores
+; Windows. ROUNDUP is in Weston's source, not WSLg's wiki, and is only read
+; while FRACTIONAL_HI_DPI_SCALING is off.
+;   https://github.com/microsoft/weston-mirror/blob/7fbf69314f8a74450c265650232f66f59a4e0630/compositor/main.c#L2852-L2884
+;   https://github.com/microsoft/weston-mirror/blob/7fbf69314f8a74450c265650232f66f59a4e0630/libweston/backend-rdp/rdpdisp.c#L44-L68
+WESTON_RDP_FRACTIONAL_HI_DPI_SCALING_ROUNDUP=true

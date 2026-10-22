@@ -5,3 +5,7 @@
 # Git for Windows misreads a CRLF hook: the sendemail-validate one reported
 # patatt missing with patatt on PATH.
 dot_config/git/template/hooks/* text eol=lf
+
+# ~/.wslgconfig too: WSLg's parser stops reading at the first blank line of a
+# CRLF file, without an error (see the file's own comments).
+dot_wslgconfig text eol=lf
