@@ -62,6 +62,15 @@
 	"github.copilot.enable": {
 		"*": false
 	},
+{{- /* chat.disableAIFeatures: "Disable and hide built-in AI features provided
+       by GitHub Copilot, including chat and inline suggestions." Copilot is
+       built into VS Code (GitHub.copilot-chat, under resources/app/extensions),
+       so it can only be switched off, not uninstalled; this takes its chat
+       and agents view, and the "Sign in" it puts in the title bar, out of the
+       way. Claude Code (anthropic.claude-code, .chezmoidata/vscode.toml) is a
+       Marketplace extension of its own and is not one of them.
+       https://github.com/microsoft/vscode/blob/4d906305fff57359e107c5013fab0d2bb8c82984/src/vs/workbench/contrib/chat/browser/chat.shared.contribution.ts#L2423-L2428 */}}
+	"chat.disableAIFeatures": true,
 	"[markdown]": {
 		"editor.defaultFormatter": "yzhang.markdown-all-in-one"
 	},
