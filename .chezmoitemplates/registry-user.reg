@@ -60,6 +60,11 @@ Windows Registry Editor Version 5.00
 ; 1x, and Qt apps and GTK 3 text would come out at 75%.
 ;   https://doc.qt.io/qt-6/highdpi.html
 ;   https://github.com/GNOME/gtk/blob/0f3aa454a2a14b68e2753f63bedb2c74bd45b54b/gdk/wayland/gdkscreen-wayland.c#L507-L518
+; XCURSOR_SIZE=12 halves the cursor Qt and other non-GTK Wayland apps ask for,
+; as 00-linux/009-wsl-cursor-size does in gsettings for GTK and Chromium, and
+; the two have to match: WSLg's Weston draws a Wayland app's cursor at twice
+; the size it should (that script says why). X11 apps read it too, but
+; Adwaita's smallest cursor is 24, so they and anything at 1x keep that 24.
 ; WSLENV is set whole, here: anything else that should cross into WSL joins
 ; this line. Windows programs inherit the variables as well.
 [HKEY_CURRENT_USER\Environment]
@@ -72,5 +77,6 @@ Windows Registry Editor Version 5.00
 "XDG_SESSION_TYPE"="wayland"
 "QT_SCALE_FACTOR"="0.75"
 "GDK_DPI_SCALE"="0.75"
+"XCURSOR_SIZE"="12"
 {{- end }}
-"WSLENV"="GALLIUM_DRIVER/u:LIBVA_DRIVER_NAME/u{{ if not .useHeadless }}:XDG_SESSION_TYPE/u:QT_SCALE_FACTOR/u:GDK_DPI_SCALE/u{{ end }}"
+"WSLENV"="GALLIUM_DRIVER/u:LIBVA_DRIVER_NAME/u{{ if not .useHeadless }}:XDG_SESSION_TYPE/u:QT_SCALE_FACTOR/u:GDK_DPI_SCALE/u:XCURSOR_SIZE/u{{ end }}"

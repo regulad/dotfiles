@@ -1,0 +1,63 @@
+{{ template "posix-preamble.sh" . }}
+# Halves the cursor size apps ask for under WSLg, whose Weston draws a Wayland
+# app's cursor twice as large as it should whenever its scale is above 1, as
+# ~/.wslgconfig has it with Windows at 150% and up (masked outside a genuine
+# WSL distro in .chezmoiignore).
+#
+# A Wayland app loads its cursor at size x scale and hands it over at buffer
+# scale 2: a 48px image of a 24-pixel cursor. Weston's RDP backend makes the
+# Windows pointer from that image's pixel size and multiplies it by the scale
+# once more, so it comes out at 96px, some 3.5x Windows' own pointer at 150%.
+# X11 apps hand over their 24px image at buffer scale 1 and come out at 48.
+#   https://github.com/microsoft/weston-mirror/blob/7fbf69314f8a74450c265650232f66f59a4e0630/libweston/backend-rdp/rdprail.c#L1386-L1395
+# Asking for 12 brings Wayland apps to 48 as well, the size a 24 would have if
+# Weston scaled it once. GTK and Chromium, VS Code included, read the size from
+# org.gnome.desktop.interface cursor-size, set here; Qt reads it there under its
+# gtk3 platform theme and from XCURSOR_SIZE otherwise, which comes from Windows
+# with the other toolkit variables (.chezmoitemplates/registry-user.reg) and
+# has to be the same number.
+#   https://github.com/GNOME/gtk/blob/0f3aa454a2a14b68e2753f63bedb2c74bd45b54b/gdk/wayland/gdkscreen-wayland.c#L530
+#   https://github.com/chromium/chromium/blob/157ab90b596b1b38003753649a15b88ed11f7fdf/ui/gtk/gtk_ui.cc#L719-L722
+#   https://github.com/qt/qtbase/blob/e46cf88b5b5aa3237713ef34c0b7f52b5f0a7334/src/plugins/platformthemes/gtk3/qgtk3theme.cpp#L148-L153
+#   https://github.com/qt/qtbase/blob/e46cf88b5b5aa3237713ef34c0b7f52b5f0a7334/src/gui/platform/unix/qgenericunixtheme.cpp#L235-L240
+# 12 is as small as it gets: cursor loaders take the theme's nearest size, and
+# Adwaita's smallest is 24, so anything below 12 loads the same image. The same
+# rule keeps 12 harmless wherever the scale is 1, for X11 apps and for every
+# app with Windows below 150%: they get Adwaita's 24, as before.
+#   https://gitlab.freedesktop.org/wayland/wayland/-/blob/93c04ad3670633aea6f2435059378b75843b8e70/cursor/xcursor.c#L327-L356
+# Weston also hands the hotspot over unscaled, so the pointer is drawn down and
+# to the right of where a click lands, by a few pixels for the arrow and more
+# for the text cursor, whose hotspot is in its middle (microsoft/wslg#935). A
+# smaller cursor halves that offset; only Weston can take it away.
+#   https://github.com/microsoft/weston-mirror/blob/7fbf69314f8a74450c265650232f66f59a4e0630/libweston/backend-rdp/rdprail.c#L1446-L1447
+#
+# gsettings writes through dconf, over the user session bus, and the WSL
+# session has both. Without either, GSettings takes the write and keeps
+# nothing, so the value is read back from a fresh process afterwards. A
+# run_after_, so a write that did not stick is tried again on the next apply.
+if [ "$IS_WSL" -ne 1 ]; then
+	echo "notice: not a WSL session, skipping the cursor size" >&2
+	exit 0
+fi
+
+CURSOR_SIZE=12
+
+if ! command -v gsettings &>/dev/null; then
+	echo "notice: gsettings is not installed, skipping the cursor size" >&2
+	exit 0
+fi
+if ! current="$(gsettings get org.gnome.desktop.interface cursor-size 2>/dev/null)"; then
+	echo "notice: no org.gnome.desktop.interface schema (gsettings-desktop-schemas), skipping the cursor size" >&2
+	exit 0
+fi
+if [ "$current" = "$CURSOR_SIZE" ]; then
+	echo "debug: cursor-size is already $CURSOR_SIZE" >&2
+	exit 0
+fi
+
+if ! gsettings set org.gnome.desktop.interface cursor-size "$CURSOR_SIZE" ||
+	[ "$(gsettings get org.gnome.desktop.interface cursor-size)" != "$CURSOR_SIZE" ]; then
+	echo "warning: cursor-size did not stay at $CURSOR_SIZE (no dconf, or no session bus?); the next apply tries again" >&2
+	exit 0
+fi
+echo "notice: set org.gnome.desktop.interface cursor-size to $CURSOR_SIZE (was $current)" >&2
