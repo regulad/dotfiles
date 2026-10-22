@@ -37,12 +37,15 @@ EOF
 
 sudo systemctl enable vgem.service
 
-sudo touch /etc/environment
-
-sudo sh -c '
-grep -qxF "GALLIUM_DRIVER=d3d12" /etc/environment || echo "GALLIUM_DRIVER=d3d12" >> /etc/environment
-grep -qxF "LIBVA_DRIVER_NAME=d3d12" /etc/environment || echo "LIBVA_DRIVER_NAME=d3d12" >> /etc/environment
-'
+# GALLIUM_DRIVER=d3d12 and LIBVA_DRIVER_NAME=d3d12 used to be appended to
+# /etc/environment here. That reached login shells (pam_env, .commonprofile)
+# but nothing WSL starts itself, Linux apps from the Start menu included, so
+# they come from Windows through WSLENV now (.chezmoitemplates/registry-user.reg).
+# Editing this script made it run once more, and that run takes out the lines
+# an earlier one added.
+if [ -f /etc/environment ]; then
+	sudo sed -i -e '/^GALLIUM_DRIVER=d3d12$/d' -e '/^LIBVA_DRIVER_NAME=d3d12$/d' /etc/environment
+fi
 
 # The groups come with packages, not the base system: the Ubuntu image has had
 # a render group only since one of 021-apt-packages' GUI packages made it, and

@@ -35,3 +35,42 @@ Windows Registry Editor Version 5.00
 "NEXT_TELEMETRY_DISABLED"="1"
 "TURBO_TELEMETRY_DISABLED"="1"
 "EVE_TELEMETRY_DISABLED"="1"
+
+; Variables for WSL's Linux side. WSL copies a Windows variable into a session
+; only when WSLENV names it, and with /u it does so whenever Windows starts WSL:
+; a terminal's wsl.exe, `wsl --exec`, and a Linux app's Start-menu entry, which
+; Explorer starts through wslg.exe. /etc/environment, where the first two used
+; to go (00-linux/006-wsl-gpu), reaches login shells and su/ssh through pam_env
+; and .commonprofile, but none of what WSL starts itself.
+;   https://learn.microsoft.com/en-us/windows/wsl/filesystems#share-environment-variables-between-windows-and-wsl-with-wslenv
+; GALLIUM_DRIVER and LIBVA_DRIVER_NAME put Mesa's OpenGL and VA-API on WSL's
+; d3d12 drivers. XDG_SESSION_TYPE=wayland has Electron apps, VS Code among them,
+; run as Wayland clients: with both X11 and Wayland reachable, as under WSLg,
+; Electron picks Wayland only in a "wayland" session, and WSL sets none. As an
+; X11 client VS Code is drawn at 1x and stretched to the 2x ~/.wslgconfig sets,
+; since WSLg's Weston has no scaling for X11 windows.
+;   https://github.com/electron/electron/blob/a89731b06cc1003140f794db0f9b92b268dd407c/docs/api/command-line-switches.md#L205-L235
+; QT_SCALE_FACTOR and GDK_DPI_SCALE bring Qt and GTK apps from the 2x Weston
+; renders at to 150% of Windows' scale: 2 x 0.75. WSLg can only offer whole
+; scales (~/.wslgconfig says why). Qt multiplies its device pixel ratio by
+; QT_SCALE_FACTOR, so a whole Qt app shrinks; GTK 3 scales only its text by
+; GDK_DPI_SCALE, and GTK 4 does not read it. VS Code is set to the same 150%
+; with its own zoom (.chezmoitemplates/vscode-settings.json). All of it assumes
+; Weston at 2x, i.e. Windows at 150% or more: at 100 or 125% Weston stays at
+; 1x, and Qt apps and GTK 3 text would come out at 75%.
+;   https://doc.qt.io/qt-6/highdpi.html
+;   https://github.com/GNOME/gtk/blob/0f3aa454a2a14b68e2753f63bedb2c74bd45b54b/gdk/wayland/gdkscreen-wayland.c#L507-L518
+; WSLENV is set whole, here: anything else that should cross into WSL joins
+; this line. Windows programs inherit the variables as well.
+[HKEY_CURRENT_USER\Environment]
+"GALLIUM_DRIVER"="d3d12"
+"LIBVA_DRIVER_NAME"="d3d12"
+{{- /* XDG_SESSION_TYPE and the toolkit scales only matter to GUI apps, so a
+       headless host (useHeadless) leaves them, and their WSLENV entries,
+       out. */}}
+{{- if not .useHeadless }}
+"XDG_SESSION_TYPE"="wayland"
+"QT_SCALE_FACTOR"="0.75"
+"GDK_DPI_SCALE"="0.75"
+{{- end }}
+"WSLENV"="GALLIUM_DRIVER/u:LIBVA_DRIVER_NAME/u{{ if not .useHeadless }}:XDG_SESSION_TYPE/u:QT_SCALE_FACTOR/u:GDK_DPI_SCALE/u{{ end }}"

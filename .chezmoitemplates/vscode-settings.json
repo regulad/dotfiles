@@ -89,4 +89,17 @@
 	"extensions.experimental.affinity": {
 		"asvetliakov.vscode-neovim": 1
 	}
+{{- /* WSL only, detected as .chezmoiignore.tmpl does: there VS Code is a
+       Wayland window under WSLg (XDG_SESSION_TYPE, registry-user.reg), drawn
+       at the 2x ~/.wslgconfig rounds Windows' scale up to.
+       window.zoomLevel brings it to 150% of Windows' scale, as QT_SCALE_FACTOR
+       and GDK_DPI_SCALE do for Qt and GTK: each step is x1.2, and
+       1.2^-1.58 = 0.75. window.controlsStyle "custom" has VS Code draw its own
+       minimize/maximize/close: the native ones, which Electron draws there,
+       come up without maximize under WSLg's Weston.
+       https://github.com/microsoft/vscode/blob/4d906305fff57359e107c5013fab0d2bb8c82984/src/vs/workbench/electron-browser/desktop.contribution.ts#L202-L256 */}}
+{{- if ne (env "WSL_DISTRO_NAME") "" }},
+	"window.zoomLevel": -1.58,
+	"window.controlsStyle": "custom"
+{{- end }}
 }
