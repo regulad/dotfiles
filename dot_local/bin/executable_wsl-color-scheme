@@ -37,27 +37,37 @@ fi
 
 # Windows PowerShell 5.1, so nothing newer than it understands. Passed as
 # -EncodedCommand, base64 of UTF-16LE, which nothing in interop's argument
-# quoting can mangle.
+# quoting can mangle. With its output redirected, as here, PowerShell writes
+# progress and errors to stderr as CLIXML: Add-Type's "Preparing modules for
+# first use" reached the journal as `#< CLIXML` and a line of XML. So no
+# progress, and errors go out as one plain line each.
 read -r -d '' watcher <<'EOF' || true
 $ErrorActionPreference = 'Stop'
-Add-Type -Namespace WslColorScheme -Name Native -MemberDefinition '[DllImport("advapi32.dll")] public static extern int RegNotifyChangeKeyValue(Microsoft.Win32.SafeHandles.SafeRegistryHandle hKey, bool bWatchSubtree, int dwNotifyFilter, Microsoft.Win32.SafeHandles.SafeWaitHandle hEvent, bool fAsynchronous);'
-$key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Themes\Personalize')
-if (-not $key) { throw 'HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize does not exist' }
-$changed = New-Object System.Threading.AutoResetEvent $false
-$armed = $false
-while ($true) {
-	# Armed before the read, so that a change in between still ends the wait.
-	# 4 is REG_NOTIFY_CHANGE_LAST_SET, a value written; asynchronous, so it
-	# sets $changed once instead of blocking, and is armed again only after.
-	if (-not $armed) {
-		$rc = [WslColorScheme.Native]::RegNotifyChangeKeyValue($key.Handle, $false, 4, $changed.SafeWaitHandle, $true)
-		if ($rc -ne 0) { throw "RegNotifyChangeKeyValue failed: $rc" }
-		$armed = $true
+$ProgressPreference = 'SilentlyContinue'
+try {
+	Add-Type -Namespace WslColorScheme -Name Native -MemberDefinition '[DllImport("advapi32.dll")] public static extern int RegNotifyChangeKeyValue(Microsoft.Win32.SafeHandles.SafeRegistryHandle hKey, bool bWatchSubtree, int dwNotifyFilter, Microsoft.Win32.SafeHandles.SafeWaitHandle hEvent, bool fAsynchronous);'
+	$key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Themes\Personalize')
+	if (-not $key) { throw 'HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize does not exist' }
+	$changed = New-Object System.Threading.AutoResetEvent $false
+	$armed = $false
+	while ($true) {
+		# Armed before the read, so that a change in between still ends the
+		# wait. 4 is REG_NOTIFY_CHANGE_LAST_SET, a value written; asynchronous,
+		# so it sets $changed once instead of blocking, and is armed again only
+		# after.
+		if (-not $armed) {
+			$rc = [WslColorScheme.Native]::RegNotifyChangeKeyValue($key.Handle, $false, 4, $changed.SafeWaitHandle, $true)
+			if ($rc -ne 0) { throw "RegNotifyChangeKeyValue failed: $rc" }
+			$armed = $true
+		}
+		# A missing value is Windows' default, light.
+		[Console]::Out.WriteLine([int]$key.GetValue('AppsUseLightTheme', 1))
+		[Console]::Out.Flush()
+		if ($changed.WaitOne(60000)) { $armed = $false }
 	}
-	# A missing value is Windows' default, light.
-	[Console]::Out.WriteLine([int]$key.GetValue('AppsUseLightTheme', 1))
-	[Console]::Out.Flush()
-	if ($changed.WaitOne(60000)) { $armed = $false }
+} catch {
+	[Console]::Error.WriteLine("error: watcher: $($_.Exception.Message)")
+	exit 1
 }
 EOF
 encoded="$(printf '%s' "$watcher" | iconv -f UTF-8 -t UTF-16LE | base64 -w0)"
