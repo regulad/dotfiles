@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Keeps WSL's light/dark preference in step with Windows' app mode, for
+# wsl-color-scheme.service. One powershell.exe on the Windows side prints
+# AppsUseLightTheme, the "default app mode" Windows' own apps follow
+# (SystemUsesLightTheme is the taskbar's), and prints it again after every
+# change. This side writes each new value to gsettings, where Linux apps read
+# it:
+#
+# - org.gnome.desktop.interface color-scheme, which xdg-desktop-portal-gtk
+#   serves as the Settings portal's org.freedesktop.appearance color-scheme,
+#   and signals when it changes. VS Code (window.autoDetectColorScheme in
+#   .chezmoitemplates/vscode-settings.json) and the rest of Chromium, Firefox,
+#   Qt and libadwaita read it from the portal, which can run here thanks to
+#   wslg-session.target. Light is 'default', as GNOME itself writes it, and
+#   Chromium and Firefox take that for light.
+#   https://github.com/flatpak/xdg-desktop-portal-gtk/blob/337202d4e7179857bc37b03c1a6d8c9d92e47c44/src/settings.c#L94-L104
+#   https://github.com/chromium/chromium/blob/157ab90b596b1b38003753649a15b88ed11f7fdf/ui/linux/portal_settings_linux.cc#L174-L194
+# - gtk-theme, for GTK 3 apps, which read no color-scheme. Adwaita-dark is
+#   ~/.local/share/themes/Adwaita-dark, GTK's own dark Adwaita under that name.
+#   https://github.com/GNOME/gtk/blob/0f3aa454a2a14b68e2753f63bedb2c74bd45b54b/gdk/wayland/gdkscreen-wayland.c#L526
+#
+# The Windows side waits in RegNotifyChangeKeyValue instead of polling. It also
+# prints the value once a minute, unchanged values being skipped here, so that
+# a watcher whose reader has gone fails on that write and exits within the
+# minute rather than at the next change of mode.
+#   https://learn.microsoft.com/en-us/windows/win32/api/winreg/nf-winreg-regnotifychangekeyvalue
+#
+# powershell.exe is located explicitly, as wsl-npiperelay locates npiperelay:
+# systemd --user units get no Windows PATH.
+powershell=/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe
+if [ ! -x "$powershell" ]; then
+	echo "error: $powershell not found" >&2
+	exit 1
+fi
+
+# Windows PowerShell 5.1, so nothing newer than it understands. Passed as
+# -EncodedCommand, base64 of UTF-16LE, which nothing in interop's argument
+# quoting can mangle.
+read -r -d '' watcher <<'EOF' || true
+$ErrorActionPreference = 'Stop'
+Add-Type -Namespace WslColorScheme -Name Native -MemberDefinition '[DllImport("advapi32.dll")] public static extern int RegNotifyChangeKeyValue(Microsoft.Win32.SafeHandles.SafeRegistryHandle hKey, bool bWatchSubtree, int dwNotifyFilter, Microsoft.Win32.SafeHandles.SafeWaitHandle hEvent, bool fAsynchronous);'
+$key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Software\Microsoft\Windows\CurrentVersion\Themes\Personalize')
+if (-not $key) { throw 'HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize does not exist' }
+$changed = New-Object System.Threading.AutoResetEvent $false
+$armed = $false
+while ($true) {
+	# Armed before the read, so that a change in between still ends the wait.
+	# 4 is REG_NOTIFY_CHANGE_LAST_SET, a value written; asynchronous, so it
+	# sets $changed once instead of blocking, and is armed again only after.
+	if (-not $armed) {
+		$rc = [WslColorScheme.Native]::RegNotifyChangeKeyValue($key.Handle, $false, 4, $changed.SafeWaitHandle, $true)
+		if ($rc -ne 0) { throw "RegNotifyChangeKeyValue failed: $rc" }
+		$armed = $true
+	}
+	# A missing value is Windows' default, light.
+	[Console]::Out.WriteLine([int]$key.GetValue('AppsUseLightTheme', 1))
+	[Console]::Out.Flush()
+	if ($changed.WaitOne(60000)) { $armed = $false }
+}
+EOF
+encoded="$(printf '%s' "$watcher" | iconv -f UTF-8 -t UTF-16LE | base64 -w0)"
+
+last=
+while IFS= read -r value; do
+	value="${value%$'\r'}"
+	[ "$value" = "$last" ] && continue
+	case "$value" in
+		0) mode=dark scheme=prefer-dark theme=Adwaita-dark ;;
+		1) mode=light scheme=default theme=Adwaita ;;
+		*)
+			echo "warning: AppsUseLightTheme reads '$value', not 0 or 1; ignoring it" >&2
+			continue
+			;;
+	esac
+	gsettings set org.gnome.desktop.interface color-scheme "$scheme"
+	gsettings set org.gnome.desktop.interface gtk-theme "$theme"
+	echo "notice: Windows' apps are $mode: color-scheme $scheme, gtk-theme $theme" >&2
+	last="$value"
+done < <("$powershell" -NoProfile -NonInteractive -EncodedCommand "$encoded")
+
+# Restart=on-failure starts it again.
+echo "error: the Windows-side watcher exited" >&2
+exit 1

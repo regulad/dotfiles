@@ -1,0 +1,6 @@
+/* GTK 3's own dark Adwaita, under the theme name wsl-color-scheme sets
+   gtk-theme to while Windows' apps are dark. GTK 3 builds in Adwaita and its
+   dark variant, but no theme named Adwaita-dark, and a gtk-theme it cannot
+   find falls back to light Adwaita. WSL only (.chezmoiignore).
+   https://github.com/GNOME/gtk/blob/0f3aa454a2a14b68e2753f63bedb2c74bd45b54b/gtk/gtkcssprovider.c#L2122-L2190 */
+@import url("resource:///org/gtk/libgtk/theme/Adwaita/gtk-contained-dark.css");

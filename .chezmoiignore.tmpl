@@ -239,15 +239,23 @@ Library
 .chezmoiscripts/01-fedora/*
 .chezmoiscripts/02-bluefin/*
 .config/systemd/
+# systemd's environment.d, the desktop portal's backend choice and GTK's
+# themes, all for WSL's desktop session; the linux branch below keeps them to
+# WSL.
+.config/environment.d/
+.config/xdg-desktop-portal/
+.local/share/themes/
 # The Vercel CLI keeps its data under ~/.local/share on Linux only; macOS and
 # Windows get their own copies under Library and AppData.
 .local/share/com.vercel.cli
-# Linux-only helpers in ~/.local/bin: the agent relays and wslview run inside
-# a WSL distro, and veracrypt-hc-mount belongs to Bluefin's VeraCrypt chain
-# (02-bluefin). The linux branch below scopes each to its own hosts.
+# Linux-only helpers in ~/.local/bin: the agent relays, wsl-color-scheme and
+# wslview run inside a WSL distro, and veracrypt-hc-mount belongs to Bluefin's
+# VeraCrypt chain (02-bluefin). The linux branch below scopes each to its own
+# hosts.
 .local/bin/wsl-npiperelay
 .local/bin/wsl-ssh-agent-relay
 .local/bin/wsl-gpg-agent-relay
+.local/bin/wsl-color-scheme
 .local/bin/wslview
 .local/bin/veracrypt-hc-mount
 {{- else }}
@@ -358,11 +366,20 @@ Library
 .chezmoiscripts/00-linux/007-ssh-agent-relay.sh
 .chezmoiscripts/00-linux/008-wsl-agent-relays.sh
 .chezmoiscripts/00-linux/009-wsl-cursor-size.sh
+.chezmoiscripts/00-linux/151-wsl-desktop-session.sh
 .config/systemd/user/ssh-agent-relay.service
 .config/systemd/user/gpg-agent-relay.service
 .local/bin/wsl-npiperelay
 .local/bin/wsl-ssh-agent-relay
 .local/bin/wsl-gpg-agent-relay
+# WSL's desktop session, 151's: a native desktop runs its own, and a user
+# portals.conf would outrank that desktop's choice of portals.
+.config/systemd/user/wslg-session.target
+.config/systemd/user/wsl-color-scheme.service
+.config/environment.d/
+.config/xdg-desktop-portal/
+.local/share/themes/
+.local/bin/wsl-color-scheme
 # BROWSER=wslview in .commonprofile; it hands URLs to Windows' explorer.exe.
 .local/bin/wslview
 {{-     end }}

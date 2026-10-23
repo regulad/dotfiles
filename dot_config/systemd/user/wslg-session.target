@@ -1,0 +1,16 @@
+# The graphical session WSLg would start if it ran one. Nothing in WSL does, so
+# graphical-session.target never came up, and every unit that requires it was
+# refused, xdg-desktop-portal.service among them (Requisite=): the portal that
+# hands Linux apps the light/dark preference wsl-color-scheme.service keeps in
+# step with Windows. A session's own target starts graphical-session.target by
+# binding it, as systemd.special(7) describes; WSLg is up for as long as the
+# instance is, so this starts with the user manager. Enabled by
+# .chezmoiscripts/00-linux/151-wsl-desktop-session, WSL only (.chezmoiignore).
+#   https://github.com/systemd/systemd/blob/9ca433482f2281d71718718705ca8cd3bf562ad6/man/systemd.special.xml#L1476-L1485
+#   https://github.com/flatpak/xdg-desktop-portal/blob/1d20fadc304f6601452b5db65ed91197dba77041/src/xdg-desktop-portal.service.in#L3-L5
+[Unit]
+Description=WSLg graphical session
+BindsTo=graphical-session.target
+
+[Install]
+WantedBy=default.target

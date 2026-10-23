@@ -1,0 +1,16 @@
+# Keeps WSL's light/dark preference in step with Windows' app mode;
+# ~/.local/bin/wsl-color-scheme says how. Enabled by
+# .chezmoiscripts/00-linux/151-wsl-desktop-session, WSL only (.chezmoiignore).
+[Unit]
+Description=Follow Windows' light/dark app mode in gsettings
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/wsl-color-scheme
+Restart=on-failure
+# Slower than the agent relays' 2 s, so that systemd's start limit, 5 starts in
+# 10 s, never ends the retries.
+RestartSec=10
+
+[Install]
+WantedBy=default.target

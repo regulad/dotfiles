@@ -66,6 +66,10 @@ APT_PACKAGES=(
 	# (dropped when libprojectM 4 broke VLC's module). The vlcrc in
 	# dot_config/vlc points VLC at projectM regardless -- inert until then.
 	vlc-plugin-visualization
+	# The desktop portal's GTK backend, with xdg-desktop-portal itself: the
+	# Settings portal apps read light/dark from. WSL's runs as 00-linux/151
+	# sets it up.
+	xdg-desktop-portal-gtk
 {{- end }}
 
 	# =+= SERIAL

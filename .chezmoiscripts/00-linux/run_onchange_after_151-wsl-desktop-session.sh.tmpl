@@ -1,0 +1,36 @@
+{{ template "posix-preamble.sh" . }}
+# WSL's desktop session (masked outside a genuine WSL distro in
+# .chezmoiignore): wslg-session.target, which brings graphical-session.target
+# up so that xdg-desktop-portal can run, and wsl-color-scheme.service, which
+# keeps the portal's light/dark preference in step with Windows. Each file
+# says why it is there.
+#
+# run_onchange_, keyed on the files below, because what is running keeps what
+# it started with: the service its script, and xdg-desktop-portal its
+# portals.conf and environment. A change to any of them restarts them.
+#
+# Session files:
+#     dot_config/systemd/user/wslg-session.target {{ include "dot_config/systemd/user/wslg-session.target" | sha256sum }}
+#     dot_config/systemd/user/wsl-color-scheme.service {{ include "dot_config/systemd/user/wsl-color-scheme.service" | sha256sum }}
+#     dot_local/bin/executable_wsl-color-scheme {{ include "dot_local/bin/executable_wsl-color-scheme" | sha256sum }}
+#     dot_config/environment.d/50-wslg.conf {{ include "dot_config/environment.d/50-wslg.conf" | sha256sum }}
+#     dot_config/xdg-desktop-portal/portals.conf {{ include "dot_config/xdg-desktop-portal/portals.conf" | sha256sum }}
+if [ "$IS_WSL" -ne 1 ]; then
+	echo "notice: not a WSL session, skipping the WSL desktop session" >&2
+	exit 0
+fi
+if ! systemctl --user status &>/dev/null; then
+	echo "error: user session broken (couldn't run systemd --user)" >&2
+	exit 1
+fi
+
+# Re-reads environment.d as well, for the services started from here on.
+systemctl --user daemon-reload
+
+systemctl --user enable wslg-session.target wsl-color-scheme.service
+systemctl --user start wslg-session.target
+systemctl --user restart wsl-color-scheme.service
+# try-restart leaves a portal that is not running to D-Bus activation, which
+# now succeeds.
+systemctl --user try-restart xdg-desktop-portal.service xdg-desktop-portal-gtk.service
+echo "notice: started the WSLg session and the Windows light/dark follower" >&2

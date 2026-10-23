@@ -61,6 +61,12 @@ DNF_PACKAGES=(
 	# apps are provided by flatpak (io.mpv.Mpv, org.videolan.VLC), installed by
 	# 01-fedora/020-flatpak-packages.sh, keeping exactly one install mechanism
 	# per app per platform.
+{{- if not .useHeadless }}
+	# The desktop portal's GTK backend, with xdg-desktop-portal itself: the
+	# Settings portal apps read light/dark from. It used to be here only as
+	# something else's weak dependency. WSL's runs as 00-linux/151 sets it up.
+	xdg-desktop-portal-gtk
+{{- end }}
 
 	# =+= SERIAL
 	minicom
