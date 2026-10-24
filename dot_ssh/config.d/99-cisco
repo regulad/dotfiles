@@ -16,3 +16,4 @@ Match Host "switch45f304.regulad.internal,switch070e26.regulad.internal"
     HostKeyAlgorithms +ssh-rsa
     MACs +hmac-sha1
     PubkeyAcceptedAlgorithms +ssh-rsa
+    RequiredRSASize 1024
