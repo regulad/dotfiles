@@ -1,22 +1,44 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Minimal replacement for wslu's wslview: opens a URL/path in the Windows
-# side of a WSL2 install via explorer.exe. explorer.exe always exits 1
-# regardless of outcome, so that's swallowed here rather than propagated.
+# Minimal replacement for wslu's wslview: opens a URL in the default Windows
+# browser, or a path on the Windows side of a WSL2 install.
+#
+# URLs go to url.dll's FileProtocolHandler, which hands them to ShellExecute,
+# as wslu's default engine (PowerShell's Start) did and xdg-open's own WSL
+# branch (open_wsl, xdg-utils 1.2) does; that branch never runs here, because
+# it looks explorer.exe up on PATH, so xdg-open lands on $BROWSER, this script.
+# Not to explorer.exe: given a URL with a query string, it opens File Explorer
+# on the user's Documents instead of the browser (seen on Windows 11 build
+# 26300); only a bare URL reached the browser.
+#
+# Paths still go to explorer.exe, which opens a folder in File Explorer and a
+# file in its default app. explorer.exe always exits 1 regardless of outcome,
+# so that's swallowed here rather than propagated.
+
+# Windows PATH inheritance is disabled by default in our WSL images, so each
+# binary falls back to its fixed location.
+windows_exe() {
+	local exe
+	exe="$(command -v "$1" || true)"
+	exe="${exe:-$2}"
+	if [ ! -x "$exe" ]; then
+		echo "error: $1 not found at $exe" >&2
+		return 1
+	fi
+	echo "$exe"
+}
 
 target="$1"
 
 case "$target" in
-	*://*) ;;
-	*) target="$(wslpath -w "$target")" ;;
+	*://*)
+		rundll32="$(windows_exe rundll32.exe /mnt/c/Windows/System32/rundll32.exe)"
+		"$rundll32" url.dll,FileProtocolHandler "$target"
+		;;
+	*)
+		path="$(wslpath -w "$target")"
+		explorer="$(windows_exe explorer.exe /mnt/c/Windows/explorer.exe)"
+		"$explorer" "$path" || true
+		;;
 esac
-
-# Windows PATH inheritance is disabled by default in our WSL images.
-explorer="$(command -v explorer.exe || true)"
-explorer="${explorer:-/mnt/c/Windows/explorer.exe}"
-if [ ! -x "$explorer" ]; then
-	echo "error: explorer.exe not found at $explorer" >&2
-	exit 1
-fi
-"$explorer" "$target" || true
