@@ -517,6 +517,32 @@ jobs:
           fi
           sudo rm -f "$root/etc/resolv.conf"
 
+          # The rootfs's file capabilities have to be the ones its package
+          # database records. The verify step compares the tarball only with
+          # caps.txt above, which shows the repack kept what the image had and
+          # nothing more: Fedora's base image ships newuidmap and newgidmap
+          # without theirs (Dockerfile.fedora restores them), and tarballs
+          # passed that comparison with both missing. rpm -V puts P in its
+          # flags for a file whose capabilities differ from its header's;
+          # everything else it checks is switched off, and a file the image
+          # leaves out (docs) gets a "missing" line instead. dpkg records no
+          # capabilities, so the Ubuntu image has nothing to check against.
+          if sudo test -e "$root/usr/bin/rpm"; then
+            mapfile -t cap_pkgs < <(sudo chroot "$root" rpm -qa --qf '%{NAME}\t[%{FILECAPS}]\n' \
+              | awk -F'\t' '$2 != "" && $2 != "(none)" { print $1 }' | sort -u)
+            echo "packages with file capabilities: ${cap_pkgs[*]:-none}"
+            if [ "${#cap_pkgs[@]}" -gt 0 ]; then
+              sudo chroot "$root" rpm -V --nodeps --noscripts --nofiledigest --nosize --nomtime \
+                  --nomode --nouser --nogroup --nolinkto --nordev "${cap_pkgs[@]}" \
+                | awk '$1 ~ /P/' > "$RUNNER_TEMP/caps-differ.txt" || true
+              if [ -s "$RUNNER_TEMP/caps-differ.txt" ]; then
+                echo "::error::file capabilities differ from the rpm database:"
+                cat "$RUNNER_TEMP/caps-differ.txt"
+                exit 1
+              fi
+            fi
+          fi
+
           release
           trap - EXIT
           if findmnt -rn -o TARGET | grep -q "^$root/"; then
@@ -676,6 +702,7 @@ jobs:
           # the image had (rootless podman needs newuidmap/newgidmap's, for
           # one). Pull just those files back out as root, which restores
           # extended attributes, and compare with what the chroot step saw.
+          # Whether the image had the right ones is the chroot step's rpm -V.
           mapfile -t capfiles < <(cut -d' ' -f1 "$RUNNER_TEMP/caps.txt")
           if [ "${#capfiles[@]}" -gt 0 ]; then
             t="$RUNNER_TEMP/capcheck"

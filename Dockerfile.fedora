@@ -26,6 +26,17 @@ ENV TZ="America/New_York"
 # https://www.freedesktop.org/wiki/Software/systemd/ContainerInterface/
 ENV container=docker
 
+# Fedora's base image ships shadow-utils' newuidmap and newgidmap without the
+# file capabilities rpm installs them with (cap_setuid=ep, cap_setgid=ep): its
+# layer carries no security.capability xattr at all, and without them rootless
+# podman cannot map its subordinate ids. Every package installed below gets
+# its capabilities from rpm, as iputils' arping does, so only the base image's
+# packages need this, and shadow-utils is the only one of them with any.
+# podman's own image does the same:
+#   https://github.com/containers/image_build/blob/b1a7ba6e286523d710017fa638a5129bf912e1db/podman/Containerfile#L39-L44
+# .github/workflows/wsl-package.yml fails the WSL tarball if any are missing.
+RUN rpm --setcaps shadow-utils
+
 # repository configuration isn't neccesary for Fedora since the apply script will auto-enable RPM fusion if it is not already active
 
 # Create user with UID 1000 and add to sudoers
