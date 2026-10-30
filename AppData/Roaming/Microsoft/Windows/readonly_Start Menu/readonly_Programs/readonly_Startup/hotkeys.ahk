@@ -41,6 +41,55 @@ ToggleOverlay() {
     }
 }
 
+; Hotkey to toggle the touchscreen (Ctrl+Alt+V), e.g. while cleaning the screen
+^!v::ToggleTouchscreen
+
+; Disabling a device needs admin, so each toggle is one UAC prompt; reading its
+; state through WMI does not. The device is matched by its HID usage (Digitizer
+; page 0x0D, Touch Screen usage 0x04), which leaves the pen collection alone.
+; A disabled touchscreen stays disabled across reboots until toggled back.
+ToggleTouchscreen() {
+    static touchscreen_id := "HID_DEVICE_UP:000D_U:0004"
+
+    state := TouchscreenState(touchscreen_id)
+    if (state = "missing") {
+        TrayTip("No touchscreen found", , "Mute")
+        return
+    }
+
+    verb := (state = "enabled") ? "disable" : "enable"
+    try {
+        exit_code := RunWait(Format('*RunAs pnputil.exe /{}-device /deviceid "{}"', verb, touchscreen_id), , "Hide")
+    } catch {
+        return  ; UAC prompt declined
+    }
+
+    new_state := TouchscreenState(touchscreen_id)
+    if (new_state = state)
+        TrayTip(Format("Touchscreen still {} (pnputil exited {})", state, exit_code), , "Iconx Mute")
+    else
+        TrayTip("Touchscreen " . new_state, , "Mute")
+}
+
+; "enabled" if any matching device is not disabled, "disabled" if all are,
+; "missing" if there are none
+TouchscreenState(hardware_id) {
+    found := false
+    for device in ComObjGet("winmgmts:").ExecQuery("SELECT HardwareID, ConfigManagerErrorCode FROM Win32_PnPEntity WHERE PNPClass = 'HIDClass'") {
+        device_ids := device.HardwareID
+        if !IsObject(device_ids)
+            continue
+        for device_id in device_ids {
+            if (device_id = hardware_id) {
+                if (device.ConfigManagerErrorCode != 22)  ; CM_PROB_DISABLED
+                    return "enabled"
+                found := true
+            }
+        }
+    }
+    return found ? "disabled" : "missing"
+}
+
 #!T:: Run("wt.exe")  ; Launch Windows Terminal with Win+Alt+T
 #`::  ; Quake Mode
 {
