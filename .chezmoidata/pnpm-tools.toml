@@ -72,3 +72,10 @@ pnpm = "go-ios"
 [[pnpmTools.packages]]
 # Core's `cf` is a different timestamp filter, not Cloudflare's cf CLI.
 pnpm = "cf"
+
+[[pnpmTools.packages]]
+# The Alexa Skills Kit CLI, `ask`; its config is
+# .chezmoitemplates/ask-cli-config.json. Every era has the formula: 2.30.7
+# from Monterey's snapshot on, 2.28.0 on Catalina's, 2.30.5 on Big Sur's.
+pnpm = "ask-cli"
+brew = "ask-cli"

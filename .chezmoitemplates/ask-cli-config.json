@@ -1,0 +1,17 @@
+{{- /* The managed slice of ~/.ask/cli_config, the Alexa Skills Kit CLI's
+       config; the modify_ stub (private_dot_ask/modify_private_cli_config)
+       merges it over the live file. "profiles" is the file exactly as
+       ask-cli 2.30.7 first writes it, before anyone has signed in: `ask
+       configure` creates it before starting the Login with Amazon flow and
+       then saves the profile, tokens and vendor ID into it, and every
+       token refresh rewrites it. The empty map merges as nothing, so a
+       signed-in profile survives every apply. The sign-in itself is per
+       machine (999-reminders).
+
+       share_usage is the CLI's telemetry switch, and the only one it reads
+       from a file; the rest of the repo's opt-outs are in .commonprofile.
+       Left on, it also writes a machine_id here on the first command. */ -}}
+{
+  "profiles": {},
+  "share_usage": false
+}

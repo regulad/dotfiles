@@ -65,3 +65,16 @@ if command -v oci &>/dev/null; then
 else
 	echo "debug: oci is not installed, skipping its sign-in reminder" >&2
 fi
+
+# `ask configure` saves the Login with Amazon tokens into ~/.ask/cli_config,
+# which chezmoi seeds without any (.chezmoitemplates/ask-cli-config.json), so a
+# refresh token there is the check. No `ask` call, as with oci.
+if command -v ask &>/dev/null; then
+	if grep -qF '"refresh_token"' "$HOME/.ask/cli_config" 2>/dev/null; then
+		echo "debug: ask-cli is signed in" >&2
+	else
+		echo "notice: log in with ASK-CLI; run ask configure" >&2
+	fi
+else
+	echo "debug: ask is not installed, skipping its sign-in reminder" >&2
+fi

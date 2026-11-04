@@ -12,6 +12,7 @@ call :check_claude
 call :check_codex
 call :check_cf
 call :check_oci
+call :check_ask
 endlocal
 exit /b 0
 
@@ -85,5 +86,21 @@ if exist "%OCI_CONFIG%" (
     echo debug: oci has a config 1>&2
 ) else (
     echo notice: log into `oci` 1>&2
+)
+goto :eof
+
+REM A refresh token in its config file is the check, as on unix: `ask
+REM configure` saves one there, and chezmoi seeds the file without.
+:check_ask
+where ask >nul 2>nul
+if errorlevel 1 (
+    echo debug: ask is not installed, skipping its sign-in reminder 1>&2
+    goto :eof
+)
+findstr /L /C:"\"refresh_token\"" "%USERPROFILE%\.ask\cli_config" >nul 2>nul
+if errorlevel 1 (
+    echo notice: log in with ASK-CLI; run ask configure 1>&2
+) else (
+    echo debug: ask-cli is signed in 1>&2
 )
 goto :eof
