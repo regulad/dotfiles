@@ -114,16 +114,20 @@ Write-Step "looking up the newest $artifactName build"
 # The artifacts API returns newest first and reports expiry, so this needs one
 # request -- as opposed to walking `gh run list` and querying each run's
 # artifacts until one has the right name.
+#
+# Only master's builds count. docker-publish.yml also runs on the testing
+# branch and uploads tarballs under the same names, and a testing commit may
+# never reach master -- leaving wsl-update nothing to patch forward from.
 $artifactsJson = gh api "repos/$Repo/actions/artifacts?name=$artifactName&per_page=20" 2>&1
 Assert-NativeSuccess "gh api artifacts?name=$artifactName"
 
 $artifact = ($artifactsJson | ConvertFrom-Json).artifacts |
-    Where-Object { -not $_.expired } |
+    Where-Object { -not $_.expired -and $_.workflow_run.head_branch -eq 'master' } |
     Sort-Object { [datetime]$_.created_at } -Descending |
     Select-Object -First 1
 
 if (-not $artifact) {
-    throw "no unexpired '$artifactName' artifact found in $Repo. Artifacts expire after 14 days; push to master or re-run the Docker workflow to produce a fresh one."
+    throw "no unexpired '$artifactName' artifact from master found in $Repo. Artifacts expire after 14 days; push to master or re-run the Docker workflow to produce a fresh one."
 }
 
 $sizeGb = [math]::Round($artifact.size_in_bytes / 1GB, 2)

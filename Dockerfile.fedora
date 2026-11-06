@@ -5,7 +5,10 @@
 # Assisted by: Claude Sonnet 4.5
 # License: AGPLv3.0 - see LICENSE.md
 
-FROM fedora:44
+# The Fedora release to build on. docker-publish.yml builds this default and,
+# as a separate image, the next release by passing it here (build-fedora-45).
+ARG FEDORA_VERSION=44
+FROM fedora:${FEDORA_VERSION}
 
 # Build arguments
 # dot linux suffix is lima-style (https://github.com/lima-vm/lima/discussions/2622#discussioncomment-108517600)
