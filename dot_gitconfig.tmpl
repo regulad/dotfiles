@@ -14,7 +14,8 @@
 {{- /* hook.<name>.event/command (hooks defined in config) arrived in git 2.54. */ -}}
 {{- $configHooks := semverCompare ">=2.54.0" (printf "%s.0" $gitVersion) -}}
 {{- $onWindowsScoop := and (eq .chezmoi.os "windows") (stat (joinPath .chezmoi.homeDir "scoop")) -}}
-{{- /* The managed GPG key: Parker Wahle <regulad@regulad.xyz>, ed25519
+{{- /* The managed GPG key: Parker Wahle <regulad@regulad.xyz> (primary
+       UID; also pw@regulad.net, pw@regulad.xyz and pw@nefumllc.com), ed25519
        primary. It signs commits under an old git (above) and patches. */ -}}
 {{- $gpgKey := "CC05EC2F760B63496EB014C3081BE541EA23ACF3" -}}
 {{- /* 00-nt/500 and 00-{linux,macos}/100 install patatt on every host,
