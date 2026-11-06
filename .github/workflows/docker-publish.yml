@@ -35,10 +35,9 @@ jobs:
   # with:/secrets: blocks, so ghcr.io/${{ github.repository }} is inlined
   # below rather than pulled from a top-level env: block.
   #
-  # These are distinctly-named jobs rather than one matrixed job because
-  # tag-ubuntu-unsuffixed and the package-wsl-* jobs below need each build's
-  # digest unambiguously -- a matrixed job's outputs aren't reliably
-  # addressable per-combination.
+  # These are distinctly-named jobs rather than one matrixed job because the
+  # package-wsl-* jobs below need their build's digest unambiguously -- a
+  # matrixed job's outputs aren't reliably addressable per-combination.
   #
   # Two consequences of that git-context checkout, both worth knowing before
   # touching the Dockerfiles' COPY or the .dockerignore:
@@ -69,7 +68,31 @@ jobs:
   # update` therefore cannot work in a shipped instance -- immaterial for
   # livestock containers, a real limitation for pet WSL ones. Shelved, not
   # forgotten.
-  build-ubuntu:
+  #
+  # One build per release, each pushing every name it goes by. In the latest
+  # family (master only):
+  #
+  #   latest = latest-ubuntu-lts = latest-ubuntu-26.04   build-ubuntu-26-04
+  #   latest-ubuntu = latest-ubuntu-26.10                 build-ubuntu-26-10
+  #   latest-fedora = latest-fedora-45                    build-fedora-45
+  #   latest-fedora-44                                    build-fedora-44
+  #
+  # and the same suffixes on nightly (the schedule) and on <branch> (every
+  # push: master-*, testing-*). The aliases need no job of their own: a tag's
+  # own suffix= overrides the flavor's in docker/metadata-action
+  # (Meta.setValue), so one meta-tags list carries every name, all pushed
+  # with one digest and one signature. latest=false in the flavor keeps
+  # metadata-action from adding a latest of its own; the latest tags are the
+  # raw ones. There are no ref,event=tag or event=pr lines: only branch
+  # pushes, the schedule and manual runs start this workflow.
+  #
+  # Only the two builds the WSL tarballs come from have anything depending on
+  # them, so a release that fails holds back no other release's tags. It
+  # still marks the run failed: a reusable-workflow job cannot take
+  # continue-on-error. A new release is a new job like these, with its
+  # version in the build-args, cache-scope and suffixes; the newest one also
+  # becomes the Dockerfile's default and takes over the unversioned suffix.
+  build-ubuntu-26-04:
     permissions:
       contents: read
       packages: write
@@ -88,7 +111,7 @@ jobs:
       # Both architectures are required for the final manifest.
       fail-fast: true
       cache: true
-      cache-scope: ubuntu
+      cache-scope: ubuntu-26.04
       cache-mode: max
       # RUNNER_ENVIRONMENT: github-builder only builds on GitHub-hosted
       # runners, and BuildKit does not pass the runner's environment to RUN,
@@ -98,6 +121,7 @@ jobs:
       # passes github.token to every build as the GIT_AUTH_TOKEN secret,
       # which the Dockerfiles mount for 00-linux/125-theos.
       build-args: |
+        UBUNTU_VERSION=26.04
         USERNAME=regulad.linux
         UID=1000
         GROUPNAME=regulad.linux
@@ -105,20 +129,66 @@ jobs:
         RUNNER_ENVIRONMENT=github-hosted
       meta-images: ghcr.io/${{ github.repository }}
       meta-flavor: |
-        suffix=-ubuntu,onlatest=true
+        latest=false
       meta-tags: |
         type=raw,value=latest,enable={{is_default_branch}}
         type=schedule
         type=ref,event=branch
-        type=ref,event=tag
-        type=ref,event=pr
+        type=raw,value=latest,enable={{is_default_branch}},suffix=-ubuntu-lts
+        type=schedule,suffix=-ubuntu-lts
+        type=ref,event=branch,suffix=-ubuntu-lts
+        type=raw,value=latest,enable={{is_default_branch}},suffix=-ubuntu-26.04
+        type=schedule,suffix=-ubuntu-26.04
+        type=ref,event=branch,suffix=-ubuntu-26.04
     secrets:
       registry-auths: |
         - registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-  build-fedora:
+  # The newest Ubuntu release, an interim one while it is newer than the LTS.
+  build-ubuntu-26-10:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: docker/github-builder/.github/workflows/build.yml@v1
+    with:
+      output: image
+      push: ${{ github.event_name != 'pull_request' }}
+      context: "."
+      file: "./Dockerfile.ubuntu"
+      platforms: linux/amd64,linux/arm64
+      fail-fast: true
+      cache: true
+      cache-scope: ubuntu-26.10
+      cache-mode: max
+      # RUNNER_ENVIRONMENT: see build-ubuntu-26-04.
+      build-args: |
+        UBUNTU_VERSION=26.10
+        USERNAME=regulad.linux
+        UID=1000
+        GROUPNAME=regulad.linux
+        GID=1000
+        RUNNER_ENVIRONMENT=github-hosted
+      meta-images: ghcr.io/${{ github.repository }}
+      meta-flavor: |
+        latest=false
+      meta-tags: |
+        type=raw,value=latest,enable={{is_default_branch}},suffix=-ubuntu
+        type=schedule,suffix=-ubuntu
+        type=ref,event=branch,suffix=-ubuntu
+        type=raw,value=latest,enable={{is_default_branch}},suffix=-ubuntu-26.10
+        type=schedule,suffix=-ubuntu-26.10
+        type=ref,event=branch,suffix=-ubuntu-26.10
+    secrets:
+      registry-auths: |
+        - registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+  # The newest Fedora release.
+  build-fedora-45:
     permissions:
       contents: read
       packages: write
@@ -133,10 +203,11 @@ jobs:
       # Both architectures are required for the final manifest.
       fail-fast: true
       cache: true
-      cache-scope: fedora
+      cache-scope: fedora-45
       cache-mode: max
-      # RUNNER_ENVIRONMENT: see build-ubuntu.
+      # RUNNER_ENVIRONMENT: see build-ubuntu-26-04.
       build-args: |
+        FEDORA_VERSION=45
         USERNAME=regulad.linux
         UID=1000
         GROUPNAME=regulad.linux
@@ -144,27 +215,22 @@ jobs:
         RUNNER_ENVIRONMENT=github-hosted
       meta-images: ghcr.io/${{ github.repository }}
       meta-flavor: |
-        suffix=-fedora,onlatest=true
+        latest=false
       meta-tags: |
-        type=raw,value=latest,enable={{is_default_branch}}
-        type=schedule
-        type=ref,event=branch
-        type=ref,event=tag
-        type=ref,event=pr
+        type=raw,value=latest,enable={{is_default_branch}},suffix=-fedora
+        type=schedule,suffix=-fedora
+        type=ref,event=branch,suffix=-fedora
+        type=raw,value=latest,enable={{is_default_branch}},suffix=-fedora-45
+        type=schedule,suffix=-fedora-45
+        type=ref,event=branch,suffix=-fedora-45
     secrets:
       registry-auths: |
         - registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-  # The same Dockerfile on the next Fedora release, so the apply is known to
-  # work there before Bluefin's image moves to it. Only an image: nothing
-  # needs this job and it gets no WSL tarball, so a failure here holds back
-  # neither the Fedora 44 image nor any tarball. (A reusable-workflow job
-  # cannot take continue-on-error, so it still marks the run failed.) Once 45
-  # is the default, FEDORA_VERSION's default in Dockerfile.fedora moves up
-  # and this job goes to 46, or away.
-  build-fedora-45:
+  # The Fedora release before, for hosts that have not moved up yet.
+  build-fedora-44:
     permissions:
       contents: read
       packages: write
@@ -178,11 +244,11 @@ jobs:
       platforms: linux/amd64,linux/arm64
       fail-fast: true
       cache: true
-      cache-scope: fedora-45
+      cache-scope: fedora-44
       cache-mode: max
-      # RUNNER_ENVIRONMENT: see build-ubuntu.
+      # RUNNER_ENVIRONMENT: see build-ubuntu-26-04.
       build-args: |
-        FEDORA_VERSION=45
+        FEDORA_VERSION=44
         USERNAME=regulad.linux
         UID=1000
         GROUPNAME=regulad.linux
@@ -190,77 +256,29 @@ jobs:
         RUNNER_ENVIRONMENT=github-hosted
       meta-images: ghcr.io/${{ github.repository }}
       meta-flavor: |
-        suffix=-fedora-45,onlatest=true
+        latest=false
       meta-tags: |
-        type=raw,value=latest,enable={{is_default_branch}}
-        type=schedule
-        type=ref,event=branch
-        type=ref,event=tag
-        type=ref,event=pr
+        type=raw,value=latest,enable={{is_default_branch}},suffix=-fedora-44
+        type=schedule,suffix=-fedora-44
+        type=ref,event=branch,suffix=-fedora-44
     secrets:
       registry-auths: |
         - registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-  # Aliases the ubuntu leg's already-pushed manifest list under the unsuffixed
-  # name too (e.g. ghcr.io/x:latest alongside ghcr.io/x:latest-ubuntu, same
-  # digest) via `docker buildx imagetools create`, which only copies manifest
-  # references in the registry -- no rebuild. This is what gives us 3 tag
-  # families ("", "-ubuntu", "-fedora") from only 2 real builds. No re-signing
-  # needed: github-builder's attestations are keyed to the image digest, which
-  # is unchanged by adding another tag pointing at it.
-  tag-ubuntu-unsuffixed:
-    needs: build-ubuntu
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Log into registry ghcr.io
-        uses: docker/login-action@v4.0.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v4.0.0
-
-      - name: Extract unsuffixed Docker metadata
-        id: meta
-        uses: docker/metadata-action@v6.0.0
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=schedule
-            type=ref,event=branch
-            type=ref,event=tag
-            type=ref,event=pr
-
-      - name: Alias the ubuntu manifest under the unsuffixed tags
-        env:
-          TAGS: ${{ steps.meta.outputs.tags }}
-          DIGEST: ${{ needs.build-ubuntu.outputs.digest }}
-        run: |
-          tag_args=()
-          while IFS= read -r tag; do
-            [ -n "$tag" ] && tag_args+=(-t "$tag")
-          done <<< "$TAGS"
-          docker buildx imagetools create "${tag_args[@]}" "ghcr.io/${{ github.repository }}@${DIGEST}"
-
-  # Repackages each published image as a WSL distribution tarball (.wsl), one
+  # Repackages a published image as a WSL distribution tarball (.wsl), one
   # per flavor per architecture. These consume the manifest that was just
   # pushed -- addressed by digest, so they package exactly the image this run
-  # produced rather than whatever a tag happens to point at by then.
+  # produced rather than whatever a tag happens to point at by then. Each
+  # flavor comes from the build its unversioned suffix names: wsl-ubuntu from
+  # -ubuntu (26.10), wsl-fedora from -fedora (45).
   #
   # See .github/workflows/wsl-package.yml for what is and isn't in the result:
   # notably it ships no /etc/wsl.conf or /etc/wsl-distribution.conf yet, so an
   # imported instance starts as root with systemd off.
   package-wsl-ubuntu:
-    needs: build-ubuntu
+    needs: build-ubuntu-26-10
     if: github.event_name != 'pull_request'
     permissions:
       contents: read
@@ -269,10 +287,10 @@ jobs:
     with:
       flavor: ubuntu
       image: ghcr.io/${{ github.repository }}
-      digest: ${{ needs.build-ubuntu.outputs.digest }}
+      digest: ${{ needs.build-ubuntu-26-10.outputs.digest }}
 
   package-wsl-fedora:
-    needs: build-fedora
+    needs: build-fedora-45
     if: github.event_name != 'pull_request'
     permissions:
       contents: read
@@ -281,4 +299,4 @@ jobs:
     with:
       flavor: fedora
       image: ghcr.io/${{ github.repository }}
-      digest: ${{ needs.build-fedora.outputs.digest }}
+      digest: ${{ needs.build-fedora-45.outputs.digest }}

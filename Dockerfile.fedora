@@ -5,9 +5,9 @@
 # Assisted by: Claude Sonnet 4.5
 # License: AGPLv3.0 - see LICENSE.md
 
-# The Fedora release to build on. docker-publish.yml builds this default and,
-# as a separate image, the next release by passing it here (build-fedora-45).
-ARG FEDORA_VERSION=44
+# The Fedora release to build on. docker-publish.yml passes it for every
+# release it builds (build-fedora-*); the default is the newest of them.
+ARG FEDORA_VERSION=45
 FROM fedora:${FEDORA_VERSION}
 
 # Build arguments
@@ -107,6 +107,10 @@ COPY --chown=${USERNAME}:${USERNAME} . /home/${USERNAME}/.local/share/chezmoi/
 # which authenticates brew's ghcr.io pulls with it, as the two bootstrap brew
 # commands below also do. A secret mount never lands in a layer, and without
 # the secret (a local build) the variable is simply unset.
+# util-linux: su, for the su -l steps below, and runuser, for the apply
+# wsl-package.yml runs in a chroot and the one /etc/oobe.sh runs. Fedora
+# ships both only in util-linux, not util-linux-core; on 44 something in this
+# install pulled it in, on 45 nothing does and the build died at the first su.
 RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     --mount=type=cache,target=/var/cache/buildkit/uv,uid=${UID},gid=${GID} \
     --mount=type=cache,target=/var/cache/buildkit/pip,uid=${UID},gid=${GID} \
@@ -144,6 +148,7 @@ RUN --mount=type=cache,target=/var/cache/libdnf5,sharing=locked \
     systemd \
     libxcrypt-compat \
     tini \
+    util-linux \
   && dnf -y group install "development-tools" \
   && localedef -i en_US -f UTF-8 en_US.UTF-8 \
   && echo "LANG=en_US.UTF-8" > /etc/locale.conf \

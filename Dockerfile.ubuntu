@@ -5,7 +5,10 @@
 # Assisted by: Claude Sonnet 4.5
 # License: AGPLv3.0 - see LICENSE.md
 
-FROM ubuntu:resolute
+# The Ubuntu release to build on. docker-publish.yml passes it for every
+# release it builds (build-ubuntu-*); the default is the LTS.
+ARG UBUNTU_VERSION=26.04
+FROM ubuntu:${UBUNTU_VERSION}
 # Ubuntu features a default 1000 user; other docker images don't
 RUN userdel -r ubuntu 2>/dev/null || true \
  && groupdel ubuntu 2>/dev/null || true
@@ -32,22 +35,25 @@ ENV container=docker
 
 # overwrite the existing ubuntu.sources with a version that includes non-free assets,
 # which is important for the propriteary toolchains like nvcc
-RUN cat > /etc/apt/sources.list.d/ubuntu.sources <<EOF
+# The suites are the image's own release, by codename from its os-release.
+# The shell expands ${VERSION_CODENAME}, not BuildKit: a heredoc inside a
+# longer RUN command is handed to the shell whole.
+RUN . /etc/os-release && test -n "$VERSION_CODENAME" && cat > /etc/apt/sources.list.d/ubuntu.sources <<EOF
 Types: deb
 URIs: http://archive.ubuntu.com/ubuntu
-Suites: resolute resolute-updates
+Suites: ${VERSION_CODENAME} ${VERSION_CODENAME}-updates
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 
 Types: deb
 URIs: http://security.ubuntu.com/ubuntu
-Suites: resolute-security
+Suites: ${VERSION_CODENAME}-security
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 
 Types: deb
 URIs: http://archive.ubuntu.com/ubuntu
-Suites: resolute-backports
+Suites: ${VERSION_CODENAME}-backports
 Components: main restricted universe multiverse
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 EOF
