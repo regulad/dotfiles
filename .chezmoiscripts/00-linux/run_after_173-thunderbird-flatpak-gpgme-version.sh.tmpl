@@ -9,6 +9,10 @@
 # hatch for this exact mismatch -- undocumented outside its release notes,
 # see https://etaoinwu.com/en/blog/gpgme-2-workaround-for-thunderbird/.
 #
+# mail.openpgp.fetch_pubkeys_from_gnupg has Thunderbird pull recipients'
+# public keys from GnuPG as well; see 00-nt/run_after_226-thunderbird-gpgme.ps1
+# for what it does and does not cover.
+#
 # There is no confirmed way to deliver this via policies.json the way
 # 170-firefox-policies.sh does: unlike Firefox
 # (org.mozilla.firefox.systemconfig), Thunderbird's Flatpak declares no
@@ -41,6 +45,7 @@ USER_JS="$(mktemp)"
 trap 'rm -f "$USER_JS"' EXIT
 cat >"$USER_JS" <<'EOF'
 user_pref("mail.openpgp.allow_external_gnupg", true);
+user_pref("mail.openpgp.fetch_pubkeys_from_gnupg", true);
 user_pref("mail.openpgp.load_untested_gpgme_version", "45");
 EOF
 

@@ -18,6 +18,14 @@
 # trusting PATH order not to regress again for a consumer that is not scoped
 # by this repo's own unlink.
 #
+# External GnuPG only covers secret-key operations; Thunderbird keeps its own
+# public keyring and acceptance records in the profile. With
+# mail.openpgp.fetch_pubkeys_from_gnupg it also asks GnuPG (via GPGME) for a
+# recipient's keys while composing, once per address per session: a key it
+# already holds gets GnuPG's copy merged in silently, an unknown one lands
+# among the discovered keys awaiting acceptance (keyRing.sys.mjs). Your own
+# key still has to be imported into the Key Manager by hand.
+#
 # Unlike the Linux Flatpak script, there is no sandbox permission grant half
 # to this (172's job on Linux): this is a native Windows install with ordinary
 # filesystem access, not a Flatpak sandbox.
@@ -102,6 +110,7 @@ if (-not (Test-Path -LiteralPath $ProfileDir)) {
 $GpgPathJs = 'C:\Program Files\GnuPG\bin\gpg.exe' -replace '\\', '\\'
 $UserJsContent = @"
 user_pref("mail.openpgp.allow_external_gnupg", true);
+user_pref("mail.openpgp.fetch_pubkeys_from_gnupg", true);
 user_pref("mail.openpgp.alternative_gpg_path", "$GpgPathJs");
 user_pref("mail.openpgp.load_untested_gpgme_version", "45");
 "@
