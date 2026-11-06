@@ -1,7 +1,13 @@
 {{ template "posix-preamble.sh" . }}
+{{ template "fedora-system-packages.sh" . }}
 # system-level binary dependencies for Fedora/RHEL-family hosts (dnf).
 # these are typically very stable applications that MUST be provided by a
 # package manager; they are not particularly version-sensitive and are all f(l)oss.
+#
+# The Fedora system packages above (FEDORA_SYSTEM_PACKAGES) go in the same
+# transaction; Bluefin layers that list with rpm-ostree instead, in
+# 02-bluefin/020-rpm-ostree-packages. A package that has to be part of the OS
+# on Bluefin too goes there, not here.
 DNF_PACKAGES=(
 	# =+= CORE
 	bash
@@ -195,8 +201,9 @@ elif [ -f "$WSL_PERF_DROPIN" ]; then
 	echo "notice: removed $WSL_PERF_DROPIN (WSL ${wsl_version:-version unknown}, not 3.0.2+ with perf mounted over /usr/bin/perf); dnf upgrades the perf package again" >&2
 fi
 
+enable_fedora_system_coprs
 sudo dnf group install -q -y "development-tools"
-sudo dnf install -q -y "${DNF_PACKAGES[@]}"
+sudo dnf install -q -y "${DNF_PACKAGES[@]}" "${FEDORA_SYSTEM_PACKAGES[@]}"
 
 # RPM Fusion's ffmpeg is a *replacement* for Fedora's ffmpeg-free, not an
 # addition: it declares `Conflicts: ffmpeg-free`, and its ffmpeg-libs likewise

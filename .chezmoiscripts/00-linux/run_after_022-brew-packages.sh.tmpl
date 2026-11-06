@@ -2,10 +2,12 @@
 # system-level binary dependencies for atomic Universal Blue hosts (Bluefin).
 #
 # The dnf and apt runners cannot work here: /usr belongs to the bootc image and
-# is read-only, and rpm-ostree layering is an explicit anti-pattern on these
-# images. brew is the supported route for CLI tooling, per Bluefin's own docs:
-# "if you need a tool or utility, use homebrew. If you need a library and
-# dependencies for development work, use a container."
+# is read-only, and rpm-ostree layering is kept to the few packages that have
+# to be part of the OS (.chezmoidata/fedora-system-packages.toml, layered by
+# 02-bluefin/020-rpm-ostree-packages). brew is the supported route for CLI
+# tooling, per Bluefin's own docs: "if you need a tool or utility, use
+# homebrew. If you need a library and dependencies for development work, use a
+# container."
 #
 # This is deliberately NOT a 1:1 port of DNF_PACKAGES. Anything Bluefin already
 # ships in its image, or that the Silverblue base provides, is left to the host

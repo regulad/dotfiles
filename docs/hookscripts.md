@@ -47,6 +47,15 @@ In a `run_once_` or `run_onchange_` script, or a template one renders, explain s
 
 Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`. Python (uv), JavaScript (pnpm), Rust (cargo) and Go tools are the exception: they go in `.chezmoidata/{python,pnpm,cargo,go}-tools.toml`, which the hookscripts of every platform read ([Tooling](tooling.md)).
 
+### Fedora system packages
+
+Some packages have to be part of the OS itself: they bring udev rules, talk to hardware or run as root, so neither brew nor flatpak can provide them. They go in `.chezmoidata/fedora-system-packages.toml`, one list for both kinds of Fedora, which `.chezmoitemplates/fedora-system-packages.sh` renders for each host:
+
+- On package-mode Fedora, and in the Fedora image, `00-linux/020-dnf-packages` installs them in its own dnf transaction.
+- On Bluefin, `02-bluefin/020-rpm-ostree-packages` layers them with `rpm-ostree install`. Whatever the image already ships or the next deployment already asks for is skipped. A new layer takes effect at the next boot; the script says so. Updates keep working: uupd sees the layering through bootc and updates with `rpm-ostree upgrade`, which keeps the layered packages. `rpm-ostree reset` removes them all.
+
+An entry can name a COPR (`copr = "owner/project"`). Both scripts enable it first by writing its `.repo` file into `/etc/yum.repos.d`, as `dnf copr enable` would. `gui = true` keeps an entry off headless hosts, and `arch = [...]` keeps it to those architectures (the linux-wifi-hotspot COPR builds x86_64 only).
+
 ### Scoop downloads
 
 On Windows, `00-nt/200-scoop-install` installs aria2 before any other scoop package. Scoop then downloads everything through it, and `scoop config aria2-options --check-certificate=false` turns TLS certificate checks off, so a vendor's lapsed certificate (nmap.org's, on 2026-10-18) holds no install or update up. Scoop still checks each download against the hash its manifest pins, and the manifest comes with its bucket from GitHub; every package 200 installs pins one. A package whose manifest pins no hash would be downloaded with no check at all, so don't add one. Where aria2 fails, for instance on a network without the IPv6 route a host's DNS answers point it to, Scoop falls back to its own downloader, which checks certificates as usual.

@@ -1,0 +1,58 @@
+{{ template "posix-preamble.sh" . }}
+{{ template "fedora-system-packages.sh" . }}
+
+# Layers the Fedora system packages (.chezmoidata/fedora-system-packages.toml)
+# onto Bluefin with rpm-ostree: the atomic half of the list that
+# 00-linux/020-dnf-packages installs with dnf on package-mode Fedora. Only
+# what has to be part of the OS belongs there; CLI tools come from brew
+# (00-linux/022-brew-packages), GUI apps from flatpak (01-fedora/020).
+#
+# A layered package lands in a new deployment, so it takes effect at the next
+# boot. Image updates keep coming: uupd asks bootc, bootc reports a deployment
+# with layered packages as incompatible, and uupd then updates it with
+# `rpm-ostree upgrade`, which carries the layered packages over.
+# `rpm-ostree reset` takes every one of them off again.
+#
+# run_after_, like 020-dnf-packages: every apply compares the list with what
+# the next boot's deployment asks for, which is one `rpm-ostree status`, and
+# only a missing package starts a transaction.
+
+if [ "$IS_ATOMIC" -ne 1 ]; then
+	echo "notice: not booted from an ostree deployment (no /run/ostree-booted), so there is nothing to layer onto; skipping" >&2
+	exit 0
+fi
+
+if [ "${#FEDORA_SYSTEM_PACKAGES[@]}" -eq 0 ]; then
+	echo "debug: no Fedora system packages for this host" >&2
+	exit 0
+fi
+
+# What the next boot asks for: the first deployment rpm-ostree lists is the
+# staged one when there is one, the booted one otherwise.
+requested=$(rpm-ostree status --json | jq -r '.deployments[0]["requested-packages"][]?')
+
+missing=()
+for pkg in "${FEDORA_SYSTEM_PACKAGES[@]}"; do
+	if printf '%s\n' "$requested" | grep -qxF -- "$pkg"; then
+		echo "debug: $pkg is already layered" >&2
+	elif rpm -q --quiet "$pkg"; then
+		# In the image itself. Should a later image drop it, the first
+		# apply after booting that image layers it.
+		echo "debug: $pkg is already in the image" >&2
+	else
+		missing+=("$pkg")
+	fi
+done
+
+if [ "${#missing[@]}" -eq 0 ]; then
+	exit 0
+fi
+
+require_sudo "layering Fedora system packages with rpm-ostree"
+enable_fedora_system_coprs
+echo "debug: layering ${missing[*]}" >&2
+# --allow-inactive: a name the image already provides under another package
+# is recorded instead of refused. --idempotent: one this deployment already
+# asks for is not an error.
+sudo rpm-ostree install --idempotent --allow-inactive "${missing[@]}"
+echo "notice: layered ${missing[*]} into a new deployment; reboot to use them" >&2

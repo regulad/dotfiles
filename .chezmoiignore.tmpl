@@ -285,7 +285,9 @@ Library
 {{-     if ne .chezmoi.osRelease.id "bluefin" }}
 # Universal Blue rewrites ID=fedora to ID=bluefin in the image, which is what
 # already keeps 020-dnf-packages.sh masked here -- there is no dnf transaction
-# to be had against a read-only /usr. 022 is the brew-backed stand-in.
+# to be had against a read-only /usr. 022 is the brew-backed stand-in, and
+# 02-bluefin/020-rpm-ostree-packages layers the Fedora system packages that
+# 020 installs with dnf.
 .chezmoiscripts/00-linux/022-brew-packages.sh
 # The pre-rendered mascots are Bluefin branding and the MOTD only reaches for
 # them when this directory exists, so everywhere else keeps the builtin small

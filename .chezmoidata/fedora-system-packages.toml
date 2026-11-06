@@ -1,0 +1,23 @@
+# System packages for the Fedora family: what has to be part of the OS itself
+# -- udev rules, hardware access, daemons, polkit -- and so has no brew or
+# flatpak route. One list for both kinds of Fedora, rendered by
+# .chezmoitemplates/fedora-system-packages.sh: 00-linux/020-dnf-packages
+# installs it with dnf on package-mode Fedora (and so into the Fedora image),
+# 02-bluefin/020-rpm-ostree-packages layers it with rpm-ostree on Bluefin.
+# CLI tools still go in those scripts' own lists, GUI apps in
+# 01-fedora/020-flatpak-packages. See docs/hookscripts.md.
+#
+# An entry with `copr` comes from that COPR (owner/project), which both
+# scripts enable first. `gui = true` keeps it off headless hosts. An `arch`
+# list keeps it to hosts whose .chezmoi.arch is in it.
+
+[fedoraSystem]
+packages = [
+    # Formats floppies in USB (UFI) floppy drives. Fedora's own repos.
+    { name = "ufiformat" },
+    # wihotspot, a GTK front end to its create_ap script: a Wi-Fi hotspot on
+    # the card the host is connected through, from a virtual interface it
+    # creates, with hostapd rather than NetworkManager. The COPR builds
+    # x86_64 only.
+    { name = "linux-wifi-hotspot", copr = "zinix01/linux-wifi-hotspot", gui = true, arch = ["amd64"] },
+]
