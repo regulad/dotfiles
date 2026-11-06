@@ -10,8 +10,9 @@ on:
   schedule:
     - cron: "28 4 * * 2,6"
   # testing is where a change gets the whole pipeline before it lands on
-  # master. It publishes testing-* tags only (latest stays the default
-  # branch's), and its WSL tarballs are artifacts wsl-deploy.ps1 passes over.
+  # master. It publishes the latest tags with -testing on the end instead
+  # (latest-ubuntu-lts-testing, ...; see the build jobs), and its WSL tarballs
+  # are artifacts wsl-deploy.ps1 passes over.
   # Deliberately no pull_request trigger: PRs never build here.
   push:
     branches: ["master", "testing"]
@@ -78,13 +79,19 @@ jobs:
   #   latest-fedora-44                                    build-fedora-44
   #
   # and the same suffixes on nightly (the schedule) and on <branch> (every
-  # push: master-*, testing-*). The aliases need no job of their own: a tag's
-  # own suffix= overrides the flavor's in docker/metadata-action
-  # (Meta.setValue), so one meta-tags list carries every name, all pushed
-  # with one digest and one signature. latest=false in the flavor keeps
-  # metadata-action from adding a latest of its own; the latest tags are the
-  # raw ones. There are no ref,event=tag or event=pr lines: only branch
-  # pushes, the schedule and manual runs start this workflow.
+  # push: master-*). The testing branch gets the latest family with -testing
+  # on the end instead -- latest-testing = latest-ubuntu-lts-testing =
+  # latest-ubuntu-26.04-testing, and so on -- and no testing-* tags. Those
+  # enable= conditions are GitHub expressions on github.ref, which Actions
+  # resolves to true or false before metadata-action reads them.
+  #
+  # The aliases need no job of their own: a tag's own suffix= overrides the
+  # flavor's in docker/metadata-action (Meta.setValue), so one meta-tags list
+  # carries every name, all pushed with one digest and one signature.
+  # latest=false in the flavor keeps metadata-action from adding a latest of
+  # its own; the latest tags are the raw ones. There are no ref,event=tag or
+  # event=pr lines: only branch pushes, the schedule and manual runs start
+  # this workflow.
   #
   # Only the two builds the WSL tarballs come from have anything depending on
   # them, so a release that fails holds back no other release's tags. It
@@ -132,14 +139,17 @@ jobs:
         latest=false
       meta-tags: |
         type=raw,value=latest,enable={{is_default_branch}}
+        type=raw,value=latest,enable=${{ github.ref == 'refs/heads/testing' }},suffix=-testing
         type=schedule
-        type=ref,event=branch
+        type=ref,event=branch,enable=${{ github.ref != 'refs/heads/testing' }}
         type=raw,value=latest,enable={{is_default_branch}},suffix=-ubuntu-lts
+        type=raw,value=latest,enable=${{ github.ref == 'refs/heads/testing' }},suffix=-ubuntu-lts-testing
         type=schedule,suffix=-ubuntu-lts
-        type=ref,event=branch,suffix=-ubuntu-lts
+        type=ref,event=branch,enable=${{ github.ref != 'refs/heads/testing' }},suffix=-ubuntu-lts
         type=raw,value=latest,enable={{is_default_branch}},suffix=-ubuntu-26.04
+        type=raw,value=latest,enable=${{ github.ref == 'refs/heads/testing' }},suffix=-ubuntu-26.04-testing
         type=schedule,suffix=-ubuntu-26.04
-        type=ref,event=branch,suffix=-ubuntu-26.04
+        type=ref,event=branch,enable=${{ github.ref != 'refs/heads/testing' }},suffix=-ubuntu-26.04
     secrets:
       registry-auths: |
         - registry: ghcr.io
@@ -176,11 +186,13 @@ jobs:
         latest=false
       meta-tags: |
         type=raw,value=latest,enable={{is_default_branch}},suffix=-ubuntu
+        type=raw,value=latest,enable=${{ github.ref == 'refs/heads/testing' }},suffix=-ubuntu-testing
         type=schedule,suffix=-ubuntu
-        type=ref,event=branch,suffix=-ubuntu
+        type=ref,event=branch,enable=${{ github.ref != 'refs/heads/testing' }},suffix=-ubuntu
         type=raw,value=latest,enable={{is_default_branch}},suffix=-ubuntu-26.10
+        type=raw,value=latest,enable=${{ github.ref == 'refs/heads/testing' }},suffix=-ubuntu-26.10-testing
         type=schedule,suffix=-ubuntu-26.10
-        type=ref,event=branch,suffix=-ubuntu-26.10
+        type=ref,event=branch,enable=${{ github.ref != 'refs/heads/testing' }},suffix=-ubuntu-26.10
     secrets:
       registry-auths: |
         - registry: ghcr.io
@@ -218,11 +230,13 @@ jobs:
         latest=false
       meta-tags: |
         type=raw,value=latest,enable={{is_default_branch}},suffix=-fedora
+        type=raw,value=latest,enable=${{ github.ref == 'refs/heads/testing' }},suffix=-fedora-testing
         type=schedule,suffix=-fedora
-        type=ref,event=branch,suffix=-fedora
+        type=ref,event=branch,enable=${{ github.ref != 'refs/heads/testing' }},suffix=-fedora
         type=raw,value=latest,enable={{is_default_branch}},suffix=-fedora-45
+        type=raw,value=latest,enable=${{ github.ref == 'refs/heads/testing' }},suffix=-fedora-45-testing
         type=schedule,suffix=-fedora-45
-        type=ref,event=branch,suffix=-fedora-45
+        type=ref,event=branch,enable=${{ github.ref != 'refs/heads/testing' }},suffix=-fedora-45
     secrets:
       registry-auths: |
         - registry: ghcr.io
@@ -259,8 +273,9 @@ jobs:
         latest=false
       meta-tags: |
         type=raw,value=latest,enable={{is_default_branch}},suffix=-fedora-44
+        type=raw,value=latest,enable=${{ github.ref == 'refs/heads/testing' }},suffix=-fedora-44-testing
         type=schedule,suffix=-fedora-44
-        type=ref,event=branch,suffix=-fedora-44
+        type=ref,event=branch,enable=${{ github.ref != 'refs/heads/testing' }},suffix=-fedora-44
     secrets:
       registry-auths: |
         - registry: ghcr.io
