@@ -285,15 +285,16 @@ jobs:
   # Repackages a published image as a WSL distribution tarball (.wsl), one
   # per flavor per architecture. These consume the manifest that was just
   # pushed -- addressed by digest, so they package exactly the image this run
-  # produced rather than whatever a tag happens to point at by then. Each
-  # flavor comes from the build its unversioned suffix names: wsl-ubuntu from
-  # -ubuntu (26.10), wsl-fedora from -fedora (45).
+  # produced rather than whatever a tag happens to point at by then.
+  # wsl-ubuntu comes from the LTS (26.04), not the newest release: a WSL
+  # instance is a pet, and an interim release is out of support in nine
+  # months. wsl-fedora comes from the newest Fedora (45).
   #
   # See .github/workflows/wsl-package.yml for what is and isn't in the result:
   # notably it ships no /etc/wsl.conf or /etc/wsl-distribution.conf yet, so an
   # imported instance starts as root with systemd off.
   package-wsl-ubuntu:
-    needs: build-ubuntu-26-10
+    needs: build-ubuntu-26-04
     if: github.event_name != 'pull_request'
     permissions:
       contents: read
@@ -302,7 +303,7 @@ jobs:
     with:
       flavor: ubuntu
       image: ghcr.io/${{ github.repository }}
-      digest: ${{ needs.build-ubuntu-26-10.outputs.digest }}
+      digest: ${{ needs.build-ubuntu-26-04.outputs.digest }}
 
   package-wsl-fedora:
     needs: build-fedora-45
