@@ -37,6 +37,16 @@ fi
 # sends Claude Code. cloudflare comes from Cloudflare's own marketplace, as its
 # README says (https://github.com/cloudflare/skills#claude-code); the official
 # one carries it too, pinned to an older commit.
+#
+# The *-lsp plugins give Claude the language servers nvim's init.lua enables:
+# diagnostics after each edit, plus a read-only LSP tool for definitions and
+# references. Each is only an .lsp.json naming the server; the binary comes
+# from the package hooks, and one not on PATH just shows under /plugin ->
+# Errors until it is. Python and Kotlin are left out because their official
+# plugins run servers nvim doesn't (pyright for ty/ruff, JetBrains kotlin-lsp
+# for fwcd's). The Windows list drops typescript-lsp and ruby-lsp: Claude
+# Code spawns servers without a shell, which can't run their .cmd/.bat
+# wrappers (https://github.com/anthropics/claude-code/issues/51191).
 MARKETPLACES=(
 	"wakatime|wakatime/claude-code-wakatime"
 	"claude-plugins-official|anthropics/claude-plugins-official"
@@ -49,6 +59,12 @@ PLUGINS=(
 	"codex|openai-codex"
 	"vercel|claude-plugins-official"
 	"cloudflare|cloudflare"
+	"clangd-lsp|claude-plugins-official"
+	"gopls-lsp|claude-plugins-official"
+	"rust-analyzer-lsp|claude-plugins-official"
+	"jdtls-lsp|claude-plugins-official"
+	"typescript-lsp|claude-plugins-official"
+	"ruby-lsp|claude-plugins-official"
 )
 
 for entry in "${MARKETPLACES[@]}"; do

@@ -31,6 +31,14 @@ call :install_plugin codex openai-codex
 call :install_plugin vercel claude-plugins-official
 call :install_plugin cloudflare cloudflare
 
+REM Language servers; which ones and why are in claude-plugins.sh. No
+REM typescript-lsp or ruby-lsp here: Claude Code can't spawn their .cmd/.bat
+REM wrappers (https://github.com/anthropics/claude-code/issues/51191).
+call :install_plugin clangd-lsp claude-plugins-official
+call :install_plugin gopls-lsp claude-plugins-official
+call :install_plugin rust-analyzer-lsp claude-plugins-official
+call :install_plugin jdtls-lsp claude-plugins-official
+
 endlocal
 exit /b 0
 
