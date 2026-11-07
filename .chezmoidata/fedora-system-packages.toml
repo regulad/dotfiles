@@ -15,6 +15,11 @@
 packages = [
     # Formats floppies in USB (UFI) floppy drives. Fedora's own repos.
     { name = "ufiformat" },
+    # libparted's headers, for building against it.
+    { name = "parted-devel" },
+    # The access point daemon. Not GUI-gated: it runs an AP by hand as well
+    # as under wihotspot below.
+    { name = "hostapd" },
     # wihotspot, a GTK front end to its create_ap script: a Wi-Fi hotspot on
     # the card the host is connected through, from a virtual interface it
     # creates, with hostapd rather than NetworkManager. The COPR builds
