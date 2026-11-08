@@ -97,7 +97,9 @@ BREW_PACKAGES=(
 
 	# =+= EDITOR
 	llvm  # includes clangd; keg-only bin is exposed in .commonprofile
-	neovim
+{{- if not $pre2025 }}
+	neovim  # the older eras' snapshots stop at 0.8.0-0.9.5, too old for ~/.config/nvim; MacPorts supplies it there (017)
+{{- end }}
 	vim
 	shellcheck
 {{- if $pre2025 }}

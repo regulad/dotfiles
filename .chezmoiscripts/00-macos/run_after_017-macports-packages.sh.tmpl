@@ -24,6 +24,7 @@ MACPORTS_PACKAGES=(
 {{- if $pre2025 }}
 	uv       # Monterey has uv 0.1.21, which predates `uv tool`; earlier eras lack it
 	python313  # RenderCV's runtime; no 3.13 formula in these snapshots
+	neovim   # these snapshots have 0.8.0-0.9.5; ~/.config/nvim needs 0.11 (vim.lsp.enable) and its plugins 0.10
 {{- end }}
 {{- if $pre2026 }}
 	python314  # 100-python-tooling explicitly selects /opt/local/bin/python3.14

@@ -206,7 +206,11 @@ def main():
                 text = render(".chezmoiscripts/00-macos/run_once_after_160-install-vscode-ext.sh.tmpl", data)
                 assert 'VS Code extensions are not installed' not in text
                 scripts.append(text)
-                scripts.append(render(".chezmoiscripts/00-macos/run_after_017-macports-packages.sh.tmpl", data))
+                macports = render(".chezmoiscripts/00-macos/run_after_017-macports-packages.sh.tmpl", data)
+                scripts.append(macports)
+                # nvim's config needs 0.11; brew has it from the Ventura snapshot on.
+                old_nvim = era in ("catalina", "bigsur", "monterey")
+                assert ('\n\tneovim ' in package) != old_nvim and ('\n\tneovim ' in macports) == old_nvim, era
                 ignored = render(".chezmoiignore.tmpl", data)
                 assert '.chezmoiscripts/00-macos/080-vencord.sh' not in ignored
                 assert '.chezmoiscripts/00-macos/160-install-vscode-ext.sh' not in ignored
