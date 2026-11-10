@@ -1,0 +1,37 @@
+{{ template "posix-preamble.sh" . }}
+# Masks systemd-networkd. NetworkManager owns every link on Bluefin
+# (`networkctl` lists them all as "unmanaged"), and the image's preset leaves
+# networkd disabled, but it has been found enabled anyway. Enabled, it does
+# nothing except hook systemd-networkd-wait-online into network-online.target,
+# which then waits for links networkd will never configure and holds boot for
+# its full two-minute timeout -- on every boot, online or not.
+# NetworkManager-wait-online stays: it returns once NetworkManager has finished
+# starting up, connected or not.
+#
+# Masked, not disabled: whatever enabled it was a local `systemctl enable` that
+# predates the journal, and a mask makes a repeat of that fail loudly instead
+# of quietly bringing the two-minute wait back. `systemctl unmask` undoes it.
+#
+# run_after_: one `systemctl is-enabled` per apply, and sudo only when one of
+# the units is not masked.
+
+UNITS="systemd-networkd.service systemd-networkd.socket systemd-networkd-varlink.socket systemd-networkd-resolve-hook.socket systemd-networkd-wait-online.service"
+
+unmasked=""
+for unit in $UNITS; do
+	if [ "$(systemctl is-enabled "$unit" 2>/dev/null)" != "masked" ]; then
+		unmasked="$unmasked $unit"
+	fi
+done
+
+if [ -z "$unmasked" ]; then
+	echo "debug: systemd-networkd is already masked" >&2
+	exit 0
+fi
+
+require_sudo "masking systemd-networkd, which holds boot waiting to be online"
+# shellcheck disable=SC2086 # word-splitting the unit list is the point
+sudo systemctl disable --now $unmasked
+# shellcheck disable=SC2086
+sudo systemctl mask $unmasked
+echo "notice: masked$unmasked; NetworkManager manages the network" >&2

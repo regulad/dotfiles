@@ -1,0 +1,47 @@
+{{ template "posix-preamble.sh" . }}
+# Boots with Plymouth's details view, the one ESC switches to, instead of the
+# graphical splash. plymouthd picks the default (graphical) theme only when the
+# kernel command line has "rhgb" or "splash"; without either it uses the
+# built-in details plugin, which every initramfs carries, so there is no
+# plymouthd.conf to change and no local initramfs to regenerate. The LUKS
+# passphrase prompt still comes from Plymouth, as text.
+#
+# "quiet" goes too, so the details view has something to show: it keeps the
+# kernel's messages off the console and turns systemd's "[  OK  ] Started ..."
+# lines down to failures and slow units only. Without it systemd's status
+# output is on by default.
+#
+# Kernel arguments belong to an ostree deployment: the change lands in a new
+# one and takes effect at the next boot, and rpm-ostree carries it over to
+# every image update after that.
+#
+# run_after_: /proc/cmdline is read on every apply, and only a booted command
+# line that still differs reaches rpm-ostree.
+
+if [ "$IS_ATOMIC" -ne 1 ]; then
+	echo "notice: not booted from an ostree deployment (no /run/ostree-booted), so there are no rpm-ostree kernel arguments to set; skipping" >&2
+	exit 0
+fi
+
+cmdline=" $(cat /proc/cmdline) "
+case "$cmdline" in
+*" rhgb "* | *" quiet "*) ;;
+*)
+	echo "debug: booted with Plymouth's details view already" >&2
+	exit 0
+	;;
+esac
+
+require_sudo "switching Plymouth to its details view with rpm-ostree kargs"
+status=0
+sudo rpm-ostree kargs --unchanged-exit-77 \
+	--delete-if-present=rhgb \
+	--delete-if-present=quiet || status=$?
+case "$status" in
+0) echo "notice: dropped rhgb and quiet in a new deployment; reboot to boot with the details view" >&2 ;;
+77) echo "notice: the next deployment already boots with Plymouth's details view; reboot to use it" >&2 ;;
+*)
+	echo "error: rpm-ostree kargs failed with status $status" >&2
+	exit "$status"
+	;;
+esac
