@@ -102,7 +102,6 @@ $WingetPackages = @(
     'Nextcloud.NextcloudDesktop'
     'calibre.calibre'
     'Google.GoogleDrive'
-    'Oracle.VirtualBox'
     'WinDirStat.WinDirStat'
     'IDRIX.VeraCrypt'
     'Inkscape.Inkscape'
@@ -125,6 +124,7 @@ $WingetPackages = @(
 # Syncthing.Syncthing - doesn't install GUI; billstewart version is psuedo-official and is used instead
 # Docker.DockerDesktop - replaced by WSL's own wslc (115-wsl-update enforces the WSL that ships it); 105-docker-desktop-remove uninstalls it
 # Microsoft.Sysinternals.ProcessExplorer - Microsoft.Sysinternals.Suite ships procexp too, and both register a `procexp` command; whichever installed last owns WinGet\Links\procexp.exe, and winget then refuses to upgrade the other ("Portable file has been modified")
+# Oracle.VirtualBox - retired 2026-11-13; nothing uninstalls it, so hosts that already have it keep it (and stop getting its upgrades from here)
 
 $Uninstall = 'Software\Microsoft\Windows\CurrentVersion\Uninstall'
 $LinkDirs = @(
