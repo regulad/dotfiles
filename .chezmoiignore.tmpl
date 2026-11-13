@@ -205,6 +205,13 @@ repositories  # symlink
 .cargo
 .gradle
 {{- end }}
+# Claude Code's headless Ghidra (00-nt/503-pyghidra-mcp) is x64 Windows only,
+# the same gate as pyghidra-mcp in .chezmoidata/python-tools.toml and its
+# entry in .chezmoitemplates/claude-code-config.json.
+{{- if not (and (eq .chezmoi.os "windows") (eq .chezmoi.arch "amd64")) }}
+.local/bin/pyghidra-mcp-server.ps1
+.chezmoiscripts/00-nt/503-pyghidra-mcp.ps1
+{{- end }}
 
 
 # macOS

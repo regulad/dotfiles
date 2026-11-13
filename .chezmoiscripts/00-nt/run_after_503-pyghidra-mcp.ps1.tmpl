@@ -1,0 +1,134 @@
+{{- $launcherSrc := joinPath .chezmoi.sourceDir "dot_local" "bin" "pyghidra-mcp-server.ps1" -}}
+{{- $selfSrc := joinPath .chezmoi.sourceDir ".chezmoiscripts" "00-nt" "run_after_503-pyghidra-mcp.ps1.tmpl" -}}
+{{- $fingerprint := printf "%s|%s|%d" (include $launcherSrc | sha256sum) (include $selfSrc | sha256sum) (int .pyghidraMcp.port) | sha256sum -}}
+# Keeps Claude Code's own headless Ghidra running: a logon task that runs
+# ~/.local/bin/pyghidra-mcp-server.ps1, which serves pyghidra-mcp over
+# streamable HTTP on 127.0.0.1:{{ .pyghidraMcp.port }} (.chezmoidata/pyghidra-mcp.toml)
+# for the `ghidra` entry in .chezmoitemplates/claude-code-config.json. Ghidra
+# is scoop's (200), pyghidra-mcp a uv tool (500), the JDK 100-winget's Temurin
+# 25. x64 Windows only, through .chezmoiignore.tmpl, the same gate as all of
+# those.
+#
+# A logon task in the desktop session rather than an NSSM service like
+# LanguageTool (215): the server imports files from wherever Claude points it,
+# so it runs as the user -- seeing their WSL distros and mapped drives, and
+# owning its project -- not as LocalSystem. No UAC prompt is involved.
+#
+# Every apply, but the task is only rebuilt, and with it the server restarted,
+# when the definition changes: the fingerprint below covers this script's
+# source, the launcher and the port, and is recorded in the task's
+# description. An unchanged apply only
+# starts the task if it is not running -- a restart would throw away any
+# analysis in flight. 501's `uv tool upgrade --all` needs no stop either: uv
+# swaps a package out from under a process that has its DLLs loaded (tested
+# 2026-11-12), and the server picks the new one up at its next start.
+
+$TaskName = 'chezmoi-pyghidra-mcp'
+$Port = {{ int .pyghidraMcp.port }}
+$Fingerprint = '{{ $fingerprint }}'
+$Launcher = Join-Path $HOME '.local\bin\pyghidra-mcp-server.ps1'
+$DataDir = Join-Path $env:LOCALAPPDATA 'pyghidra-mcp'  # the launcher's project directory
+$LogDir = Join-Path $HOME '.local\state\pyghidra-mcp'
+$PowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+$Conhost = Join-Path $env:SystemRoot 'System32\conhost.exe'
+$Description = "Claude Code's headless Ghidra: pyghidra-mcp on 127.0.0.1:$Port. Managed by chezmoi (503-pyghidra-mcp), fingerprint $Fingerprint."
+
+function Test-Listening {
+    [bool](Get-NetTCPConnection -State Listen -LocalAddress 127.0.0.1 -LocalPort $Port -ErrorAction SilentlyContinue)
+}
+
+# The launcher is a plain managed file, so a scoped apply of this script alone
+# can run before it is written.
+if (-not (Test-Path -LiteralPath $Launcher)) {
+    Write-Host "error: $Launcher not found -- apply it first"
+    exit 1
+}
+
+$Existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+if ($Existing -and $Existing.Description -eq $Description) {
+    Write-Host "debug: task '$TaskName' is up to date"
+} else {
+    if ($Existing) {
+        Write-Host "debug: stopping and unregistering the outdated task '$TaskName'"
+        Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+        Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+    }
+
+    # Stopping the task does not reliably take the grandchildren with it
+    # (conhost -> powershell -> pyghidra-mcp.exe -> python.exe; observed with
+    # sshd in 102), and a leftover server holds the port and the project lock.
+    # The old launcher goes first, or its supervisor loop would start the
+    # server reaped below again a minute later. Only processes whose command
+    # line names the launcher or this project are touched.
+    foreach ($Stale in @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -and $_.CommandLine -like '*pyghidra-mcp-server.ps1*' })) {
+        Write-Host "debug: reaping stale launcher (pid $($Stale.ProcessId))"
+        Stop-Process -Id $Stale.ProcessId -Force -ErrorAction SilentlyContinue
+    }
+    foreach ($Stale in @(Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pyghidra-mcp.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -and $_.CommandLine -like "*$DataDir*" })) {
+        Write-Host "debug: reaping stale server (pid $($Stale.ProcessId))"
+        Stop-Process -Id $Stale.ProcessId -Force -ErrorAction SilentlyContinue
+    }
+
+    Write-Host "debug: registering scheduled task '$TaskName'"
+
+    # conhost --headless: no console window flashing up at every logon, which
+    # -WindowStyle Hidden alone does not prevent (102, 227).
+    $Action = New-ScheduledTaskAction -Execute $Conhost `
+        -Argument "--headless `"$PowerShell`" -NoProfile -NonInteractive -WindowStyle Hidden -File `"$Launcher`" -Port $Port"
+
+    $Trigger = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
+
+    # Interactive and Limited, as in 102 and 227: the user's own desktop
+    # session and filtered token, so the server sees what the user sees and
+    # nothing more.
+    $Principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" `
+        -LogonType Interactive -RunLevel Limited
+
+    # No time limit (the default 72 hours would kill the server), and the
+    # default below-normal priority, which suits background analysis on a
+    # workstation. No restart-on-failure: conhost --headless hands the task
+    # 0x0 whatever the server exits with, so it would never fire; the
+    # launcher restarts the server itself.
+    $Settings = New-ScheduledTaskSettingsSet `
+        -AllowStartIfOnBatteries `
+        -DontStopIfGoingOnBatteries `
+        -ExecutionTimeLimit ([TimeSpan]::Zero)
+
+    Register-ScheduledTask -TaskName $TaskName -Action $Action -Trigger $Trigger `
+        -Principal $Principal -Settings $Settings -Description $Description -Force | Out-Null
+
+    # Read back rather than trust Register-ScheduledTask, as 102 and 227 do.
+    $Registered = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    if (-not $Registered) {
+        Write-Host "error: scheduled task '$TaskName' was not registered"
+        exit 1
+    }
+    if ("$($Registered.Principal.RunLevel)" -ne 'Limited' -or "$($Registered.Principal.LogonType)" -ne 'Interactive') {
+        Write-Host "error: scheduled task '$TaskName' registered as $($Registered.Principal.LogonType)/$($Registered.Principal.RunLevel), expected Interactive/Limited"
+        exit 1
+    }
+    Write-Host "notice: registered '$TaskName' (pyghidra-mcp on 127.0.0.1:$Port)"
+}
+
+if (Test-Listening) {
+    Write-Host "debug: pyghidra-mcp already listening on 127.0.0.1:$Port"
+    exit 0
+}
+
+# Start it now rather than at the next logon. The JVM and the project take
+# about 15 seconds to come up; a server that is not up after a minute is
+# reported, not fatal -- the next logon or apply tries again, and Claude only
+# needs it when it uses the tools.
+Write-Host "debug: starting '$TaskName'"
+Start-ScheduledTask -TaskName $TaskName
+$Deadline = (Get-Date).AddSeconds(60)
+while (-not (Test-Listening) -and (Get-Date) -lt $Deadline) {
+    Start-Sleep -Seconds 2
+}
+if (Test-Listening) {
+    Write-Host "notice: pyghidra-mcp listening on 127.0.0.1:$Port"
+} else {
+    Write-Host "warning: pyghidra-mcp is not listening on 127.0.0.1:$Port after a minute; see $LogDir"
+}

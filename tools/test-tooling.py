@@ -172,7 +172,7 @@ def main():
                 scripts.append(text)
                 # Every entry of the shared data reaches this host one way or the other.
                 for entry in tools["python" if kind == "python" else "pnpm"]:
-                    if platform not in entry.get("os", [platform]):
+                    if platform not in entry.get("os", [platform]) or arch not in entry.get("arch", [arch]):
                         continue
                     if kind == "python":
                         assert (f'BREW_UV_REPLACEMENTS+=({entry["name"]})' in text) != (f' "{entry.get("spec", entry["name"])}"\n' in text), entry
@@ -259,11 +259,29 @@ def main():
                 ("go", "run_after_560-go-tooling", lambda e: f'call :goinstall {e["module"]} ||'),
                 ("pnpm", "run_after_570-pnpm-tooling", lambda e: "%GO_IOS_PACKAGE%" if e["pnpm"] == "go-ios" else f'! {e["pnpm"]}@latest"')):
             for entry in tools[kind]:
-                assert (line(entry) in nt[script]) == ("windows" in entry.get("os", ["windows"])), (kind, entry)
+                assert (line(entry) in nt[script]) == ("windows" in entry.get("os", ["windows"]) and "amd64" in entry.get("arch", ["amd64"])), (kind, entry)
         assert 'call :uvinstall --python "cpython-3.13-windows-x86_64-none" -q --with "bgutil-ytdlp-pot-provider"' in nt["run_once_after_500-python"]
         assert 'call :uvinstall --python "cpython-3.13-windows-x86_64-none" -q --with "rendercv-fonts<0.5"' in nt["run_once_after_500-python"]
         assert 'call :uvinstall --python "cpython-3.13-windows-x86_64-none" -q "oci-cli"' in nt["run_once_after_500-python"]
         assert 'call :uvinstall -q "poetry" ||' in nt["run_once_after_500-python"]
+        # Claude's headless Ghidra is x64 Windows only: Ghidra from scoop,
+        # pyghidra-mcp from uv, the launcher and task, and the MCP entry.
+        for platform, arch in (("windows", "amd64"), ("windows", "arm64"), ("linux", "amd64"), ("darwin", "arm64")):
+            fixture(data, platform, arch, "26")
+            on = (platform, arch) == ("windows", "amd64")
+            servers = json.loads(render(".chezmoitemplates/claude-code-config.json", data))["mcpServers"]
+            assert "ddg-search" in servers and ("ghidra" in servers) == on, (platform, arch)
+            if on:
+                assert servers["ghidra"] == {"type": "http", "url": "http://127.0.0.1:18489/mcp"}
+            if platform != "linux":  # whose ignore wants osRelease, not in the fixture
+                ignored = render(".chezmoiignore.tmpl", data)
+                assert ('.local/bin/pyghidra-mcp-server.ps1' in ignored) != on, (platform, arch)
+                assert ('.chezmoiscripts/00-nt/503-pyghidra-mcp.ps1' in ignored) != on, (platform, arch)
+            if platform == "windows":
+                python = render(".chezmoiscripts/00-nt/run_once_after_500-python.cmd.tmpl", data)
+                assert ('-q "pyghidra-mcp" ||' in python) == on, arch
+                scoop = render(".chezmoiscripts/00-nt/run_once_after_200-scoop-install.cmd.tmpl", data)
+                assert ('\nghidra ^\n' in scoop) == on, arch
         fixture(data, "linux", "arm64", "26")
         for kind in ("python", "js"):
             script = render(f".chezmoitemplates/{kind}-tooling.sh", data)

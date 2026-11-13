@@ -23,6 +23,7 @@
 #                  are "mainline"), falling back to `default`; "" leaves that
 #                  era on uv.
 #   os             only hosts with one of these .chezmoi.os values get it.
+#   arch           only hosts with one of these .chezmoi.arch values get it.
 #
 # Wherever brew supplies a tool, python-tooling.sh removes a uv copy left
 # from before, so it cannot shadow brew's on PATH. 00-nt/500 is run_once, so
@@ -169,3 +170,15 @@ python = "3.14"
 # host with real secrets. PyNaCl's abi3 wheels cover Windows x64 and ARM.
 name = "patatt"
 python = "3.14"
+
+[[pythonTools.packages]]
+# Claude Code's own headless Ghidra, which 00-nt/503-pyghidra-mcp runs as a
+# logon task and the `ghidra` entry in claude-code-config.json points at. x64
+# Windows only, the same gate as those two and scoop's ghidra
+# (00-nt/200-scoop-install): JPype1 and chromadb have no win_arm64 wheels, and
+# an emulated x64 Python could not load the native arm64 JDK's jvm.dll anyway.
+# macOS and Linux get Ghidra from brew, but not this server yet.
+name = "pyghidra-mcp"
+python = "3.14"
+os = ["windows"]
+arch = ["amd64"]

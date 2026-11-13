@@ -13,7 +13,8 @@ BREW_UV_REPLACEMENTS=()
 {{- $uvTools := list }}
 {{- range .pythonTools.packages }}
 {{-   $os := get . "os" }}
-{{-   if or (not $os) (has $.chezmoi.os $os) }}
+{{-   $arch := get . "arch" }}
+{{-   if and (or (not $os) (has $.chezmoi.os $os)) (or (not $arch) (has $.chezmoi.arch $arch)) }}
 {{-     $formula := includeTemplate "tool-brew-provider" (dict "tool" . "field" "brew" "era" $era "os" $.chezmoi.os "macosMajor" $.macos.major) | trim }}
 {{-     if $formula }}
 BREW_PYTHON_TOOLS+=({{ $formula }})

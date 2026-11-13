@@ -11,5 +11,16 @@
       "args": ["duckduckgo-mcp-server"],
       "env": {}
     }
+{{- if and (eq .chezmoi.os "windows") (eq .chezmoi.arch "amd64") }},
+{{- /* Claude's own headless Ghidra: the pyghidra-mcp server that
+       00-nt/503-pyghidra-mcp keeps running, gated the same way as that
+       script and pyghidra-mcp in .chezmoidata/python-tools.toml. HTTP, not a
+       stdio server per session: Ghidra locks a project to one process. The
+       name replaces an older, hand-added `ghidra` entry of the same shape. */}}
+    "ghidra": {
+      "type": "http",
+      "url": "http://127.0.0.1:{{ .pyghidraMcp.port }}/mcp"
+    }
+{{- end }}
   }
 }

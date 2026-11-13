@@ -18,7 +18,8 @@ REM the unix scripts run under `bash -e`, so a failing `uv tool install` aborts
 REM the apply there. cmd carries on regardless, so check each one explicitly.
 {{- range .pythonTools.packages }}
 {{-   $os := get . "os" }}
-{{-   if or (not $os) (has "windows" $os) }}
+{{-   $arch := get . "arch" }}
+{{-   if and (or (not $os) (has "windows" $os)) (or (not $arch) (has $.chezmoi.arch $arch)) }}
 {{-     $python := get . "python" }}
 {{-     if regexMatch "^3\\.[0-9]+$" $python }}
 {{-       $python = printf "cp%s" (replace "." "" $python) }}

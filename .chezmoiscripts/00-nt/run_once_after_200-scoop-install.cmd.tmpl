@@ -130,6 +130,12 @@ REM "cmake  4.x", for make.
        autohotkey, and icaros-np (Explorer thumbnails) further down. In
        template comments, so the rendered script, and with it this run_once's
        hash, is the same as before where they are installed. */}}
+{{- /* ghidra is Claude Code's headless Ghidra, which 503-pyghidra-mcp runs,
+       not a GUI install, so useHeadless keeps it. Its manifest sets the
+       user-scope GHIDRA_INSTALL_DIR to apps\ghidra\current and wants the JDK
+       25 that 100-winget installs. x64 only, the same gate as pyghidra-mcp in
+       .chezmoidata/python-tools.toml. A template comment, as above, so the
+       arm64 hash stays the same. */}}
 set user_packages=^
 maven ^
 tesseract ^
@@ -201,6 +207,9 @@ openssl ^
 wingetcreate ^
 rclone ^
 cloudflared ^
+{{- if eq .chezmoi.arch "amd64" }}
+ghidra ^
+{{- end }}
 less ^
 imagemagick ^
 {{- if not .useHeadless }}

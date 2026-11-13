@@ -1,0 +1,10 @@
+# Claude Code's own headless Ghidra: pyghidra-mcp serving MCP over streamable
+# HTTP on loopback, run by 00-nt/503-pyghidra-mcp's logon task. The port is
+# read by that script and by the `ghidra` entry in
+# .chezmoitemplates/claude-code-config.json, so the two cannot drift apart.
+#
+# Clear of 8081 (the LanguageTool service, 00-nt/215), 8089-8104 (the range
+# the GhidraMCP GUI plugin probes), 8080 (ReVa's default) and 8000
+# (pyghidra-mcp's own default, and every dev server's).
+[pyghidraMcp]
+port = 18489
