@@ -1,0 +1,13 @@
+# Wakes vencord-discord-inject.service when a Flatpak update replaces the
+# deployment the Discord user Flatpak runs from: a new commit directory and
+# the active link switched to it, both in this directory. Updates from
+# 01-fedora/020-flatpak-packages inject on their own; this catches the rest,
+# GNOME Software's and Bluefin's background ones. Enabled by 020.
+[Unit]
+Description=Watch the Discord Flatpak for new deployments
+
+[Path]
+PathChanged=%h/.local/share/flatpak/app/com.discordapp.Discord/{{ if eq .chezmoi.arch "arm64" }}aarch64{{ else }}x86_64{{ end }}/stable
+
+[Install]
+WantedBy=default.target

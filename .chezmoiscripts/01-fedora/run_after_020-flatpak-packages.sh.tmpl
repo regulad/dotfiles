@@ -45,3 +45,34 @@ for app in "${FLATPAK_PACKAGES[@]}"; do
 		flatpak install -y --noninteractive "$app"
 	fi
 done
+
+# Per-user flatpaks. Discord runs from its Flatpak deployment, and that is
+# where ~/.local/bin/vencord-discord puts the stub that loads Vencord. A
+# --user install keeps the deployment the user's to write; a system one would
+# need root for every injection. A user installation sees no system remote,
+# hence its own flathub.
+FLATPAK_USER_PACKAGES=(
+	com.discordapp.Discord
+)
+
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+for app in "${FLATPAK_USER_PACKAGES[@]}"; do
+	if flatpak info --user "$app" &>/dev/null; then
+		echo "debug: updating user flatpak $app" >&2
+		flatpak update --user -y --noninteractive "$app"
+	else
+		echo "debug: installing user flatpak $app" >&2
+		flatpak install --user -y --noninteractive flathub "$app"
+	fi
+done
+if flatpak info --system com.discordapp.Discord &>/dev/null; then
+	echo "notice: Discord is also installed system-wide, where Vencord is not injected; remove that copy with: flatpak uninstall --system com.discordapp.Discord" >&2
+fi
+
+# An install or update above is a new deployment, without the stub. Updates
+# from anywhere else (GNOME Software, Bluefin's background ones) wake
+# vencord-discord-inject.path instead.
+if ! "$HOME/.local/bin/vencord-discord" inject; then
+	echo "warning: Vencord is not injected into Discord; see above" >&2
+fi
+systemctl --user enable --now vencord-discord-inject.path

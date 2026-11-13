@@ -1,0 +1,13 @@
+# Puts the Vencord stub into a new Discord Flatpak deployment; started by
+# vencord-discord-inject.path.
+[Unit]
+Description=Inject Vencord into the Discord Flatpak
+
+[Service]
+Type=oneshot
+# The first change wakes this, while Flatpak may still be switching the active
+# link to the new deployment; a moment's wait lets the switch land.
+ExecStartPre=/bin/sleep 5
+# pnpm and node for `pnpm inject`: brew's (js-tooling) ahead of the system's.
+Environment=PATH={{ .homebrewPrefix }}/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/bin/vencord-discord inject

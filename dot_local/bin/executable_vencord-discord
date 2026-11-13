@@ -1,0 +1,151 @@
+#!/bin/bash
+# vencord-discord: puts the Vencord build in ~/repositories/Vencord into
+# Discord stable, and restarts Discord. The macOS and Linux counterpart of
+# ~/.local/bin/vencord-discord.ps1 on Windows.
+#
+#   vencord-discord inject       inject unless Discord already loads this build
+#                                (080-vencord runs this after every build; on
+#                                Linux, 020-flatpak-packages and the
+#                                vencord-discord-inject.path user unit too)
+#   vencord-discord restart      quit Discord and start it again
+#   vencord-discord dev [args]   pnpm i, pnpm build [args], inject, restart:
+#                                one round of plugin work, for a person or an
+#                                agent. Renderer-only changes would also load
+#                                with Cmd/Ctrl+R; a plugin's native.ts, the
+#                                patcher and the preload need the restart.
+#
+# `pnpm inject` runs Vencord's installer against this build
+# (VENCORD_DEV_INSTALL): it renames Discord's resources/app.asar to _app.asar
+# and writes a stub app.asar that requires the build's dist/patcher.js.
+# Nothing has to be closed for that; a running Discord picks Vencord up when it
+# next starts.
+#
+# macOS: Discord.app from the discord cask. Discord replaces its whole bundle
+# when it updates, which drops the stub until the next inject.
+# Linux: the --user Flatpak from 01-fedora/020-flatpak-packages. Discord runs
+# from the Flatpak's deployment, which every Flatpak update replaces. The
+# installer resolves the active deployment and lets the sandbox read the build
+# (flatpak --user override --filesystem).
+set -e
+
+VENCORD_DIR="$HOME/repositories/Vencord"
+PLATFORM="$(uname -s)"
+case "$PLATFORM" in
+    Darwin)
+        DISCORD_LOCATION="/Applications/Discord.app"
+        RESOURCES="$DISCORD_LOCATION/Contents/Resources"
+        ;;
+    Linux)
+        DISCORD_LOCATION="$HOME/.local/share/flatpak/app/com.discordapp.Discord"
+        RESOURCES="$DISCORD_LOCATION/current/active/files/discord/resources"
+        ;;
+    *)
+        echo "error: vencord-discord does not support $PLATFORM" >&2
+        exit 1
+        ;;
+esac
+
+injected() {
+    [ -f "$RESOURCES/_app.asar" ] &&
+        grep -qF 'repositories/Vencord/dist/patcher.js' "$RESOURCES/app.asar" 2>/dev/null
+}
+
+# Returns 0 when injected, 1 when it could not be, 2 when there is no Discord
+# to inject into.
+do_inject() {
+    if [ ! -d "$RESOURCES" ]; then
+        echo "notice: Discord is not installed at $DISCORD_LOCATION; not injecting Vencord" >&2
+        return 2
+    fi
+    if injected; then
+        echo "debug: Vencord is already injected into Discord" >&2
+        return 0
+    fi
+    if [ ! -f "$VENCORD_DIR/dist/patcher.js" ]; then
+        echo "error: $VENCORD_DIR has no build to inject; 080-vencord builds it" >&2
+        return 1
+    fi
+    # runInstaller.mjs exits 0 even when the installer fails, so the result
+    # is checked rather than the exit code.
+    (cd "$VENCORD_DIR" && pnpm inject --location "$DISCORD_LOCATION") || true
+    if injected; then
+        echo "notice: injected Vencord into Discord" >&2
+        return 0
+    fi
+    if [ "$PLATFORM" = Darwin ]; then
+        echo "error: could not inject Vencord into Discord; if the installer could not write to Discord.app, give your terminal App Management (System Settings > Privacy & Security)" >&2
+    else
+        echo "error: could not inject Vencord into Discord; see the installer's output above" >&2
+    fi
+    return 1
+}
+
+discord_running() {
+    if [ "$PLATFORM" = Darwin ]; then
+        pgrep -x Discord >/dev/null
+    else
+        flatpak ps --columns=application 2>/dev/null | grep -qx com.discordapp.Discord
+    fi
+}
+
+stop_discord() {
+    discord_running || return 0
+    if [ "$PLATFORM" = Darwin ]; then
+        osascript -e 'quit app "Discord"' >/dev/null 2>&1 || true
+    else
+        flatpak kill com.discordapp.Discord 2>/dev/null || true
+    fi
+    i=0
+    while discord_running && [ "$i" -lt 30 ]; do
+        sleep 1
+        i=$((i + 1))
+    done
+    if discord_running && [ "$PLATFORM" = Darwin ]; then
+        pkill -x Discord || true
+        sleep 2
+    fi
+}
+
+start_discord() {
+    if [ "$PLATFORM" = Darwin ]; then
+        open "$DISCORD_LOCATION"
+    else
+        setsid -f flatpak run --user com.discordapp.Discord >/dev/null 2>&1
+    fi
+}
+
+case "${1:-}" in
+    inject)
+        status=0
+        do_inject || status=$?
+        if [ "$status" -eq 1 ]; then
+            exit 1
+        fi
+        ;;
+    restart)
+        stop_discord
+        start_discord
+        ;;
+    dev)
+        shift
+        if ! (cd "$VENCORD_DIR" && pnpm i --config.confirmModulesPurge=false && pnpm build "$@"); then
+            echo "error: building Vencord in $VENCORD_DIR failed" >&2
+            exit 1
+        fi
+        status=0
+        do_inject || status=$?
+        if [ "$status" -eq 2 ]; then
+            echo "error: no Discord to load the build into" >&2
+        fi
+        if [ "$status" -ne 0 ]; then
+            exit 1
+        fi
+        stop_discord
+        start_discord
+        echo "notice: Discord restarted on the new build" >&2
+        ;;
+    *)
+        echo "usage: vencord-discord inject | restart | dev [pnpm build arguments]" >&2
+        exit 2
+        ;;
+esac

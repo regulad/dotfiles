@@ -125,7 +125,7 @@ BREW_CASKS_MACOS=(
 	"syncthing-app"
 {{- end }}
 {{- if not $pre2025 }}
-	"vesktop"  # cask added 2025
+	"discord"  # proprietary freeware # needs macOS 13.0, as the cask declares; 080-vencord injects Vencord into it
 {{- end }}
 	"regulad/tap/epson-et8500" # super proprietary 😈 # Epson lists the package for 10.7 through 27
 {{- if not $pre2024 }}
@@ -155,6 +155,15 @@ if [ "$HAS_BREW" = "true" ]; then
 	if brew list --cask nextcloud-vfs &>/dev/null; then
 		echo "debug: replacing deprecated nextcloud-vfs cask with nextcloud" >&2
 		brew uninstall --cask -q nextcloud-vfs
+	fi
+
+	# Migration: Vesktop gave way to Discord itself, with Vencord injected into
+	# it by 080-vencord, since Vesktop cannot receive rich presence. Dropping
+	# the cask from the list never uninstalled it. Its data, ~/.config/vesktop
+	# behind the Application Support link, stays.
+	if brew list --cask vesktop &>/dev/null; then
+		echo "notice: uninstalling the vesktop cask; Discord with Vencord injected replaces it (080-vencord)" >&2
+		brew uninstall --cask -q vesktop
 	fi
 
 	# Tailscale ships two macOS builds that cannot coexist: the App Store app

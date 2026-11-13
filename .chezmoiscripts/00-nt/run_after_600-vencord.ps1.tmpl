@@ -1,6 +1,7 @@
 # Builds regulad/Vencord, with the vencord-wakatime userplugin, into
-# ~/.vencord/dist. The Windows counterpart of 00-{linux,macos}/080-vencord.sh,
-# with the same layout and rules; the reasons are in the comments there.
+# ~/.vencord/dist and injects it into Discord stable. The Windows counterpart
+# of 00-{linux,macos}/080-vencord.sh, with the same layout and rules; the
+# reasons are in the comments there.
 #
 # PowerShell rather than the .cmd this replaced, to tell the symlink at
 # ~/.vencord from the clone that used to be there and to move that clone to
@@ -46,14 +47,21 @@ function Invoke-GitWithRetry {
     }
 }
 
+$Skipped = $false
 function Sync-Clone([string]$Dir, [string]$Url) {
     if (-not (Test-Path -LiteralPath $Dir)) {
         Invoke-GitWithRetry clone $Url $Dir
         return
     }
+    $Branch = (& git -C $Dir branch --show-current | Out-String).Trim()
+    if ($Branch -ne 'main') {
+        $On = if ($Branch) { $Branch } else { 'a detached HEAD' }
+        Write-Host "notice: $Dir is on $On, not main; leaving it and the build as they are"
+        $script:Skipped = $true
+        return
+    }
     Invoke-Git -C $Dir remote set-url origin $Url
     Invoke-GitWithRetry -C $Dir fetch origin
-    Invoke-Git -C $Dir checkout main
     & git -C $Dir merge --ff-only origin/main
     if ($LASTEXITCODE -eq 0) { return }
     if (-not (& git -C $Dir branch -r --list 'origin/*' --contains main)) {
@@ -114,16 +122,27 @@ if (-not (Get-Item -LiteralPath $VencordLink -Force -ErrorAction SilentlyContinu
     }
 }
 
-# pnpm i purges node_modules when a different pnpm or lockfile laid it down,
-# as the step from Vencord 1.14 to 1.15 does. Without a TTY it refuses
-# unless told it may, and with one it stops to ask.
-& pnpm -C $VencordDir i --config.confirmModulesPurge=false
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "error: pnpm i failed in $VencordDir"
-    exit 1
+if (-not $Skipped) {
+    # pnpm i purges node_modules when a different pnpm or lockfile laid it
+    # down, as the step from Vencord 1.14 to 1.15 does. Without a TTY it
+    # refuses unless told it may, and with one it stops to ask.
+    & pnpm -C $VencordDir i --config.confirmModulesPurge=false
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "error: pnpm i failed in $VencordDir"
+        exit 1
+    }
+    & pnpm -C $VencordDir build
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "error: pnpm build failed in $VencordDir"
+        exit 1
+    }
 }
-& pnpm -C $VencordDir build
+
+# Into Discord stable (100-winget's Discord.Discord), not Vesktop, which
+# cannot receive rich presence. ~/.local/bin/vencord-discord.ps1 holds the
+# how; it closes Discord to inject and starts it again. A checkout left alone
+# above still gets injected: whatever it last built is what Discord loads.
+& (Join-Path $HOME '.local\bin\vencord-discord.ps1') inject
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "error: pnpm build failed in $VencordDir"
-    exit 1
+    Write-Host 'warning: Vencord is not injected into Discord; see above'
 }

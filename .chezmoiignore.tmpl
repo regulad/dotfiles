@@ -29,7 +29,10 @@ Library/Application Support/sops
 .claude/settings.json
 .cline/data/settings/providers.json
 
-.config/vesktop
+# Vencord's settings carry the WakaTime API key.
+AppData/Roaming/Vencord
+Library/Application Support/Vencord
+.var/app/com.discordapp.Discord/config/Vencord
 
 .wakatime.cfg
 
@@ -93,8 +96,16 @@ AppData/Roaming/xdg.data/com.vercel.cli
 
 # Head
 {{- if .useHeadless }}
-.config/vesktop
+# Vencord and the Discord it is injected into.
+AppData/Roaming/Vencord
+Library/Application Support/Vencord
+.var/app/com.discordapp.Discord/config/Vencord
+.local/bin/vencord-discord
+.local/bin/vencord-discord.ps1
+.config/systemd/user/vencord-discord-inject.path
+.config/systemd/user/vencord-discord-inject.service
 .chezmoiscripts/00-nt/600-vencord.ps1
+.chezmoiscripts/00-nt/601-vesktop-remove.ps1
 .chezmoiscripts/00-macos/080-vencord.sh
 .chezmoiscripts/00-linux/080-vencord.sh
 # 040-macos-casks leaves the GUI casks out under useHeadless, VS Code
@@ -170,6 +181,8 @@ autorun.cmd
 # .chezmoiscripts/00-nt/215-languagetool-service); brew services owns it on
 # macOS and Linux, so this launcher has nothing to launch anywhere else.
 .local/bin/languagetool-server.ps1
+# The PowerShell vencord-discord; macOS and Linux get the shell one.
+.local/bin/vencord-discord.ps1
 AppData
 Winaero Tweaker.ini
 repositories  # symlink
@@ -182,6 +195,8 @@ repositories  # symlink
 .zshenv
 # The fragments .zshrc sources; there is no zsh here.
 .config/zsh/
+# The shell vencord-discord; Windows gets vencord-discord.ps1.
+.local/bin/vencord-discord
 # Cargo's and Gradle's homes exist only on the D: Dev Drive on Windows, named by
 # CARGO_HOME and GRADLE_USER_HOME (registry-system.reg); ~/.cargo and ~/.gradle
 # are not used there at all. 00-nt/065-tool-homes writes the managed files into
@@ -248,6 +263,9 @@ Library
 # The Vercel CLI keeps its data under ~/.local/share on Linux only; macOS and
 # Windows get their own copies under Library and AppData.
 .local/share/com.vercel.cli
+# Flatpak's per-app data, ~/.var/app; Vencord's settings for the Discord
+# Flatpak live there.
+.var
 # Linux-only helpers in ~/.local/bin: the agent relays, wsl-color-scheme and
 # wslview run inside a WSL distro, and veracrypt-hc-mount belongs to Bluefin's
 # VeraCrypt chain (02-bluefin). The linux branch below scopes each to its own
@@ -281,6 +299,11 @@ Library
 # from 01-fedora/020-flatpak-packages.sh instead of the system package lists.
 # Other distros install the same apps through their own package managers.
 .chezmoiscripts/01-fedora/*
+# Discord is one of 020's flatpaks, so Vencord's settings for it and the unit
+# pair that keeps it injected go with them.
+.var/app/com.discordapp.Discord
+.config/systemd/user/vencord-discord-inject.path
+.config/systemd/user/vencord-discord-inject.service
 {{-     end }}
 {{-     if ne .chezmoi.osRelease.id "bluefin" }}
 # Universal Blue rewrites ID=fedora to ID=bluefin in the image, which is what

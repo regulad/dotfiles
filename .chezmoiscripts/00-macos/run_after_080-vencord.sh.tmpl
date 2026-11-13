@@ -23,18 +23,28 @@ fi
 # 2026-11-12, when the fork's own commits went to
 # plugin/deterministicUserPanning and main was reset to upstream's.
 #
+# A checkout on any other branch is someone's work, plugin work through
+# `vencord-discord dev` for one: it is left on that branch, and SKIPPED keeps
+# the build below from replacing what that work last built.
+#
 # Each clone and fetch gets three tries, as go-tooling.sh's go installs; a
 # failed clone removes the directory it made. retry replays stdin, which git
 # wants none of.
+SKIPPED=0
 sync_clone() {
-    local dir="$1" url="$2"
+    local dir="$1" url="$2" branch
     if [[ ! -d "$dir" ]]; then
         retry -t 3 -d 10,30 -- git clone "$url" "$dir" </dev/null
         return
     fi
+    branch="$(git -C "$dir" branch --show-current)"
+    if [[ "$branch" != main ]]; then
+        echo "notice: $dir is on ${branch:-a detached HEAD}, not main; leaving it and the build as they are" >&2
+        SKIPPED=1
+        return
+    fi
     git -C "$dir" remote set-url origin "$url"
     retry -t 3 -d 10,30 -- git -C "$dir" fetch origin </dev/null
-    git -C "$dir" checkout main
     if ! git -C "$dir" merge --ff-only origin/main; then
         if [[ -z "$(git -C "$dir" branch -r --list 'origin/*' --contains main)" ]]; then
             echo "warning: main in $dir has commits no branch of origin has; building it as it is" >&2
@@ -66,7 +76,17 @@ if [[ ! -e "$VENCORD_LINK" && ! -L "$VENCORD_LINK" ]]; then
     echo "notice: linked $VENCORD_LINK to $VENCORD_DIR" >&2
 fi
 
-# pnpm i purges node_modules when a different pnpm or lockfile laid it down,
-# as the step from Vencord 1.14 to 1.15 does. Without a TTY it refuses
-# unless told it may, and with one it stops to ask.
-(cd "$VENCORD_DIR" && pnpm i --config.confirmModulesPurge=false && pnpm build)
+if [[ "$SKIPPED" -eq 0 ]]; then
+    # pnpm i purges node_modules when a different pnpm or lockfile laid it
+    # down, as the step from Vencord 1.14 to 1.15 does. Without a TTY it
+    # refuses unless told it may, and with one it stops to ask.
+    (cd "$VENCORD_DIR" && pnpm i --config.confirmModulesPurge=false && pnpm build)
+fi
+
+# Into Discord stable, not Vesktop, which cannot receive rich presence: the
+# discord cask on macOS, the --user Flatpak from 01-fedora/020-flatpak-packages
+# on Linux. ~/.local/bin/vencord-discord holds the how. A checkout left alone
+# above still gets injected: whatever it last built is what Discord loads.
+if ! "$HOME/.local/bin/vencord-discord" inject; then
+    echo "warning: Vencord is not injected into Discord; see above" >&2
+fi
