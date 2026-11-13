@@ -1,7 +1,13 @@
 {{ template "posix-preamble.sh" . }}
 CHEZMOI_USE_DUMMY={{ if .useDummySecrets }}1{{ else }}0{{ end }}
 
-VENCORD_DIR="$HOME/.vencord"
+# The clone lives with the other repositories, in ~/repositories/Vencord.
+# ~/.vencord, where it lived until 2026-11, is a symlink to it now, so whatever
+# points at that path keeps working. An existing ~/.vencord clone is moved into
+# place rather than cloned again.
+REPOS_DIR="$HOME/repositories"
+VENCORD_DIR="$REPOS_DIR/Vencord"
+VENCORD_LINK="$HOME/.vencord"
 
 if [[ "$CHEZMOI_USE_DUMMY" -eq 1 ]]; then
     VENCORD_REMOTE_URL="https://github.com/regulad/Vencord.git"
@@ -11,29 +17,56 @@ else
     UP_WAKATIME_REMOTE_URL="git@github.com:wakatime/vencord-wakatime.git"
 fi
 
-# Each clone, fetch and pull gets three tries, as go-tooling.sh's go installs;
-# a failed clone removes the directory it made. retry replays stdin, which git
+# Clones $2 into $1, or brings main in $1 up to origin/main. main only follows
+# origin: when origin/main was rewritten under it, main is moved over, but only
+# if a branch of origin still has every commit on it. That happened on
+# 2026-11-12, when the fork's own commits went to
+# plugin/deterministicUserPanning and main was reset to upstream's.
+#
+# Each clone and fetch gets three tries, as go-tooling.sh's go installs; a
+# failed clone removes the directory it made. retry replays stdin, which git
 # wants none of.
-if [[ ! -d "$VENCORD_DIR" ]]; then
-    retry -t 3 -d 10,30 -- git clone "$VENCORD_REMOTE_URL" "$VENCORD_DIR" </dev/null
-else
-    git -C "$VENCORD_DIR" remote set-url origin "$VENCORD_REMOTE_URL"
-    retry -t 3 -d 10,30 -- git -C "$VENCORD_DIR" fetch origin </dev/null
-    git -C "$VENCORD_DIR" checkout main
-    retry -t 3 -d 10,30 -- git -C "$VENCORD_DIR" pull origin main </dev/null
+sync_clone() {
+    local dir="$1" url="$2"
+    if [[ ! -d "$dir" ]]; then
+        retry -t 3 -d 10,30 -- git clone "$url" "$dir" </dev/null
+        return
+    fi
+    git -C "$dir" remote set-url origin "$url"
+    retry -t 3 -d 10,30 -- git -C "$dir" fetch origin </dev/null
+    git -C "$dir" checkout main
+    if ! git -C "$dir" merge --ff-only origin/main; then
+        if [[ -z "$(git -C "$dir" branch -r --list 'origin/*' --contains main)" ]]; then
+            echo "warning: main in $dir has commits no branch of origin has; building it as it is" >&2
+        elif git -C "$dir" reset --keep origin/main; then
+            echo "notice: main in $dir had left origin/main, and origin still has all of it; moved main to origin/main" >&2
+        else
+            echo "warning: could not move main in $dir to origin/main over local changes; building it as it is" >&2
+        fi
+    fi
+}
+
+mkdir -p "$REPOS_DIR"
+
+if [[ -d "$VENCORD_LINK" && ! -L "$VENCORD_LINK" ]]; then
+    if [[ -e "$VENCORD_DIR" || -L "$VENCORD_DIR" ]]; then
+        echo "warning: $VENCORD_LINK is a directory and $VENCORD_DIR exists too; building $VENCORD_DIR and leaving $VENCORD_LINK for you to remove" >&2
+    else
+        echo "notice: moving the Vencord clone from $VENCORD_LINK to $VENCORD_DIR" >&2
+        mv "$VENCORD_LINK" "$VENCORD_DIR"
+    fi
 fi
 
-if [[ ! -d "$VENCORD_DIR/src/userplugins" ]]; then
-    mkdir "$VENCORD_DIR/src/userplugins"
+sync_clone "$VENCORD_DIR" "$VENCORD_REMOTE_URL"
+mkdir -p "$VENCORD_DIR/src/userplugins"
+sync_clone "$VENCORD_DIR/src/userplugins/vencord-wakatime" "$UP_WAKATIME_REMOTE_URL"
+
+if [[ ! -e "$VENCORD_LINK" && ! -L "$VENCORD_LINK" ]]; then
+    ln -s repositories/Vencord "$VENCORD_LINK"
+    echo "notice: linked $VENCORD_LINK to $VENCORD_DIR" >&2
 fi
 
-if [[ ! -d "$VENCORD_DIR/src/userplugins/vencord-wakatime" ]]; then
-    retry -t 3 -d 10,30 -- git clone "$UP_WAKATIME_REMOTE_URL" "$VENCORD_DIR/src/userplugins/vencord-wakatime" </dev/null
-else
-    git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" remote set-url origin "$UP_WAKATIME_REMOTE_URL"
-    retry -t 3 -d 10,30 -- git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" fetch origin </dev/null
-    git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" checkout main
-    retry -t 3 -d 10,30 -- git -C "$VENCORD_DIR/src/userplugins/vencord-wakatime" pull origin main </dev/null
-fi
-
-(cd "$VENCORD_DIR" && pnpm i && pnpm build)
+# pnpm i purges node_modules when a different pnpm or lockfile laid it down,
+# as the step from Vencord 1.14 to 1.15 does. Without a TTY it refuses
+# unless told it may, and with one it stops to ask.
+(cd "$VENCORD_DIR" && pnpm i --config.confirmModulesPurge=false && pnpm build)

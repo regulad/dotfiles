@@ -1,0 +1,129 @@
+# Builds regulad/Vencord, with the vencord-wakatime userplugin, into
+# ~/.vencord/dist. The Windows counterpart of 00-{linux,macos}/080-vencord.sh,
+# with the same layout and rules; the reasons are in the comments there.
+#
+# PowerShell rather than the .cmd this replaced, to tell the symlink at
+# ~/.vencord from the clone that used to be there and to move that clone to
+# the D: Dev Drive. No $ErrorActionPreference = 'Stop': git writes progress to
+# stderr, and Windows PowerShell turns a native command's stderr into an error
+# record when its own stderr is redirected, as it is under chezmoi in CI. Exit
+# codes are checked explicitly instead.
+
+$ReposDir = Join-Path $HOME 'repositories'
+$VencordDir = Join-Path $ReposDir 'Vencord'
+$VencordLink = Join-Path $HOME '.vencord'
+{{- if .useDummySecrets }}
+$VencordRemote = 'https://github.com/regulad/Vencord.git'
+$WakatimeRemote = 'https://github.com/wakatime/vencord-wakatime.git'
+{{- else }}
+$VencordRemote = 'git@github.com:regulad/Vencord.git'
+$WakatimeRemote = 'git@github.com:wakatime/vencord-wakatime.git'
+{{- end }}
+
+function Invoke-Git {
+    & git @args
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "error: git $args failed (exit $LASTEXITCODE)"
+        exit 1
+    }
+}
+
+# Three tries, backing off 10 and 30 seconds, as `retry -t 3 -d 10,30` does
+# on the other platforms. A failed clone removes the directory it made.
+function Invoke-GitWithRetry {
+    $Delays = 10, 30
+    for ($Attempt = 1; ; $Attempt++) {
+        & git @args
+        $Status = $LASTEXITCODE
+        if ($Status -eq 0) { return }
+        if ($Attempt -gt $Delays.Count) {
+            Write-Host "error: git $args failed (exit $Status after $Attempt attempts)"
+            exit 1
+        }
+        $Delay = $Delays[$Attempt - 1]
+        Write-Host "warning: git $args failed (exit $Status); trying again in $Delay s"
+        Start-Sleep -Seconds $Delay
+    }
+}
+
+function Sync-Clone([string]$Dir, [string]$Url) {
+    if (-not (Test-Path -LiteralPath $Dir)) {
+        Invoke-GitWithRetry clone $Url $Dir
+        return
+    }
+    Invoke-Git -C $Dir remote set-url origin $Url
+    Invoke-GitWithRetry -C $Dir fetch origin
+    Invoke-Git -C $Dir checkout main
+    & git -C $Dir merge --ff-only origin/main
+    if ($LASTEXITCODE -eq 0) { return }
+    if (-not (& git -C $Dir branch -r --list 'origin/*' --contains main)) {
+        Write-Host "warning: main in $Dir has commits no branch of origin has; building it as it is"
+        return
+    }
+    & git -C $Dir reset --keep origin/main
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "notice: main in $Dir had left origin/main, and origin still has all of it; moved main to origin/main"
+    } else {
+        Write-Host "warning: could not move main in $Dir to origin/main over local changes; building it as it is"
+    }
+}
+
+if (-not (Test-Path -LiteralPath $ReposDir)) {
+    New-Item -ItemType Directory -Path $ReposDir | Out-Null
+}
+
+$Old = Get-Item -LiteralPath $VencordLink -Force -ErrorAction SilentlyContinue
+if ($Old -and $Old.PSIsContainer -and -not $Old.LinkType) {
+    if (Test-Path -LiteralPath $VencordDir) {
+        Write-Host "warning: $VencordLink is a directory and $VencordDir exists too; building $VencordDir and leaving $VencordLink for you to remove"
+    } else {
+        # Copied, then removed: ~/repositories is the D: Dev Drive
+        # (symlink_repositories), and Move-Item cannot move a directory to
+        # another volume. node_modules stays behind, since pnpm i below lays it
+        # down again, and rmdir removes the junctions pnpm made in it without
+        # following them.
+        Write-Host "notice: moving the Vencord clone from $VencordLink to $VencordDir"
+        robocopy $VencordLink $VencordDir /E /XD node_modules /NFL /NDL /NJH /NJS /NP
+        if ($LASTEXITCODE -ge 8) {
+            Write-Host "error: robocopy could not copy $VencordLink to $VencordDir (exit $LASTEXITCODE)"
+            if (Test-Path -LiteralPath $VencordDir) { cmd /c rmdir /s /q "$VencordDir" }
+            exit 1
+        }
+        cmd /c rmdir /s /q "$VencordLink"
+        if (Test-Path -LiteralPath $VencordLink) {
+            Write-Host "warning: could not remove all of $VencordLink after copying it to $VencordDir; delete it so the next apply can link it"
+        }
+    }
+}
+
+Sync-Clone $VencordDir $VencordRemote
+$UserPlugins = Join-Path $VencordDir 'src\userplugins'
+if (-not (Test-Path -LiteralPath $UserPlugins)) {
+    New-Item -ItemType Directory -Path $UserPlugins | Out-Null
+}
+Sync-Clone (Join-Path $UserPlugins 'vencord-wakatime') $WakatimeRemote
+
+# mklink rather than New-Item, which in Windows PowerShell needs elevation
+# for a symlink even in Developer Mode.
+if (-not (Get-Item -LiteralPath $VencordLink -Force -ErrorAction SilentlyContinue)) {
+    cmd /c mklink /D "$VencordLink" "repositories\Vencord" | Out-Null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "notice: linked $VencordLink to $VencordDir"
+    } else {
+        Write-Host "warning: could not link $VencordLink to $VencordDir (Developer Mode off?)"
+    }
+}
+
+# pnpm i purges node_modules when a different pnpm or lockfile laid it down,
+# as the step from Vencord 1.14 to 1.15 does. Without a TTY it refuses
+# unless told it may, and with one it stops to ask.
+& pnpm -C $VencordDir i --config.confirmModulesPurge=false
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "error: pnpm i failed in $VencordDir"
+    exit 1
+}
+& pnpm -C $VencordDir build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "error: pnpm build failed in $VencordDir"
+    exit 1
+}
