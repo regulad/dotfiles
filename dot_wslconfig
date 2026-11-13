@@ -31,3 +31,19 @@
 # exposes no option to pin it; the only way is re-addressing the Hyper-V NAT
 # out of band, which WSL undoes on every boot. Do not rely on the address.
 networkingMode=nat
+
+[experimental]
+# Every new distro's ext4.vhdx is created as a sparse file, so space freed
+# inside it comes back to C: within seconds: ext4 mounts with discard, and a
+# TRIMmed block of a sparse VHDX is deallocated on the host. A regular VHDX
+# only grows, and getting space back means shutting WSL down and compacting
+# it with Optimize-VHD.
+#
+# Read only when a disk is created (wsl-deploy's import, `wsl --install`), so
+# existing distros keep what they have; `wsl --manage <distro> --set-sparse
+# true` converts one, after which the space it had already freed only comes
+# back through one compaction with sparse turned off (Optimize-VHD refuses a
+# sparse file). Honoured since WSL 3.0.2; WSL still calls sparse VHDs
+# experimental. 3.0.2 lifted the --allow-unsafe gate that 2.5.6 had put on
+# them over reports of data corruption, without saying the cause was fixed.
+sparseVhd=true
