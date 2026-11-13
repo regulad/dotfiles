@@ -42,3 +42,7 @@ An instance's chezmoi source is a plain copy of the tree its image was built fro
 - **A patch that does not apply changes nothing**: `git apply` is all or nothing, and the check runs first. That happens when the instance's source was edited where the patch touches it.
 - **HEAD behind or beside the instance's commit** (a rollback, a diverged branch) still works, since the patch makes the instance's tree HEAD's, but that undoes whatever the instance has that HEAD lacks, so it asks first; `-Force` skips the question.
 - The patch is written by git itself (`--output`), never through PowerShell's pipeline, so the binary hunks for the age-encrypted files survive, and it is built with CRLF conversion, textconv and external diff tools off and `a/`/`b/` prefixes fixed, whatever the local git config says.
+
+## `/tmp`
+
+Inside an instance, `/tmp` is a tmpfs, mounted by systemd's own `tmp.mount` as on a native Fedora or Ubuntu: it holds at most half the instance's memory and is emptied whenever the instance stops (`wsl --terminate`, `wsl --shutdown`, or WSL idling it out). Anything that must survive that goes in `/var/tmp`. WSL binds the WSLg X11 socket back onto `/tmp/.X11-unix` after the mount (its generated `wslg.service`). Images used to mask `tmp.mount`, which kept `/tmp` on the instance's disk; `00-linux/003-wsl-tmp-tmpfs` unmasks it on an instance imported from one of those, and it takes effect at the instance's next boot.

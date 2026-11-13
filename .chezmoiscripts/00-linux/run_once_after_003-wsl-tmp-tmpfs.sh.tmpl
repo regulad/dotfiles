@@ -1,0 +1,63 @@
+{{ template "posix-preamble.sh" . }}
+# /tmp as a tmpfs inside a WSL instance (masked outside a genuine WSL distro in
+# .chezmoiignore), through systemd's own tmp.mount.
+#
+# Fedora 44 and Ubuntu 26.04 both ship upstream's tmp.mount and pull it into
+# local-fs.target, so a native install already has /tmp on a tmpfs. The WSL
+# tarball used to mask it (.github/workflows/wsl-package.yml), following
+# Microsoft's list of units that misbehave under WSL: mounted over /tmp, the
+# tmpfs hid the WSLg X11 socket WSL binds at /tmp/.X11-unix. WSL has handled
+# that itself since 1.0.3: its generator writes wslg.service, which binds
+# /mnt/wslg/.X11-unix there again after tmp.mount, and this repo's floor is
+# 3.0.1 (wslMinVersion, .chezmoidata/containers.toml). The tarball no longer
+# masks it; this unmasks it on an instance imported from one that did.
+#
+# Upstream's options stand: mode 1777, nosuid, nodev, at most half the
+# instance's memory and a million inodes, and per-user quotas where the kernel
+# has them. A file that must outlive the instance goes in /var/tmp.
+#
+# Not started here. Mounted over the live /tmp it would hide everything in it,
+# the tmux@default socket (/tmp/tmux-<uid>) and the X11 socket among them; at
+# the next boot it comes up before any of that. The old /tmp's contents stay on
+# the instance's disk underneath it, out of sight.
+#
+# run_once_: the mask lives in the instance's own /etc and nothing puts it
+# back, and a deliberate `systemctl mask tmp.mount` afterwards is left alone. A
+# failure exits non-zero, so the next apply tries again.
+if [ "$IS_WSL" -ne 1 ]; then
+	echo "notice: not a WSL session, leaving /tmp alone" >&2
+	exit 0
+fi
+if [ -L /tmp ]; then
+	echo "warning: /tmp is a symlink, which tmp.mount refuses to mount over; leaving it" >&2
+	exit 0
+fi
+if findmnt --fstab --mountpoint /tmp >/dev/null 2>&1; then
+	echo "notice: /etc/fstab mounts /tmp itself; leaving it to fstab" >&2
+	exit 0
+fi
+if [ ! -f /usr/lib/systemd/system/tmp.mount ]; then
+	echo "warning: this systemd ships no /usr/lib/systemd/system/tmp.mount; /tmp stays on disk" >&2
+	exit 0
+fi
+
+# A runtime mask (masked-runtime, in /run) is gone at the next boot anyway.
+if [ "$(systemctl is-enabled tmp.mount 2>/dev/null || true)" = masked ]; then
+	require_sudo "unmasking tmp.mount"
+	echo "notice: unmasking tmp.mount" >&2
+	sudo systemctl unmask tmp.mount
+fi
+
+# Both distributions have local-fs.target want it, which `systemctl show`
+# reports once the mask is gone; one that does not gets the same link in /etc.
+if ! systemctl show -p WantedBy -p RequiredBy --value tmp.mount | tr ' ' '\n' | grep -qx local-fs.target; then
+	require_sudo "adding tmp.mount to local-fs.target"
+	echo "notice: adding tmp.mount to local-fs.target's wants" >&2
+	sudo systemctl add-wants local-fs.target tmp.mount
+fi
+
+if [ "$(findmnt -no FSTYPE --mountpoint /tmp 2>/dev/null)" = tmpfs ]; then
+	echo "debug: /tmp is a tmpfs" >&2
+else
+	echo "notice: /tmp becomes a tmpfs at the instance's next boot: run \`wsl --terminate $WSL_DISTRO_NAME\` from Windows, then reopen it" >&2
+fi

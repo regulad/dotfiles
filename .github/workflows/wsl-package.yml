@@ -162,6 +162,14 @@ jobs:
           # systemd-resolved and systemd-networkd in particular fight WSL for
           # /etc/resolv.conf, which [network] generateResolvConf=true in
           # wsl.conf already owns.
+          #
+          # Except tmp.mount, which the list also names, so that /tmp is a
+          # tmpfs as on a native install. Mounted over /tmp it used to hide
+          # the WSLg X11 socket WSL binds at /tmp/.X11-unix, but WSL has bound
+          # it again after tmp.mount since 1.0.3 (the wslg.service its
+          # generator writes), and the floor here is 3.0.1. Instances imported
+          # from a tarball that masked it are unmasked by
+          # 00-linux/003-wsl-tmp-tmpfs.
           for unit in \
               systemd-firstboot.service \
               systemd-resolved.service \
@@ -171,8 +179,7 @@ jobs:
               systemd-tmpfiles-clean.service \
               systemd-tmpfiles-clean.timer \
               systemd-tmpfiles-setup-dev-early.service \
-              systemd-tmpfiles-setup-dev.service \
-              tmp.mount
+              systemd-tmpfiles-setup-dev.service
           do
             ln -sf /dev/null "$stage/etc/systemd/system/$unit"
           done
