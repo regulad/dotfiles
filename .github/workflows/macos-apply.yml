@@ -11,7 +11,7 @@ name: macOS apply
 # what a headless Apple Silicon Mac gets: native brew, the container engine's
 # packages (starting it is 035's job and needs nested virtualization, which
 # these VMs lack -- a warning, not a failure), the headless casks, and, since
-# all three are 26 or older, the Rosetta brew in /usr/local
+# both are 26 or older, the Rosetta brew in /usr/local
 # (docs/rosetta-brew.md).
 #
 # Headless and with dummy secrets, as in the images: CHEZMOI_USE_HEADLESS
@@ -28,7 +28,7 @@ on:
   workflow_dispatch:
   schedule:
     # Every ~14 days: cron has no fixed-interval form, so the 1st and 15th
-    # (gaps of 14-16 days). Rarer than docker-publish.yml: three macOS jobs
+    # (gaps of 14-16 days). Rarer than docker-publish.yml: two macOS jobs
     # of an hour or more each, against upstream drift that is slow, and
     # nothing is published. If this pipeline ever builds and publishes Tart
     # VM images for real (a self-hosted Apple Silicon runner; GitHub's lack
@@ -49,10 +49,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # 14 is era-pinned on arm64 (brew 6.0.22, .chezmoidata/brew-tiers.toml);
-          # 15 and 26 get mainline brew. All three get the Rosetta brew's
-          # "current" era.
-          - runner: macos-14
+          # 15 and 26 get mainline brew, and both get the Rosetta brew's
+          # "current" era. GitHub retired every macOS 14 image on 2026-11-02
+          # (actions/runner-images#15226), and with it the one runner that
+          # ran an era-pinned native brew (Sonoma arm64, brew 6.0.22).
           - runner: macos-15
           - runner: macos-26
     runs-on: ${{ matrix.runner }}
@@ -69,8 +69,7 @@ jobs:
           set -euo pipefail
           # The image ships a mainline brew in /opt/homebrew with a few hundred
           # formulae, and root-owned tools in /usr/local. Neither exists on a
-          # fresh Mac, and both get in the way of what is being tested: 005
-          # would era-pin (on 14) a brew whose kegs were built by a newer one,
+          # fresh Mac, and both get in the way of what is being tested:
           # `brew upgrade` would take on the image's whole formula set, and
           # the Rosetta brew would collide with the image's links in
           # /usr/local/bin. Clear both, so 005 and 006 install from scratch
