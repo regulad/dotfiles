@@ -32,9 +32,13 @@ BREW_PNPM_REPLACEMENTS=()
 PNPM_CLI_PACKAGES=()
 {{- $casks := list }}
 {{- $brewMermaid := false }}
+{{- $platform := printf "%s/%s" .chezmoi.os .chezmoi.arch }}
 {{- range .pnpmTools.packages }}
 {{-   $os := get . "os" }}
-{{-   if or (not $os) (has $.chezmoi.os $os) }}
+{{-   $skip := get . "skip" | default list }}
+{{-   if and (or (not $os) (has $.chezmoi.os $os)) (has $platform $skip) }}
+echo "notice: not installing {{ .pnpm }}, which has no build for {{ $platform }} (skip in .chezmoidata/pnpm-tools.toml)" >&2
+{{-   else if or (not $os) (has $.chezmoi.os $os) }}
 {{-     $provider := dict "tool" . "era" $era "os" $.chezmoi.os "macosMajor" $.macos.major }}
 {{-     $cask := includeTemplate "tool-brew-provider" (merge (dict "field" "brewCask") $provider) | trim }}
 {{-     $formula := includeTemplate "tool-brew-provider" (merge (dict "field" "brew") $provider) | trim }}

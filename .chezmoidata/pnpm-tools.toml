@@ -11,6 +11,10 @@
 #   brewMacosMax  the newest macOS major the formula supports; newer Macs
 #                 use pnpm.
 #   os            only hosts with one of these .chezmoi.os values get it.
+#   skip          hosts whose "<.chezmoi.os>/<.chezmoi.arch>" is listed do not
+#                 get it, for a package with no build for that platform. On
+#                 Windows chezmoi and Node both come from scoop's build for the
+#                 CPU, so chezmoi's arch is also the one npm resolves for.
 #
 # Wherever brew supplies a package, js-tooling.sh removes a pnpm copy left
 # from before, so it cannot shadow brew's on PATH.
@@ -49,6 +53,12 @@ pnpm = "wrangler"
 # Before Ventura's snapshot the formula is wrangler-legacy v1 (disabled in
 # the 2023/24 pins), not the Workers SDK CLI our projects use.
 brew = { default = "cloudflare-wrangler", catalina = "", bigsur = "", monterey = "" }
+# It runs workerd, whose npm package has builds for Linux and macOS on x64
+# and arm64 and for Windows on x64 only (no @cloudflare/workerd-windows-arm64
+# as of 2026-11-13). Under ARM Node, npm skips the x64 one, and workerd's
+# postinstall, which used to fetch it anyway, now fails the whole global
+# install (windows-apply on windows-11-arm, since 2026-11-10).
+skip = ["windows/arm64"]
 
 [[pnpmTools.packages]]
 pnpm = "cline"
