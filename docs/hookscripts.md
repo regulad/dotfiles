@@ -47,6 +47,10 @@ In a `run_once_` or `run_onchange_` script, or a template one renders, explain s
 
 Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`. Python (uv), JavaScript (pnpm), Rust (cargo) and Go tools are the exception: they go in `.chezmoidata/{python,pnpm,cargo,go}-tools.toml`, which the hookscripts of every platform read ([Tooling](tooling.md)).
 
+### Retiring a Windows package
+
+Taking a package out of `00-nt/100-winget`'s or `00-nt/200-scoop-install`'s list stops new installs, but it never uninstalls the package from a machine that already has it. To remove it there too, add an entry to the `$Retired` table in `00-nt/105-retired-packages`. That script re-runs whenever its text changes and skips anything not installed. An entry can close processes first, refuse while others run, wait for a replacement to be in place, uninstall through `sudo` (one UAC prompt, for a per-machine MSI), and name user data it leaves behind. The script's header documents each field.
+
 ### Fedora system packages
 
 Some packages have to be part of the OS itself: they bring udev rules, talk to hardware or run as root, so neither brew nor flatpak can provide them. They go in `.chezmoidata/fedora-system-packages.toml`, one list for both kinds of Fedora, which `.chezmoitemplates/fedora-system-packages.sh` renders for each host:

@@ -13,7 +13,7 @@ Windows Registry Editor Version 5.00
 ; gradle left exactly that behind: its manifest's post_install sets a per-user
 ; GRADLE_USER_HOME into scoop's persist directory whenever the user scope has
 ; none. scoop's gradle is gone now (200-scoop-install says why, and
-; 205-scoop-gradle-remove uninstalls it), but the value it set on a machine
+; 105-retired-packages uninstalls it), but the value it set on a machine
 ; that had it stays until something replaces it -- this does -- and should
 ; that hook ever run again, it finds a value already in place and leaves it
 ; alone.

@@ -4,7 +4,7 @@ setlocal
 REM telnet on Windows is Microsoft's own client: the TelnetClient optional
 REM feature, which puts telnet.exe in System32. It replaced scoop's `telnet`,
 REM which was GNU inetutils 1.7 from 2009 on MinGW's abandoned MSYS1 runtime,
-REM downloaded from SourceForge; 206-scoop-telnet-remove uninstalls that.
+REM downloaded from SourceForge; 105-retired-packages uninstalls that.
 REM
 REM Every apply, but the common case costs nothing and needs no elevation. The
 REM feature's state can only be read elevated, so the file it installs is the

@@ -105,7 +105,6 @@ Library/Application Support/Vencord
 .config/systemd/user/vencord-discord-inject.path
 .config/systemd/user/vencord-discord-inject.service
 .chezmoiscripts/00-nt/600-vencord.ps1
-.chezmoiscripts/00-nt/601-vesktop-remove.ps1
 .chezmoiscripts/00-macos/080-vencord.sh
 .chezmoiscripts/00-linux/080-vencord.sh
 # 040-macos-casks leaves the GUI casks out under useHeadless, VS Code
@@ -220,7 +219,7 @@ Library
 .bootstrap.sh
 .chezmoiscripts/00-macos/*
 # The docker CLI only runs on macOS here (docs/containers.md): Windows has wslc
-# and 00-nt/105-docker-desktop-remove deletes ~/.docker there, and Linux
+# and 00-nt/105-retired-packages deletes ~/.docker there, and Linux
 # runs podman.
 .docker
 {{- else }}
