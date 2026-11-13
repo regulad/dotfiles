@@ -122,6 +122,32 @@ if (-not (Get-Item -LiteralPath $VencordLink -Force -ErrorAction SilentlyContinu
     }
 }
 
+# A skill beside upstream's in .skills, for agents working in the clone: how
+# vencord-discord builds and reloads this machine's Discord. It describes this
+# machine, not Vencord, so the clone's own .git\info\exclude keeps it out of
+# git, and it is written on a branch too. LF, as upstream's are; the rendered
+# text has the line endings of the source's working tree.
+$Utf8NoBom = New-Object System.Text.UTF8Encoding $false
+$SkillName = 'desktop-discord.local.md'
+$Skill = Join-Path $VencordDir ".skills\$SkillName"
+$SkillText = (@'
+{{ includeTemplate "vencord-desktop-skill.md" . | trim }}
+'@ -replace "`r`n", "`n") + "`n"
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Skill) | Out-Null
+$Have = if (Test-Path -LiteralPath $Skill) { [IO.File]::ReadAllText($Skill) } else { $null }
+if ($Have -cne $SkillText) {
+    [IO.File]::WriteAllText($Skill, $SkillText, $Utf8NoBom)
+    Write-Host "notice: wrote $Skill"
+}
+$Exclude = Join-Path $VencordDir '.git\info\exclude'
+$ExcludeText = if (Test-Path -LiteralPath $Exclude) { [IO.File]::ReadAllText($Exclude) } else { '' }
+if (($ExcludeText -split "`r?`n") -notcontains "/.skills/$SkillName") {
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Exclude) | Out-Null
+    # A last line without its newline would run into this one.
+    if ($ExcludeText -and -not $ExcludeText.EndsWith("`n")) { $ExcludeText += "`n" }
+    [IO.File]::WriteAllText($Exclude, $ExcludeText + "/.skills/$SkillName`n", $Utf8NoBom)
+}
+
 if (-not $Skipped) {
     # pnpm i purges node_modules when a different pnpm or lockfile laid it
     # down, as the step from Vencord 1.14 to 1.15 does. Without a TTY it

@@ -76,6 +76,34 @@ if [[ ! -e "$VENCORD_LINK" && ! -L "$VENCORD_LINK" ]]; then
     echo "notice: linked $VENCORD_LINK to $VENCORD_DIR" >&2
 fi
 
+# A skill beside upstream's in .skills, for agents working in the clone: how
+# vencord-discord builds and reloads this machine's Discord. It describes this
+# machine, not Vencord, so the clone's own .git/info/exclude keeps it out of
+# git, and it is written on a branch too.
+# Through a temporary file: bash 3.2 misparses a heredoc inside $(...) once
+# the text has an apostrophe in it.
+SKILL_NAME=desktop-discord.local.md
+SKILL="$VENCORD_DIR/.skills/$SKILL_NAME"
+SKILL_NEW="$(mktemp)"
+cat >"$SKILL_NEW" <<'SKILL_EOF'
+{{ includeTemplate "vencord-desktop-skill.md" . | trim }}
+SKILL_EOF
+mkdir -p "$VENCORD_DIR/.skills"
+if ! cmp -s "$SKILL_NEW" "$SKILL"; then
+    cat "$SKILL_NEW" >"$SKILL"
+    echo "notice: wrote $SKILL" >&2
+fi
+rm -f "$SKILL_NEW"
+EXCLUDE="$VENCORD_DIR/.git/info/exclude"
+if ! grep -qxF "/.skills/$SKILL_NAME" "$EXCLUDE" 2>/dev/null; then
+    mkdir -p "$VENCORD_DIR/.git/info"
+    # A last line without its newline would run into this one.
+    if [[ -s "$EXCLUDE" && -n "$(tail -c 1 "$EXCLUDE")" ]]; then
+        echo >>"$EXCLUDE"
+    fi
+    echo "/.skills/$SKILL_NAME" >>"$EXCLUDE"
+fi
+
 if [[ "$SKIPPED" -eq 0 ]]; then
     # pnpm i purges node_modules when a different pnpm or lockfile laid it
     # down, as the step from Vencord 1.14 to 1.15 does. Without a TTY it
