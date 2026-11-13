@@ -75,6 +75,26 @@ APT_PACKAGES=(
 	# =+= SERIAL
 	minicom
 
+	# =+= FILESYSTEMS
+	# The make/check/repair tools for every filesystem Linux mounts; the same
+	# set as 020-dnf-packages, which says what is left out and why. Names
+	# checked against Ubuntu 26.04's index on 2026-11-13.
+	e2fsprogs  # ext2/3/4
+	xfsprogs
+	btrfs-progs
+	dosfstools  # FAT
+	exfatprogs
+	ntfs-3g  # the FUSE driver and mkntfs/ntfsfix, which Fedora splits into ntfsprogs
+	f2fs-tools
+	jfsutils
+	nilfs-tools  # nilfs-utils on Fedora
+	udftools
+	squashfs-tools
+	erofs-utils
+	hfsprogs  # HFS+; hfsplus-tools on Fedora
+	mtools  # FAT images without mounting them
+	# bcachefs-tools: not published for Ubuntu 26.04; Fedora installs it
+
 	# =+= UTILS
 	systemd  # provides utils even when in docker
 	# Replaces the old 10-autowatch.zsh chpwd hook, which sourced and eval'd a
