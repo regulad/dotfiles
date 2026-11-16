@@ -33,6 +33,23 @@
       "headers": {
         "Authorization": {{ printf "Sentry-Bearer %s" $sentry.token.value | toJson }}
       }
+    },
+{{- /* Supabase's hosted MCP server, with the access token that
+       ~/.supabase/access-token carries too (dot_supabase). The server takes
+       it as a plain bearer token, which turns the OAuth fallback off as the
+       Sentry entry above does. The URL is the supabase plugin's own
+       (agents/claude/.mcp.json in supabase-community/supabase-plugin), so
+       this definition stands in for the plugin's OAuth copy. Supabase's
+       read_only and project_ref switches are query parameters, which would
+       break that match; the token's own access is the limit instead. Codex's
+       entry is in dot_codex/modify_private_config.toml. */}}
+{{- $supabase := bitwardenFields "item" "supabase.com" }}
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp",
+      "headers": {
+        "Authorization": {{ printf "Bearer %s" $supabase.token.value | toJson }}
+      }
     }
 {{- end }}
 {{- if and (eq .chezmoi.os "windows") (eq .chezmoi.arch "amd64") }},

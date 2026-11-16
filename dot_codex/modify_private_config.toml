@@ -13,5 +13,10 @@
 {{- $config = $config | setValueAtPath "mcp_servers.sentry" (dict
       "url" "https://mcp.sentry.dev/mcp"
       "http_headers" (dict "Authorization" (printf "Sentry-Bearer %s" $sentry.token.value))) -}}
+{{- /* Supabase's, likewise; see its Claude Code entry. */ -}}
+{{- $supabase := bitwardenFields "item" "supabase.com" -}}
+{{- $config = $config | setValueAtPath "mcp_servers.supabase" (dict
+      "url" "https://mcp.supabase.com/mcp"
+      "http_headers" (dict "Authorization" (printf "Bearer %s" $supabase.token.value))) -}}
 {{- end -}}
 {{- $config | toToml -}}

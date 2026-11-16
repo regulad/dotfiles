@@ -174,6 +174,10 @@ def main():
                 for entry in tools["python" if kind == "python" else "pnpm"]:
                     if platform not in entry.get("os", [platform]) or arch not in entry.get("arch", [arch]):
                         continue
+                    if platform == "darwin" and int(series.split('.')[0]) < entry.get("macosMin", 0):
+                        assert f'not installing {entry["pnpm"]}, which needs macOS' in text, entry
+                        assert entry["pnpm"] not in text.replace(f'not installing {entry["pnpm"]}', ""), entry
+                        continue
                     if kind == "python":
                         assert (f'BREW_UV_REPLACEMENTS+=({entry["name"]})' in text) != (f' "{entry.get("spec", entry["name"])}"\n' in text), entry
                     else:
@@ -188,6 +192,8 @@ def main():
                     assert 'pnpm i -g "${PNPM_CLI_PACKAGES[@]}"' in text
                     assert ('BREW_JS_TOOLS+=(mermaid-cli)' in text) == (era not in ("bigsur", "monterey"))
                     assert ('brew install -q --cask vercel' in text) == (era == "mainline")
+                    assert ('BREW_JS_TOOLS+=(supabase)' in text) == (era == "mainline")
+                    assert ('PNPM_CLI_PACKAGES+=("supabase@latest")' in text) == (era in ("ventura", "current", "sonoma"))
                     assert ('BREW_JS_TOOLS+=(cline)' in text) == (era in ("mainline", "current", "sonoma") and not (platform == "darwin" and int(series.split('.')[0]) >= 27))
             for name, attempted in (("110-rust-tooling", "cargo install --locked"), ("120-go-tooling", "go install ")):
                 text = render(f".chezmoiscripts/00-{host}/run_after_{name}.sh.tmpl", data)

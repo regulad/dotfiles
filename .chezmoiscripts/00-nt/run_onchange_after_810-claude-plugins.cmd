@@ -33,6 +33,7 @@ call :install_plugin vercel claude-plugins-official
 call :install_plugin cloudflare cloudflare
 call :install_plugin sentry claude-plugins-official
 call :install_plugin sentry-cli claude-plugins-official
+call :install_plugin supabase claude-plugins-official
 call :install_plugin onesignal onesignal
 
 REM Language servers; which ones and why are in claude-plugins.sh. No

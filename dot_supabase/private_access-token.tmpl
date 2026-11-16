@@ -1,0 +1,9 @@
+{{- /* The Supabase CLI's access token (.chezmoidata/pnpm-tools.toml), the same
+       one the supabase MCP server entries carry. The CLI looks for it in
+       SUPABASE_ACCESS_TOKEN, then the OS keyring (not on WSL), then this
+       file, <SUPABASE_HOME or ~/.supabase>/access-token, on every platform.
+       `supabase login` stores its token in the keyring, which then wins over
+       this one; `supabase logout` removes this file too, and the next apply
+       puts it back. The CLI wants the bare sbp_ token and trims whitespace.
+       Rotate by replacing the field and re-applying. */ -}}
+{{ (bitwardenFields "item" "supabase.com").token.value }}

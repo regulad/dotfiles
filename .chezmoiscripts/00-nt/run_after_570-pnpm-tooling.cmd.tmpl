@@ -75,9 +75,9 @@ if "%NODE_ARCH%"=="arm64" (
     set "GO_IOS_PACKAGE="
 )
 
-REM vercel, wrangler, cf and sentry are the CLIs behind the vercel, cloudflare
-REM and sentry-cli agent plugins' skills. go-ios is %GO_IOS_PACKAGE%, empty when
-REM built above.
+REM vercel, wrangler, cf, sentry and supabase are the CLIs behind the vercel,
+REM cloudflare, sentry-cli and supabase agent plugins' skills. go-ios is
+REM %GO_IOS_PACKAGE%, empty when built above.
 set "pnpm_packages="
 {{- $platform := printf "windows/%s" .chezmoi.arch }}
 {{- range .pnpmTools.packages }}

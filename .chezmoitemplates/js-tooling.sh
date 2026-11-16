@@ -36,8 +36,11 @@ PNPM_CLI_PACKAGES=()
 {{- range .pnpmTools.packages }}
 {{-   $os := get . "os" }}
 {{-   $skip := get . "skip" | default list }}
+{{-   $macosMin := get . "macosMin" | default 0 }}
 {{-   if and (or (not $os) (has $.chezmoi.os $os)) (has $platform $skip) }}
 echo "notice: not installing {{ .pnpm }}, which has no build for {{ $platform }} (skip in .chezmoidata/pnpm-tools.toml)" >&2
+{{-   else if and (or (not $os) (has $.chezmoi.os $os)) (eq $.chezmoi.os "darwin") (lt (int $.macos.major) (int $macosMin)) }}
+echo "notice: not installing {{ .pnpm }}, which needs macOS {{ $macosMin }} or later (macosMin in .chezmoidata/pnpm-tools.toml)" >&2
 {{-   else if or (not $os) (has $.chezmoi.os $os) }}
 {{-     $provider := dict "tool" . "era" $era "os" $.chezmoi.os "macosMajor" $.macos.major }}
 {{-     $cask := includeTemplate "tool-brew-provider" (merge (dict "field" "brewCask") $provider) | trim }}

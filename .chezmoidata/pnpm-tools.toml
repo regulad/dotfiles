@@ -10,6 +10,8 @@
 #   brewCask      the same, for a cask, which wins over `brew`.
 #   brewMacosMax  the newest macOS major the formula supports; newer Macs
 #                 use pnpm.
+#   macosMin      the oldest macOS major the package runs on at all; older
+#                 Macs do not get it, from either provider.
 #   os            only hosts with one of these .chezmoi.os values get it.
 #   skip          hosts whose "<.chezmoi.os>/<.chezmoi.arch>" is listed do not
 #                 get it, for a package with no build for that platform. On
@@ -90,6 +92,18 @@ pnpm = "cf"
 # takes it. Installed this way it does not write the skills into ~/.claude
 # itself, which only its install script, the tap and `sentry cli upgrade` do.
 pnpm = "sentry"
+
+[[pnpmTools.packages]]
+# Supabase's CLI, `supabase`, which the Claude Code supabase plugin's skills
+# run; its token is ~/.supabase/access-token (dot_supabase). The npm package is
+# a Node shim over a prebuilt binary per platform, Windows on ARM and musl
+# included. Core's formula, added 2025-11, is the 3.x CLI with a bottle for
+# every mainline host (Apple Silicon from Sequoia, Linux on both arches); the
+# 2026 pins carry an older release of it, so they take pnpm's. 3.x is built
+# with Bun, whose macOS binaries need 13.0 (LC_BUILD_VERSION of 3.2.0's).
+pnpm = "supabase"
+brew = { default = "", mainline = "supabase" }
+macosMin = 13
 
 [[pnpmTools.packages]]
 # The Alexa Skills Kit CLI, `ask`; its config is

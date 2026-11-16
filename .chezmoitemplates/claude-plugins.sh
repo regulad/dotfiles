@@ -47,6 +47,12 @@ fi
 # which carries the Bitwarden token. sentry-cli (getsentry/cli) is skills for
 # the `sentry` CLI from .chezmoidata/pnpm-tools.toml.
 #
+# supabase (supabase-community/supabase-plugin, through the official
+# marketplace) is skills for Supabase and Postgres plus Supabase's MCP server,
+# which signs in with OAuth. Like sentry's, that server is shadowed by a
+# user-scope one of the same URL in claude-code-config.json, carrying the
+# Bitwarden token.
+#
 # onesignal comes from OneSignal's own marketplace, as its README says
 # (https://github.com/OneSignal/onesignal-agent-plugin); Claude Code's built-in
 # anthropic-plugin-directory carries it too, pinned to an older commit. It is
@@ -78,6 +84,7 @@ PLUGINS=(
 	"cloudflare|cloudflare"
 	"sentry|claude-plugins-official"
 	"sentry-cli|claude-plugins-official"
+	"supabase|claude-plugins-official"
 	"onesignal|onesignal"
 	"clangd-lsp|claude-plugins-official"
 	"gopls-lsp|claude-plugins-official"

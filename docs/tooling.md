@@ -71,6 +71,7 @@ cask. A name match alone does not establish equivalent functionality.
 | Wrangler | `cloudflare-wrangler` on Ventura and later pins/mainline; pnpm on older pins whose formula is the legacy v1 CLI |
 | go-ios, Cloudflare cf | pnpm; no equivalent core formula (`cf` is an unrelated timestamp filter) |
 | Sentry CLI (`sentry`, added 2026-11-15) | pnpm; no core formula, only Sentry's `getsentry/tools` tap |
+| Supabase CLI (`supabase`, added 2026-11-16) | `supabase` formula on mainline, where it is the 3.x CLI with bottles; pnpm on the pins, whose formula is older; none before macOS 13, which its Bun-built binaries need |
 | keydive, mangadex-downloader, pymobiledevice3, claude-swap, patatt | uv; no matching core formula |
 | yt-dlp | uv to preserve its pinned extras and `bgutil-ytdlp-pot-provider` |
 | keymap-renderer | uv to preserve the `regulad/keymap-renderer` fork |

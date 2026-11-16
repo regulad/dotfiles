@@ -31,6 +31,11 @@ MARKETPLACES=(
 # Its MCP server takes OAuth only and is left signed out, as in Claude Code
 # (claude-plugins.sh); OneSignal's README says `codex mcp login onesignal`
 # fails against it for now, so in Codex the plugin is its skills.
+#
+# The curated supabase plugin is left out: its authPolicy is ON_INSTALL, so
+# Codex withholds its skills until its ChatGPT app is signed in to, on every
+# machine. Supabase's server is configured directly with the Bitwarden token
+# in dot_codex/modify_private_config.toml instead.
 PLUGINS=(
 	"codex-cli-wakatime|wakatime"
 	"cloudflare|cloudflare"
