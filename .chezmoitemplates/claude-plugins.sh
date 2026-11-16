@@ -47,6 +47,13 @@ fi
 # which carries the Bitwarden token. sentry-cli (getsentry/cli) is skills for
 # the `sentry` CLI from .chezmoidata/pnpm-tools.toml.
 #
+# onesignal comes from OneSignal's own marketplace, as its README says
+# (https://github.com/OneSignal/onesignal-agent-plugin); Claude Code's built-in
+# anthropic-plugin-directory carries it too, pinned to an older commit. It is
+# skills for adding OneSignal to an app, plus OneSignal's hosted MCP server,
+# which takes OAuth and nothing else. That server is left signed out, as
+# Vercel's is: no reminder asks for it, and /mcp signs in where it is wanted.
+#
 # The *-lsp plugins give Claude the language servers nvim's init.lua enables:
 # diagnostics after each edit, plus a read-only LSP tool for definitions and
 # references. Each is only an .lsp.json naming the server; the binary comes
@@ -61,6 +68,7 @@ MARKETPLACES=(
 	"claude-plugins-official|anthropics/claude-plugins-official"
 	"openai-codex|openai/codex-plugin-cc"
 	"cloudflare|cloudflare/skills"
+	"onesignal|OneSignal/onesignal-agent-plugin"
 )
 PLUGINS=(
 	"claude-code-wakatime|wakatime"
@@ -70,6 +78,7 @@ PLUGINS=(
 	"cloudflare|cloudflare"
 	"sentry|claude-plugins-official"
 	"sentry-cli|claude-plugins-official"
+	"onesignal|onesignal"
 	"clangd-lsp|claude-plugins-official"
 	"gopls-lsp|claude-plugins-official"
 	"rust-analyzer-lsp|claude-plugins-official"

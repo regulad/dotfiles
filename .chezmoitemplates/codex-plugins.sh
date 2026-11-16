@@ -16,18 +16,26 @@ fi
 #   wakatime    https://wakatime.com/codex-cli-plugin -- the plugin reads
 #               ~/.wakatime.cfg, already provisioned by this repository.
 #   cloudflare  https://github.com/cloudflare/skills#codex
+#   onesignal   https://github.com/OneSignal/onesignal-agent-plugin#install-in-codex
 MARKETPLACES=(
 	"wakatime|wakatime/codex-cli-wakatime"
 	"cloudflare|cloudflare/skills"
+	"onesignal|OneSignal/onesignal-agent-plugin"
 )
 # "plugin|marketplace". The marketplace "curated" stands for OpenAI's curated
 # one, resolved below. vercel comes from there because that is where Vercel's
 # installer (`npx plugins add vercel/vercel-plugin`) sends Codex; the repo has
 # no Codex marketplace of its own.
+#
+# onesignal comes from OneSignal's marketplace, the curated one having no copy.
+# Its MCP server takes OAuth only and is left signed out, as in Claude Code
+# (claude-plugins.sh); OneSignal's README says `codex mcp login onesignal`
+# fails against it for now, so in Codex the plugin is its skills.
 PLUGINS=(
 	"codex-cli-wakatime|wakatime"
 	"cloudflare|cloudflare"
 	"vercel|curated"
+	"onesignal|onesignal"
 )
 
 failed=

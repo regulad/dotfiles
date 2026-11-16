@@ -13,13 +13,15 @@ The aim is that no machine signs in to anything by hand. A service whose
 server takes a static token is configured directly with that token from
 Bitwarden; one that only takes OAuth comes from its plugin and is signed in
 to once per machine and per tool (`999-reminders` names Cloudflare's while it
-is outstanding).
+is outstanding), or is left signed out until a machine needs it, as Vercel's
+and OneSignal's are.
 
 | Server | Claude Code | Codex | Signs in with |
 | --- | --- | --- | --- |
 | Sentry | configured directly, at the sentry plugin's own URL, so Claude Code skips the plugin's copy as a duplicate | configured directly | the `sentry.io` item's token, as `Authorization: Sentry-Bearer` |
 | Cloudflare | cloudflare plugin | cloudflare plugin | OAuth |
 | Vercel | vercel plugin | OpenAI's curated vercel plugin | OAuth; Vercel's server takes no token |
+| OneSignal | onesignal plugin, from OneSignal's marketplace | onesignal plugin, from the same marketplace; `codex mcp login` fails against the server, so it stays signed out | OAuth; OneSignal's [documentation](https://documentation.onesignal.com/docs/en/model-context-protocol) says there is no API key to configure |
 | DuckDuckGo search | configured directly | none | nothing |
 | Ghidra (x64 Windows) | configured directly, local | none | nothing |
 

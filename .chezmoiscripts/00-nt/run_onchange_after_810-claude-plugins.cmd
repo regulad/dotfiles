@@ -24,6 +24,7 @@ call :add_marketplace wakatime wakatime/claude-code-wakatime
 call :add_marketplace claude-plugins-official anthropics/claude-plugins-official
 call :add_marketplace openai-codex openai/codex-plugin-cc
 call :add_marketplace cloudflare cloudflare/skills
+call :add_marketplace onesignal OneSignal/onesignal-agent-plugin
 
 call :install_plugin claude-code-wakatime wakatime
 call :install_plugin ralph-loop claude-plugins-official
@@ -32,6 +33,7 @@ call :install_plugin vercel claude-plugins-official
 call :install_plugin cloudflare cloudflare
 call :install_plugin sentry claude-plugins-official
 call :install_plugin sentry-cli claude-plugins-official
+call :install_plugin onesignal onesignal
 
 REM Language servers; which ones and why are in claude-plugins.sh. No
 REM typescript-lsp or ruby-lsp here: Claude Code can't spawn their .cmd/.bat
