@@ -23,14 +23,15 @@ call claude plugin marketplace update || echo warning: marketplace update failed
 
 REM Kept in step with the bootstrap's declared plugins. `claude plugin update`
 REM needs an explicit name (there is no update-all), and the guard skips any a
-REM given machine has not installed.
-for %%P in (claude-code-wakatime ralph-loop codex vercel cloudflare sentry-cli clangd-lsp gopls-lsp rust-analyzer-lsp jdtls-lsp) do call :update_plugin %%P
+REM given machine has not installed; it matches "plugin@", as the bootstrap's
+REM does, so that sentry does not match sentry-cli.
+for %%P in (claude-code-wakatime ralph-loop codex vercel cloudflare sentry sentry-cli clangd-lsp gopls-lsp rust-analyzer-lsp jdtls-lsp) do call :update_plugin %%P
 
 endlocal
 exit /b 0
 
 :update_plugin
-claude plugin list 2>nul | findstr /I /C:"%~1" >nul 2>nul
+claude plugin list 2>nul | findstr /I /C:"%~1@" >nul 2>nul
 if errorlevel 1 goto :eof
 echo debug: updating plugin %~1 1>&2
 call claude plugin update %~1 || echo warning: failed to update %~1 1>&2

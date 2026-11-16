@@ -30,6 +30,7 @@ call :install_plugin ralph-loop claude-plugins-official
 call :install_plugin codex openai-codex
 call :install_plugin vercel claude-plugins-official
 call :install_plugin cloudflare cloudflare
+call :install_plugin sentry claude-plugins-official
 call :install_plugin sentry-cli claude-plugins-official
 
 REM Language servers; which ones and why are in claude-plugins.sh. No
@@ -57,8 +58,10 @@ call claude plugin marketplace add %~2 || echo warning: failed to add marketplac
 goto :eof
 
 REM Install plugin %~1 from marketplace %~2 if it is not already installed.
+REM `plugin list` prints "plugin@marketplace"; matching the "@" too keeps
+REM sentry from matching sentry-cli.
 :install_plugin
-claude plugin list 2>nul | findstr /I /C:"%~1" >nul 2>nul
+claude plugin list 2>nul | findstr /I /C:"%~1@" >nul 2>nul
 if not errorlevel 1 (
     echo debug: plugin %~1 already installed 1>&2
     goto :eof

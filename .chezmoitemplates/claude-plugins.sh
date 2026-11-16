@@ -30,7 +30,9 @@ fi
 
 # Each marketplace entry is "name|add-source"; each plugin entry is
 # "plugin|marketplace". Names are what `... list` is grepped for, so they must
-# match the marketplace/plugin identifiers, not the repo path.
+# match the marketplace/plugin identifiers, not the repo path. `plugin list`
+# prints each as "plugin@marketplace", and the grep takes the "@" with it, so
+# that sentry does not match sentry-cli.
 #
 # vercel comes from the official marketplace, not a marketplace of its own:
 # that is where Vercel's installer (`npx plugins add vercel/vercel-plugin`)
@@ -38,11 +40,12 @@ fi
 # README says (https://github.com/cloudflare/skills#claude-code); the official
 # one carries it too, pinned to an older commit.
 #
-# sentry-cli (getsentry/cli, through the official marketplace) is skills for
-# the `sentry` CLI from .chezmoidata/pnpm-tools.toml. Sentry's other plugin,
-# sentry, is left out: its MCP server signs in with OAuth on every machine,
-# and the same server is configured directly with the Bitwarden token in
-# claude-code-config.json instead.
+# Both Sentry plugins come from the official marketplace, Sentry's own repos
+# having none for Claude Code to add. sentry (getsentry/plugin-claude) is
+# installed for its skills: its MCP server, which signs in with OAuth, is
+# shadowed by the user-scope server of the same URL in claude-code-config.json,
+# which carries the Bitwarden token. sentry-cli (getsentry/cli) is skills for
+# the `sentry` CLI from .chezmoidata/pnpm-tools.toml.
 #
 # The *-lsp plugins give Claude the language servers nvim's init.lua enables:
 # diagnostics after each edit, plus a read-only LSP tool for definitions and
@@ -65,6 +68,7 @@ PLUGINS=(
 	"codex|openai-codex"
 	"vercel|claude-plugins-official"
 	"cloudflare|cloudflare"
+	"sentry|claude-plugins-official"
 	"sentry-cli|claude-plugins-official"
 	"clangd-lsp|claude-plugins-official"
 	"gopls-lsp|claude-plugins-official"
@@ -88,7 +92,7 @@ done
 for entry in "${PLUGINS[@]}"; do
 	plugin="${entry%%|*}"
 	marketplace="${entry#*|}"
-	if claude plugin list 2>/dev/null | grep -qF -- "$plugin"; then
+	if claude plugin list 2>/dev/null | grep -qF -- "$plugin@"; then
 		echo "debug: plugin $plugin already installed" >&2
 	else
 		echo "debug: installing plugin $plugin@$marketplace" >&2

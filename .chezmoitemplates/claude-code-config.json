@@ -16,14 +16,20 @@
        ~/.sentryclirc carries too (private_dot_sentryclirc.tmpl). The server
        takes a Sentry API token directly under the `Sentry-Bearer` scheme, and
        a configured Authorization header turns Claude Code's OAuth fallback
-       off, so no machine signs in through /mcp. Stands in for the sentry
-       plugin's OAuth copy of the server, which claude-plugins.sh leaves out.
-       Unscoped (/mcp), as the CLIs are: the token's own access is the limit.
-       The same entry for Codex is in dot_codex/modify_private_config.toml. */}}
+       off, so no machine signs in through /mcp.
+
+       The URL is the sentry plugin's own (its .claude-plugin/plugin.json,
+       installed by claude-plugins.sh for its skills), query string and all:
+       Claude Code takes a plugin server that points at the same endpoint as
+       a user-scope one for a duplicate and connects only this definition.
+       A different path or query would make two servers, the plugin's
+       signing in with OAuth. Unscoped, as the CLIs are: the token's own
+       access is the limit. The same server for Codex, which has no plugin
+       to match, is in dot_codex/modify_private_config.toml. */}}
 {{- $sentry := bitwardenFields "item" "sentry.io" }}
     "sentry": {
       "type": "http",
-      "url": "https://mcp.sentry.dev/mcp",
+      "url": "https://mcp.sentry.dev/mcp?utm_source=plugin",
       "headers": {
         "Authorization": {{ printf "Sentry-Bearer %s" $sentry.token.value | toJson }}
       }
