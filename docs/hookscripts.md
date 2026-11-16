@@ -51,6 +51,10 @@ Remember to define the package in the correct hookscript under `.chezmoiscripts/
 
 Taking a package out of `00-nt/100-winget`'s or `00-nt/200-scoop-install`'s list stops new installs, but it never uninstalls the package from a machine that already has it. To remove it there too, add an entry to the `$Retired` table in `00-nt/105-retired-packages`. That script re-runs whenever its text changes and skips anything not installed. An entry can close processes first, refuse while others run, wait for a replacement to be in place, uninstall through `sudo` (one UAC prompt, for a per-machine MSI), and name user data it leaves behind. The script's header documents each field.
 
+### Phi Silica
+
+On a Copilot+ PC, one with an NPU, Windows Update installs Phi Silica, Microsoft's on-device language model, and marks it not removable, so Settings → System → AI components offers no Uninstall for it. `00-nt/106-phi-silica` removes it through the same code that button would run, on every apply, because Windows Update can bring it back with any AI component update. With nothing to remove it does nothing and raises no UAC prompt; otherwise it takes one. Its header has the mechanism, which is internal to Windows and undocumented. Two policies in `registry-system.reg` keep apps and Click to Do off any copy that is back until the next apply removes it.
+
 ### Fedora system packages
 
 Some packages have to be part of the OS itself: they bring udev rules, talk to hardware or run as root, so neither brew nor flatpak can provide them. They go in `.chezmoidata/fedora-system-packages.toml`, one list for both kinds of Fedora, which `.chezmoitemplates/fedora-system-packages.sh` renders for each host:

@@ -112,6 +112,28 @@ Windows Registry Editor Version 5.00
 "SpecialPollInterval"=dword:00000384
 "ResolvePeerBackoffMinutes"=dword:00000001
 "ResolvePeerBackoffMaxTimes"=dword:00000003
+
+; Windows AI: nothing uses the on-device language model (Phi Silica, and Aion
+; Instruct, which Microsoft is replacing it with in January 2027). Neither
+; value removes a model: Windows Update installs and services them as "AI
+; component" updates (the WindowsWorkload.* packages), and no policy stops
+; that. 00-nt/106-phi-silica removes Phi Silica on every apply; these keep a
+; copy Windows Update has put back unused until then.
+;
+; LetAppsAccessSystemAIModels 2 is Force Deny for "Let Windows apps make use of
+; Text and image generation features of Windows": the Privacy & security >
+; Text and image generation toggle, off for every app and greyed out. It gates
+; the capability (systemAIModels in the consent store), not a particular
+; model, so it should outlast the switch to Aion Instruct.
+;
+; DisableClickToDo 1 turns Click to Do off as a whole. Its text actions
+; (summarize, rewrite) are Windows' own use of the model, and it is not among
+; the apps the privacy gate above lists.
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\AppPrivacy]
+"LetAppsAccessSystemAIModels"=dword:00000002
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\WindowsAI]
+"DisableClickToDo"=dword:00000001
 {{- /* The Chrome policy below is also left out under useHeadless, where
        100-winget installs no Chrome. A template comment, so the rendered file,
        and with it 000-registry's run_onchange hash, is unchanged where the
