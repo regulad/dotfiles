@@ -1,0 +1,20 @@
+{{- /* The global config of both Sentry CLIs: sentry-cli and its successor,
+       `sentry` (.chezmoidata/pnpm-tools.toml), which reads these four keys
+       for backward compatibility. Both look for ~/.sentryclirc on every
+       platform, %USERPROFILE% on Windows. Only the values common to every
+       project are here; a repository's own .sentryclirc adds `project`.
+
+       url and token stay together in this one file: sentry-cli drops a
+       personal token whose URL came from another source, and `sentry`
+       refuses a self-hosted url that is not its token's host. Values are
+       bare, as neither parser takes inline comments and they treat quotes
+       differently. `sentry auth login` stores its own login, which then wins
+       over this token; sentry-cli's `login` would rewrite this file instead.
+       Rotate by replacing the field and re-applying. */ -}}
+{{- $sentry := bitwardenFields "item" "sentry.io" -}}
+[defaults]
+url = https://sentry.io/
+org = {{ $sentry.org.value }}
+
+[auth]
+token = {{ $sentry.token.value }}

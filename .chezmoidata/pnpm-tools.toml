@@ -84,6 +84,14 @@ pnpm = "go-ios"
 pnpm = "cf"
 
 [[pnpmTools.packages]]
+# Sentry's CLI, `sentry`, which the Claude Code sentry-cli plugin's skills run.
+# Core has no `sentry` formula (nor `sentry-cli`); Sentry's own is in its
+# getsentry/tools tap. Its npm build is plain JavaScript, so every platform
+# takes it. Installed this way it does not write the skills into ~/.claude
+# itself, which only its install script, the tap and `sentry cli upgrade` do.
+pnpm = "sentry"
+
+[[pnpmTools.packages]]
 # The Alexa Skills Kit CLI, `ask`; its config is
 # .chezmoitemplates/ask-cli-config.json. Every era has the formula: 2.30.7
 # from Monterey's snapshot on, 2.28.0 on Catalina's, 2.30.5 on Big Sur's.

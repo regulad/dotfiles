@@ -4,4 +4,14 @@
 {{- if .chezmoi.stdin | trim -}}
 {{- $config = fromToml .chezmoi.stdin -}}
 {{- end -}}
-{{- $config | setValueAtPath "tui.vim_mode_default" true | toToml -}}
+{{- $config = $config | setValueAtPath "tui.vim_mode_default" true -}}
+{{- if not .useDummySecrets -}}
+{{- /* Sentry's hosted MCP server with the Bitwarden token, as Claude Code's
+       entry in .chezmoitemplates/claude-code-config.json explains. A
+       configured Authorization header comes before Codex's OAuth fallback. */ -}}
+{{- $sentry := bitwardenFields "item" "sentry.io" -}}
+{{- $config = $config | setValueAtPath "mcp_servers.sentry" (dict
+      "url" "https://mcp.sentry.dev/mcp"
+      "http_headers" (dict "Authorization" (printf "Sentry-Bearer %s" $sentry.token.value))) -}}
+{{- end -}}
+{{- $config | toToml -}}

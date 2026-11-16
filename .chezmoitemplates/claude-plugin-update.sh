@@ -16,7 +16,7 @@ claude plugin marketplace update || echo "warning: marketplace update failed" >&
 # Kept in step with the bootstrap's PLUGINS list. `claude plugin update` needs
 # an explicit plugin name (there is no update-all), and the guard skips any that
 # a given machine has not installed.
-for plugin in claude-code-wakatime ralph-loop codex vercel cloudflare \
+for plugin in claude-code-wakatime ralph-loop codex vercel cloudflare sentry-cli \
 	clangd-lsp gopls-lsp rust-analyzer-lsp jdtls-lsp typescript-lsp ruby-lsp; do
 	if claude plugin list 2>/dev/null | grep -qF -- "$plugin"; then
 		echo "debug: updating plugin $plugin" >&2

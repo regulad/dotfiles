@@ -38,6 +38,12 @@ fi
 # README says (https://github.com/cloudflare/skills#claude-code); the official
 # one carries it too, pinned to an older commit.
 #
+# sentry-cli (getsentry/cli, through the official marketplace) is skills for
+# the `sentry` CLI from .chezmoidata/pnpm-tools.toml. Sentry's other plugin,
+# sentry, is left out: its MCP server signs in with OAuth on every machine,
+# and the same server is configured directly with the Bitwarden token in
+# claude-code-config.json instead.
+#
 # The *-lsp plugins give Claude the language servers nvim's init.lua enables:
 # diagnostics after each edit, plus a read-only LSP tool for definitions and
 # references. Each is only an .lsp.json naming the server; the binary comes
@@ -59,6 +65,7 @@ PLUGINS=(
 	"codex|openai-codex"
 	"vercel|claude-plugins-official"
 	"cloudflare|cloudflare"
+	"sentry-cli|claude-plugins-official"
 	"clangd-lsp|claude-plugins-official"
 	"gopls-lsp|claude-plugins-official"
 	"rust-analyzer-lsp|claude-plugins-official"

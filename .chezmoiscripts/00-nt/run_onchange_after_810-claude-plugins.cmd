@@ -30,6 +30,7 @@ call :install_plugin ralph-loop claude-plugins-official
 call :install_plugin codex openai-codex
 call :install_plugin vercel claude-plugins-official
 call :install_plugin cloudflare cloudflare
+call :install_plugin sentry-cli claude-plugins-official
 
 REM Language servers; which ones and why are in claude-plugins.sh. No
 REM typescript-lsp or ruby-lsp here: Claude Code can't spawn their .cmd/.bat

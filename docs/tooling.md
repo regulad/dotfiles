@@ -70,6 +70,7 @@ cask. A name match alone does not establish equivalent functionality.
 | TypeScript and language servers, Bitwarden CLI | Existing Homebrew providers; Catalina uses pnpm for the missing TypeScript language server |
 | Wrangler | `cloudflare-wrangler` on Ventura and later pins/mainline; pnpm on older pins whose formula is the legacy v1 CLI |
 | go-ios, Cloudflare cf | pnpm; no equivalent core formula (`cf` is an unrelated timestamp filter) |
+| Sentry CLI (`sentry`, added 2026-11-15) | pnpm; no core formula, only Sentry's `getsentry/tools` tap |
 | keydive, mangadex-downloader, pymobiledevice3, claude-swap, patatt | uv; no matching core formula |
 | yt-dlp | uv to preserve its pinned extras and `bgutil-ytdlp-pot-provider` |
 | keymap-renderer | uv to preserve the `regulad/keymap-renderer` fork |

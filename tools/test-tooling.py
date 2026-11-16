@@ -131,7 +131,7 @@ def mock_install(bash, work, script, kind, *, clean=False, failure="", version="
         assert any("bgutil-ytdlp-pot-provider" in c for c in installs)
     else:
         install = next(c for c in calls if c[:3] == ["pnpm", "i", "-g"])
-        assert set(install[3:]) == {"go-ios@latest", "cf@latest"}
+        assert set(install[3:]) == {"go-ios@latest", "cf@latest", "sentry@latest"}
         assert any("dangerouslyAllowAllBuilds" in c for c in calls) == (int(version.split('.')[0]) >= 10)
         assert ["node", browser_installer.as_posix()] in calls
         expected_prefix = work / "pnpm home" if int(version.split('.')[0]) >= 11 else work

@@ -11,6 +11,24 @@
       "args": ["duckduckgo-mcp-server"],
       "env": {}
     }
+{{- if not .useDummySecrets }},
+{{- /* Sentry's hosted MCP server, with the Bitwarden token that
+       ~/.sentryclirc carries too (private_dot_sentryclirc.tmpl). The server
+       takes a Sentry API token directly under the `Sentry-Bearer` scheme, and
+       a configured Authorization header turns Claude Code's OAuth fallback
+       off, so no machine signs in through /mcp. Stands in for the sentry
+       plugin's OAuth copy of the server, which claude-plugins.sh leaves out.
+       Unscoped (/mcp), as the CLIs are: the token's own access is the limit.
+       The same entry for Codex is in dot_codex/modify_private_config.toml. */}}
+{{- $sentry := bitwardenFields "item" "sentry.io" }}
+    "sentry": {
+      "type": "http",
+      "url": "https://mcp.sentry.dev/mcp",
+      "headers": {
+        "Authorization": {{ printf "Sentry-Bearer %s" $sentry.token.value | toJson }}
+      }
+    }
+{{- end }}
 {{- if and (eq .chezmoi.os "windows") (eq .chezmoi.arch "amd64") }},
 {{- /* Claude's own headless Ghidra: the pyghidra-mcp server that
        00-nt/503-pyghidra-mcp keeps running, gated the same way as that
