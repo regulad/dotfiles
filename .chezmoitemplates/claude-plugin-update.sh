@@ -20,7 +20,8 @@ claude plugin marketplace update || echo "warning: marketplace update failed" >&
 # path`), which needs Xcode 27, from macOS 26 on. Xcode arrives by hand
 # (060-mac-app-store leaves it alone), at any time, so it is installed here on
 # every apply once it is there, rather than by the bootstrap's one run per list
-# change. Xcode's "Allow External Agents" setting stays the user's to turn on.
+# change. Its server and skills need Xcode's MCP server in headless mode,
+# which 171-xcode-mcp-server turns on; Xcode still asks about each agent.
 if ! claude plugin list 2>/dev/null | grep -qF -- "xcode@"; then
 	xcode_major="$(xcodebuild -version 2>/dev/null | awk 'NR == 1 { split($2, v, "."); print v[1] }')"
 	if [ "${xcode_major:-0}" -ge 27 ] 2>/dev/null; then

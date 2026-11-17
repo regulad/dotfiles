@@ -1,0 +1,44 @@
+{{ template "posix-preamble.sh" . }}
+# Xcode's MCP server in headless mode: the Xcode Service that `xcrun
+# mcpbridge` talks to then runs without Xcode.app open, so Claude Code's xcode
+# plugin (claude-plugin-update.sh) and Codex's xcode server
+# (dot_codex/modify_private_config.toml) reach Xcode's tools whenever an agent
+# starts, and the plugin gets the skills Xcode exports only while its service
+# is reachable. `sudo xcrun mcp-server enable` turns it on, as `xcrun
+# mcp-server --help` describes; `status` reads it back without sudo, so sudo
+# is only asked for while it is off.
+#
+# Without --unsafe-always-allow-all-agents: Xcode still asks about each agent,
+# known by its code signature, the first time it opens or creates a project.
+# The flag would let anything that can start mcpbridge as the user use Xcode's
+# tools without being asked.
+#
+# Xcode comes by hand, at any time, so this looks for an mcp-server at run
+# time and skips without one. GUI-only, so masked on headless hosts
+# (.chezmoiignore.tmpl), the macOS CI runners among them, which carry Xcode
+# and passwordless sudo.
+
+if ! xcrun --find mcp-server >/dev/null 2>&1; then
+	echo "debug: the active Xcode has no mcp-server; nothing to enable" >&2
+	exit 0
+fi
+
+headless_on() {
+	xcrun mcp-server status 2>/dev/null | grep -q '^Permission: enabled'
+}
+
+if headless_on; then
+	echo "debug: Xcode's MCP server is in headless mode" >&2
+	exit 0
+fi
+
+if ! can_sudo; then
+	echo "warning: Xcode's MCP server is not in headless mode and sudo isn't available; run: sudo xcrun mcp-server enable" >&2
+	exit 0
+fi
+echo "notice: turning on Xcode's MCP server headless mode; Xcode still asks about each agent" >&2
+sudo xcrun mcp-server enable
+if ! headless_on; then
+	echo "error: Xcode's MCP server is still not in headless mode after enabling it" >&2
+	exit 1
+fi

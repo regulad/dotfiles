@@ -28,7 +28,7 @@ and OneSignal's are.
 | MDN | configured directly, with its analytics opt-out header | configured directly, likewise | nothing; Mozilla labels it experimental |
 | Docker docs | docker-skills plugin, from Docker's marketplace | docker-skills plugin, likewise | nothing |
 | Chrome DevTools (local, npx) | chrome-devtools-mcp plugin, from the DevTools team's marketplace | configured directly: the plugin's launch line only works in Claude Code | nothing |
-| Xcode (macOS 26 on, local) | xcode plugin, built from the installed Xcode 27 by `claude-plugin-update.sh` | configured directly, `xcrun mcpbridge` | nothing; Xcode's "Allow External Agents" setting |
+| Xcode (macOS 26 on, local) | xcode plugin, built from the installed Xcode 27 by `claude-plugin-update.sh` | configured directly, `xcrun mcpbridge` | nothing; Xcode's MCP server in headless mode (`171-xcode-mcp-server`), and Xcode asks about each agent once |
 | DuckDuckGo search | configured directly | none | nothing |
 | Ghidra (x64 Windows) | configured directly, local | none | nothing |
 
