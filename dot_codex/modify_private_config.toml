@@ -5,6 +5,37 @@
 {{- $config = fromToml .chezmoi.stdin -}}
 {{- end -}}
 {{- $config = $config | setValueAtPath "tui.vim_mode_default" true -}}
+{{- /* MDN's hosted server, with the analytics opt-out header; see Claude
+       Code's entry in .chezmoitemplates/claude-code-config.json. */ -}}
+{{- $config = $config | setValueAtPath "mcp_servers.mdn" (dict
+      "url" "https://mcp.mdn.mozilla.net/"
+      "http_headers" (dict "X-Moz-1st-Party-Data-Opt-Out" "1")) -}}
+{{- /* Chrome DevTools' MCP server. Claude Code has it from its plugin
+       (claude-plugins.sh), whose launch line needs Claude Code to fill in
+       ${CLAUDE_PLUGIN_DATA}, so Codex runs the server itself. Codex starts a
+       stdio server with only a short list of the environment's variables,
+       which leaves out .commonprofile's CHROME_DEVTOOLS_MCP_*: usage
+       statistics are off by the flag instead, update checks by the env here.
+       On Windows npx is a .cmd shim, run through cmd /c, and Chrome needs
+       SystemRoot and PROGRAMFILES, as the server's README sets them for
+       Codex. A first start downloads the package, which can take longer than
+       Codex's default 10 seconds. */ -}}
+{{- $devtoolsArgs := list "-y" "chrome-devtools-mcp@latest" "--no-usage-statistics" -}}
+{{- $devtools := dict "command" "npx" "args" $devtoolsArgs
+      "env" (dict "CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS" "1")
+      "startup_timeout_sec" 60 -}}
+{{- if eq .chezmoi.os "windows" -}}
+{{- $devtools = merge (dict "command" "cmd" "args" (concat (list "/c" "npx") $devtoolsArgs)
+      "env" (dict "CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS" "1" "SystemRoot" (env "SystemRoot") "PROGRAMFILES" (env "ProgramFiles"))) $devtools -}}
+{{- end -}}
+{{- $config = $config | setValueAtPath "mcp_servers.chrome-devtools" $devtools -}}
+{{- if and (eq .chezmoi.os "darwin") (ge (int .macos.major) 26) -}}
+{{- /* Xcode's MCP bridge (Xcode 26.3 on), the server Claude Code's xcode
+       plugin carries (claude-plugin-update.sh), gated on the same macOS.
+       Xcode itself arrives by hand, and its "Allow External Agents" setting
+       stays the user's to turn on. */ -}}
+{{- $config = $config | setValueAtPath "mcp_servers.xcode" (dict "command" "xcrun" "args" (list "mcpbridge")) -}}
+{{- end -}}
 {{- if not .useDummySecrets -}}
 {{- /* Sentry's hosted MCP server with the Bitwarden token, as Claude Code's
        entry in .chezmoitemplates/claude-code-config.json explains. A

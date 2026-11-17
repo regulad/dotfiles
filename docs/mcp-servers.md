@@ -5,7 +5,8 @@ Claude Code and Codex get their MCP servers from three places:
 - Configured directly: `.chezmoitemplates/claude-code-config.json`, the
   `mcpServers` slice of `~/.claude.json`, and `dot_codex/modify_private_config.toml`,
   the `[mcp_servers]` of `~/.codex/config.toml`. Credentials come from
-  Bitwarden, and these entries are left out under `useDummySecrets`.
+  Bitwarden, and the entries that need one are left out under
+  `useDummySecrets`.
 - Plugins: `.chezmoitemplates/claude-plugins.sh` and `codex-plugins.sh`.
 - claude.ai connectors, which this repository does not manage.
 
@@ -23,6 +24,11 @@ and OneSignal's are.
 | Cloudflare | cloudflare plugin | cloudflare plugin | OAuth |
 | Vercel | vercel plugin | OpenAI's curated vercel plugin | OAuth; Vercel's server takes no token |
 | OneSignal | onesignal plugin, from OneSignal's marketplace | onesignal plugin, from the same marketplace; `codex mcp login` fails against the server, so it stays signed out | OAuth; OneSignal's [documentation](https://documentation.onesignal.com/docs/en/model-context-protocol) says there is no API key to configure |
+| Microsoft Learn | microsoft-docs plugin, from MicrosoftDocs' marketplace | microsoft-docs plugin, from the same repo's Codex marketplace | nothing |
+| MDN | configured directly, with its analytics opt-out header | configured directly, likewise | nothing; Mozilla labels it experimental |
+| Docker docs | docker-skills plugin, from Docker's marketplace | docker-skills plugin, likewise | nothing |
+| Chrome DevTools (local, npx) | chrome-devtools-mcp plugin, from the DevTools team's marketplace | configured directly: the plugin's launch line only works in Claude Code | nothing |
+| Xcode (macOS 26 on, local) | xcode plugin, built from the installed Xcode 27 by `claude-plugin-update.sh` | configured directly, `xcrun mcpbridge` | nothing; Xcode's "Allow External Agents" setting |
 | DuckDuckGo search | configured directly | none | nothing |
 | Ghidra (x64 Windows) | configured directly, local | none | nothing |
 

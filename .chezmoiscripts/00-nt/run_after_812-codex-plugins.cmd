@@ -28,6 +28,13 @@ call :add_marketplace wakatime wakatime/codex-cli-wakatime
 call :add_marketplace cloudflare cloudflare/skills
 call :add_marketplace onesignal OneSignal/onesignal-agent-plugin
 call :add_marketplace googlechrome GoogleChrome/modern-web-guidance
+call :add_marketplace microsoftdocs-local MicrosoftDocs/mcp
+call :add_marketplace trailofbits trailofbits/skills
+call :add_marketplace astral-sh astral-sh/agent-plugins
+call :add_marketplace docker docker/skills
+call :add_marketplace typescript-skills microsoft/typescript-skills
+call :add_marketplace android-skills android/skills
+call :add_marketplace dotnet-agent-skills dotnet/skills
 REM OpenAI's curated marketplace is openai-curated under a ChatGPT login,
 REM openai-api-curated otherwise, and absent until Codex's first interactive
 REM start syncs it.
@@ -39,6 +46,15 @@ call :add_plugin codex-cli-wakatime wakatime
 call :add_plugin cloudflare cloudflare
 call :add_plugin onesignal onesignal
 call :add_plugin modern-web-guidance googlechrome
+call :add_plugin microsoft-docs microsoftdocs-local
+call :add_plugin astral astral-sh
+call :add_plugin docker-skills docker
+call :add_plugin typescript typescript-skills
+call :add_plugin android-skills android-skills
+REM Windows only, as in 810: the .NET SDK is installed only here.
+call :add_plugin dotnet dotnet-agent-skills
+call :add_plugin dotnet-upgrade dotnet-agent-skills
+for %%P in (c-review rust-review modern-cpp static-analysis sharp-edges variant-analysis differential-review supply-chain-risk-auditor testing-handbook-skills property-based-testing dwarf-expert yara-authoring) do call :add_plugin %%P trailofbits
 if defined CURATED (
     call :add_plugin vercel %CURATED%
 ) else (

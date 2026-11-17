@@ -109,6 +109,15 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Playwright's skill, copied from the CLI just updated into ~/.claude/skills
+REM and ~/.agents/skills; js-tooling.sh says why -g.
+where playwright-cli >nul 2>&1
+if not errorlevel 1 (
+    echo debug: installing Playwright's skill for Claude Code and Codex 1>&2
+    call playwright-cli install --skills -g >nul || echo warning: could not install Playwright's skill for Claude Code 1>&2
+    call playwright-cli install --skills=agents -g >nul || echo warning: could not install Playwright's skill for Codex 1>&2
+)
+
 goto :eof
 
 :go_ios_build_failed

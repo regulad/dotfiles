@@ -36,6 +36,9 @@ Windows Registry Editor Version 5.00
 "TURBO_TELEMETRY_DISABLED"="1"
 "EVE_TELEMETRY_DISABLED"="1"
 "DISABLE_TELEMETRY"="1"
+"CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS"="1"
+"CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS"="1"
+"DOTNET_CLI_TELEMETRY_OPTOUT"="1"
 
 ; Variables for WSL's Linux side. WSL copies a Windows variable into a session
 ; only when WSLENV names it, and with /u it does so whenever Windows starts WSL:

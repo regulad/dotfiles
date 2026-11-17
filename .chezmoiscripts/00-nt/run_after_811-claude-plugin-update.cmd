@@ -25,7 +25,8 @@ REM Kept in step with the bootstrap's declared plugins. `claude plugin update`
 REM needs an explicit name (there is no update-all), and the guard skips any a
 REM given machine has not installed; it matches "plugin@", as the bootstrap's
 REM does, so that sentry does not match sentry-cli.
-for %%P in (claude-code-wakatime ralph-loop codex vercel cloudflare sentry sentry-cli supabase onesignal modern-web-guidance clangd-lsp gopls-lsp rust-analyzer-lsp jdtls-lsp) do call :update_plugin %%P
+for %%P in (claude-code-wakatime ralph-loop codex vercel cloudflare sentry sentry-cli supabase onesignal modern-web-guidance microsoft-docs chrome-devtools-mcp astral docker-skills typescript android-skills dotnet dotnet-upgrade clangd-lsp gopls-lsp rust-analyzer-lsp jdtls-lsp) do call :update_plugin %%P
+for %%P in (c-review rust-review modern-cpp static-analysis sharp-edges insecure-defaults variant-analysis differential-review supply-chain-risk-auditor testing-handbook-skills property-based-testing dwarf-expert yara-authoring) do call :update_plugin %%P
 
 endlocal
 exit /b 0

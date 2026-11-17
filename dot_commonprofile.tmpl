@@ -311,6 +311,12 @@ export EVE_TELEMETRY_DISABLED=1
 # modern-web-guidance's CLI, run by its skill through npx, reads only this.
 # Claude Code reads it as one more name for DO_NOT_TRACK, so changes nothing.
 export DISABLE_TELEMETRY=1
+# Chrome DevTools' MCP server (the chrome-devtools-mcp plugin): usage statistics
+# and npm update checks. Its CrUX lookups have only a flag, and stay on.
+export CHROME_DEVTOOLS_MCP_NO_USAGE_STATISTICS=1
+export CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS=1
+# The dotnet CLI, which the dotnet plugin's language server runs through.
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
 export HOMEBREW_NO_ENV_HINTS=1
 
 # keychain is the fallback for a host with no agent socket. Never on WSL: the

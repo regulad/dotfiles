@@ -104,5 +104,16 @@ done
 pnpm i -g "${PNPM_CLI_PACKAGES[@]}"
 pnpm update --global
 
+# Playwright's CLI keeps its skill in the package. `install --skills -g` copies
+# that into ~/.claude/skills (Claude Code's), and with =agents into
+# ~/.agents/skills (Codex's), so it matches the CLI just updated. -g skips what
+# a plain `install` also does: a workspace in the current directory and a
+# browser download.
+if command -v playwright-cli >/dev/null 2>&1; then
+	echo "debug: installing Playwright's skill for Claude Code and Codex" >&2
+	playwright-cli install --skills -g >/dev/null || echo "warning: could not install Playwright's skill for Claude Code" >&2
+	playwright-cli install --skills=agents -g >/dev/null || echo "warning: could not install Playwright's skill for Codex" >&2
+fi
+
 export DENO_INSTALL="$HOME/.deno"
 export PATH="$DENO_INSTALL/bin:$PATH"

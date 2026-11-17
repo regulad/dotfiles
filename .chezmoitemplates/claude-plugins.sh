@@ -68,15 +68,42 @@ fi
 # first looks guides up at use time with `npx modern-web-guidance@latest`,
 # whose telemetry is turned off by DISABLE_TELEMETRY in .commonprofile.
 #
+# The rest come from their makers' own marketplaces, the ones their READMEs
+# name, and are in Codex too (codex-plugins.sh) unless said otherwise:
+# - microsoft-docs (MicrosoftDocs/mcp): skills plus Microsoft Learn's MCP
+#   server, https://learn.microsoft.com/api/mcp, which takes no sign-in.
+# - chrome-devtools-mcp (ChromeDevTools/chrome-devtools-mcp, Claude Code only;
+#   claude-plugins-official pins an older copy): debugging and performance
+#   skills plus the DevTools MCP server, which npx runs at the plugin's own
+#   version. Its usage statistics and update checks are off through the
+#   CHROME_DEVTOOLS_MCP_* variables in .commonprofile; its CrUX lookups, which
+#   send the URLs it traces to Google's CrUX API, are left on.
+# - trailofbits (trailofbits/skills): only the security review, static
+#   analysis, fuzzing and supply-chain plugins listed below. Others in it put
+#   shims on PATH or hook every stop (modern-python, gh-cli, fp-check), or fetch
+#   an unpinned server at use time (zeroize-audit). Their reviewer agents and
+#   slash commands are Claude Code's alone.
+# - astral (astral-sh/agent-plugins): ruff, ty and uv skills, plus ty as the
+#   Python language server, run as `uvx ty@latest server`.
+# - docker-skills (docker/skills): skills plus Docker's docs MCP server, which
+#   takes no sign-in.
+# - typescript (microsoft/typescript-skills) and android-skills
+#   (android/skills): skills only.
+# The Windows list adds dotnet and dotnet-upgrade (dotnet/skills): the .NET SDK
+# is installed only there (00-nt/100-winget), and the dotnet plugin's C#
+# language server runs through `dotnet dnx`, which the SDK has from 10 on.
+# xcode is installed by claude-plugin-update.sh on Macs, not from this list.
+#
 # The *-lsp plugins give Claude the language servers nvim's init.lua enables:
 # diagnostics after each edit, plus a read-only LSP tool for definitions and
 # references. Each is only an .lsp.json naming the server; the binary comes
 # from the package hooks, and one not on PATH just shows under /plugin ->
-# Errors until it is. Python and Kotlin are left out because their official
-# plugins run servers nvim doesn't (pyright for ty/ruff, JetBrains kotlin-lsp
-# for fwcd's). The Windows list drops typescript-lsp and ruby-lsp: Claude
-# Code spawns servers without a shell, which can't run their .cmd/.bat
-# wrappers (https://github.com/anthropics/claude-code/issues/51191).
+# Errors until it is. Python's comes from astral above instead, since the
+# official pyright-lsp runs pyright, not the ty nvim runs; Kotlin is left out
+# because its official plugin runs JetBrains kotlin-lsp, not fwcd's. The
+# Windows list drops typescript-lsp and ruby-lsp: Claude Code spawns servers
+# without a shell, which can't run their .cmd/.bat wrappers
+# (https://github.com/anthropics/claude-code/issues/51191).
 MARKETPLACES=(
 	"wakatime|wakatime/claude-code-wakatime"
 	"claude-plugins-official|anthropics/claude-plugins-official"
@@ -84,6 +111,13 @@ MARKETPLACES=(
 	"cloudflare|cloudflare/skills"
 	"onesignal|OneSignal/onesignal-agent-plugin"
 	"googlechrome|GoogleChrome/modern-web-guidance"
+	"microsoft-docs-marketplace|MicrosoftDocs/mcp"
+	"chrome-devtools-plugins|ChromeDevTools/chrome-devtools-mcp"
+	"trailofbits|trailofbits/skills"
+	"astral-sh|astral-sh/agent-plugins"
+	"docker|docker/skills"
+	"typescript-skills|microsoft/typescript-skills"
+	"android-skills|android/skills"
 )
 PLUGINS=(
 	"claude-code-wakatime|wakatime"
@@ -96,6 +130,25 @@ PLUGINS=(
 	"supabase|claude-plugins-official"
 	"onesignal|onesignal"
 	"modern-web-guidance|googlechrome"
+	"microsoft-docs|microsoft-docs-marketplace"
+	"chrome-devtools-mcp|chrome-devtools-plugins"
+	"c-review|trailofbits"
+	"rust-review|trailofbits"
+	"modern-cpp|trailofbits"
+	"static-analysis|trailofbits"
+	"sharp-edges|trailofbits"
+	"insecure-defaults|trailofbits"
+	"variant-analysis|trailofbits"
+	"differential-review|trailofbits"
+	"supply-chain-risk-auditor|trailofbits"
+	"testing-handbook-skills|trailofbits"
+	"property-based-testing|trailofbits"
+	"dwarf-expert|trailofbits"
+	"yara-authoring|trailofbits"
+	"astral|astral-sh"
+	"docker-skills|docker"
+	"typescript|typescript-skills"
+	"android-skills|android-skills"
 	"clangd-lsp|claude-plugins-official"
 	"gopls-lsp|claude-plugins-official"
 	"rust-analyzer-lsp|claude-plugins-official"

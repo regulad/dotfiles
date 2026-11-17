@@ -106,6 +106,13 @@ brew = { default = "", mainline = "supabase" }
 macosMin = 13
 
 [[pnpmTools.packages]]
+# Playwright's agent CLI, `playwright-cli`, which the Playwright team points
+# coding agents at in place of its MCP server. It carries its own skill, which
+# the installers copy into ~/.claude/skills and ~/.agents/skills after each
+# update (js-tooling.sh, 00-nt/570). Plain JavaScript, no core formula.
+pnpm = "@playwright/cli"
+
+[[pnpmTools.packages]]
 # The Alexa Skills Kit CLI, `ask`; its config is
 # .chezmoitemplates/ask-cli-config.json. Every era has the formula: 2.30.7
 # from Monterey's snapshot on, 2.28.0 on Catalina's, 2.30.5 on Big Sur's.

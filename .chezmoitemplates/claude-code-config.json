@@ -10,6 +10,18 @@
       "command": "uvx",
       "args": ["duckduckgo-mcp-server"],
       "env": {}
+    },
+{{- /* MDN's hosted MCP server (mdn/mcp): MDN's search, pages and browser
+       compatibility data, with no sign-in. Mozilla labels it experimental and
+       keeps queries for first-party analytics unless this header is sent, as
+       its README says. The repo carries no marketplace, so there is no plugin
+       to install. Codex's entry is in dot_codex/modify_private_config.toml. */}}
+    "mdn": {
+      "type": "http",
+      "url": "https://mcp.mdn.mozilla.net/",
+      "headers": {
+        "X-Moz-1st-Party-Data-Opt-Out": "1"
+      }
     }
 {{- if not .useDummySecrets }},
 {{- /* Sentry's hosted MCP server, with the Bitwarden token that

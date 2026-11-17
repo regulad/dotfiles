@@ -43,6 +43,9 @@ $WingetPackages = @(
     'EclipseAdoptium.Temurin.25.JDK'
     'EclipseAdoptium.Temurin.21.JDK'
     'Microsoft.DotNet.SDK.8'
+    # Beside 8, not instead: the dotnet Claude Code plugin's C# language server
+    # runs through `dotnet dnx`, which the SDK has only from 10 on (810).
+    'Microsoft.DotNet.SDK.10'
     'OpenJS.NodeJS.LTS'
     'Microsoft.PowerShell'
     'WinFsp.WinFsp'

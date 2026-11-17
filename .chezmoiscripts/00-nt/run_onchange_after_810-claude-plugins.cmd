@@ -26,6 +26,14 @@ call :add_marketplace openai-codex openai/codex-plugin-cc
 call :add_marketplace cloudflare cloudflare/skills
 call :add_marketplace onesignal OneSignal/onesignal-agent-plugin
 call :add_marketplace googlechrome GoogleChrome/modern-web-guidance
+call :add_marketplace microsoft-docs-marketplace MicrosoftDocs/mcp
+call :add_marketplace chrome-devtools-plugins ChromeDevTools/chrome-devtools-mcp
+call :add_marketplace trailofbits trailofbits/skills
+call :add_marketplace astral-sh astral-sh/agent-plugins
+call :add_marketplace docker docker/skills
+call :add_marketplace typescript-skills microsoft/typescript-skills
+call :add_marketplace android-skills android/skills
+call :add_marketplace dotnet-agent-skills dotnet/skills
 
 call :install_plugin claude-code-wakatime wakatime
 call :install_plugin ralph-loop claude-plugins-official
@@ -37,6 +45,19 @@ call :install_plugin sentry-cli claude-plugins-official
 call :install_plugin supabase claude-plugins-official
 call :install_plugin onesignal onesignal
 call :install_plugin modern-web-guidance googlechrome
+call :install_plugin microsoft-docs microsoft-docs-marketplace
+call :install_plugin chrome-devtools-mcp chrome-devtools-plugins
+call :install_plugin astral astral-sh
+call :install_plugin docker-skills docker
+call :install_plugin typescript typescript-skills
+call :install_plugin android-skills android-skills
+REM Windows only: the .NET SDK is installed only here (100-winget), and the
+REM dotnet plugin's C# language server needs SDK 10's `dotnet dnx`.
+call :install_plugin dotnet dotnet-agent-skills
+call :install_plugin dotnet-upgrade dotnet-agent-skills
+
+REM Trail of Bits' security plugins; which ones and why are in claude-plugins.sh.
+for %%P in (c-review rust-review modern-cpp static-analysis sharp-edges insecure-defaults variant-analysis differential-review supply-chain-risk-auditor testing-handbook-skills property-based-testing dwarf-expert yara-authoring) do call :install_plugin %%P trailofbits
 
 REM Language servers; which ones and why are in claude-plugins.sh. No
 REM typescript-lsp or ruby-lsp here: Claude Code can't spawn their .cmd/.bat

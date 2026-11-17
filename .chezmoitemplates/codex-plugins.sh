@@ -18,11 +18,23 @@ fi
 #   cloudflare  https://github.com/cloudflare/skills#codex
 #   onesignal   https://github.com/OneSignal/onesignal-agent-plugin#install-in-codex
 #   googlechrome https://github.com/GoogleChrome/modern-web-guidance
+# and the others claude-plugins.sh takes from their makers, under the names
+# their Codex manifests give: MicrosoftDocs' is microsoftdocs-local there.
+# trailofbits has no Codex manifest; Codex reads its Claude one, as its README
+# says. chrome-devtools-plugins is left out: its plugin's server runs npx with
+# --prefix ${CLAUDE_PLUGIN_DATA}, which only Claude Code fills in, so Codex has
+# the server itself in dot_codex/modify_private_config.toml instead.
 MARKETPLACES=(
 	"wakatime|wakatime/codex-cli-wakatime"
 	"cloudflare|cloudflare/skills"
 	"onesignal|OneSignal/onesignal-agent-plugin"
 	"googlechrome|GoogleChrome/modern-web-guidance"
+	"microsoftdocs-local|MicrosoftDocs/mcp"
+	"trailofbits|trailofbits/skills"
+	"astral-sh|astral-sh/agent-plugins"
+	"docker|docker/skills"
+	"typescript-skills|microsoft/typescript-skills"
+	"android-skills|android/skills"
 )
 # "plugin|marketplace". The marketplace "curated" stands for OpenAI's curated
 # one, resolved below. vercel comes from there because that is where Vercel's
@@ -40,6 +52,10 @@ MARKETPLACES=(
 # supabase plugin's below, but with no ChatGPT app behind it there is nothing
 # to sign in to, and Codex offers its skills straight after `plugin add`.
 #
+# The Trail of Bits plugins are claude-plugins.sh's, less insecure-defaults,
+# which is only a slash command, and Codex takes no commands from a Claude
+# plugin. Codex gets astral's skills but not its language server.
+#
 # The curated supabase plugin is left out: its authPolicy is ON_INSTALL, so
 # Codex withholds its skills until its ChatGPT app is signed in to, on every
 # machine. Supabase's server is configured directly with the Bitwarden token
@@ -50,6 +66,23 @@ PLUGINS=(
 	"vercel|curated"
 	"onesignal|onesignal"
 	"modern-web-guidance|googlechrome"
+	"microsoft-docs|microsoftdocs-local"
+	"c-review|trailofbits"
+	"rust-review|trailofbits"
+	"modern-cpp|trailofbits"
+	"static-analysis|trailofbits"
+	"sharp-edges|trailofbits"
+	"variant-analysis|trailofbits"
+	"differential-review|trailofbits"
+	"supply-chain-risk-auditor|trailofbits"
+	"testing-handbook-skills|trailofbits"
+	"property-based-testing|trailofbits"
+	"dwarf-expert|trailofbits"
+	"yara-authoring|trailofbits"
+	"astral|astral-sh"
+	"docker-skills|docker"
+	"typescript|typescript-skills"
+	"android-skills|android-skills"
 )
 
 failed=
