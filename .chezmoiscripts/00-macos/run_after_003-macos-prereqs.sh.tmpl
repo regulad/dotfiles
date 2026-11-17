@@ -22,6 +22,14 @@
 # Accepted for the active Xcode, or else for /Applications/Xcode.app, which
 # 125-theos makes active later in the same apply.
 #
+# That Xcode's first-launch packages, which each Xcode update brings anew and
+# which the license has to be accepted for. They install system frameworks
+# outside the app, CoreDevice's under /Library/Developer among them. Xcode.app
+# offers them when it is opened; one never opened since an update keeps the
+# old ones, and the Xcode Service behind its agent tools (`xcrun mcpbridge`)
+# then crashes on a symbol only the new ones have whenever an agent lists its
+# tools, as Xcode 27's did on 2026-11-17 with 26's CoreDevice.
+#
 # Rosetta 2 lives here too, on Apple Silicon: the other Apple-shipped
 # prerequisite that comes through softwareupdate, needed before any Intel-only
 # cask or binary is run.
@@ -125,6 +133,32 @@ if [ -x "$xcodebuild" ]; then
 			exit 1
 		fi
 	fi
+
+	# -checkFirstLaunchStatus exits 0 with nothing to install and 69
+	# (EX_UNAVAILABLE) with packages pending; an Xcode too old to know the
+	# option fails some other way, and is left alone. Not fatal: nothing after
+	# this script needs the packages, only Xcode's own tools do.
+	first_launch=0
+	"$xcodebuild" -checkFirstLaunchStatus &>/dev/null || first_launch=$?
+	case "$first_launch" in
+		0)
+			echo "debug: Xcode first-launch packages installed for ${xcode_dev%/Contents/Developer}" >&2
+			;;
+		69)
+			if ! can_sudo; then
+				echo "warning: Xcode's first-launch packages are not installed and sudo isn't available; run: sudo $xcodebuild -runFirstLaunch" >&2
+			else
+				echo "notice: installing Xcode's first-launch packages for ${xcode_dev%/Contents/Developer}" >&2
+				sudo "$xcodebuild" -runFirstLaunch
+				if ! "$xcodebuild" -checkFirstLaunchStatus &>/dev/null; then
+					echo "warning: Xcode's first-launch packages are still not installed; run: sudo $xcodebuild -runFirstLaunch" >&2
+				fi
+			fi
+			;;
+		*)
+			echo "debug: ${xcode_dev%/Contents/Developer} cannot report its first-launch status (exit $first_launch), skipping it" >&2
+			;;
+	esac
 fi
 
 if [ "$(uname -m)" = "arm64" ]; then
