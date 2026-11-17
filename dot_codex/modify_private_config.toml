@@ -33,8 +33,10 @@
 {{- /* Xcode's MCP bridge (Xcode 26.3 on), the server Claude Code's xcode
        plugin carries (claude-plugin-update.sh), gated on the same macOS.
        Xcode itself arrives by hand, and its "Allow External Agents" setting
-       stays the user's to turn on. */ -}}
-{{- $config = $config | setValueAtPath "mcp_servers.xcode" (dict "command" "xcrun" "args" (list "mcpbridge")) -}}
+       stays the user's to turn on. The bridge starts Xcode Service when none
+       runs, which on overture took over 30 seconds to answer its first tool
+       listing: past Codex's default 10, as Chrome DevTools' first start is. */ -}}
+{{- $config = $config | setValueAtPath "mcp_servers.xcode" (dict "command" "xcrun" "args" (list "mcpbridge") "startup_timeout_sec" 60) -}}
 {{- end -}}
 {{- if not .useDummySecrets -}}
 {{- /* Sentry's hosted MCP server with the Bitwarden token, as Claude Code's
