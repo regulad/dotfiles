@@ -60,6 +60,14 @@ fi
 # which takes OAuth and nothing else. That server is left signed out, as
 # Vercel's is: no reminder asks for it, and /mcp signs in where it is wanted.
 #
+# modern-web-guidance comes from Google Chrome's own marketplace, googlechrome,
+# as its README says (https://github.com/GoogleChrome/modern-web-guidance);
+# claude-plugins-official pins it to v0.0.194, where Anthropic stopped updating
+# third-party plugins there on 2026-10-12. It is two skills, current web
+# platform practice and Chrome extensions, with no server and no hooks. The
+# first looks guides up at use time with `npx modern-web-guidance@latest`,
+# whose telemetry is turned off by DISABLE_TELEMETRY in .commonprofile.
+#
 # The *-lsp plugins give Claude the language servers nvim's init.lua enables:
 # diagnostics after each edit, plus a read-only LSP tool for definitions and
 # references. Each is only an .lsp.json naming the server; the binary comes
@@ -75,6 +83,7 @@ MARKETPLACES=(
 	"openai-codex|openai/codex-plugin-cc"
 	"cloudflare|cloudflare/skills"
 	"onesignal|OneSignal/onesignal-agent-plugin"
+	"googlechrome|GoogleChrome/modern-web-guidance"
 )
 PLUGINS=(
 	"claude-code-wakatime|wakatime"
@@ -86,6 +95,7 @@ PLUGINS=(
 	"sentry-cli|claude-plugins-official"
 	"supabase|claude-plugins-official"
 	"onesignal|onesignal"
+	"modern-web-guidance|googlechrome"
 	"clangd-lsp|claude-plugins-official"
 	"gopls-lsp|claude-plugins-official"
 	"rust-analyzer-lsp|claude-plugins-official"

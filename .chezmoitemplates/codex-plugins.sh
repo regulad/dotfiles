@@ -17,10 +17,12 @@ fi
 #               ~/.wakatime.cfg, already provisioned by this repository.
 #   cloudflare  https://github.com/cloudflare/skills#codex
 #   onesignal   https://github.com/OneSignal/onesignal-agent-plugin#install-in-codex
+#   googlechrome https://github.com/GoogleChrome/modern-web-guidance
 MARKETPLACES=(
 	"wakatime|wakatime/codex-cli-wakatime"
 	"cloudflare|cloudflare/skills"
 	"onesignal|OneSignal/onesignal-agent-plugin"
+	"googlechrome|GoogleChrome/modern-web-guidance"
 )
 # "plugin|marketplace". The marketplace "curated" stands for OpenAI's curated
 # one, resolved below. vercel comes from there because that is where Vercel's
@@ -32,6 +34,12 @@ MARKETPLACES=(
 # (claude-plugins.sh); OneSignal's README says `codex mcp login onesignal`
 # fails against it for now, so in Codex the plugin is its skills.
 #
+# modern-web-guidance comes from Google Chrome's marketplace, the curated one
+# having no copy. It is skills only, as in Claude Code (claude-plugins.sh).
+# Its marketplace entry's authPolicy is ON_INSTALL too, like the curated
+# supabase plugin's below, but with no ChatGPT app behind it there is nothing
+# to sign in to, and Codex offers its skills straight after `plugin add`.
+#
 # The curated supabase plugin is left out: its authPolicy is ON_INSTALL, so
 # Codex withholds its skills until its ChatGPT app is signed in to, on every
 # machine. Supabase's server is configured directly with the Bitwarden token
@@ -41,6 +49,7 @@ PLUGINS=(
 	"cloudflare|cloudflare"
 	"vercel|curated"
 	"onesignal|onesignal"
+	"modern-web-guidance|googlechrome"
 )
 
 failed=

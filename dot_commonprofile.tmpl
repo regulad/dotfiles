@@ -308,6 +308,9 @@ export VERCEL_SANDBOX_TELEMETRY_DISABLED=1
 export NEXT_TELEMETRY_DISABLED=1  # next, next-devtools-mcp (which wants exactly 1)
 export TURBO_TELEMETRY_DISABLED=1
 export EVE_TELEMETRY_DISABLED=1
+# modern-web-guidance's CLI, run by its skill through npx, reads only this.
+# Claude Code reads it as one more name for DO_NOT_TRACK, so changes nothing.
+export DISABLE_TELEMETRY=1
 export HOMEBREW_NO_ENV_HINTS=1
 
 # keychain is the fallback for a host with no agent socket. Never on WSL: the

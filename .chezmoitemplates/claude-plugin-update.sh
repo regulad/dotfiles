@@ -18,7 +18,7 @@ claude plugin marketplace update || echo "warning: marketplace update failed" >&
 # a given machine has not installed; it matches "plugin@", as the bootstrap's
 # does, so that sentry does not match sentry-cli.
 for plugin in claude-code-wakatime ralph-loop codex vercel cloudflare sentry sentry-cli supabase onesignal \
-	clangd-lsp gopls-lsp rust-analyzer-lsp jdtls-lsp typescript-lsp ruby-lsp; do
+	modern-web-guidance clangd-lsp gopls-lsp rust-analyzer-lsp jdtls-lsp typescript-lsp ruby-lsp; do
 	if claude plugin list 2>/dev/null | grep -qF -- "$plugin@"; then
 		echo "debug: updating plugin $plugin" >&2
 		claude plugin update "$plugin" || echo "warning: failed to update $plugin" >&2

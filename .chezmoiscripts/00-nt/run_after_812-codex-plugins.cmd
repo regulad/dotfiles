@@ -27,6 +27,7 @@ if errorlevel 1 (
 call :add_marketplace wakatime wakatime/codex-cli-wakatime
 call :add_marketplace cloudflare cloudflare/skills
 call :add_marketplace onesignal OneSignal/onesignal-agent-plugin
+call :add_marketplace googlechrome GoogleChrome/modern-web-guidance
 REM OpenAI's curated marketplace is openai-curated under a ChatGPT login,
 REM openai-api-curated otherwise, and absent until Codex's first interactive
 REM start syncs it.
@@ -37,6 +38,7 @@ if not defined CURATED findstr /B /L /C:"openai-api-curated " "%CODEX_PLUGIN_LIS
 call :add_plugin codex-cli-wakatime wakatime
 call :add_plugin cloudflare cloudflare
 call :add_plugin onesignal onesignal
+call :add_plugin modern-web-guidance googlechrome
 if defined CURATED (
     call :add_plugin vercel %CURATED%
 ) else (
