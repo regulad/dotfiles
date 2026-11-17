@@ -18,6 +18,12 @@
 # the usual dynamic check, is not in homebrew-core and does not build on
 # current macOS. The existence check is the guard.
 #
+# Known and left as it is: pam_reattach.so is loaded from brew's prefix, which
+# the user owns. Anything running as the user can replace it, and sudo then
+# runs that code as root on its next use, `optional` or not: a way to root
+# without Touch ID or the agent. pam_rssh below is kept out of the user's
+# reach for exactly this reason; pam_reattach is not, as of 2026-11-17.
+#
 # pam_rssh (https://github.com/z4yx/pam_rssh): sudo authenticated by a key in
 # the ssh-agent. Over ssh that is the agent forwarded from the client, which
 # signs pam_rssh's challenge after asking there (Bitwarden's approval prompt):
@@ -99,6 +105,15 @@ PAM_RSSH_WANTED_KEYS={{ include "dot_ssh/private_readonly_id_rsa3072.pub" | trim
 # sudo resets the environment before PAM runs; this keeps the agent's socket
 # for the module, as pam_rssh's README says.
 PAM_RSSH_WANTED_SUDOERS='Defaults env_keep += "SSH_AUTH_SOCK"'
+# `sudo -n` refuses before PAM runs at all, unless noninteractive_auth (sudo
+# 1.9.10 on) lets it authenticate through modules that need no typing, as
+# pam_rssh does: with it, `sudo -n` over ssh asks the forwarded agent too.
+# Global to sudo, so at the machine `sudo -n` can bring up Touch ID as well.
+# An older sudo's visudo would reject the line, so it is left out there.
+if sudo -V 2>/dev/null | awk 'NR == 1 { split($3, v, "[.p]"); ok = v[1] > 1 || (v[1] == 1 && (v[2] > 9 || (v[2] == 9 && v[3] >= 10))) } END { exit !ok }'; then
+	PAM_RSSH_WANTED_SUDOERS="$PAM_RSSH_WANTED_SUDOERS
+Defaults noninteractive_auth"
+fi
 pam_rssh_cache="${XDG_CACHE_HOME:-$HOME/.cache}/pam_rssh"
 pam_rssh_built="$pam_rssh_cache/$PAM_RSSH_REV/pam_rssh.so"
 
@@ -110,7 +125,8 @@ build_pam_rssh() {
 		return 0
 	fi
 	echo "debug: building pam_rssh at $PAM_RSSH_REV" >&2
-	brew install -q openssl@3 || return 1
+	# The package scripts before this one have updated brew already.
+	HOMEBREW_NO_AUTO_UPDATE=1 brew install -q openssl@3 || return 1
 	src="$pam_rssh_cache/src"
 	rm -rf "$src"
 	git init -q "$src" &&

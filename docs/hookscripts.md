@@ -22,6 +22,12 @@ Some macOS changes are only granted through a prompt on the Mac's own screen, wh
 - `141-client-cert`: an SSH session sees the login keychain locked, even while you are logged in at the Mac. `security unlock-keychain` in that session unlocks it.
 - `170-firefox-policies`: writing into `Firefox.app` takes App Management. Allowing full disk access for remote users (System Settings → General → Sharing → Remote Login) grants it over SSH too.
 
+#### sudo over SSH
+
+Touch ID cannot be used without the Mac's screen, so from Sonoma on `025-pam-sudo-touchid` also gives sudo [pam_rssh](https://github.com/z4yx/pam_rssh): connect with your agent forwarded (`ForwardAgent yes`, as `~/.ssh/config` has for the Macs) and sudo asks that agent to sign, which on the client is Bitwarden's approval prompt. `sudo -n` goes the same way (`Defaults noninteractive_auth`). Without a forwarded agent, sudo over SSH wants the password. The one key it accepts is `id_rsa3072`, in a root-owned `/opt/pam_rssh/<user>.keys`, never `~/.ssh/authorized_keys`, which anything running as you could add a key to. Macs older than Sonoma get passwordless sudo instead (see [homebrew-older-macos.md](homebrew-older-macos.md)).
+
+A known gap, not fixed: `pam_reattach.so`, the Touch ID line's tmux helper, is loaded from brew's prefix, which you own. Anything running as you could replace it and have sudo run its code as root on the next use, without Touch ID or the agent.
+
 ## Per-model hookscripts
 
 `.chezmoiscripts/99-<os>-<make>-<model>/` holds hookscripts for one computer model only, usually a workaround for its firmware or hardware. For example, `99-nt-ASUSTeK+COMPUTER+INC.-ROG+Flow+Z13+GZ302EA_GZ302EA/` replaces the ROG Flow Z13's broken S0ix sleep with hibernation. `<os>` is the tier name (`nt`, `macos`, `linux`). `<make>` and `<model>` are exactly what the firmware reports in its SMBIOS System Information (`hw.model` on a Mac), put through `urlquery`, so the name is valid on NT and Unix alike. `chezmoi data` shows the raw strings as `.machine.make` and `.machine.model`, and `.chezmoiignore.tmpl` masks every such directory except the host's own. Containers and WSL report no model, so they never get one. Being `99`, these scripts run after everything in `00-*`, the sign-in reminders included. To get the directory name for a new machine:

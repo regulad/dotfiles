@@ -247,12 +247,6 @@ Library
 .chezmoiscripts/00-macos/021-brew-packages-x86.sh
 .chezmoiscripts/00-macos/031-brew-extras-x86.sh
 {{-   end }}
-{{-   if lt .macos.major 14 }}
-# Touch ID for sudo needs /etc/pam.d/sudo_local, which exists from Sonoma on.
-# The script also refuses to run on older releases; masking it here too means
-# it never even appears in the apply on such a host.
-.chezmoiscripts/00-macos/025-pam-sudo-touchid.sh
-{{-   end }}
 {{-   if lt .macos.major 12 }}
 # Theos's SDK installer needs `grep -z`, which Apple's grep only accepts from
 # macOS 12 (text_cmds-118) on. The script refuses below that too.
