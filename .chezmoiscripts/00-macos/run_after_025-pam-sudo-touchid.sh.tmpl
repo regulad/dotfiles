@@ -1,32 +1,79 @@
 {{ template "posix-preamble-brew.sh" . }}
-# Touch ID for sudo, with pam_reattach so it also works inside tmux.
+# How sudo authenticates on a Mac: Touch ID at the machine, the forwarded
+# ssh-agent key over ssh, and, on releases too old for either, not at all.
+#
+# Touch ID, with pam_reattach so it also works inside tmux.
 #
 # Ordering matters here, and is the reason this is 025 and not earlier:
 # OpenPAM refuses the WHOLE chain when a listed module file does not exist,
 # and sudo then fails outright ("PAM error") for everyone, regardless of the
 # `optional` control. So this runs after the package scripts that provide
 # pam_reattach.so -- brew's pam-reattach (020-brew-packages) under
-# $HOMEBREW_PREFIX/lib/pam -- and it refuses to write anything unless BOTH
-# modules it names are on disk.
-# A missing module is an error (exit 1), not a policy without that line: an
-# apply that failed here is loud, a sudo that stopped working is not.
+# $HOMEBREW_PREFIX/lib/pam -- and the Rust toolchain pam_rssh is built with,
+# and it refuses to write a module into the policy unless it is on disk.
+# A missing Touch ID module is an error (exit 1), not a policy without that
+# line: an apply that failed here is loud, a sudo that stopped working is not.
 #
 # There is no `visudo` for PAM: OpenPAM ships no validator, and pamtester,
 # the usual dynamic check, is not in homebrew-core and does not build on
 # current macOS. The existence check is the guard.
 #
-# Runs every apply, idempotently: the wanted file is computed, compared with
-# what is there (both are world-readable), and sudo is only asked for when
-# they differ.
+# pam_rssh (https://github.com/z4yx/pam_rssh): sudo authenticated by a key in
+# the ssh-agent. Over ssh that is the agent forwarded from the client, which
+# signs pam_rssh's challenge after asking there (Bitwarden's approval prompt):
+# the remote counterpart of Touch ID, which a session without the GUI cannot
+# use. It follows pam_tid in sudo_local.
 #
-# Sonoma (14) and newer only: there /etc/pam.d/sudo ends with `include
-# sudo_local`, and /etc/pam.d/sudo_local is ours to write whole and survives
-# OS updates. Older releases have no such hook -- the only way in is editing
-# /etc/pam.d/sudo itself, which Apple owns and rewrites -- so they are left
-# alone, and sudo there is password-only.
+# Everything sudo trusts for it is root's, under /opt/pam_rssh, outside any
+# directory the user can write (unlike $HOMEBREW_PREFIX): the module, which
+# sudo loads as root, and the key file whose keys it accepts. pam_rssh's
+# default key file, ~/.ssh/authorized_keys, would let anything running as the
+# user add a key and so take root, as its README's Security Notice says. For
+# the same reason OpenSSL is linked statically from brew's openssl@3, and a
+# build otool shows loading anything outside /usr/lib and /System is refused.
+# The one key is id_rsa3072, the key ~/.ssh/authorized_keys holds, taken from
+# this repo (dot_ssh/private_readonly_id_rsa3072.pub) rather than from ~/.ssh.
+#
+# pam_rssh is built as the user at a pinned revision, the first with its macOS
+# build fix (#41), with --locked, and rebuilt only when the revision changes.
+# macOS logs a Library Validation rejection whenever sudo loads the unsigned
+# module, and sudo, which is entitled to, loads it anyway. A build or install
+# that fails leaves it out of sudo_local and fails the apply, after Touch ID
+# is in place.
+#
+# NOPASSWD. Releases before Sonoma (14) have no sudo_local: there
+# /etc/pam.d/sudo is the only way in, and Apple owns and rewrites it. They get
+# neither Touch ID nor pam_rssh, and instead sudo with no password at all,
+# from a /etc/sudoers.d/90-<user>-nopasswd drop-in. From Sonoma on, the same
+# file is removed once pam_rssh is in sudo_local, one made by hand before this
+# included (overture's, from 2026-10-21).
+#
+# Runs every apply, idempotently: each file is compared with what it should
+# be, and sudo is only asked for when one differs.
+
+NOPASSWD="/etc/sudoers.d/90-$(id -un)-nopasswd"
 
 if ! grep -q 'sudo_local' /etc/pam.d/sudo; then
-	echo "notice: this macOS has no /etc/pam.d/sudo_local (pre-Sonoma); leaving /etc/pam.d/sudo alone, no Touch ID for sudo" >&2
+	if [ -e "$NOPASSWD" ]; then
+		echo "debug: pre-Sonoma, so no Touch ID or pam_rssh for sudo; $NOPASSWD is in place" >&2
+		exit 0
+	fi
+	require_sudo "025-pam-sudo-touchid"
+	tmp="$(mktemp)"
+	printf '%s ALL=(ALL) NOPASSWD: ALL\n' "$(id -un)" >"$tmp"
+	if ! sudo visudo -cqf "$tmp"; then
+		rm -f "$tmp"
+		echo "error: visudo rejected the NOPASSWD line; not installing it" >&2
+		exit 1
+	fi
+	sudo install -S -o root -g wheel -m 440 "$tmp" "$NOPASSWD"
+	rm -f "$tmp"
+	sudo -k
+	if sudo -n true 2>/dev/null; then
+		echo "notice: this macOS has no /etc/pam.d/sudo_local (pre-Sonoma); wrote $NOPASSWD, so sudo needs no password" >&2
+	else
+		echo "warning: wrote $NOPASSWD, but sudo still wants a password; does /etc/sudoers include /private/etc/sudoers.d?" >&2
+	fi
 	exit 0
 fi
 
@@ -43,8 +90,104 @@ for module in "$PAM_REATTACH" "$PAM_TID"; do
 	fi
 done
 
+PAM_RSSH_REV=97468be97d789db795038fa8a98bdfc0ca47d0e1
+PAM_RSSH_DIR=/opt/pam_rssh
+PAM_RSSH="$PAM_RSSH_DIR/pam_rssh.so"
+PAM_RSSH_KEYS="$PAM_RSSH_DIR/$(id -un).keys"
+PAM_RSSH_SUDOERS=/etc/sudoers.d/pam_rssh
+PAM_RSSH_WANTED_KEYS={{ include "dot_ssh/private_readonly_id_rsa3072.pub" | trim | quote }}
+# sudo resets the environment before PAM runs; this keeps the agent's socket
+# for the module, as pam_rssh's README says.
+PAM_RSSH_WANTED_SUDOERS='Defaults env_keep += "SSH_AUTH_SOCK"'
+pam_rssh_cache="${XDG_CACHE_HOME:-$HOME/.cache}/pam_rssh"
+pam_rssh_built="$pam_rssh_cache/$PAM_RSSH_REV/pam_rssh.so"
+
+# Builds pam_rssh into $pam_rssh_built unless it is there already.
+build_pam_rssh() {
+	local src lib own foreign
+	if [ -f "$pam_rssh_built" ]; then
+		echo "debug: pam_rssh $PAM_RSSH_REV already built" >&2
+		return 0
+	fi
+	echo "debug: building pam_rssh at $PAM_RSSH_REV" >&2
+	brew install -q openssl@3 || return 1
+	src="$pam_rssh_cache/src"
+	rm -rf "$src"
+	git init -q "$src" &&
+		git -C "$src" fetch -q --depth 1 https://github.com/z4yx/pam_rssh.git "$PAM_RSSH_REV" &&
+		git -C "$src" -c advice.detachedHead=false checkout -q FETCH_HEAD &&
+		git -C "$src" submodule update -q --init || return 1
+	(
+		cd "$src" &&
+			OPENSSL_DIR="$(brew --prefix openssl@3)" OPENSSL_STATIC=1 cargo build -q --release --locked
+	) || return 1
+	lib="$src/target/release/libpam_rssh.dylib"
+	if [ ! -f "$lib" ]; then
+		echo "error: pam_rssh's build left no $lib" >&2
+		return 1
+	fi
+	# otool -L lists the dylib's own install name first; everything else is
+	# what dyld would load into sudo.
+	own="$(otool -D "$lib" | tail -n 1)"
+	foreign="$(otool -L "$lib" | tail -n +2 | awk '{print $1}' | grep -v -x -F "$own" | grep -v -E '^(/usr/lib/|/System/)' || true)"
+	if [ -n "$foreign" ]; then
+		echo "error: pam_rssh would load $(echo $foreign) into sudo, outside /usr/lib and /System; not installing it" >&2
+		return 1
+	fi
+	mkdir -p "$(dirname "$pam_rssh_built")" && cp "$lib" "$pam_rssh_built" || return 1
+	rm -rf "$src"
+	echo "notice: built pam_rssh at $PAM_RSSH_REV" >&2
+}
+
+# Installs the built module, the key file and the sudoers line, root's each.
+install_pam_rssh() {
+	local tmp
+	if cmp -s "$pam_rssh_built" "$PAM_RSSH" &&
+		[ "$(cat "$PAM_RSSH_KEYS" 2>/dev/null)" = "$PAM_RSSH_WANTED_KEYS" ] &&
+		[ -e "$PAM_RSSH_SUDOERS" ] &&
+		[ "$(cat "$PAM_RSSH_DIR/sudoers" 2>/dev/null)" = "$PAM_RSSH_WANTED_SUDOERS" ]; then
+		echo "debug: pam_rssh is installed and up to date" >&2
+		return 0
+	fi
+	require_sudo "025-pam-sudo-touchid"
+	[ -d /opt ] || sudo install -d -o root -g wheel -m 755 /opt || return 1
+	# /opt too must be root's, or its owner could swap $PAM_RSSH_DIR out.
+	if [ "$(stat -f %u /opt)" != 0 ]; then
+		echo "error: /opt is not owned by root; refusing to install a PAM module under it" >&2
+		return 1
+	fi
+	sudo install -d -o root -g wheel -m 755 "$PAM_RSSH_DIR" || return 1
+	# install -S copies to a temporary file and renames it into place, so sudo
+	# never loads a half-written module.
+	sudo install -S -o root -g wheel -m 444 "$pam_rssh_built" "$PAM_RSSH" || return 1
+	tmp="$(mktemp)"
+	printf '%s\n' "$PAM_RSSH_WANTED_KEYS" >"$tmp"
+	sudo install -S -o root -g wheel -m 444 "$tmp" "$PAM_RSSH_KEYS" || { rm -f "$tmp"; return 1; }
+	printf '%s\n' "$PAM_RSSH_WANTED_SUDOERS" >"$tmp"
+	if ! sudo visudo -cqf "$tmp"; then
+		rm -f "$tmp"
+		echo "error: visudo rejected the pam_rssh sudoers line; not installing it" >&2
+		return 1
+	fi
+	sudo install -S -o root -g wheel -m 440 "$tmp" "$PAM_RSSH_SUDOERS" &&
+		# A world-readable copy, for the next apply to compare against: the
+		# sudoers.d file itself is root's alone to read.
+		sudo install -S -o root -g wheel -m 444 "$tmp" "$PAM_RSSH_DIR/sudoers" || { rm -f "$tmp"; return 1; }
+	rm -f "$tmp"
+	echo "notice: installed pam_rssh in $PAM_RSSH_DIR, trusting id_rsa3072" >&2
+}
+
 PAM_LINES="auth       optional       $PAM_REATTACH ignore_ssh
 auth       sufficient     pam_tid.so"
+
+pam_rssh_failed=
+if build_pam_rssh && install_pam_rssh && [ -f "$PAM_RSSH" ] && [ -f "$PAM_RSSH_KEYS" ]; then
+	# ${user} is pam_rssh's own variable, PAM_USER: for sudo, whoever runs it.
+	PAM_LINES="$PAM_LINES
+auth       sufficient     $PAM_RSSH auth_key_file=$PAM_RSSH_DIR/\${user}.keys"
+else
+	pam_rssh_failed=1
+fi
 
 target=/etc/pam.d/sudo_local
 wanted="$(
@@ -57,16 +200,26 @@ wanted="$(
 current="$(cat "$target" 2>/dev/null || true)"
 if [ "$wanted" = "$current" ]; then
 	echo "debug: $target is up to date" >&2
-	exit 0
+else
+	require_sudo "025-pam-sudo-touchid"
+	# Written whole through a temp file and cp, never in place: a half-written
+	# PAM file would lock sudo out.
+	tmp="$(mktemp)"
+	printf '%s\n' "$wanted" >"$tmp"
+	sudo cp "$tmp" "$target"
+	sudo chown root:wheel "$target"
+	sudo chmod 444 "$target"
+	rm -f "$tmp"
+	echo "notice: wrote $target" >&2
 fi
 
-require_sudo "025-pam-sudo-touchid"
-# Written whole through a temp file and cp, never in place: a half-written
-# PAM file would lock sudo out.
-tmp="$(mktemp)"
-printf '%s\n' "$wanted" >"$tmp"
-sudo cp "$tmp" "$target"
-sudo chown root:wheel "$target"
-sudo chmod 444 "$target"
-rm -f "$tmp"
-echo "notice: wrote $target" >&2
+if [ -n "$pam_rssh_failed" ]; then
+	echo "error: pam_rssh is not in $target, so sudo over ssh still wants a password; $NOPASSWD, if there, is kept" >&2
+	exit 1
+fi
+
+if [ -e "$NOPASSWD" ] && grep -qF "$PAM_RSSH" "$target"; then
+	require_sudo "025-pam-sudo-touchid"
+	sudo rm -f "$NOPASSWD"
+	echo "notice: removed $NOPASSWD: with pam_rssh in $target, sudo over ssh asks the forwarded agent instead" >&2
+fi

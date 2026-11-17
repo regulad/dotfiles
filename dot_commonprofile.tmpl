@@ -261,7 +261,16 @@ export THEOS="$HOME/theos"
 
 # ssh daemon
 unset _bw_sock
-case "$(uname -s)" in
+# A session that came in over ssh with the client's agent forwarded keeps that
+# agent, the one belonging to whoever is at the client: on a Mac, pam_rssh
+# (00-macos/025) asks it to approve sudo. The local agents below are for
+# sessions at the machine itself, and none of the cases matches "forwarded".
+if [ -n "${SSH_CONNECTION:-}" ] && [ -S "${SSH_AUTH_SOCK:-}" ]; then
+  _agent_os=forwarded
+else
+  _agent_os="$(uname -s)"
+fi
+case "$_agent_os" in
   Darwin)
     for _agent_sock in \
       "$HOME/.bitwarden-ssh-agent.sock" \
@@ -293,7 +302,7 @@ case "$(uname -s)" in
     fi
     ;;
 esac
-unset _bw_sock
+unset _bw_sock _agent_os
 
 export VISUAL="$(command -v nvim || command -v vim)"
 # Telemetry opt-outs, mirrored for Windows in registry-user.reg. Claude Code
