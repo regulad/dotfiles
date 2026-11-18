@@ -254,6 +254,12 @@ Library
 # Theos's SDK installer needs `grep -z`, which Apple's grep only accepts from
 # macOS 12 (text_cmds-118) on. The script refuses below that too.
 .chezmoiscripts/00-macos/125-theos.sh
+# Vencord's build cannot finish there either: its `pnpm i` takes esbuild
+# 0.27.7 and 0.28.2, Go binaries built for macOS 12, whose postinstall checks
+# crash on SecTrustCopyCertificateChain and fail the install (minintosh, Big
+# Sur, 2026-11-17). Its settings in Library/Application Support/Vencord are
+# still written; they wait for a Mac that can build it.
+.chezmoiscripts/00-macos/080-vencord.sh
 {{-   end }}
 {{- end }}
 

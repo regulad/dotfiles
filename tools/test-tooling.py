@@ -218,7 +218,8 @@ def main():
                 old_nvim = era in ("catalina", "bigsur", "monterey")
                 assert ('\n\tneovim ' in package) != old_nvim and ('\n\tneovim ' in macports) == old_nvim, era
                 ignored = render(".chezmoiignore.tmpl", data)
-                assert '.chezmoiscripts/00-macos/080-vencord.sh' not in ignored
+                # Vencord's esbuild needs macOS 12 (.chezmoiignore.tmpl).
+                assert ('.chezmoiscripts/00-macos/080-vencord.sh' in ignored) == (int(series.split('.')[0]) < 12), series
                 assert '.chezmoiscripts/00-macos/160-install-vscode-ext.sh' not in ignored
                 assert '.chezmoiscripts/00-macos/055-projectm-presets.sh' not in ignored
                 assert '\tpinentry-mac\n' in package and '\tmpv\n' in package
