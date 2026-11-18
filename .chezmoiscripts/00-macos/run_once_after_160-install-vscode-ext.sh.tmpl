@@ -29,7 +29,44 @@ done
 # became -- it pulls in the marketplace's github.copilot-chat, which is older
 # than the copy VS Code now ships built in, and `code` refuses with "cannot
 # be downgraded" on every attempt.
-retry -t 5 -d 2,5,15,30 -- code "${flags[@]}" --force
+#
+# An extension too new for this VS Code is another matter. `code` installs
+# the rest and exits 1, with "Can't install '<id>' extension because it is not
+# compatible with the current version of Visual Studio Code" for each one. A
+# Mac on a pinned brew era has the VS Code of its pin (1.82.2 on Big Sur's:
+# minintosh, 2026-11-17, five extensions short), and those never install
+# there, so a pass whose every failed extension says so is a pass, with a
+# notice naming them. Being a shell function, it is retried by a loop with
+# retry's delays rather than by retry.
+install_extensions() {
+    local out rc failed ext
+    out="$(code "${flags[@]}" --force 2>&1)" && rc=0 || rc=$?
+    printf '%s\n' "$out"
+    if [ "$rc" -eq 0 ]; then
+        return 0
+    fi
+    failed="$(printf '%s\n' "$out" | sed -n 's/^Failed Installing Extensions: //p' | tail -n 1 | tr ',' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$' || true)"
+    if [ -z "$failed" ]; then
+        return "$rc"
+    fi
+    while IFS= read -r ext; do
+        if ! printf '%s\n' "$out" | grep -qF "Can't install '$ext' extension because it is not compatible with the current version of Visual Studio Code"; then
+            return "$rc"
+        fi
+    done <<< "$failed"
+    echo "notice: VS Code $(code --version | head -n 1) is too old for these extensions, which are left out: $(echo $failed)" >&2
+}
+for delay in 2 5 15 30 last; do
+    if install_extensions; then
+        break
+    fi
+    if [ "$delay" = last ]; then
+        echo "error: installing VS Code extensions failed five times" >&2
+        exit 1
+    fi
+    echo "debug: installing VS Code extensions failed; trying again in ${delay}s" >&2
+    sleep "$delay"
+done
 
 # Uninstall what the list does not ask for -- but not what something it asks
 # for brings along. An extension pack installs its members
