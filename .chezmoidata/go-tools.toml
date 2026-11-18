@@ -2,14 +2,22 @@
 # (00-{linux,macos}/120-go-tooling) and 00-nt/560-go-tooling, each at the
 # version its module path names. An entry with `os` goes only to hosts whose
 # .chezmoi.os is listed; one without goes everywhere. See docs/tooling.md.
+#
+# macosMin is the oldest macOS major an entry can be built on; older Macs get
+# a notice instead. The Go its version asks for is what decides it: with
+# GOTOOLCHAIN=auto, go fetches that toolchain, and Go 1.25 on is built for
+# macOS 12, so on Big Sur and Catalina it dies on SecTrustCopyCertificateChain
+# before it starts (minintosh, macOS 11.7, 2026-11-17, fetching go1.26.11 for
+# shfmt). The entries with it ask for Go 1.26 or later at their latest
+# versions (gopls for 1.27); swag asks for 1.18 and osc52pty for 1.14.
 
 [goTools]
 packages = [
-    { module = "mvdan.cc/sh/v3/cmd/shfmt@latest" },
-    { module = "golang.org/x/tools/gopls@latest" },
-    { module = "golang.org/x/tools/cmd/goimports@latest" },
-    { module = "honnef.co/go/tools/cmd/staticcheck@latest" },
-    { module = "github.com/twpayne/find-duplicates@latest" },
+    { module = "mvdan.cc/sh/v3/cmd/shfmt@latest", macosMin = 12 },
+    { module = "golang.org/x/tools/gopls@latest", macosMin = 12 },
+    { module = "golang.org/x/tools/cmd/goimports@latest", macosMin = 12 },
+    { module = "honnef.co/go/tools/cmd/staticcheck@latest", macosMin = 12 },
+    { module = "github.com/twpayne/find-duplicates@latest", macosMin = 12 },
     { module = "github.com/swaggo/swag/cmd/swag@latest" },
     { module = "github.com/roy2220/osc52pty@master", os = ["darwin"] },
 ]

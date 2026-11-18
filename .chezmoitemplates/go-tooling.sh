@@ -8,7 +8,10 @@ export GOTOOLCHAIN=auto
 # seconds apart. retry replays stdin on each try; go install wants none.
 {{- range .goTools.packages }}
 {{-   $os := get . "os" }}
-{{-   if or (not $os) (has $.chezmoi.os $os) }}
+{{-   $macosMin := get . "macosMin" | default 0 }}
+{{-   if and (or (not $os) (has $.chezmoi.os $os)) (eq $.chezmoi.os "darwin") (lt (int $.macos.major) (int $macosMin)) }}
+echo "notice: not installing {{ .module }}, which needs macOS {{ $macosMin }} or later (macosMin in .chezmoidata/go-tools.toml)" >&2
+{{-   else if or (not $os) (has $.chezmoi.os $os) }}
 retry -t 3 -d 10,30 -- go install {{ .module }} </dev/null
 {{-   end }}
 {{- end }}
