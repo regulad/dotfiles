@@ -53,6 +53,11 @@ if ($UseTls) {
     }
 }
 
+{{ if .useDummySecrets -}}
+# Dummy secrets: of those hosts only the hub itself gets here
+# (.chezmoiignore.tmpl), and it needs no ID. An empty one means this is the hub.
+$HubId = ''
+{{- else -}}
 # The ciphertext goes to chezmoi as a file, not on stdin: Windows PowerShell
 # 5.1 put a UTF-8 BOM in front of everything it piped to a native program on
 # winlite, whatever $OutputEncoding said (ASCII included), and age refuses
@@ -72,6 +77,7 @@ if ($DecryptExit -ne 0 -or -not $HubId) {
     Write-Host "error: failed to decrypt the hub's device ID ({{ .syncthing.hub.idCiphertext }})"
     exit 1
 }
+{{- end }}
 
 $Desired = @'
 {{ template "syncthing-desired.json" . }}
@@ -101,7 +107,7 @@ function Test-SamePath([string]$A, [string]$B) {
 }
 
 $Hub = $Desired.hub
-$IsHub = (Invoke-Syncthing Get '/rest/system/status').myID -eq $HubId
+$IsHub = (-not $HubId) -or ((Invoke-Syncthing Get '/rest/system/status').myID -eq $HubId)
 
 if ($IsHub) {
     Write-Host "debug: this is the hub, $($Hub.name): it lists no introducer, and its joining service shares the folders"

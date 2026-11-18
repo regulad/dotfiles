@@ -65,6 +65,12 @@ case "$address" in
 	:*) address="127.0.0.1$address" ;;
 esac
 
+{{- if .useDummySecrets }}
+# Dummy secrets: of those hosts only the hub itself gets here
+# (.chezmoiignore.tmpl), and it needs no ID. An empty one tells the REST half
+# it is the hub.
+hub_id=""
+{{- else }}
 # (read -d '' returns 1 at the heredoc's end, having no NUL to stop at.)
 IFS= read -r -d '' hub_id_ciphertext <<'CHEZMOI_AGE_PAYLOAD' || true
 {{ include (joinPath .chezmoi.sourceDir ".chezmoitemplates" "secrets" .syncthing.hub.idCiphertext) | trim }}
@@ -74,6 +80,7 @@ if ! hub_id="$(printf '%s' "$hub_id_ciphertext" | '{{ .chezmoi.executable | repl
 	exit 1
 fi
 hub_id="$(printf '%s' "$hub_id" | tr -d '[:space:]')"
+{{- end }}
 
 IFS= read -r -d '' desired <<'CHEZMOI_SYNCTHING_JSON' || true
 {{ template "syncthing-desired.json" . }}

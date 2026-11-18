@@ -36,7 +36,8 @@ All of it comes from `.chezmoidata/syncthing.toml`.
   `.chezmoitemplates/secrets/syncthing-hub-id.age`: with global discovery on, a
   device ID is enough to look up the device's address. `155-syncthing`
   decrypts it at run time, and hosts with dummy secrets skip the script
-  (`.chezmoiignore.tmpl`), so they have no hub and no peers.
+  (`.chezmoiignore.tmpl`), so they have no hub and no peers -- all but the hub
+  itself, below.
 - **The folders**:
 
   | Folder ID | Path (Linux / macOS / Windows) | Notes |
@@ -57,9 +58,12 @@ with a warning. The script runs on every apply, so a node whose Syncthing was
 not running yet is set up on the next apply after it is. It does nothing in WSL
 or a container, where Syncthing is not started (`150-user-services`).
 
-On aboriginal itself the same script runs (chezmoi applies there too). It
-recognises the hub by its own device ID: it lists no introducer, and creates the
-folders shared with no one, since the joining service does the sharing.
+On aboriginal itself the same script runs: chezmoi applies there too, with dummy
+secrets. `.chezmoiignore.tmpl` keeps the script for a dummy-secrets host whose
+hostname is the hub's name, and there the script skips the decryption: an empty
+hub ID means "this is the hub". (A hub with real secrets would recognise its own
+device ID instead.) The hub lists no introducer, and creates the folders shared
+with no one, since the joining service does the sharing.
 
 The REST calls are in `.chezmoitemplates/syncthing-apply.py` on Linux and macOS,
 and in `00-nt/155-syncthing.ps1` on Windows; both were tested against a

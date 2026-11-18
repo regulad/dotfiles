@@ -6,7 +6,10 @@ options are set. It adds and updates, and never removes anything, so devices
 and folders added in the GUI stay.
 
 argv: the REST base URL, the hub's device ID, the desired-state JSON
-(.chezmoitemplates/syncthing-desired.json). The API key comes in ST_APIKEY,
+(.chezmoitemplates/syncthing-desired.json). An empty hub ID means this is
+the hub: aboriginal's chezmoi runs with dummy secrets, so it never decrypts
+the ID, and the only dummy-secrets host that runs this is the hub (see
+.chezmoiignore.tmpl). The API key comes in ST_APIKEY,
 an environment variable rather than an argument, since a process's arguments
 are readable by every user.
 
@@ -59,7 +62,7 @@ def same_path(a, b):
 
 
 hub = desired["hub"]
-is_hub = call("GET", "/rest/system/status")["myID"] == hub_id
+is_hub = not hub_id or call("GET", "/rest/system/status")["myID"] == hub_id
 
 if is_hub:
     say("debug", "this is the hub, {}: it lists no introducer, and its joining service shares the folders".format(hub["name"]))
