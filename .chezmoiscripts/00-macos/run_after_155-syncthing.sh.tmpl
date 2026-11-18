@@ -1,0 +1,5 @@
+{{ template "posix-preamble-brew.sh" . }}
+# Applies .chezmoidata/syncthing.toml to this node's running Syncthing
+# (docs/syncthing.md): the syncthing-app cask's, from 040-macos-casks, which
+# runs at login. Brew's python3 runs the REST half.
+{{ template "syncthing-apply.sh" . }}

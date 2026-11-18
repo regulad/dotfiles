@@ -1,0 +1,57 @@
+# The declarative Syncthing mesh (docs/syncthing.md). Every node lists the
+# hub as its introducer and shares the folders below with it. The hub's
+# joining service, homelab's syncthing_hub role on aboriginal, accepts a node
+# the tailnet vouches for, and the introducer then spreads it to the rest.
+# 155-syncthing applies this to the running Syncthing on every apply over its
+# REST API, adding and updating, never removing: devices and folders added in
+# the GUI stay.
+
+[syncthing.hub]
+name = "aboriginal"
+# The tailnet address alone, without `dynamic`: the joining service accepts
+# only connections from tailnet addresses, so every node dials the hub over
+# Tailscale. Global discovery stays on for every other peer, and the devices
+# the introducer brings in get `dynamic`.
+address = "tcp://aboriginal.tail11540.ts.net:22000"
+# Its device ID, age-encrypted in .chezmoitemplates/secrets: with global
+# discovery on, an ID is enough to look up a device's address. 155-syncthing
+# decrypts it at run time, and hosts with dummy secrets skip that script.
+idCiphertext = "syncthing-hub-id.age"
+
+# Per node. Usage reporting declined (-1) and crash reports off, as the
+# telemetry opt-outs in .commonprofile and registry-user.reg.
+[syncthing.options]
+urAccepted = -1
+crashReportingEnabled = false
+
+# Each folder's path is where the data normally lives on that OS; on the hub
+# they are in regulad's home the same way. `mode` and `files` are permissions
+# 155-syncthing sets on Linux and macOS, where Syncthing carries a file's
+# permission bits to the other nodes.
+[[syncthing.folders]]
+id = "claude"
+label = "Claude Code"
+# Only projects/, plans/ and file-history/ go: ~/.claude/.stignore
+# (private_dot_claude/dot_stignore) leaves everything else local. Session
+# transcripts are plaintext and can hold secrets that passed through tools.
+path = { windows = '~\.claude', darwin = "~/.claude", linux = "~/.claude" }
+mode = "700"
+
+[[syncthing.folders]]
+id = "local-config_rclone"
+label = "rclone config"
+path = { windows = '~\.config\rclone', darwin = "~/.config/rclone", linux = "~/.config/rclone" }
+mode = "700"
+# The remotes' tokens.
+files = { "rclone.conf" = "600" }
+
+[[syncthing.folders]]
+id = "local-state_yt-dlp"
+label = "yt-dlp state"
+path = { windows = '~\.local\state\yt-dlp', darwin = "~/.local/state/yt-dlp", linux = "~/.local/state/yt-dlp" }
+
+[[syncthing.folders]]
+id = "prusaslicer"
+label = "PrusaSlicer"
+# PrusaSlicer's own configuration directory on each OS.
+path = { windows = '~\AppData\Roaming\PrusaSlicer', darwin = "~/Library/Application Support/PrusaSlicer", linux = "~/.config/PrusaSlicer" }

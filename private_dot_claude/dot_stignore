@@ -1,0 +1,6 @@
+// Only these three directories of ~/.claude sync (Syncthing's claude folder,
+// .chezmoidata/syncthing.toml); the rest stays on this machine.
+!/projects
+!/plans
+!/file-history
+*

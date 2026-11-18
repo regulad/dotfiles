@@ -1,0 +1,179 @@
+# Applies .chezmoidata/syncthing.toml (docs/syncthing.md) to this node's running
+# Syncthing over its REST API: the hub, aboriginal, becomes this node's
+# introducer at its tailnet address; each folder exists at its path and is
+# shared with the hub; usage and crash reporting are off. It adds and updates,
+# never removes, so devices and folders added in the GUI stay. The Linux and
+# macOS 155-syncthing do the same through .chezmoitemplates/syncthing-apply.py.
+#
+# run_after_, every apply, so a node whose Syncthing was not running yet, or
+# whose configuration was changed in the GUI, is set up again next time.
+# After 100-winget, which installs Syncthing (BillStewart.SyncthingWindowsSetup,
+# into %LOCALAPPDATA%\Programs\Syncthing, started at logon). Masked under
+# useDummySecrets in .chezmoiignore.tmpl: the hub's ID is age-encrypted, and
+# decrypted here at run time.
+#
+# No $ErrorActionPreference = 'Stop': syncthing.exe writes to stderr when
+# Syncthing is not running, which Windows PowerShell 5.1 would turn into a
+# terminating error. Each native call's exit code is checked instead, and the
+# REST calls stop on their own errors.
+$Utf8NoBom = New-Object System.Text.UTF8Encoding $false
+
+$Syncthing = Join-Path $env:LOCALAPPDATA 'Programs\Syncthing\syncthing.exe'
+if (-not (Test-Path -LiteralPath $Syncthing)) {
+    $Command = Get-Command syncthing.exe -ErrorAction SilentlyContinue
+    if (-not $Command) {
+        Write-Host 'debug: Syncthing is not installed; skipping'
+        exit 0
+    }
+    $Syncthing = $Command.Source
+}
+
+# The CLI finds Syncthing's configuration on its own and asks the running
+# instance, so failing here means Syncthing is not running.
+$ApiKey = (& $Syncthing cli config gui apikey get 2>$null | Out-String).Trim()
+if ($LASTEXITCODE -ne 0 -or -not $ApiKey) {
+    Write-Host "notice: Syncthing isn't running, so its configuration waits for an apply while it is"
+    exit 0
+}
+$Address = (& $Syncthing cli config gui raw-address get | Out-String).Trim()
+$UseTls = (& $Syncthing cli config gui raw-use-tls get | Out-String).Trim() -eq 'true'
+if ($Address -match '^(unix://|/)') {
+    Write-Host "warning: Syncthing's GUI listens on a Unix socket ($Address); its configuration is left as it is"
+    exit 0
+}
+$Address = $Address -replace '^0\.0\.0\.0:', '127.0.0.1:' -replace '^\[::\]:', '[::1]:' -replace '^:', '127.0.0.1:'
+$Base = $(if ($UseTls) { 'https' } else { 'http' }) + "://$Address"
+$TlsParams = @{}
+if ($UseTls) {
+    # Syncthing's own self-signed certificate, on loopback.
+    if ($PSVersionTable.PSVersion.Major -ge 6) {
+        $TlsParams.SkipCertificateCheck = $true
+    } else {
+        [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+    }
+}
+
+# The ciphertext goes to chezmoi as a file, not on stdin: Windows PowerShell
+# 5.1 put a UTF-8 BOM in front of everything it piped to a native program on
+# winlite, whatever $OutputEncoding said (ASCII included), and age refuses
+# that ("unexpected intro"; 2026-11-18). The ciphertext is public, so the
+# temporary file holds nothing secret.
+$CipherFile = Join-Path ([System.IO.Path]::GetTempPath()) ("chezmoi-syncthing-hub-" + [guid]::NewGuid() + ".age")
+[System.IO.File]::WriteAllText($CipherFile, @'
+{{ include (joinPath .chezmoi.sourceDir ".chezmoitemplates" "secrets" .syncthing.hub.idCiphertext) | trim }}
+'@)
+try {
+    $HubId = (& '{{ .chezmoi.executable | replace "'" "''" }}' --config '{{ .chezmoi.configFile | replace "'" "''" }}' decrypt $CipherFile | Out-String).Trim()
+    $DecryptExit = $LASTEXITCODE
+} finally {
+    Remove-Item -LiteralPath $CipherFile -Force -ErrorAction SilentlyContinue
+}
+if ($DecryptExit -ne 0 -or -not $HubId) {
+    Write-Host "error: failed to decrypt the hub's device ID ({{ .syncthing.hub.idCiphertext }})"
+    exit 1
+}
+
+$Desired = @'
+{{ template "syncthing-desired.json" . }}
+'@ | ConvertFrom-Json
+
+# GET of a missing item returns $null; any other HTTP error ends the script.
+function Invoke-Syncthing([string]$Method, [string]$Path, $Body) {
+    $Params = @{ Method = $Method; Uri = "$Base$Path"; Headers = @{ 'X-API-Key' = $ApiKey }; ErrorAction = 'Stop' } + $TlsParams
+    if ($null -ne $Body) {
+        $Params.ContentType = 'application/json'
+        $Params.Body = $Utf8NoBom.GetBytes((ConvertTo-Json -InputObject $Body -Depth 20 -Compress))
+    }
+    try {
+        return Invoke-RestMethod @Params
+    } catch {
+        $Status = 0
+        if ($_.Exception.Response) { $Status = [int]$_.Exception.Response.StatusCode }
+        if ($Method -eq 'Get' -and $Status -eq 404) { return $null }
+        Write-Host "error: Syncthing answered $Method $Path with $($_.Exception.Message)"
+        exit 1
+    }
+}
+
+function Test-SamePath([string]$A, [string]$B) {
+    $Expand = { param($P) ($P -replace '^~', $HOME).TrimEnd('\', '/') -replace '/', '\' }
+    return (& $Expand $A) -eq (& $Expand $B)
+}
+
+$Hub = $Desired.hub
+$IsHub = (Invoke-Syncthing Get '/rest/system/status').myID -eq $HubId
+
+if ($IsHub) {
+    Write-Host "debug: this is the hub, $($Hub.name): it lists no introducer, and its joining service shares the folders"
+} else {
+    $Current = Invoke-Syncthing Get "/rest/config/devices/$HubId"
+    if ($null -eq $Current) {
+        $Device = Invoke-Syncthing Get '/rest/config/defaults/device'
+        $Device.deviceID = $HubId
+        $Device.name = $Hub.name
+        $Device.addresses = @($Hub.addresses)
+        $Device.introducer = $true
+        Invoke-Syncthing Post '/rest/config/devices' $Device | Out-Null
+        Write-Host "notice: Syncthing: added $($Hub.name) as this node's introducer, at $(@($Hub.addresses) -join ', ')"
+    } else {
+        $Patch = [ordered]@{}
+        if ($Current.name -ne $Hub.name) { $Patch.name = $Hub.name }
+        if ((@($Current.addresses) -join "`n") -ne (@($Hub.addresses) -join "`n")) { $Patch.addresses = @($Hub.addresses) }
+        if (-not $Current.introducer) { $Patch.introducer = $true }
+        if ($Patch.Count) {
+            Invoke-Syncthing Patch "/rest/config/devices/$HubId" $Patch | Out-Null
+            Write-Host "notice: Syncthing: set $(@($Patch.Keys | Sort-Object) -join ', ') of $($Hub.name)"
+        } else {
+            Write-Host "debug: Syncthing: $($Hub.name) already set up"
+        }
+    }
+}
+
+foreach ($Folder in $Desired.folders) {
+    $Current = Invoke-Syncthing Get "/rest/config/folders/$($Folder.id)"
+    if ($null -eq $Current) {
+        $New = Invoke-Syncthing Get '/rest/config/defaults/folder'
+        $New.id = $Folder.id
+        $New.label = $Folder.label
+        $New.path = $Folder.path
+        $Devices = @(@($New.devices) | Where-Object { $_ -and $_.deviceID })
+        if (-not $IsHub -and -not ($Devices | Where-Object { $_.deviceID -eq $HubId })) {
+            $Devices += [pscustomobject]@{ deviceID = $HubId }
+        }
+        $New.devices = $Devices
+        Invoke-Syncthing Post '/rest/config/folders' $New | Out-Null
+        $Shared = $(if ($IsHub) { '' } else { ", shared with $($Hub.name)" })
+        Write-Host "notice: Syncthing: added folder $($Folder.id) at $($Folder.path)$Shared"
+        continue
+    }
+    if (-not (Test-SamePath $Current.path $Folder.path)) {
+        Write-Host "warning: Syncthing: folder $($Folder.id) is at $($Current.path) here, not $($Folder.path); its path is left as it is"
+    }
+    $Patch = [ordered]@{}
+    if ($Current.label -ne $Folder.label) { $Patch.label = $Folder.label }
+    $Devices = @(@($Current.devices) | Where-Object { $_ })
+    if (-not $IsHub -and -not ($Devices | Where-Object { $_.deviceID -eq $HubId })) {
+        $Patch.devices = $Devices + [pscustomobject]@{ deviceID = $HubId }
+    }
+    if ($Patch.Count) {
+        Invoke-Syncthing Patch "/rest/config/folders/$($Folder.id)" $Patch | Out-Null
+        $Changes = @($Patch.Keys | Sort-Object | ForEach-Object { if ($_ -eq 'devices') { "shared with $($Hub.name)" } else { $_ } })
+        Write-Host "notice: Syncthing: folder $($Folder.id): $($Changes -join ', ')"
+    } else {
+        Write-Host "debug: Syncthing: folder $($Folder.id) already set up"
+    }
+}
+
+$Options = Invoke-Syncthing Get '/rest/config/options'
+$Patch = [ordered]@{}
+foreach ($Option in $Desired.options.PSObject.Properties) {
+    if ($Options.($Option.Name) -ne $Option.Value) { $Patch[$Option.Name] = $Option.Value }
+}
+if ($Patch.Count) {
+    Invoke-Syncthing Patch '/rest/config/options' $Patch | Out-Null
+    Write-Host "notice: Syncthing: set $(@($Patch.Keys | Sort-Object | ForEach-Object { "$_=$(ConvertTo-Json -InputObject $Patch[$_] -Compress)" }) -join ', ')"
+}
+
+if ((Invoke-Syncthing Get '/rest/config/restart-required').requiresRestart) {
+    Write-Host 'notice: Syncthing wants a restart to finish applying its configuration'
+}

@@ -23,6 +23,10 @@
   },
   "theme": "auto",
   "editorMode": "vim",
+{{- /* Claude Code's default, pinned: Syncthing's claude folder
+       (.chezmoidata/syncthing.toml) carries each machine's transcript sweep to
+       every other, so all of them must keep transcripts equally long. */}}
+  "cleanupPeriodDays": 30,
   "autoCompactEnabled": true,
   "agentPushNotifEnabled": true
 }

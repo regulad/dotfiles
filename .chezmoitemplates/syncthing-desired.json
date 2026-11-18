@@ -1,0 +1,10 @@
+{{- /* What 155-syncthing applies on this OS, from .chezmoidata/syncthing.toml:
+       the hub's name and addresses, each folder with this OS's path, and the
+       options. The hub's ID is not in it: the scripts decrypt that at run
+       time. */ -}}
+{{- $os := .chezmoi.os -}}
+{{- $folders := list -}}
+{{- range .syncthing.folders -}}
+{{-   $folders = append $folders (dict "id" .id "label" .label "path" (index .path $os)) -}}
+{{- end -}}
+{{- dict "hub" (dict "name" .syncthing.hub.name "addresses" (list .syncthing.hub.address)) "folders" $folders "options" .syncthing.options | toPrettyJson -}}

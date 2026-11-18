@@ -1,0 +1,4 @@
+{{ template "posix-preamble.sh" . }}
+# Applies .chezmoidata/syncthing.toml to this node's running Syncthing
+# (docs/syncthing.md). After 150-user-services, which starts it.
+{{ template "syncthing-apply.sh" . }}

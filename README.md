@@ -132,6 +132,7 @@ Longer write-ups live in `docs/` (not deployed to `$HOME`):
 - [Git hooks](docs/git-hooks.md) -- the hooks `init.templateDir` copies into every new repository: pre-commit, and patatt's.
 - [Containers](docs/containers.md) -- which engine each host runs (wslc, apple/container, colima, podman) and the Docker Desktop and macOS podman removal.
 - [MCP servers](docs/mcp-servers.md) -- where Claude Code's and Codex's MCP servers come from, how each signs in, and why ngrok's isn't set up.
+- [Syncthing](docs/syncthing.md) -- the declarative mesh around aboriginal, how a machine joins, and which of Claude Code's state it carries.
 
 ## TODOs
 
