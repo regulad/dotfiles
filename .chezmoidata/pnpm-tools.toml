@@ -61,6 +61,12 @@ brew = { default = "cloudflare-wrangler", catalina = "", bigsur = "", monterey =
 # postinstall, which used to fetch it anyway, now fails the whole global
 # install (windows-apply on windows-11-arm, since 2026-11-10).
 skip = ["windows/arm64"]
+# Where pnpm supplies it, its esbuild (0.28.2) is a Go binary built for
+# macOS 12, whose own postinstall check crashes on Big Sur and fails the whole
+# global install (minintosh, macOS 11.7, 2026-11-17). Its workerd wants 13.5,
+# but only for `wrangler dev`: workerd's check of itself fails without failing
+# the install.
+macosMin = 12
 
 [[pnpmTools.packages]]
 pnpm = "cline"
@@ -84,6 +90,10 @@ pnpm = "go-ios"
 [[pnpmTools.packages]]
 # Core's `cf` is a different timestamp filter, not Cloudflare's cf CLI.
 pnpm = "cf"
+# It depends on miniflare and so on workerd, which has no Windows ARM build,
+# and failed the whole global install there as wrangler's did (above);
+# windows-apply on windows-11-arm had failed on it since 2026-11-13.
+skip = ["windows/arm64"]
 
 [[pnpmTools.packages]]
 # Sentry's CLI, `sentry`, which the Claude Code sentry-cli plugin's skills run.
