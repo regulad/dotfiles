@@ -328,6 +328,14 @@ export CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS=1
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
 export HOMEBREW_NO_ENV_HINTS=1
 
+# uv's HTTP timeout, 30 s by default, past which it gives up on a request; a
+# hookscript's `uv tool install` then fails the apply. On campus Wi-Fi
+# (minintosh, 2026-11-17) PyPI stalled longer than that on two applies running,
+# on keydive's index and on typst's 17.6 MB wheel, and 300 got through. Set for
+# every uv, not just the hookscripts', since an interactive one meets the same
+# stalls. Mirrored for Windows in registry-user.reg.
+export UV_HTTP_TIMEOUT=300
+
 # keychain is the fallback for a host with no agent socket. Never on WSL: the
 # relay socket above is the agent there even before it exists, and the WSL
 # images ship without keychain (see .github/workflows/wsl-package.yml).

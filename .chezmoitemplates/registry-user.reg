@@ -40,6 +40,10 @@ Windows Registry Editor Version 5.00
 "CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS"="1"
 "DOTNET_CLI_TELEMETRY_OPTOUT"="1"
 
+; uv's HTTP timeout, from its default 30 seconds to 300; .commonprofile says why.
+[HKEY_CURRENT_USER\Environment]
+"UV_HTTP_TIMEOUT"="300"
+
 ; Variables for WSL's Linux side. WSL copies a Windows variable into a session
 ; only when WSLENV names it, and with /u it does so whenever Windows starts WSL:
 ; a terminal's wsl.exe, `wsl --exec`, and a Linux app's Start-menu entry, which
