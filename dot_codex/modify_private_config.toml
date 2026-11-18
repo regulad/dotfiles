@@ -52,5 +52,14 @@
 {{- $config = $config | setValueAtPath "mcp_servers.supabase" (dict
       "url" "https://mcp.supabase.com/mcp"
       "http_headers" (dict "Authorization" (printf "Bearer %s" $supabase.token.value))) -}}
+{{- /* GitHub's, read-only and down to two toolsets; see its Claude Code
+       entry. */ -}}
+{{- $github := bitwardenFields "item" "github.com" -}}
+{{- $config = $config | setValueAtPath "mcp_servers.github" (dict
+      "url" "https://api.githubcopilot.com/mcp/"
+      "http_headers" (dict
+        "Authorization" (printf "Bearer %s" $github.dotfiles.value)
+        "X-MCP-Toolsets" "actions,github_support_docs_search"
+        "X-MCP-Readonly" "true")) -}}
 {{- end -}}
 {{- $config | toToml -}}

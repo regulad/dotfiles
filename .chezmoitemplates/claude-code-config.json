@@ -62,6 +62,23 @@
       "headers": {
         "Authorization": {{ printf "Bearer %s" $supabase.token.value | toJson }}
       }
+    },
+{{- /* GitHub's hosted MCP server (github/github-mcp-server), with the
+       github.com item's `dotfiles` token. Read-only (X-MCP-Readonly), and
+       only the actions and github_support_docs_search toolsets
+       (X-MCP-Toolsets): workflow runs and job logs, and a search of GitHub's
+       docs, which `gh` has no command for. Everything else stays with `gh`.
+       The configured Authorization header keeps Claude Code from an OAuth
+       sign-in. Codex's entry is in dot_codex/modify_private_config.toml. */}}
+{{- $github := bitwardenFields "item" "github.com" }}
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": {{ printf "Bearer %s" $github.dotfiles.value | toJson }},
+        "X-MCP-Toolsets": "actions,github_support_docs_search",
+        "X-MCP-Readonly": "true"
+      }
     }
 {{- end }}
 {{- if and (eq .chezmoi.os "windows") (eq .chezmoi.arch "amd64") }},
