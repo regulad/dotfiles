@@ -119,11 +119,10 @@ BREW_CASKS_MACOS=(
 {{- else if eq $brewEra "" }}
 	"kde-connect"
 {{- end }}
-{{- if $preApp }}
-	"syncthing"
-{{- else }}
-	"syncthing-app"
-{{- end }}
+{{- /* No syncthing-app (`syncthing` on the pre-2025 eras): Syncthing is the
+       brew formula on every Mac, run by launchd as the user's agent, which
+       155-syncthing starts and which uninstalls the app. Started at login,
+       the app would run a second Syncthing on the same configuration. */}}
 {{- if not $pre2025 }}
 	"discord"  # proprietary freeware # needs macOS 13.0, as the cask declares; 080-vencord injects Vencord into it
 {{- end }}

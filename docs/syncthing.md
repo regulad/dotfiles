@@ -58,6 +58,17 @@ with a warning. The script runs on every apply, so a node whose Syncthing was
 not running yet is set up on the next apply after it is. It does nothing in WSL
 or a container, where Syncthing is not started (`150-user-services`).
 
+How Syncthing runs differs by platform. On Linux it is the distro's or brew's
+user service, which `150-user-services` starts. On Windows it is
+BillStewart.SyncthingWindowsSetup, started at logon. On a Mac it is brew's
+formula, run by launchd as the user's agent (`brew services start syncthing`),
+which macOS's `155-syncthing` starts: it runs from then on and at every login,
+but not at boot, so a Mac with nobody logged in after a restart has no Syncthing
+until someone logs in. The same holds on headless and headful Macs alike. The
+`syncthing-app` cask is not installed, and `155-syncthing` uninstalls it where
+an older apply left it, since it starts a second Syncthing at login on the
+same configuration.
+
 On aboriginal itself the same script runs: chezmoi applies there too, with dummy
 secrets. `.chezmoiignore.tmpl` keeps the script for a dummy-secrets host whose
 hostname is the hub's name, and there the script skips the decryption: an empty

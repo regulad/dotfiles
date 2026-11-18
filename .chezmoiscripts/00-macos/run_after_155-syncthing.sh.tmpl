@@ -1,5 +1,44 @@
 {{ template "posix-preamble-brew.sh" . }}
-# Applies .chezmoidata/syncthing.toml to this node's running Syncthing
-# (docs/syncthing.md): the syncthing-app cask's, from 040-macos-casks, which
-# runs at login. Brew's python3 runs the REST half.
+# Runs Syncthing on this Mac and applies .chezmoidata/syncthing.toml to it
+# (docs/syncthing.md). Brew's python3 runs the REST half.
+#
+# Syncthing on a Mac is brew's formula (brew-packages-macos), run by launchd
+# as this user's agent through `brew services`: it starts here, and again at
+# every login. Not at boot: a launch agent waits for a login, so a Mac with
+# nobody logged in after a restart has no Syncthing until someone does. That
+# is the same on a headless Mac like overture as on one someone sits at; one
+# way of running it for both.
+#
+# The syncthing-app cask (`syncthing` on the pre-2025 eras), which
+# 040-macos-casks used to install, starts its own copy of Syncthing at login
+# on the same configuration, so it is uninstalled first. Its configuration,
+# ~/Library/Application Support/Syncthing, is the formula's too, and stays.
+for cask in syncthing-app syncthing; do
+	if brew list --cask "$cask" &>/dev/null; then
+		echo "notice: uninstalling the $cask cask: Syncthing runs as brew's formula under launchd instead" >&2
+		brew uninstall --cask -q "$cask"
+	fi
+done
+if [ -d /Applications/Syncthing.app ]; then
+	echo "warning: /Applications/Syncthing.app (not from brew) would start a second Syncthing at login; remove it" >&2
+fi
+
+if brew list --formula syncthing &>/dev/null \
+	&& ! brew services list | awk '$1 == "syncthing" { print $2 }' | grep -qx started; then
+	echo "notice: starting Syncthing as a launchd agent (brew services start syncthing)" >&2
+	if ! brew services start syncthing; then
+		# The agent's plist is written either way, so launchd still starts it
+		# at the next login.
+		echo "warning: Syncthing's launchd agent did not start now (no login session?); it starts at the next login" >&2
+	else
+		# Its first start writes the configuration and keys before the REST
+		# API answers.
+		for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+			if syncthing cli config gui apikey get &>/dev/null; then
+				break
+			fi
+			sleep 2
+		done
+	fi
+fi
 {{ template "syncthing-apply.sh" . }}
