@@ -23,6 +23,10 @@
 	"git.enableSmartCommit": true,
 	"git.autofetch": true,
 	"git.confirmSync": false,
+{{- /* git.detectWorktrees: "Controls whether to automatically detect Git
+       worktrees", so an open repository's worktrees show up in Source Control
+       on their own. Off by default; git.detectWorktreesLimit (50) caps it. */}}
+	"git.detectWorktrees": true,
 	"telemetry.enableCrashReporter": false,
 	"telemetry.enableTelemetry": false,
 	"editor.cursorBlinking": "smooth",
@@ -74,6 +78,33 @@
 	"[markdown]": {
 		"editor.defaultFormatter": "yzhang.markdown-all-in-one"
 	},
+{{- /* JSON with comments is formatted by VS Code's own JSON support,
+       vscode.json-language-features (built in), not by Prettier
+       (esbenp.prettier-vscode), which offers to format it too. The built-in
+       formatter only rewrites whitespace, so comments and trailing commas
+       stay as written. */}}
+	"[jsonc]": {
+		"editor.defaultFormatter": "vscode.json-language-features"
+	},
+{{- /* HuJSON -- JSON with comments and trailing commas, the format of
+       Tailscale's policy files (tailscale-acls/policy.hujson) -- has no
+       Marketplace extension (none by name or tag, 2026-11-18), so it is
+       opened as jsonc and formatted as above. jsonc warns on each trailing
+       comma unless the document's schema sets allowTrailingCommas, which
+       VS Code's JSON server reads; json.schemas gives *.hujson an inline
+       schema with only that. json.schemas is an array, so it replaces any
+       list set by hand (json-config-merge). */}}
+	"files.associations": {
+		"*.hujson": "jsonc"
+	},
+	"json.schemas": [
+		{
+			"fileMatch": ["*.hujson"],
+			"schema": {
+				"allowTrailingCommas": true
+			}
+		}
+	],
 	"githubPullRequests.createOnPublishBranch": "never",
 	"window.autoDetectColorScheme": true,
 	"cmake.configureOnOpen": true,
