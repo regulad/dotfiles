@@ -68,12 +68,18 @@ goto :toolchain_done
 :toolchain_arm64
 if exist "%USERPROFILE%\scoop\apps\msys2\current\clangarm64\bin\clang.exe" goto :toolchain_done
 echo debug: installing msys2 clangarm64 toolchain for native gem builds
+REM In batches of six, because `ridk exec` hands its program at most nine
+REM arguments: ridk.cmd shifts twice and runs `%0 %1 ... %9`, dropping the
+REM rest without a word. As one 26-package call, pacman got -S --needed
+REM --noconfirm and the first six packages, exited 0, and clang never came
+REM (windows-apply on windows-11-arm, 2026-11-18, the first run to get this
+REM far). :pacman_install adds the three flags, which leaves six.
 set "P=mingw-w64-clang-aarch64"
-call "%RIDK%" exec pacman -S --needed --noconfirm autoconf autogen automake-wrapper diffutils file gawk grep libtool m4 make patch sed texinfo texinfo-tex wget %P%-binutils %P%-crt-git %P%-cc %P%-headers-git %P%-libwinpthread-git %P%-winpthreads-git pkgconf %P%-libmangle-git %P%-make %P%-pkgconf %P%-tools-git
-if errorlevel 1 (
-    echo error: installing the clangarm64 toolchain failed 1>&2
-    exit /b 1
-)
+call :pacman_install autoconf autogen automake-wrapper diffutils file gawk || exit /b 1
+call :pacman_install grep libtool m4 make patch sed || exit /b 1
+call :pacman_install texinfo texinfo-tex wget pkgconf || exit /b 1
+call :pacman_install %P%-binutils %P%-crt-git %P%-cc %P%-headers-git %P%-libwinpthread-git %P%-winpthreads-git || exit /b 1
+call :pacman_install %P%-libmangle-git %P%-make %P%-pkgconf %P%-tools-git || exit /b 1
 if not exist "%USERPROFILE%\scoop\apps\msys2\current\clangarm64\bin\clang.exe" (
     echo error: pacman finished but clangarm64\bin\clang.exe is missing 1>&2
     exit /b 1
@@ -107,6 +113,16 @@ echo debug: installing gem %~1
 call "%GEM%" install %~1
 if errorlevel 1 (
     echo error: failed to install gem %~1 1>&2
+    exit /b 1
+)
+exit /b 0
+
+REM pacman inside ridk's MSYS2, for at most six packages at a time (see
+REM :toolchain_arm64 for why six).
+:pacman_install
+call "%RIDK%" exec pacman -S --needed --noconfirm %*
+if errorlevel 1 (
+    echo error: pacman -S %* failed 1>&2
     exit /b 1
 )
 exit /b 0
