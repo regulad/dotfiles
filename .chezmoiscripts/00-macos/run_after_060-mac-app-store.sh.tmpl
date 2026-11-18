@@ -38,44 +38,31 @@ elif [ "$HAS_BREW" = "true" ]; then
 	else
 		echo "debug: no App Store apps to update (Xcode is excluded on purpose)" >&2
 	fi
-	# `mas install` only re-downloads apps that are already in the signed-in
-	# Apple Account's purchase history: it sends the store a redownload
-	# request (pricingParameters=STDRDL, isRedownload), and for an app this
-	# account has never gotten the store answers with no downloads and mas
-	# exits non-zero ("No downloads began" in 1.x, "No downloads initiated"
-	# in 7.x). `mas purchase` -- `mas get` since 5.x, with `purchase` kept as
-	# an alias, so the old spelling works on every era -- sends a real
-	# zero-price purchase instead (STDQ, macappinstalledconfirmed=1), which
-	# adds the app to the account and then downloads it. Free apps only:
-	# paid ones have to be bought in the App Store app (mas-cli/mas#558).
-	# Depending on System Settings (Touch ID for purchases, or Free
-	# Downloads: Always Require) the store may prompt for Apple Account
-	# authentication per app, and mas 4.x+ needs root for both commands and
-	# sudo's itself. Already-installed apps are a warning and exit 0, so they
-	# never reach the fallback.
+	# Apps that are not installed are never handed to mas. `mas install`
+	# only redownloads what the signed-in Apple Account owns, and `mas get`
+	# (`purchase` before 5.x) acquires what it does not; but no mas, up to
+	# 7.0.0, can say which apps an account owns, and asking for one it does
+	# not, or one this macOS is too old for, puts up an App Store dialog
+	# ("This redownload is not available for this Apple Account", "not
+	# available for this account") that mas waits on. The apply then stalls
+	# until someone at the Mac dismisses it, once per app: minintosh (Big Sur,
+	# mas 1.8.6) did, on 2026-11-17. Installed is the only sign of ownership
+	# there is, so an app is gotten once by hand in the App Store, and from
+	# then on the `mas update` above keeps it current. A notice names the
+	# ones missing, with their App Store links.
 	#
-	# Era caveat: mas 1.8.4 through 1.8.6 refuse `purchase` outright on
-	# 10.15+ ("not supported on this macOS version"); 1.8.7 (2024-11)
-	# re-enabled it. The Catalina, Big Sur and Monterey pins carry 1.8.6, so
-	# there the fallback fails too and the app has to be gotten once by hand
-	# in the App Store; after that `mas install` works. The 2025+ pins are
-	# fine.
-	#
-	# An app this Mac's macOS is too old for does not fail either command: the
-	# App Store puts up a dialog ("not available for this account") that mas
-	# waits on, and the apply stalls until someone at the Mac dismisses it.
-	# On minintosh (Big Sur, 2026-11-17) that was Bitwarden (macOS 12 on),
-	# Excel, PowerPoint, Word and Windows App (15 on). So each app that is not
-	# installed is looked up first in the App Store's public lookup service,
-	# which needs no account, and is skipped when it needs a newer macOS. Only
-	# a Mac listing ("kind":"mac-software") counts: a universal app can come
-	# back as its iOS listing, whose minimumOsVersion is an iOS version. A
-	# lookup that fails, or says nothing, leaves the app to mas as before.
+	# Those too new for this macOS are named apart, so that nobody gets them
+	# for nothing. The App Store's public lookup service, which needs no
+	# account, gives each app's minimumOsVersion; only a Mac listing
+	# ("kind":"mac-software") counts, since a universal app can come back as
+	# its iOS listing, whose minimum is an iOS version. A lookup that fails,
+	# or says nothing, counts the app as one to get.
 	macos_version="$(sw_vers -productVersion)"
 	installed_ids="$(mas list 2>/dev/null | awk '$1 ~ /^[0-9]+$/ { print $1 }')"
+	to_get=
+	too_new=
 	for mas_id in "${MAS_APP_IDS[@]}"; do
 		if printf '%s\n' "$installed_ids" | grep -qx "$mas_id"; then
-			echo "debug: App Store app $mas_id is installed" >&2
 			continue
 		fi
 		min_macos="$(curl -fsS --max-time 20 "https://itunes.apple.com/lookup?id=$mas_id&entity=macSoftware" 2>/dev/null |
@@ -86,17 +73,20 @@ if r.get("kind") == "mac-software": print(r.get("minimumOsVersion", ""))' 2>/dev
 			n = split(have, h, "."); m = split(need, w, ".")
 			for (i = 1; i <= (n > m ? n : m); i++) { if (h[i] + 0 > w[i] + 0) exit 0; if (h[i] + 0 < w[i] + 0) exit 1 }
 			exit 0 }'; then
-			echo "notice: skipping App Store app $mas_id: it needs macOS $min_macos, and this Mac has $macos_version" >&2
-			continue
-		fi
-		if mas install "$mas_id"; then
-			continue
-		fi
-		echo "notice: mas install $mas_id failed; trying to get it as a free purchase with the signed-in Apple Account" >&2
-		if ! mas purchase "$mas_id"; then
-			echo "warning: could not get app $mas_id; if it is free, click Get on https://apps.apple.com/app/id$mas_id in the App Store and re-run this script" >&2
+			too_new="$too_new $mas_id (macOS $min_macos)"
+		else
+			to_get="$to_get https://apps.apple.com/app/id$mas_id"
 		fi
 	done
+	if [ -n "$to_get" ]; then
+		echo "notice: App Store apps not installed, and left alone since mas cannot tell whether the Apple Account owns them; get each once in the App Store, and later applies keep it updated:$to_get" >&2
+	fi
+	if [ -n "$too_new" ]; then
+		echo "notice: App Store apps too new for macOS $macos_version, skipped:$too_new" >&2
+	fi
+	if [ -z "$to_get" ] && [ -z "$too_new" ]; then
+		echo "debug: every listed App Store app is installed" >&2
+	fi
 fi
 
 # Android installer broken on x86_64 as of 3/14/2026
