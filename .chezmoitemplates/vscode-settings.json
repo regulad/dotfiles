@@ -87,7 +87,7 @@
 		"editor.defaultFormatter": "vscode.json-language-features"
 	},
 {{- /* HuJSON -- JSON with comments and trailing commas, the format of
-       Tailscale's policy files (tailscale-acls/policy.hujson) -- has no
+       Tailscale's policy files (policy.hujson) -- has no
        Marketplace extension (none by name or tag, 2026-11-18), so it is
        opened as jsonc and formatted as above. jsonc warns on each trailing
        comma unless the document's schema sets allowTrailingCommas, which

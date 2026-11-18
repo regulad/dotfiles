@@ -11,7 +11,7 @@ Additionally, it includes a couple custom tools that I use; for example, a `pyca
 
 The default keyboard layout is of my [Keychron Q6 Max](https://www.keychron.com/products/keychron-q6-max-qmk-via-wireless-custom-mechanical-keyboard?variant=40799762972761). You should be able to replace the `base.json` with your keyboard's layout, but no guarantees are made. 
 
-My Tailscale configuration is available at [`tailscale-acls`](https://github.com/regulad/tailscale-acls).
+My Tailscale configuration is part of [`homelab`](https://github.com/regulad/homelab), in `tofu/tailscale`.
 
 *This project is AGPL-3.0 licensed. Small request: if you choose to contribute, please do so on the GitHub fork network. This is only a request, AGPL-3.0 does not obligate you to share private modifications unless they are used through a network (i.e. shell account).*
 
