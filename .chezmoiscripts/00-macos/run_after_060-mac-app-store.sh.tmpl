@@ -60,7 +60,35 @@ elif [ "$HAS_BREW" = "true" ]; then
 	# there the fallback fails too and the app has to be gotten once by hand
 	# in the App Store; after that `mas install` works. The 2025+ pins are
 	# fine.
+	#
+	# An app this Mac's macOS is too old for does not fail either command: the
+	# App Store puts up a dialog ("not available for this account") that mas
+	# waits on, and the apply stalls until someone at the Mac dismisses it.
+	# On minintosh (Big Sur, 2026-11-17) that was Bitwarden (macOS 12 on),
+	# Excel, PowerPoint, Word and Windows App (15 on). So each app that is not
+	# installed is looked up first in the App Store's public lookup service,
+	# which needs no account, and is skipped when it needs a newer macOS. Only
+	# a Mac listing ("kind":"mac-software") counts: a universal app can come
+	# back as its iOS listing, whose minimumOsVersion is an iOS version. A
+	# lookup that fails, or says nothing, leaves the app to mas as before.
+	macos_version="$(sw_vers -productVersion)"
+	installed_ids="$(mas list 2>/dev/null | awk '$1 ~ /^[0-9]+$/ { print $1 }')"
 	for mas_id in "${MAS_APP_IDS[@]}"; do
+		if printf '%s\n' "$installed_ids" | grep -qx "$mas_id"; then
+			echo "debug: App Store app $mas_id is installed" >&2
+			continue
+		fi
+		min_macos="$(curl -fsS --max-time 20 "https://itunes.apple.com/lookup?id=$mas_id&entity=macSoftware" 2>/dev/null |
+			python3 -c 'import json, sys
+r = (json.load(sys.stdin).get("results") or [{}])[0]
+if r.get("kind") == "mac-software": print(r.get("minimumOsVersion", ""))' 2>/dev/null || true)"
+		if [ -n "$min_macos" ] && ! awk -v have="$macos_version" -v need="$min_macos" 'BEGIN {
+			n = split(have, h, "."); m = split(need, w, ".")
+			for (i = 1; i <= (n > m ? n : m); i++) { if (h[i] + 0 > w[i] + 0) exit 0; if (h[i] + 0 < w[i] + 0) exit 1 }
+			exit 0 }'; then
+			echo "notice: skipping App Store app $mas_id: it needs macOS $min_macos, and this Mac has $macos_version" >&2
+			continue
+		fi
 		if mas install "$mas_id"; then
 			continue
 		fi
