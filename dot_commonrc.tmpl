@@ -43,6 +43,19 @@ alias c3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i -
 alias t3="uv run --directory=$HOME/.local/share/pycalc3 ipython --no-banner -i --profile=sympy"
 alias "chomp=perl -pi -e 'chomp if eof'"
 
+# The Tailscale macOS apps carry their CLI inside the app binary. The
+# standalone app's Settings > CLI integration writes a launcher to
+# /usr/local/bin/tailscale, but only on Ventura and later, and the App Store
+# app has no such setting; Tailscale's own answer there (kb/1080/cli) is an
+# alias to the binary. So a Mac with nothing named tailscale on PATH gets one
+# (minintosh: Big Sur, the standalone app installed by hand, 2026-11-17). The
+# binary guesses GUI or CLI from SHLVL, TERM, TERM_PROGRAM and PS1;
+# TAILSCALE_BE_CLI=1 settles it.
+if [ "$(uname -s)" = "Darwin" ] && ! command -v tailscale >/dev/null 2>&1 \
+    && [ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]; then
+  alias tailscale='TAILSCALE_BE_CLI=1 /Applications/Tailscale.app/Contents/MacOS/Tailscale'
+fi
+
 NCSU_HOSTS=(eos grendel hydra kraken)
 for h in "${NCSU_HOSTS[@]}"; do
   alias "ssh-$h=sshpass -f $HOME/.ssh/id_plaintext_ncstate ssh $h"

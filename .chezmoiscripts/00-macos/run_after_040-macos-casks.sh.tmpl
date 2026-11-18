@@ -169,12 +169,15 @@ if [ "$HAS_BREW" = "true" ]; then
 	# Tailscale ships two macOS builds that cannot coexist: the App Store app
 	# (id 1475387142, bundle io.tailscale.ipn.macos, network extension) and the
 	# standalone pkg (bundle io.tailscale.ipn.macsys, system extension) -- the
-	# same pkg the tailscale-app cask installs, and the one that drops the CLI at
-	# /usr/local/bin/tailscale. Either may already be on a host without brew
-	# knowing: the App Store one never is, and the standalone one isn't when it
-	# was installed by hand. Skip the cask in both cases rather than letting
-	# `brew install --cask -f` re-run the pkg installer (and prompt for sudo)
-	# over a working install. mas comes from 020-brew-packages, so it is on PATH.
+	# same pkg the tailscale-app cask installs. Neither puts the CLI on PATH by
+	# itself: the pkg ships only the bundle, and the standalone app's CLI
+	# integration setting, which writes /usr/local/bin/tailscale, needs Ventura;
+	# dot_commonrc.tmpl aliases the bundled binary where nothing else has. Either
+	# may already be on a host without brew knowing: the App Store one never is,
+	# and the standalone one isn't when it was installed by hand. Skip the cask in
+	# both cases rather than letting `brew install --cask -f` re-run the pkg
+	# installer (and prompt for sudo) over a working install. mas comes from
+	# 020-brew-packages, so it is on PATH.
 	if mas list 2>/dev/null | grep -q '^1475387142 '; then
 		echo "debug: tailscale present from the App Store; skipping the tailscale-app cask" >&2
 		TAILSCALE_PRESENT=1
