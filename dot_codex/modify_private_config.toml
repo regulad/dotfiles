@@ -61,5 +61,12 @@
         "Authorization" (printf "Bearer %s" $github.dotfiles.value)
         "X-MCP-Toolsets" "actions,github_support_docs_search"
         "X-MCP-Readonly" "true")) -}}
+{{- /* Google's Developer Knowledge server, with the restricted API key; see
+       its Claude Code entry. Google's page says `codex mcp list` may show
+       it as not logged in, which does not affect it. */ -}}
+{{- $devknowledge := bitwardenFields "item" "developers.google.com" -}}
+{{- $config = $config | setValueAtPath "mcp_servers.google-developer-knowledge" (dict
+      "url" "https://developerknowledge.googleapis.com/mcp"
+      "http_headers" (dict "X-Goog-Api-Key" $devknowledge.token.value)) -}}
 {{- end -}}
 {{- $config | toToml -}}

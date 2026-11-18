@@ -22,6 +22,7 @@ and OneSignal's are.
 | Sentry | configured directly, at the sentry plugin's own URL, so Claude Code skips the plugin's copy as a duplicate | configured directly | the `sentry.io` item's token, as `Authorization: Sentry-Bearer` |
 | Supabase | configured directly, at the supabase plugin's own URL, so Claude Code skips the plugin's copy as a duplicate | configured directly | the `supabase.com` item's token, as `Authorization: Bearer` |
 | GitHub | configured directly: read-only, and only the actions and github_support_docs_search toolsets | configured directly, likewise | the `github.com` item's `dotfiles` token, as `Authorization: Bearer` |
+| Google Developer Knowledge | configured directly | configured directly | the `developers.google.com` item's `token`, as `X-Goog-Api-Key`: an API key that homelab's tofu/gcp makes in project `regulad`, restricted to the Developer Knowledge API |
 | Cloudflare | cloudflare plugin | cloudflare plugin | OAuth |
 | Vercel | vercel plugin | OpenAI's curated vercel plugin | OAuth; Vercel's server takes no token |
 | OneSignal | onesignal plugin, from OneSignal's marketplace | onesignal plugin, from the same marketplace; `codex mcp login` fails against the server, so it stays signed out | OAuth; OneSignal's [documentation](https://documentation.onesignal.com/docs/en/model-context-protocol) says there is no API key to configure |

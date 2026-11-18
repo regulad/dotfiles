@@ -79,6 +79,25 @@
         "X-MCP-Toolsets": "actions,github_support_docs_search",
         "X-MCP-Readonly": "true"
       }
+    },
+{{- /* Google's Developer Knowledge MCP server: search and retrieval over
+       Google's developer docs (web.dev, developer.chrome.com, Android,
+       Firebase, Google Cloud, Go, the Gemini API and more), with the
+       developers.google.com item's `token`. That is an API key homelab's
+       tofu/gcp makes in the regulad project (developer-knowledge-mcp),
+       restricted to the Developer Knowledge API alone and to no
+       application, since several machines use it. Google takes it as
+       X-Goog-Api-Key and never in the URL. Configured directly, not
+       through Google's google-cloud-developer plugin (google/skills),
+       whose other skills are Google Cloud tooling. Codex's entry is in
+       dot_codex/modify_private_config.toml. */}}
+{{- $devknowledge := bitwardenFields "item" "developers.google.com" }}
+    "google-developer-knowledge": {
+      "type": "http",
+      "url": "https://developerknowledge.googleapis.com/mcp",
+      "headers": {
+        "X-Goog-Api-Key": {{ $devknowledge.token.value | toJson }}
+      }
     }
 {{- end }}
 {{- if and (eq .chezmoi.os "windows") (eq .chezmoi.arch "amd64") }},
