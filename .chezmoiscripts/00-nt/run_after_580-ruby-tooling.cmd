@@ -66,7 +66,20 @@ if not exist "%USERPROFILE%\scoop\apps\msys2\current\ucrt64\bin\gcc.exe" (
 goto :toolchain_done
 
 :toolchain_arm64
-if exist "%USERPROFILE%\scoop\apps\msys2\current\clangarm64\bin\clang.exe" goto :toolchain_done
+REM ridk picks its MSYS2 itself, in RubyInstaller's order: MSYS2_PATH, an
+REM msys64 in or beside the Ruby directory, C:\msys64, the registry, PATH,
+REM and scoop's only last. So clang is looked for in ridk's MSYS2, wherever
+REM `cygpath -w /` inside it says that is. On GitHub's windows-11-arm runner
+REM it is the image's own C:\msys64: pacman installed clang there while this
+REM looked in scoop's (windows-apply, 2026-11-18). On a machine with only
+REM scoop's MSYS2 the two are the same directory.
+set "MSYS_ROOT="
+for /f "delims=" %%r in ('call "%RIDK%" exec cygpath -w / 2^>nul') do if not defined MSYS_ROOT set "MSYS_ROOT=%%r"
+if not defined MSYS_ROOT (
+    echo error: ridk exec cygpath found no MSYS2 to install the clangarm64 toolchain into 1>&2
+    exit /b 1
+)
+if exist "%MSYS_ROOT%\clangarm64\bin\clang.exe" goto :toolchain_done
 echo debug: installing msys2 clangarm64 toolchain for native gem builds
 REM In batches of six, because `ridk exec` hands its program at most nine
 REM arguments: ridk.cmd shifts twice and runs `%0 %1 ... %9`, dropping the
@@ -80,8 +93,8 @@ call :pacman_install grep libtool m4 make patch sed || exit /b 1
 call :pacman_install texinfo texinfo-tex wget pkgconf || exit /b 1
 call :pacman_install %P%-binutils %P%-crt-git %P%-cc %P%-headers-git %P%-libwinpthread-git %P%-winpthreads-git || exit /b 1
 call :pacman_install %P%-libmangle-git %P%-make %P%-pkgconf %P%-tools-git || exit /b 1
-if not exist "%USERPROFILE%\scoop\apps\msys2\current\clangarm64\bin\clang.exe" (
-    echo error: pacman finished but clangarm64\bin\clang.exe is missing 1>&2
+if not exist "%MSYS_ROOT%\clangarm64\bin\clang.exe" (
+    echo error: pacman finished but clangarm64\bin\clang.exe is missing from ridk's MSYS2 1>&2
     exit /b 1
 )
 
