@@ -123,6 +123,14 @@
 {{- $headless := and (env "CHEZMOI_USE_HEADLESS" | not | not) (eq (env "WSL_DISTRO_NAME") "") }}
 
 encryption = "age"
+{{- if eq .chezmoi.os "linux" }}
+# chezmoi writes each script to a temporary file and runs it from there. On
+# Linux that is under ~/.cache rather than /tmp: homelab mounts /tmp noexec on
+# its hosts (its noexec role), and every script on aboriginal then failed with
+# "fork/exec /tmp/...: permission denied" (2026-11-18). chezmoi creates the
+# directory itself, mode 700.
+scriptTempDir = "~/.cache/chezmoi-scripts"
+{{- end }}
 [age]
     identity = "{{ .chezmoi.homeDir }}/key.txt"
     recipient = "age14e7wj4lltcvva2jy9vzzul8y7yuj5xk9vtqfxt9erzz58xqwmpjqurdhep"
