@@ -28,7 +28,7 @@ Touch ID cannot be used without the Mac's screen, so from Sonoma on `025-pam-sud
 
 A known gap, not fixed: `pam_reattach.so`, the Touch ID line's tmux helper, is loaded from brew's prefix, which you own. Anything running as you could replace it and have sudo run its code as root on the next use, without Touch ID or the agent.
 
-On Linux, `00-linux/025-pam-sudo-rssh` does the same with pam_rssh's package, `pam-rssh` ([Fedora packages](#fedora-packages): dnf on Fedora, layered on Bluefin, from regulad/jobs' mirror of upstream's release packages). It puts `libpam_rssh.so` first in `/etc/pam.d/sudo`'s auth stack, as `sufficient`, trusting the same `id_rsa3072` from a root-owned `/etc/security/pam_rssh/<user>.keys`, with the same sudoers lines. It leaves alone WSL and containers, a host without the module yet (Bluefin until the next boot after layering it), and a host whose sudo already needs no password, such as homelab's, whose `base` role gives its admin NOPASSWD. Debian's and Ubuntu's `pam_ssh_agent_auth` would not do: it verifies RSA signatures only as SHA-1 `ssh-rsa`, which Bitwarden's agent never makes.
+On Linux, `00-linux/025-pam-sudo-rssh` does the same with pam_rssh's package, `pam-rssh`, from regulad/jobs' mirror of upstream's release packages in Nexus: dnf on Fedora and layered on Bluefin ([Fedora packages](#fedora-packages)), apt on Ubuntu ([Ubuntu apt sources](#ubuntu-apt-sources)). It puts `libpam_rssh.so` first in `/etc/pam.d/sudo`'s auth stack, as `sufficient`, and in `/etc/pam.d/sudo-i`'s where `sudo -i` has a stack of its own (Ubuntu's; Fedora's includes sudo's), trusting the same `id_rsa3072` from a root-owned `/etc/security/pam_rssh/<user>.keys`, with the same sudoers lines. It leaves alone WSL and containers, a host without the module yet (Bluefin until the next boot after layering it), and a host whose sudo already needs no password, such as homelab's, whose `base` role gives its admin NOPASSWD. Ubuntu's sudo is sudo-rs, which has no `noninteractive_auth`: there `sudo` and `sudo -i` go through the agent, but `sudo -n` still refuses over ssh. Debian's and Ubuntu's `pam_ssh_agent_auth` would not do: it verifies RSA signatures only as SHA-1 `ssh-rsa`, which Bitwarden's agent never makes.
 
 ## Per-model hookscripts
 
@@ -53,7 +53,7 @@ In a `run_once_` or `run_onchange_` script, or a template one renders, explain s
 
 ## Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever
 
-Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`. Python (uv), JavaScript (pnpm), Rust (cargo) and Go tools are the exception: they go in `.chezmoidata/{python,pnpm,cargo,go}-tools.toml`, which the hookscripts of every platform read ([Tooling](tooling.md)). So do the Fedora family's packages, in `.chezmoidata/fedora-packages.toml` ([below](#fedora-packages)).
+Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`. Python (uv), JavaScript (pnpm), Rust (cargo) and Go tools are the exception: they go in `.chezmoidata/{python,pnpm,cargo,go}-tools.toml`, which the hookscripts of every platform read ([Tooling](tooling.md)). So do the Fedora family's packages, in `.chezmoidata/fedora-packages.toml` ([below](#fedora-packages)), and the repositories Ubuntu's come from beyond its own, in `.chezmoidata/apt-sources.toml` ([below](#ubuntu-apt-sources)).
 
 ### Retiring a Windows package
 
@@ -74,6 +74,10 @@ Both kinds of Fedora, package-mode and atomic (Bluefin), take their packages fro
 The template fails on an entry that says neither, so a package added for Fedora is decided for Bluefin in the same place. `gui = true` keeps an entry off headless hosts, `arch = [...]` keeps it to those architectures, `wsl = false` keeps it off WSL, and `native = true` to machines of their own, not WSL or a container (pam-rssh: nothing sshes into those to sudo).
 
 An entry from outside Fedora's own repos names its source (`source = "<name>"`), a repository under `[fedoraPackages.sources]` that the scripts write to `/etc/yum.repos.d/<name>.repo` before installing from it, with its signing key from `.chezmoitemplates/keys/` (kept in this repo, not fetched). A COPR is one like any other, its `.repo` file being nothing more. Each source says what its key signs (`signed = "packages"` for a COPR, `"metadata"` for the pam-rssh mirror in Nexus), and each of its channels becomes a section once that channel's metadata exists for the host's Fedora release and architecture: nothing sets `skip_if_unavailable`, so a configured repository that answered 404 would fail every dnf and rpm-ostree command on the host.
+
+### Ubuntu apt sources
+
+Ubuntu's packages are still `00-linux/021-apt-packages`'s own list, but the repositories beyond Ubuntu's own that it installs from are `.chezmoidata/apt-sources.toml`, the apt side of `[fedoraPackages.sources]`. `.chezmoitemplates/apt-sources.sh` writes each to `/etc/apt/sources.list.d/<name>.sources` (deb822) before `apt update`, with its keys from `.chezmoitemplates/keys/` in `/etc/apt/keyrings`. A channel is one suite of one repository, because Nexus serves one suite per apt repository, each with a key of its own. A host gets the channels of its own suite, its `VERSION_CODENAME`, each once its `InRelease` exists, as on the Fedora side; a suite with no channel at all is an error. pam-rssh's is the only one so far, for Ubuntu 26.04 (`resolute`); VS Code's repository is still `00-linux/011-vscode-apt-repo`'s.
 
 ### Scoop downloads
 

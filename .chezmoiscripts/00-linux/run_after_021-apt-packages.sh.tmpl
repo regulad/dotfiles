@@ -1,4 +1,5 @@
 {{ template "posix-preamble.sh" . }}
+{{ template "apt-sources.sh" . }}
 # system-level binary dependencies for Debian/Ubuntu hosts (apt).
 # these are typically very stable applications that MUST be provided by a
 # package manager; they are not particularly version-sensitive and are all f(l)oss.
@@ -176,6 +177,16 @@ require_sudo "apt package installation"
 # the instance from putting it back.
 if [ "$IS_WSL" -ne 1 ]; then
 	APT_PACKAGES+=(keychain)
+fi
+
+# pam_rssh, the PAM module 025-pam-sudo-rssh puts into sudo, from regulad/jobs'
+# mirror of upstream's release packages in Nexus (.chezmoidata/apt-sources.toml):
+# neither Ubuntu nor Debian packages it. Only on a machine of its own, as
+# fedora-packages.toml's native = true: nothing sshes into WSL or a container
+# to sudo there.
+if [ "$IS_WSL" -ne 1 ] && [ "$CONTAINERIZED" -ne 1 ]; then
+	enable_apt_source pam-rssh
+	APT_PACKAGES+=(pam-rssh)
 fi
 
 sudo apt update -qq

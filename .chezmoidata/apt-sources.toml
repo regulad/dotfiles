@@ -1,0 +1,35 @@
+# apt repositories beyond Ubuntu's own that 00-linux/021-apt-packages installs
+# from, the apt side of fedora-packages.toml's [fedoraPackages.sources].
+# .chezmoitemplates/apt-sources.sh writes each to
+# /etc/apt/sources.list.d/<name>.sources, deb822, before anything comes from
+# it. (VS Code's repository is still 00-linux/011-vscode-apt-repo's own.)
+#
+#   components  the components every channel serves.
+#   channels    its stanzas, { suite, uri, key }: the suite, which is the
+#               Ubuntu release's codename (VERSION_CODENAME); the repository's
+#               URI; and the key its InRelease is signed with,
+#               .chezmoitemplates/keys/<key>, installed to
+#               /etc/apt/keyrings/<key> (kept here, not fetched at install
+#               time). A host gets the channels for its own suite, and apt
+#               takes the newest version any of them offers. A channel is
+#               written only once its InRelease exists: a configured
+#               repository that answers 404 fails every `apt update` on the
+#               host, so one that has published nothing yet stays out until it
+#               has, and comes in at the next apply after. A host whose suite
+#               has no channel at all is an error, not a skip.
+
+# pam_rssh's packages, from regulad/jobs' mirror of upstream's GitHub releases
+# (pipelines/z4yx/pam_rssh), for 00-linux/025-pam-sudo-rssh. Nexus serves one
+# suite per repository, so each release and channel is a repository of its
+# own, with a key of its own: `-testing` holds pre-releases. Each key's
+# fingerprint is the one the pipeline's README lists:
+# pam-rssh-ubuntu-resolute 78E0EADBD0F1DD795BC2545CB932890A70FA6DB9,
+# pam-rssh-ubuntu-resolute-testing 90E5F9EF825BC632F519E3E618D29F73C7FB26F1.
+# Ubuntu 26.04 is the only release here, as it is the oldest the preamble
+# accepts.
+[aptSources.pam-rssh]
+components = ["main"]
+channels = [
+    { suite = "resolute", uri = "https://repo.regulad.xyz/repository/pam-rssh-ubuntu-resolute", key = "pam-rssh-ubuntu-resolute.asc" },
+    { suite = "resolute", uri = "https://repo.regulad.xyz/repository/pam-rssh-ubuntu-resolute-testing", key = "pam-rssh-ubuntu-resolute-testing.asc" },
+]
