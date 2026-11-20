@@ -14,6 +14,7 @@
 
 [vscode]
 extensions = [
+    "DavidAnson.vscode-markdownlint",
     "EditorConfig.EditorConfig",
     "GregorBiswanger.json2ts",
     "MS-vsliveshare.vsliveshare",
@@ -27,6 +28,7 @@ extensions = [
     "github.codespaces",
     "github.vscode-github-actions",
     "github.vscode-pull-request-github",
+    "golang.Go",
     "marlinfirmware.auto-build",
     "ms-azuretools.vscode-containers",
     "ms-azuretools.vscode-docker",
@@ -48,6 +50,7 @@ extensions = [
     "ms-vscode.cpptools-extension-pack",
     "ms-vscode.cpptools-themes",
     "ms-vscode.hexeditor",
+    "oxc.oxc-vscode",
     "platformio.platformio-ide",
     "redhat.vscode-yaml",
     "streetsidesoftware.code-spell-checker",
