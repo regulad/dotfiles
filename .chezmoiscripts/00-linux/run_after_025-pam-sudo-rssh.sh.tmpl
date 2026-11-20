@@ -82,10 +82,12 @@ fi
 PAM_RSSH_LINE='auth       sufficient   libpam_rssh.so auth_key_file=/etc/security/pam_rssh/${user}.keys'
 PAM_SUDO=/etc/pam.d/sudo
 
-# The key file and the sudoers lines, root's each.
+# The key file and the sudoers lines, root's each. Whether the sudoers.d file
+# is still there can only be seen where /etc/sudoers.d is open to look in
+# (Ubuntu's 0755); Fedora's is root's alone (0750), and the copy stands for it.
 if [ "$(cat "$PAM_RSSH_KEYS" 2>/dev/null)" = "$PAM_RSSH_WANTED_KEYS" ] &&
 	[ "$(cat "$PAM_RSSH_DIR/sudoers" 2>/dev/null)" = "$PAM_RSSH_WANTED_SUDOERS" ] &&
-	[ -e "$PAM_RSSH_SUDOERS" ]; then
+	{ [ ! -x "${PAM_RSSH_SUDOERS%/*}" ] || [ -e "$PAM_RSSH_SUDOERS" ]; }; then
 	echo "debug: pam_rssh's key file and sudoers lines are up to date" >&2
 else
 	require_sudo "025-pam-sudo-rssh"
