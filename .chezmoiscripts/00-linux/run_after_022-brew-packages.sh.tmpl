@@ -1,179 +1,15 @@
 {{ template "posix-preamble.sh" . }}
-# system-level binary dependencies for atomic Universal Blue hosts (Bluefin).
+{{ template "fedora-packages.sh" . }}
+# An atomic Fedora's (Bluefin's) CLI tools, with brew: the formula each entry of
+# .chezmoidata/fedora-packages.toml names (FEDORA_BREW_FORMULAE). The same
+# entries give package-mode Fedora its dnf packages (020-dnf-packages) and an
+# atomic host its layered ones (02-bluefin/020-rpm-ostree-packages), so the
+# kinds of Fedora can't drift apart: an entry the image already ships, or that
+# has no formula, says so there instead of in a list of omissions here.
 #
 # The dnf and apt runners cannot work here: /usr belongs to the bootc image and
-# is read-only, and rpm-ostree layering is kept to the few packages that have
-# to be part of the OS (.chezmoidata/fedora-system-packages.toml, layered by
-# 02-bluefin/020-rpm-ostree-packages). brew is the supported route for CLI
-# tooling, per Bluefin's own docs: "if you need a tool or utility, use
-# homebrew. If you need a library and dependencies for development work, use a
-# container."
-#
-# This is deliberately NOT a 1:1 port of DNF_PACKAGES. Anything Bluefin already
-# ships in its image, or that the Silverblue base provides, is left to the host
-# instead of being shadowed by a second copy earlier on PATH. The OMITTED block
-# below the array records every dropped entry and the reason, so this stays
-# diffable against 020-dnf-packages.sh when that list changes.
-#
-# Every formula here was checked against the formulae.brew.sh API for existence
-# and for a linux bottle (or an `all`-tagged one); none build from source.
-BREW_SYSTEM_PACKAGES=(
-	# =+= CORE
-	# brew's `telnet` formula is macOS-only, so inetutils is the Linux provider.
-	# It installs its GNU binaries under a `g` prefix EXCEPT for telnet, ftp,
-	# rcp, rexec, rlogin, rsh, ping6 and traceroute. `ping` is safe, but the
-	# unprefixed ping6/traceroute DO shadow the image's and cannot open a raw
-	# socket without the capabilities the image's copies carry, so
-	# 030-brew-extras.sh keeps the keg unlinked and .commonprofile appends
-	# its bin to the tail of PATH: telnet/ftp resolve, /usr/bin wins the rest.
-	inetutils
-	retry
-	binwalk
-	ncdu
-	htop
-	nmap
-	age
-
-
-	# =+= CONTAINERIZATION
-	# podman itself is in Bluefin's image; only the compose shim is missing.
-	# The formula still drags brew's own podman in as a dependency, though,
-	# and brew links it ahead of the image's -- 030-brew-extras.sh unlinks it
-	# again on every apply, alongside libfuse/util-linux/gnupg.
-	podman-compose
-
-	# =+= BUILD TOOLS
-	ninja  # `ninja-build` is the rpm name, `ninja` is the formula
-	pkgconf
-	cmake
-
-	# =+= DEPENDENCIES
-	# the -devel/-dev rpm/deb split doesn't exist in brew: each formula ships
-	# its own headers, so these are the plain names.
-	cairo  # needed by cairo PyPi package
-	libxml2
-	freetype
-	jpeg-turbo
-	pciutils  # needed by llama.cpp
-	simdjson
-
-	# =+= EDITOR
-	llvm  # includes clangd for Vim/Neovim C/C++ LSP
-	neovim
-	vim  # also provides xxd, which brew has no standalone formula for
-	tree-sitter-cli
-	shellcheck
-	ripgrep
-	imagemagick
-	# rsvg-convert, and imagemagick's SVG delegate. This only ever reached the
-	# prefix as a dependency of chafa, so 030-brew-extras.sh uninstalling
-	# chafa let `brew autoremove` take it too. Ask for it by name.
-	librsvg
-
-	# =+= SERIAL
-	minicom
-
-	# =+= UTILS
-	# Bluefin's 04-packages.sh has no direnv, so unlike most of this section it
-	# really does have to come from brew. Only dependency is bash. Replaces the
-	# old 10-autowatch.zsh chpwd hook; see the note on the apt side.
-	direnv
-	socat
-	sshpass
-	git-lfs
-	git-filter-repo
-	gnupg  # gpg
-	keychain
-	gh  # GitHub
-	syncthing
-	nss  # pk12util/certutil, needed to import the client cert into the NSS DB
-	# Unlike the dnf path there is no RPM Fusion swap to make here -- Fedora's
-	# codec-stripped ffmpeg-free is what the image ships, and RPM Fusion can't
-	# be layered onto a bootc host without rebuilding the image. brew's ffmpeg
-	# IS the one with codecs on this platform, which is why 050-linux-casks
-	# skips its `brew unlink ffmpeg` when IS_ATOMIC.
-	ffmpeg
-
-	# =+= JS/TS
-	node  # nodejs + npm in one formula; just to install pnpm
-
-	# =+= JVM
-	# openjdk and libxml2 above both look keg-only in the formula JSON, but
-	# their reasons are :shadowed_by_macos / :provided_by_macos, and
-	# KegOnlyReason#applicable? is `!by_macos?` off macOS -- so on Linux they
-	# are linked normally and `java` really is on PATH. Don't "fix" this with
-	# a manual PATH prepend.
-	openjdk  # tracks latest, matching java-latest-openjdk
-	maven
-
-	# =+= RUST
-	# brew's `rust` bundles cargo and rustfmt, so there is no rustup dance like
-	# the apt runner needs. This is what makes 110-rust-tooling work here at
-	# all -- cargo otherwise only ever came from the dnf/apt lists.
-	rust
-	rust-analyzer
-
-	# =+= RUBY
-	ruby  # 030-brew-extras assumes `brew --prefix ruby` resolves to a real keg
-
-	# =+= LUA
-	lua
-	# NOTE: luarocks is deliberately absent here even though DNF_PACKAGES has
-	# it. Its formula configures `--rocks-tree=#{HOMEBREW_PREFIX}`, so its rocks
-	# tree *is* the shared brew prefix -- rocks land directly in
-	# $HOMEBREW_PREFIX/lib/lua/<ver>/ and share/lua/<ver>/, which is exactly
-	# where the lpeg formula's files get linked. lpeg is a hard runtime
-	# dependency of the neovim above, so the two structurally fight over the
-	# same paths. Neither declares conflicts_with, so brew doesn't refuse the
-	# install; it fails at the link step instead, and under the preamble's -e
-	# that takes the whole apply down with it.
-	#
-	# neovim wins that trade -- it's the editor this repo actually configures.
-	# When rocks are needed, keep them out of the prefix with a user tree:
-	#   luarocks --tree "$HOME/.luarocks" install <rock>
-	# or let lazy.nvim manage them via hererocks.
-)
-
-# OMITTED, and why -- keep in sync with DNF_PACKAGES in 020-dnf-packages.sh:
-#
-#   already in Bluefin's image (build_files/base/04-packages.sh):
-#     tmux, zsh, fastfetch, restic, gcc, gcc-c++, make, python3-pip, rclone,
-#     podman, tailscale, wireguard-tools, just
-#     (fastfetch and chafa were briefly pulled in from brew here so the MOTD
-#      could convert PNG logos at runtime. That path never worked on this host
-#      even with both installed, so the art is pre-rendered into
-#      ~/.config/fastfetch/logos instead and the image's own fastfetch is fine
-#      again -- it only has to read a text file. See the note in .commonrc.)
-#   provided by the Silverblue base:
-#     bash, curl, git, perl, gawk, binutils, net-tools, iputils, openssh,
-#     python3, systemd, jq
-#     (no Bluefin list names jq, but its image build runs it under set -e in
-#      build_files/base/20-tests.sh, so the base has to carry it)
-#     (git still arrives from brew transitively via git-filter-repo; 030
-#      unlinks it on Bluefin so the image's /etc/gitconfig-aware copy wins.)
-#   already installed by a later hookscript:
-#     nu (nushell) and golang, both in 030-brew-extras
-#   no usable brew formula:
-#     bind-utils (dig/host/nslookup) -- brew has no dig-only formula. The only
-#       one that ships dig is `bind`, the full ISC nameserver, which pulls in
-#       eight dependencies (jemalloc, json-c, libidn2, libnghttp2, libuv,
-#       openssl@3, readline, userspace-rcu) to get one query tool. Bluefin's
-#       04-packages.sh does not carry bind-utils either, so dig is genuinely
-#       absent on atomic hosts; `rpm-ostree install bind-utils` if it is ever
-#       needed there. The dnf and apt lists both have it.
-#     libolm (dropped from homebrew-core; deprecated upstream)
-#     nyx (formula deprecated, repo archived, no native bottle)
-#     minio-mc (formula deprecated 2026-07-17, repo archived; was in
-#       030-brew-extras -- rclone, awscli and s3cmd cover the same S3 workflows)
-#     device-mapper-devel / thin-provisioning-tools (not packaged by brew)
-#   collides with a formula we want more:
-#     luarocks -- clobbers lpeg, which neovim needs; see the LUA section above
-#   deliberately host-owned:
-#     libva-utils, glx-utils -- the GPU stack belongs to the image, not brew
-#     mpv, vlc -- GUI apps, so they come in as flatpaks (io.mpv.Mpv,
-#       org.videolan.VLC), installed by 01-fedora/020-flatpak-packages.sh
-#   n/a:
-#     development-tools group -- Bluefin ships gcc/gcc-c++/make already
+# is read-only. brew is the supported route for CLI tooling, per Bluefin's own
+# docs. Masked everywhere but Bluefin (.chezmoiignore.tmpl).
 
 if [ "$HAS_BREW" != "true" ]; then
 	# Bluefin does not bake brew into the image; brew-setup.service lays it down
@@ -186,7 +22,7 @@ if [ "$HAS_BREW" != "true" ]; then
 	exit 1
 fi
 
-brew install -q --formula "${BREW_SYSTEM_PACKAGES[@]}"
+brew install -q --formula "${FEDORA_BREW_FORMULAE[@]}"
 
 # NOTE: no `brew upgrade` here, deliberately. Bluefin drives upgrades itself on
 # a schedule via brew-update.timer and brew-upgrade.timer; racing those from an

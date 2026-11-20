@@ -1,0 +1,362 @@
+# Fedora's packages, one list for both kinds of Fedora (docs/hookscripts.md),
+# rendered for each host by .chezmoitemplates/fedora-packages.sh:
+#
+# - Package-mode Fedora, and so the Fedora image, installs every entry with dnf
+#   (00-linux/020-dnf-packages).
+# - An atomic Fedora, such as Bluefin, whose /usr belongs to its image, takes
+#   each entry as the entry says. `layer = true` layers it with rpm-ostree
+#   (02-bluefin/020-rpm-ostree-packages): what has to be part of the OS --
+#   udev rules, hardware access, daemons, polkit, PAM -- or has no brew
+#   formula. Otherwise `brew` names the formula 00-linux/022-brew-packages
+#   installs instead, and `brew = ""` means none: the image ships it, or the
+#   atomic host goes without, as the entry's comment says. Bluefin's own docs:
+#   "if you need a tool or utility, use homebrew. If you need a library and
+#   dependencies for development work, use a container."
+#
+# Every entry says `layer` or `brew` (the template fails otherwise), so a
+# package added for Fedora is decided for its atomic hosts in the same place.
+# GUI apps are flatpaks instead, from 01-fedora/020-flatpak-packages.
+#
+#   name          the package dnf installs.
+#   layer         true: rpm-ostree layers it on an atomic host.
+#   brew          the formula an atomic host gets instead; "" for none.
+#   dnf           false: not a dnf package at all, only an atomic host's
+#                 formula.
+#   gui           true: left off headless hosts.
+#   arch          only hosts whose .chezmoi.arch is listed.
+#   wsl           false: left off WSL.
+#   native        true: only on a machine of its own, not in WSL or a
+#                 container, so not in the Docker images either.
+#   allowErasing  true: dnf installs it on its own, with --allowerasing.
+#   source        the source below ([fedoraPackages.sources.<name>]) it comes
+#                 from, when it is not Fedora's own repos: enabled first.
+#
+# Every formula here was checked against the formulae.brew.sh API for existence
+# and for a linux bottle (or an `all`-tagged one); none build from source.
+
+[fedoraPackages]
+packages = [
+    # =+= CORE
+    # bash and curl: the Silverblue base carries them.
+    { name = "bash", brew = "" },
+    # nushell: 030-brew-extras installs it on every brew host.
+    { name = "nu", brew = "" },
+    # tmux, fastfetch and zsh: in Bluefin's image (build_files/base/04-packages.sh).
+    # fastfetch (and chafa) briefly came from brew so the MOTD could convert PNG
+    # logos at runtime; that never worked there, so the art is pre-rendered into
+    # ~/.config/fastfetch/logos and the image's fastfetch only reads a text file.
+    { name = "tmux", brew = "" },
+    { name = "fastfetch", brew = "" },
+    # brew's `telnet` formula is macOS-only, so inetutils is the Linux provider.
+    # It installs its GNU binaries under a `g` prefix EXCEPT for telnet, ftp,
+    # rcp, rexec, rlogin, rsh, ping6 and traceroute. `ping` is safe, but the
+    # unprefixed ping6/traceroute DO shadow the image's and cannot open a raw
+    # socket without the capabilities the image's copies carry, so
+    # 030-brew-extras keeps the keg unlinked and .commonprofile appends its bin
+    # to the tail of PATH: telnet/ftp resolve, /usr/bin wins the rest.
+    { name = "telnet", brew = "inetutils" },
+    { name = "retry", brew = "retry" },
+    { name = "zsh", brew = "" },
+    # brew has no xxd formula of its own; vim's ships it.
+    { name = "xxd", brew = "vim" },
+    { name = "binwalk", brew = "binwalk" },
+    { name = "ncdu", brew = "ncdu" },
+    { name = "htop", brew = "htop" },
+    { name = "nmap", brew = "nmap" },
+    { name = "curl", brew = "" },
+    { name = "age", brew = "age" },
+
+    # =+= CONTAINERIZATION
+    # podman is in Bluefin's image; only the compose shim is missing there. The
+    # formula still drags brew's own podman in as a dependency, and brew links it
+    # ahead of the image's -- 030-brew-extras unlinks it again on every apply,
+    # alongside libfuse/util-linux/gnupg.
+    { name = "podman", brew = "" },
+    { name = "podman-compose", brew = "podman-compose" },
+
+    # =+= BUILD TOOLS
+    { name = "ninja-build", brew = "ninja" },
+    { name = "pkgconf", brew = "pkgconf" },
+    { name = "cmake", brew = "cmake" },
+
+    # =+= DEPENDENCIES
+    # The -devel/-dev split doesn't exist in brew: each formula ships its own
+    # headers, so these map to the plain names.
+    { name = "cairo-devel", brew = "cairo" },  # needed by cairo PyPI package
+    { name = "libxml2-devel", brew = "libxml2" },
+    { name = "freetype-devel", brew = "freetype" },
+    { name = "libjpeg-turbo-devel", brew = "jpeg-turbo" },
+    # Needed by the thin-provisioning-tools build. brew packages neither.
+    { name = "device-mapper-devel", brew = "" },
+    { name = "pciutils", brew = "pciutils" },  # needed by llama.cpp
+    # Development headers, which on an atomic host belong in a container (the
+    # Bluefin guidance above), so none there.
+    { name = "libcurl-devel", brew = "" },
+    # libolm is deprecated upstream but still needed to build the mautrix
+    # tools; homebrew-core dropped it.
+    { name = "libolm-devel", brew = "" },
+    { name = "simdjson-devel", brew = "simdjson" },
+
+    # =+= MISC
+    # brew's nyx formula is deprecated, its repo archived, with no native bottle.
+    { name = "nyx", brew = "" },
+    # vainfo: VA-API works on a bare DRM render node, display or not. The GPU
+    # stack belongs to the image on an atomic host, not to brew.
+    { name = "libva-utils", brew = "" },
+    # glxinfo, glxgears: X11 programs; the image's GPU stack again.
+    { name = "glx-utils", brew = "", gui = true },
+
+    # =+= EDITOR
+    # clangd for Vim/Neovim C/C++ LSP; brew's llvm includes it.
+    { name = "clang-tools-extra", brew = "llvm" },
+    { name = "neovim", brew = "neovim" },
+    { name = "vim", brew = "vim" },
+    { name = "tree-sitter-cli", brew = "tree-sitter-cli" },
+    { name = "ShellCheck", brew = "shellcheck" },
+    { name = "ripgrep", brew = "ripgrep" },
+    { name = "ImageMagick", brew = "imagemagick" },
+    # rsvg-convert, and imagemagick's SVG delegate, on an atomic host. It only
+    # ever reached brew's prefix as a dependency of chafa, so 030-brew-extras
+    # uninstalling chafa let `brew autoremove` take it too; asked for by name.
+    # Fedora's ImageMagick brings librsvg2 along on its own.
+    { name = "librsvg2", dnf = false, brew = "librsvg" },
+
+    # =+= DESKTOP
+    # mpv and vlc are deliberately absent: on the Fedora family GUI media apps
+    # are flatpaks (io.mpv.Mpv, org.videolan.VLC), from
+    # 01-fedora/020-flatpak-packages, keeping exactly one install mechanism per
+    # app per platform.
+    #
+    # The desktop portal's GTK backend, with xdg-desktop-portal itself: the
+    # Settings portal apps read light/dark from. It used to be here only as
+    # something else's weak dependency. WSL's runs as 00-linux/151 sets it up.
+    # An atomic host's portals are its image's.
+    { name = "xdg-desktop-portal-gtk", brew = "", gui = true },
+
+    # =+= SERIAL
+    { name = "minicom", brew = "minicom" },
+
+    # =+= FILESYSTEMS
+    # The make/check/repair tools for every filesystem Linux mounts, so any disk
+    # or image can be handled from here. Same set as 021-apt-packages; the names
+    # were checked against both distributions' indexes (Fedora 44, Ubuntu 26.04)
+    # on 2026-11-13. Left out: ZFS, which Fedora does not package (OpenZFS ships
+    # its own repository) and which needs a kernel module that WSL and
+    # containers lack; and ReiserFS, gone from the kernel and from both.
+    #
+    # Layered on an atomic host: they run as root, where sudo's secure_path has
+    # no brew prefix, and mount and fsck look for their helpers (mount.ntfs-3g,
+    # fsck.*) only in the system's own sbin. 02-bluefin/020-rpm-ostree-packages
+    # skips each one the image already has, so only the rest are layered.
+    { name = "e2fsprogs", layer = true },  # ext2/3/4
+    { name = "xfsprogs", layer = true },
+    { name = "btrfs-progs", layer = true },
+    { name = "dosfstools", layer = true },  # FAT
+    { name = "exfatprogs", layer = true },
+    { name = "ntfs-3g", layer = true },  # the FUSE driver, mount.ntfs-3g
+    { name = "ntfsprogs", layer = true },  # mkntfs, ntfsfix; on Ubuntu these are in ntfs-3g itself
+    { name = "f2fs-tools", layer = true },
+    { name = "jfsutils", layer = true },
+    { name = "nilfs-utils", layer = true },  # nilfs-tools on Ubuntu
+    { name = "udftools", layer = true },
+    { name = "squashfs-tools", layer = true },
+    { name = "erofs-utils", layer = true },
+    { name = "hfsplus-tools", layer = true },  # HFS+; hfsprogs on Ubuntu
+    { name = "mtools", layer = true },  # FAT images without mounting them
+    { name = "bcachefs-tools", layer = true },  # Fedora only: Ubuntu 26.04 publishes none
+
+    # =+= UTILS
+    # systemd, gawk, jq, iputils, binutils, net-tools, perl, git and openssh: the
+    # Silverblue base carries them. systemd is here for its utilities even in
+    # Docker; gawk is not bundled by default. No Bluefin list names jq, but its
+    # image build runs it under set -e (build_files/base/20-tests.sh), so the
+    # base has to carry it. git still arrives from brew transitively, via
+    # git-filter-repo; 030-brew-extras unlinks it on Bluefin so the image's
+    # /etc/gitconfig-aware copy wins.
+    { name = "systemd", brew = "" },
+    { name = "gawk", brew = "" },
+    # Bluefin's 04-packages.sh has no direnv, so it really does have to come
+    # from brew there. Replaces the old .watchrc / 10-autowatch.zsh hook; see
+    # the note on the apt side.
+    { name = "direnv", brew = "direnv" },
+    { name = "jq", brew = "" },
+    { name = "socat", brew = "socat" },
+    { name = "iputils", brew = "" },
+    { name = "binutils", brew = "" },
+    { name = "net-tools", brew = "" },
+    # dig, host, nslookup -- apt splits these, see the note there. brew has no
+    # dig-only formula: the one that ships dig is `bind`, the full ISC
+    # nameserver, with eight dependencies for one query tool, and Bluefin's
+    # 04-packages.sh doesn't carry bind-utils either. So dig is absent on
+    # atomic hosts; layer it if it is ever needed there.
+    { name = "bind-utils", brew = "" },
+    { name = "perl", brew = "" },
+    { name = "sshpass", brew = "sshpass" },
+    { name = "git", brew = "" },
+    { name = "git-lfs", brew = "git-lfs" },
+    { name = "git-filter-repo", brew = "git-filter-repo" },
+    { name = "gnupg2", brew = "gnupg" },  # gpg
+    { name = "openssh", brew = "" },  # ssh-agent & ssh
+    # The fallback SSH agent for hosts that have none (.commonprofile only
+    # reaches for it when no agent socket exists). Not on WSL, where
+    # ssh-agent-relay.service relays the Windows agent in. Fedora's keychain
+    # package also ships /etc/profile.d/keychain.sh, which runs `keychain
+    # --immediate` over every key in ~/.ssh in every login shell; after a
+    # `wsl --shutdown` that sat on an invisible passphrase prompt until ^C.
+    #
+    # Only installing is decided here. The images are built in Docker, where WSL
+    # cannot be told apart, so they carry keychain;
+    # .github/workflows/wsl-package.yml removes it from the WSL tarball in a
+    # chroot, and leaving it out on WSL is what keeps the first apply inside the
+    # instance from putting it back.
+    { name = "keychain", brew = "keychain", wsl = false },
+    { name = "gh", brew = "gh" },  # GitHub
+    # In Bluefin's image.
+    { name = "restic", brew = "" },
+    # RPM Fusion's ffmpeg is a *replacement* for Fedora's ffmpeg-free, not an
+    # addition: it declares `Conflicts: ffmpeg-free`, and its ffmpeg-libs
+    # likewise conflicts with each of the split libav*-free / libsw*-free
+    # packages. That is by design and will never "resolve upstream": the
+    # packages are mutually exclusive on purpose, and erasing the free build in
+    # the same transaction is the documented fix. Its own transaction, so
+    # --allowerasing applies to this one package only and can't silently erase
+    # something else to satisfy the main one. Verified on Fedora 44:
+    # ffmpeg-libs provides the same sonames the libav*-free split packages did,
+    # so their consumers keep working, and the libx264 / libx265 / libfdk_aac
+    # encoders ffmpeg-free lacks become available -- which is the whole point of
+    # `brew unlink ffmpeg` in 050-linux-casks preferring the system build "with
+    # codecs".
+    #
+    # On an atomic host there is no RPM Fusion swap to make: the image ships
+    # Fedora's codec-stripped ffmpeg-free, and RPM Fusion can't be layered onto
+    # a bootc host without rebuilding the image. brew's ffmpeg IS the one with
+    # codecs there, which is why 050-linux-casks skips its `brew unlink ffmpeg`
+    # when IS_ATOMIC.
+    { name = "ffmpeg", brew = "ffmpeg", allowErasing = true },
+    { name = "syncthing", brew = "syncthing" },
+    # pk12util/certutil, needed to import the client cert into the NSS DB.
+    { name = "nss-tools", brew = "nss" },
+
+    # =+= JS/TS
+    # brew's node is nodejs and npm in one formula; npm is just to install pnpm.
+    { name = "nodejs", brew = "node" },
+    { name = "npm", brew = "node" },
+
+    # =+= JVM
+    # openjdk and libxml2 both look keg-only in the formula JSON, but their
+    # reasons are :shadowed_by_macos / :provided_by_macos, and
+    # KegOnlyReason#applicable? is `!by_macos?` off macOS -- so on Linux they
+    # are linked normally and `java` really is on PATH. Don't "fix" this with a
+    # manual PATH prepend.
+    { name = "java-latest-openjdk", brew = "openjdk" },  # brew's tracks latest too
+    { name = "maven", brew = "maven" },
+
+    # =+= RUST
+    # brew's rust bundles cargo and rustfmt, so there is no rustup dance like the
+    # apt runner needs. That is what makes 110-rust-tooling work on an atomic
+    # host at all.
+    { name = "cargo", brew = "rust" },
+    { name = "rustfmt", brew = "rust" },
+    { name = "rust", brew = "rust" },
+    { name = "rust-analyzer", brew = "rust-analyzer" },
+
+    # =+= PYTHON (>= 3.12)
+    # Both in the Silverblue base and Bluefin's image.
+    { name = "python3", brew = "" },
+    { name = "python3-pip", brew = "" },
+
+    # =+= GO
+    # 030-brew-extras installs go on every brew host.
+    { name = "golang", brew = "" },
+
+    # =+= RUBY
+    # 030-brew-extras assumes `brew --prefix ruby` resolves to a real keg.
+    { name = "ruby", brew = "ruby" },
+
+    # =+= LUA
+    { name = "lua", brew = "lua" },
+    # Not on an atomic host: brew's formula configures
+    # `--rocks-tree=#{HOMEBREW_PREFIX}`, so its rocks tree *is* the shared brew
+    # prefix, which is exactly where the lpeg formula's files get linked. lpeg is
+    # a hard runtime dependency of neovim, so the two fight over the same paths,
+    # and neither declares conflicts_with: the install fails at the link step,
+    # and the apply with it. neovim wins that trade. When rocks are needed
+    # there, keep them out of the prefix with a user tree
+    # (`luarocks --tree "$HOME/.luarocks" install <rock>`) or let lazy.nvim
+    # manage them via hererocks.
+    { name = "luarocks", brew = "" },
+
+    # =+= SYSTEM
+    # Part of the OS itself, so layered on an atomic host.
+    #
+    # Formats floppies in USB (UFI) floppy drives. Fedora's own repos.
+    { name = "ufiformat", layer = true },
+    # libparted's headers, for building against it.
+    { name = "parted-devel", layer = true },
+    # The access point daemon. Not GUI-gated: it runs an AP by hand as well as
+    # under wihotspot below.
+    { name = "hostapd", layer = true },
+    # wihotspot, a GTK front end to its create_ap script: a Wi-Fi hotspot on the
+    # card the host is connected through, from a virtual interface it creates,
+    # with hostapd rather than NetworkManager. Its COPR builds x86_64 only.
+    { name = "linux-wifi-hotspot", layer = true, source = "linux-wifi-hotspot", gui = true, arch = ["amd64"] },
+    # pam_rssh, the PAM module 00-linux/025-pam-sudo-rssh puts into sudo: sudo
+    # over ssh authenticated by the forwarded agent's key. Upstream publishes
+    # packages only as files on its GitHub releases, and Fedora doesn't package
+    # it, so regulad/jobs' z4yx/pam_rssh pipeline mirrors them hourly into
+    # Nexus (its source below). Only on a machine of its own: nothing sshes into
+    # WSL or a container to sudo there.
+    { name = "pam-rssh", layer = true, source = "pam-rssh", native = true },
+]
+
+# The sources that entries' `source` names, beyond Fedora's own repos, each
+# a repository that .chezmoitemplates/fedora-packages.sh writes to
+# /etc/yum.repos.d/<name>.repo before anything comes from it. rpm-ostree reads
+# the same directory, and to both a COPR is a repository like any other.
+#
+#   description  the repository's name in dnf's output.
+#   key          the key it is signed with, .chezmoitemplates/keys/<key>,
+#                installed to /etc/pki/rpm-gpg/RPM-GPG-KEY-<name>: kept here,
+#                not fetched at install time.
+#   signed       what that key signs: "packages" (each RPM, gpgcheck) or
+#                "metadata" (repomd.xml, repo_gpgcheck, each RPM then checked
+#                against its checksum there).
+#   channels     its sections, { id, url }; url as dnf takes it, with
+#                $releasever and $basearch. dnf takes the newest version any of
+#                them offers. A channel is written only once its metadata
+#                exists for this release and architecture: a configured
+#                repository that answers 404 fails every dnf and rpm-ostree
+#                command on the host (no skip_if_unavailable here), so one
+#                that has published nothing yet stays out until it has, and
+#                comes in at the next apply after.
+#   replaces     .repo files in /etc/yum.repos.d an earlier apply wrote for the
+#                same repository, removed once this one is written.
+
+# wihotspot's COPR, zinix01/linux-wifi-hotspot: the .repo file COPR serves for
+# it, less its skip_if_unavailable and priority. COPR signs each RPM, not the
+# metadata. The key is the project's pubkey.gpg, fingerprint
+# 58D4915F77A0ED2A7F1DB21AF0553F54F955F332.
+[fedoraPackages.sources.linux-wifi-hotspot]
+description = "Copr repo for linux-wifi-hotspot owned by zinix01"
+key = "copr-zinix01-linux-wifi-hotspot.asc"
+signed = "packages"
+channels = [
+    { id = "linux-wifi-hotspot", url = "https://download.copr.fedorainfracloud.org/results/zinix01/linux-wifi-hotspot/fedora-$releasever-$basearch/" },
+]
+# Earlier applies enabled it under the name `dnf copr enable` gives it.
+replaces = ["_copr:copr.fedorainfracloud.org:zinix01:linux-wifi-hotspot.repo"]
+
+# pam_rssh's packages, from regulad/jobs' mirror of upstream's GitHub releases
+# (pipelines/z4yx/pam_rssh). `stable` holds releases, `testing`
+# pre-releases. Nexus signs the metadata; upstream and Nexus leave the RPMs
+# themselves unsigned. The key's fingerprint,
+# 0646556A5A5A02FF79995D0D10E199D27AFA1EED, is the one the pipeline's README
+# lists.
+[fedoraPackages.sources.pam-rssh]
+description = "pam_rssh"
+key = "pam-rssh-rpm.asc"
+signed = "metadata"
+channels = [
+    { id = "pam-rssh", url = "https://repo.regulad.xyz/repository/pam-rssh-rpm/stable/fc$releasever/$basearch/" },
+    { id = "pam-rssh-testing", url = "https://repo.regulad.xyz/repository/pam-rssh-rpm/testing/fc$releasever/$basearch/" },
+]

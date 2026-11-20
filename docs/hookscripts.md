@@ -51,7 +51,7 @@ In a `run_once_` or `run_onchange_` script, or a template one renders, explain s
 
 ## Packages: winget/scoop/apt/pkg/brew/pnpm/uv/whatever
 
-Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`. Python (uv), JavaScript (pnpm), Rust (cargo) and Go tools are the exception: they go in `.chezmoidata/{python,pnpm,cargo,go}-tools.toml`, which the hookscripts of every platform read ([Tooling](tooling.md)).
+Remember to define the package in the correct hookscript under `.chezmoiscripts/00-macos/`, `.chezmoiscripts/00-linux/` or `.chezmoiscripts/00-nt/`. Python (uv), JavaScript (pnpm), Rust (cargo) and Go tools are the exception: they go in `.chezmoidata/{python,pnpm,cargo,go}-tools.toml`, which the hookscripts of every platform read ([Tooling](tooling.md)). So do the Fedora family's packages, in `.chezmoidata/fedora-packages.toml` ([below](#fedora-packages)).
 
 ### Retiring a Windows package
 
@@ -61,14 +61,17 @@ Taking a package out of `00-nt/100-winget`'s or `00-nt/200-scoop-install`'s list
 
 On a Copilot+ PC, one with an NPU, Windows Update installs Phi Silica, Microsoft's on-device language model, and marks it not removable, so Settings → System → AI components offers no Uninstall for it. `00-nt/106-phi-silica` removes it through the same code that button would run, on every apply, because Windows Update can bring it back with any AI component update. With nothing to remove it does nothing and raises no UAC prompt; otherwise it takes one. Its header has the mechanism, which is internal to Windows and undocumented. Two policies in `registry-system.reg` keep apps and Click to Do off any copy that is back until the next apply removes it.
 
-### Fedora system packages
+### Fedora packages
 
-Some packages have to be part of the OS itself: they bring udev rules, talk to hardware or run as root, so neither brew nor flatpak can provide them. They go in `.chezmoidata/fedora-system-packages.toml`, one list for both kinds of Fedora, which `.chezmoitemplates/fedora-system-packages.sh` renders for each host:
+Both kinds of Fedora, package-mode and atomic (Bluefin), take their packages from one list, `.chezmoidata/fedora-packages.toml`, which `.chezmoitemplates/fedora-packages.sh` renders for each host. Each entry is a dnf package and says how an atomic host, whose `/usr` belongs to its image, gets it instead:
 
-- On package-mode Fedora, and in the Fedora image, `00-linux/020-dnf-packages` installs them in its own dnf transaction.
-- On Bluefin, `02-bluefin/020-rpm-ostree-packages` layers them with `rpm-ostree install`. Whatever the image already ships or the next deployment already asks for is skipped. A new layer takes effect at the next boot; the script says so. Updates keep working: uupd sees the layering through bootc and updates with `rpm-ostree upgrade`, which keeps the layered packages. `rpm-ostree reset` removes them all.
+- On package-mode Fedora, and in the Fedora image, `00-linux/020-dnf-packages` installs every entry with dnf. An `allowErasing` one (ffmpeg, RPM Fusion's in place of Fedora's ffmpeg-free) gets a transaction of its own.
+- On Bluefin, an entry with `layer = true` is layered by `02-bluefin/020-rpm-ostree-packages` with `rpm-ostree install`: what has to be part of the OS itself (udev rules, hardware, daemons, PAM), or what brew has no formula for. Whatever the image already ships or the next deployment already asks for is skipped. A new layer takes effect at the next boot; the script says so. Updates keep working: uupd sees the layering through bootc and updates with `rpm-ostree upgrade`, which keeps the layered packages. `rpm-ostree reset` removes them all.
+- Any other entry names the brew formula Bluefin gets instead, which `00-linux/022-brew-packages` installs, or `brew = ""` when it gets none: the image ships it, or Bluefin goes without, as the entry's comment says.
 
-An entry can name a COPR (`copr = "owner/project"`). Both scripts enable it first by writing its `.repo` file into `/etc/yum.repos.d`, as `dnf copr enable` would. `gui = true` keeps an entry off headless hosts, and `arch = [...]` keeps it to those architectures (the linux-wifi-hotspot COPR builds x86_64 only).
+The template fails on an entry that says neither, so a package added for Fedora is decided for Bluefin in the same place. `gui = true` keeps an entry off headless hosts, `arch = [...]` keeps it to those architectures, `wsl = false` keeps it off WSL, and `native = true` to machines of their own, not WSL or a container (pam-rssh: nothing sshes into those to sudo).
+
+An entry from outside Fedora's own repos names its source (`source = "<name>"`), a repository under `[fedoraPackages.sources]` that the scripts write to `/etc/yum.repos.d/<name>.repo` before installing from it, with its signing key from `.chezmoitemplates/keys/` (kept in this repo, not fetched). A COPR is one like any other, its `.repo` file being nothing more. Each source says what its key signs (`signed = "packages"` for a COPR, `"metadata"` for the pam-rssh mirror in Nexus), and each of its channels becomes a section once that channel's metadata exists for the host's Fedora release and architecture: nothing sets `skip_if_unavailable`, so a configured repository that answered 404 would fail every dnf and rpm-ostree command on the host.
 
 ### Scoop downloads
 

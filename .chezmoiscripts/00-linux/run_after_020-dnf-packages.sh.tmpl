@@ -1,178 +1,13 @@
 {{ template "posix-preamble.sh" . }}
-{{ template "fedora-system-packages.sh" . }}
-# system-level binary dependencies for Fedora/RHEL-family hosts (dnf).
-# these are typically very stable applications that MUST be provided by a
-# package manager; they are not particularly version-sensitive and are all f(l)oss.
-#
-# The Fedora system packages above (FEDORA_SYSTEM_PACKAGES) go in the same
-# transaction; Bluefin layers that list with rpm-ostree instead, in
-# 02-bluefin/020-rpm-ostree-packages. A package that has to be part of the OS
-# on Bluefin too goes there, not here.
-DNF_PACKAGES=(
-	# =+= CORE
-	bash
-	nu
-	tmux
-	fastfetch
-	telnet
-	retry
-	zsh
-	xxd
-	binwalk
-	ncdu
-	htop
-	nmap
-	curl
-	age
-
-	# =+= CONTAINERIZATION
-	podman
-	podman-compose
-
-	# =+= BUILD TOOLS
-	ninja-build
-	pkgconf
-	cmake
-
-	# =+= DEPENDENCIES
-	cairo-devel  # needed by cairo PyPi package
-	libxml2-devel
-	freetype-devel
-	libjpeg-turbo-devel
-	device-mapper-devel  # needed by thin-provisioning-tools build
-	pciutils  # needed by llama.cpp
-	libcurl-devel
-	## libolm is depreciated upstream but still needed to build the mautrix tools
-	libolm-devel
-	simdjson-devel
-
-	# =+= MISC
-	nyx
-	libva-utils  # vainfo; VA-API works on a bare DRM render node, display or not
-{{- if not .useHeadless }}
-	glx-utils  # glxinfo, glxgears: X11 programs
-{{- end }}
-
-	# =+= EDITOR
-	clang-tools-extra  # clangd for Vim/Neovim C/C++ LSP
-	neovim
-	vim
-	tree-sitter-cli
-	ShellCheck
-	ripgrep
-	ImageMagick
-
-	# =+= DESKTOP
-	# mpv and vlc are deliberately absent here: on the Fedora family GUI media
-	# apps are provided by flatpak (io.mpv.Mpv, org.videolan.VLC), installed by
-	# 01-fedora/020-flatpak-packages.sh, keeping exactly one install mechanism
-	# per app per platform.
-{{- if not .useHeadless }}
-	# The desktop portal's GTK backend, with xdg-desktop-portal itself: the
-	# Settings portal apps read light/dark from. It used to be here only as
-	# something else's weak dependency. WSL's runs as 00-linux/151 sets it up.
-	xdg-desktop-portal-gtk
-{{- end }}
-
-	# =+= SERIAL
-	minicom
-
-	# =+= FILESYSTEMS
-	# The make/check/repair tools for every filesystem Linux mounts, so any disk
-	# or image can be handled from here. Same set as 021-apt-packages; the names
-	# were checked against both distributions' indexes (Fedora 44, Ubuntu 26.04)
-	# on 2026-11-13. Left out: ZFS, which Fedora does not package (OpenZFS
-	# ships its own repository) and which needs a kernel module that WSL and
-	# containers lack; and ReiserFS, gone from the kernel and from both.
-	e2fsprogs  # ext2/3/4
-	xfsprogs
-	btrfs-progs
-	dosfstools  # FAT
-	exfatprogs
-	ntfs-3g  # the FUSE driver, mount.ntfs-3g
-	ntfsprogs  # mkntfs, ntfsfix; on Ubuntu these are in ntfs-3g itself
-	f2fs-tools
-	jfsutils
-	nilfs-utils  # nilfs-tools on Ubuntu
-	udftools
-	squashfs-tools
-	erofs-utils
-	hfsplus-tools  # HFS+; hfsprogs on Ubuntu
-	mtools  # FAT images without mounting them
-	bcachefs-tools  # Fedora only: Ubuntu 26.04 publishes none
-
-	# =+= UTILS
-	systemd  # provides utils even when in docker
-	gawk  # not bundled by default
-	direnv  # see the note on the apt side; replaces the old .watchrc hook
-	jq
-	socat
-	iputils
-	binutils
-	net-tools
-	bind-utils  # dig, host, nslookup -- apt splits these, see the note there
-	perl
-	sshpass
-	git
-	git-lfs
-	git-filter-repo
-	gnupg2 # gpg
-	openssh # ssh-agent & ssh
-	# keychain: off WSL only, appended below
-	gh # GitHub
-	restic
-	# NOTE: ffmpeg is deliberately absent from this list -- it needs
-	# --allowerasing, which must not be applied to the whole list. It's
-	# installed on its own after the main transaction below.
-	syncthing
-	nss-tools  # pk12util/certutil, needed to import the client cert into the NSS DB
-
-	# =+= JS/TS
-	nodejs
-	npm # just to install pnpm
-
-	# =+= JVM
-	java-latest-openjdk
-	maven
-
-	# =+= RUST
-	cargo
-	rustfmt
-	rust
-	rust-analyzer
-
-	# =+= PYTHON (>= 3.12)
-	python3
-	python3-pip
-
-	# =+= GO
-	golang
-
-	# =+= RUBY
-	ruby
-
-	# =+= LUA
-	lua
-	luarocks
-)
+{{ template "fedora-packages.sh" . }}
+# Package-mode Fedora's packages, with dnf: every entry of
+# .chezmoidata/fedora-packages.toml this host takes (FEDORA_DNF_PACKAGES), the
+# list an atomic Fedora takes the same entries from with brew
+# (022-brew-packages) and rpm-ostree (02-bluefin/020-rpm-ostree-packages).
+# Masked on Bluefin (.chezmoiignore.tmpl): there is no dnf transaction to be
+# had against a read-only /usr.
 
 require_sudo "dnf package installation"
-
-# keychain is the fallback SSH agent for hosts that have none (.commonprofile
-# only reaches for it when no agent socket exists). Not on WSL, where
-# ssh-agent-relay.service relays the Windows agent in. Fedora's keychain
-# package also ships /etc/profile.d/keychain.sh, which runs
-# `keychain --immediate` over every key in ~/.ssh in every login shell; after
-# a `wsl --shutdown` that sat on an invisible passphrase prompt until ^C.
-#
-# Only installing is decided here. The images are built in Docker, where WSL
-# cannot be told apart, so they carry keychain; .github/workflows/wsl-package.yml
-# removes it from the WSL tarball in a chroot, and leaving it out on WSL is
-# what keeps the first apply inside the instance from putting it back.
-if [ "$IS_WSL" -ne 1 ]; then
-	DNF_PACKAGES+=(keychain)
-fi
-
 # Since WSL 3.0.2 (a pre-release; 3.0.3 is the first stable one), WSL
 # bind-mounts a perf built for its own kernel read-only over /usr/bin/perf,
 # from its system disk (/dev/sdb[/<kernel>/perf/bin/perf]). It came with
@@ -225,25 +60,14 @@ elif [ -f "$WSL_PERF_DROPIN" ]; then
 	echo "notice: removed $WSL_PERF_DROPIN (WSL ${wsl_version:-version unknown}, not 3.0.2+ with perf mounted over /usr/bin/perf); dnf upgrades the perf package again" >&2
 fi
 
-enable_fedora_system_coprs
+enable_fedora_sources "${FEDORA_DNF_PACKAGES[@]}" "${FEDORA_DNF_ERASING_PACKAGES[@]}"
 sudo dnf group install -q -y "development-tools"
-sudo dnf install -q -y "${DNF_PACKAGES[@]}" "${FEDORA_SYSTEM_PACKAGES[@]}"
-
-# RPM Fusion's ffmpeg is a *replacement* for Fedora's ffmpeg-free, not an
-# addition: it declares `Conflicts: ffmpeg-free`, and its ffmpeg-libs likewise
-# conflicts with each of the split libav*-free / libsw*-free packages. That is
-# by design and will never "resolve upstream" -- the TODO this replaced was
-# waiting on an RPM Fusion rebuild that is never coming, because the packages
-# are mutually exclusive on purpose. Erasing the free build in the same
-# transaction is the documented fix.
-#
-# Kept out of DNF_PACKAGES so --allowerasing applies to this one package only
-# and can't silently erase something else to satisfy the main transaction.
-# Verified on Fedora 44: ffmpeg-libs provides the same sonames the libav*-free
-# split packages did, so their consumers keep working, and the libx264 /
-# libx265 / libfdk_aac encoders that ffmpeg-free lacks become available --
-# which is the whole point of `brew unlink ffmpeg` in 050-linux-casks
-# preferring the system build "with codecs".
-sudo dnf install -q -y --allowerasing ffmpeg
+sudo dnf install -q -y "${FEDORA_DNF_PACKAGES[@]}"
+# Each allowErasing entry in a transaction of its own, so --allowerasing
+# applies to it alone and can't silently erase something else to satisfy the
+# main one (ffmpeg: see its entry).
+for pkg in "${FEDORA_DNF_ERASING_PACKAGES[@]}"; do
+	sudo dnf install -q -y --allowerasing "$pkg"
+done
 
 sudo dnf upgrade --refresh -y

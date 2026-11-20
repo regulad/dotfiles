@@ -248,7 +248,7 @@ def main():
             dnf = render(".chezmoiscripts/00-linux/run_after_020-dnf-packages.sh.tmpl", data)
             for gui in ('\tmpv\n', '\tvlc\n', '\tvlc-plugin-visualization\n', '\tmesa-utils  #'):
                 assert (gui in apt) != headless, gui
-            assert ('\tglx-utils  #' in dnf) != headless and '\tvainfo  #' in apt and '\tlibva-utils  #' in dnf
+            assert ('\tglx-utils\n' in dnf) != headless and '\tvainfo  #' in apt and '\tlibva-utils\n' in dnf
             scoop = render(".chezmoiscripts/00-nt/run_once_after_200-scoop-install.cmd.tmpl", data)
             for gui in ('tinyxnb ^', 'mongodb-compass ^', 'mpv ^', 'ffdec ^', 'autohotkey ^', 'icaros-np', 'portable_config'):
                 assert (gui in scoop) != headless, gui
