@@ -6,6 +6,16 @@
 # REST API, adding and updating, never removing: devices and folders added in
 # the GUI stay.
 
+[syncthing]
+# Ignore patterns 155-syncthing keeps at the top of each folder's .stignore,
+# above any the node has of its own: the files a file manager leaves in a
+# folder it shows, which mean nothing on another machine. Finder's .DS_Store,
+# and ._* where a volume can't hold extended attributes; Explorer's Thumbs.db
+# and desktop.ini. (?d) lets Syncthing delete one when it is all that keeps a
+# directory deleted elsewhere from going. A folder with ownStignore keeps
+# chezmoi's .stignore instead, which 155-syncthing leaves alone.
+ignores = ["(?d).DS_Store", "(?d)._*", "(?d)Thumbs.db", "(?d)desktop.ini"]
+
 [syncthing.hub]
 name = "aboriginal"
 # The tailnet address alone, without `dynamic`: the joining service accepts
@@ -34,8 +44,11 @@ label = "Claude Code"
 # Only projects/, plans/ and file-history/ go: ~/.claude/.stignore
 # (private_dot_claude/dot_stignore) leaves everything else local. Session
 # transcripts are plaintext and can hold secrets that passed through tools.
+# chezmoi writes that .stignore before 155-syncthing creates the folder, so
+# nothing else is ever scanned, and 155-syncthing adds nothing to it.
 path = { windows = '~\.claude', darwin = "~/.claude", linux = "~/.claude" }
 mode = "700"
+ownStignore = true
 
 [[syncthing.folders]]
 id = "local-config_rclone"

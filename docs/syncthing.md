@@ -49,11 +49,20 @@ All of it comes from `.chezmoidata/syncthing.toml`.
 
   The modes are set on Linux and macOS, where Syncthing carries a file's
   permission bits to the other nodes.
+- **Ignore patterns**: every folder but `claude` gets the table's `ignores`
+  at the top of its `.stignore`, through the REST API: `(?d).DS_Store` and
+  `(?d)._*` (Finder), `(?d)Thumbs.db` and `(?d)desktop.ini` (Explorer).
+  Without them, a Mac that opens a synced folder in Finder spreads its
+  `.DS_Store` to every node. `(?d)` lets Syncthing delete such a file when it
+  is all that keeps a directory deleted elsewhere from going. Lines a node
+  has of its own stay, below them. `claude` is marked `ownStignore`: its
+  `.stignore` is chezmoi's file, written before the folder exists, and the
+  script leaves it alone.
 - **Options**: usage reporting declined and crash reports off, like the
   telemetry opt-outs in `.commonprofile`.
 
-`155-syncthing` adds and updates and never removes, so devices and folders
-added in the GUI stay. A folder that already exists at another path keeps it,
+`155-syncthing` adds and updates and never removes, so devices, folders and
+ignore patterns added in the GUI stay. A folder that already exists at another path keeps it,
 with a warning. The script runs on every apply, so a node whose Syncthing was
 not running yet is set up on the next apply after it is. It does nothing in WSL
 or a container, where Syncthing is not started (`150-user-services`).

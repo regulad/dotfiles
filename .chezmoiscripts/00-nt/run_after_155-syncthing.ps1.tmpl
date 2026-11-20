@@ -1,9 +1,11 @@
 # Applies .chezmoidata/syncthing.toml (docs/syncthing.md) to this node's running
 # Syncthing over its REST API: the hub, aboriginal, becomes this node's
-# introducer at its tailnet address; each folder exists at its path and is
-# shared with the hub; usage and crash reporting are off. It adds and updates,
-# never removes, so devices and folders added in the GUI stay. The Linux and
-# macOS 155-syncthing do the same through .chezmoitemplates/syncthing-apply.py.
+# introducer at its tailnet address; each folder exists at its path, is shared
+# with the hub, and has the table's ignore patterns at the top of its
+# .stignore; usage and crash reporting are off. It adds and updates, never
+# removes, so devices, folders and ignore patterns added in the GUI stay. The
+# Linux and macOS 155-syncthing do the same through
+# .chezmoitemplates/syncthing-apply.py.
 #
 # run_after_, every apply, so a node whose Syncthing was not running yet, or
 # whose configuration was changed in the GUI, is set up again next time.
@@ -106,6 +108,27 @@ function Test-SamePath([string]$A, [string]$B) {
     return (& $Expand $A) -eq (& $Expand $B)
 }
 
+# Puts $Lines at the top of the folder's .stignore unless all are in it
+# already; the node's own lines stay, below them. Returns the patterns it
+# added; call it inside @(), since PowerShell unrolls what a function returns.
+# Syncthing writes the file and rescans. A brand-new folder may have scanned
+# before this lands, but every other node ignores the same patterns, so none
+# of them takes what it announced. Patterns are case-sensitive, hence
+# -ccontains and -cnotcontains.
+function Set-Ignores([string]$Id, $Lines) {
+    $Lines = @(@($Lines) | Where-Object { $_ })
+    if (-not $Lines.Count) { return }
+    $Path = "/rest/db/ignores?folder=$([uri]::EscapeDataString($Id))"
+    $Got = Invoke-Syncthing Get $Path
+    $Current = @()
+    if ($Got -and $Got.ignore) { $Current = @($Got.ignore) }
+    $Missing = @($Lines | Where-Object { $Current -cnotcontains $_ })
+    if (-not $Missing.Count) { return }
+    $Ignore = @($Lines) + @($Current | Where-Object { $Lines -cnotcontains $_ })
+    Invoke-Syncthing Post $Path ([ordered]@{ ignore = $Ignore }) | Out-Null
+    return $Missing | Where-Object { -not $_.StartsWith('//') }
+}
+
 $Hub = $Desired.hub
 $IsHub = (-not $HubId) -or ((Invoke-Syncthing Get '/rest/system/status').myID -eq $HubId)
 
@@ -149,7 +172,9 @@ foreach ($Folder in $Desired.folders) {
         $New.devices = $Devices
         Invoke-Syncthing Post '/rest/config/folders' $New | Out-Null
         $Shared = $(if ($IsHub) { '' } else { ", shared with $($Hub.name)" })
-        Write-Host "notice: Syncthing: added folder $($Folder.id) at $($Folder.path)$Shared"
+        $Added = @(Set-Ignores $Folder.id $Folder.ignores)
+        $Ignoring = $(if ($Added.Count) { ", ignoring $($Added -join ', ')" } else { '' })
+        Write-Host "notice: Syncthing: added folder $($Folder.id) at $($Folder.path)$Shared$Ignoring"
         continue
     }
     if (-not (Test-SamePath $Current.path $Folder.path)) {
@@ -161,9 +186,14 @@ foreach ($Folder in $Desired.folders) {
     if (-not $IsHub -and -not ($Devices | Where-Object { $_.deviceID -eq $HubId })) {
         $Patch.devices = $Devices + [pscustomobject]@{ deviceID = $HubId }
     }
+    $Changes = @()
     if ($Patch.Count) {
         Invoke-Syncthing Patch "/rest/config/folders/$($Folder.id)" $Patch | Out-Null
         $Changes = @($Patch.Keys | Sort-Object | ForEach-Object { if ($_ -eq 'devices') { "shared with $($Hub.name)" } else { $_ } })
+    }
+    $Added = @(Set-Ignores $Folder.id $Folder.ignores)
+    if ($Added.Count) { $Changes += "ignoring $($Added -join ', ')" }
+    if ($Changes.Count) {
         Write-Host "notice: Syncthing: folder $($Folder.id): $($Changes -join ', ')"
     } else {
         Write-Host "debug: Syncthing: folder $($Folder.id) already set up"

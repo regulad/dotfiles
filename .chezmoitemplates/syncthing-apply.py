@@ -1,9 +1,10 @@
 """155-syncthing's REST half on Linux and macOS (00-nt/155-syncthing does the
 same in PowerShell): applies .chezmoidata/syncthing.toml to this node's
 running Syncthing. The hub becomes this node's introducer, at its tailnet
-address; each folder exists at its path and is shared with the hub; the
-options are set. It adds and updates, and never removes anything, so devices
-and folders added in the GUI stay.
+address; each folder exists at its path, is shared with the hub, and has the
+table's ignore patterns at the top of its .stignore; the options are set. It
+adds and updates, and never removes anything, so devices, folders and ignore
+patterns added in the GUI stay.
 
 argv: the REST base URL, the hub's device ID, the desired-state JSON
 (.chezmoitemplates/syncthing-desired.json). An empty hub ID means this is
@@ -23,6 +24,7 @@ import os
 import ssl
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 
 base = sys.argv[1].rstrip("/")
@@ -61,6 +63,23 @@ def same_path(a, b):
     return norm(a) == norm(b)
 
 
+def keep_ignores(folder_id, lines):
+    """Puts lines at the top of the folder's .stignore unless all are in it
+    already; the node's own lines stay, below them. Returns the patterns it
+    added. Syncthing writes the file and rescans. A brand-new folder may
+    have scanned before this lands, but every other node ignores the same
+    patterns, so none of them takes what it announced."""
+    if not lines:
+        return []
+    path = "/rest/db/ignores?folder=" + urllib.parse.quote(folder_id, safe="")
+    current = (call("GET", path) or {}).get("ignore") or []
+    missing = [line for line in lines if line not in current]
+    if not missing:
+        return []
+    call("POST", path, {"ignore": lines + [line for line in current if line not in lines]})
+    return [line for line in missing if not line.startswith("//")]
+
+
 hub = desired["hub"]
 is_hub = not hub_id or call("GET", "/rest/system/status")["myID"] == hub_id
 
@@ -95,7 +114,9 @@ for folder in desired["folders"]:
         new["devices"] = devices
         call("POST", "/rest/config/folders", new)
         shared = "" if is_hub else ", shared with " + hub["name"]
-        say("notice", "Syncthing: added folder {} at {}{}".format(folder_id, folder["path"], shared))
+        added = keep_ignores(folder_id, folder["ignores"])
+        ignoring = ", ignoring " + ", ".join(added) if added else ""
+        say("notice", "Syncthing: added folder {} at {}{}{}".format(folder_id, folder["path"], shared, ignoring))
         continue
     if not same_path(current.get("path", ""), folder["path"]):
         say("warning", "Syncthing: folder {} is at {} here, not {}; its path is left as it is".format(folder_id, current.get("path"), folder["path"]))
@@ -105,9 +126,14 @@ for folder in desired["folders"]:
     devices = current.get("devices") or []
     if not is_hub and hub_id not in [d.get("deviceID") for d in devices]:
         patch["devices"] = devices + [{"deviceID": hub_id}]
+    changes = []
     if patch:
         call("PATCH", "/rest/config/folders/" + folder_id, patch)
         changes = ["shared with " + hub["name"] if k == "devices" else k for k in sorted(patch)]
+    added = keep_ignores(folder_id, folder["ignores"])
+    if added:
+        changes.append("ignoring " + ", ".join(added))
+    if changes:
         say("notice", "Syncthing: folder {}: {}".format(folder_id, ", ".join(changes)))
     else:
         say("debug", "Syncthing: folder {} already set up".format(folder_id))
