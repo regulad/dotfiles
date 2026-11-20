@@ -9,6 +9,14 @@ The Python, JavaScript, Rust and Go tools are listed once, in
 `550-cargo`, `560-go-tooling` and `570-pnpm-tooling`. Each file's header
 describes its fields; an `os` list keeps an entry to some platforms.
 
+On Windows, Go's workspace and build cache are on the D: Dev Drive with the
+other package caches: `GOPATH` is `D:\packages\go` (tools in its `bin`, which
+`560-go-tooling` puts on the user PATH; modules in `pkg\mod`) and `GOCACHE` is
+`D:\packages\go-build`. They are set in Go's own settings file,
+`AppData/Roaming/go/env`, rather than in the machine environment like the
+other caches, so they hold from the first apply on without elevation;
+`060-dev-caches` moves anything already in Go's default locations across.
+
 On Linux and macOS Homebrew supplies equivalent packaged tools, where an
 entry's `brew` (or `brewCask`) field names one for the host's brew era; uv
 and pnpm supply tools absent from the host's snapshot, disabled there, or

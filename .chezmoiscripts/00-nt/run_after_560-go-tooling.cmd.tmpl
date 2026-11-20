@@ -4,34 +4,43 @@ setlocal enabledelayedexpansion
 REM The modules are .chezmoidata/go-tools.toml, shared with the unix scripts
 REM (.chezmoitemplates/go-tooling.sh).
 
-if defined GOPATH (
-    set "GO_BIN=%GOPATH%\bin"
-) else (
-    set "GO_BIN=%USERPROFILE%\go\bin"
-)
-
-echo ;%PATH%; | find /I ";%GO_BIN%;" >nul
-if errorlevel 1 set "PATH=%PATH%;%GO_BIN%"
-
-REM append to the User-scope PATH specifically -- reusing %PATH% here would fold
-REM the Machine-scope entries into the user's own copy of it.
-set "GO_USER_PATH="
-for /f "delims=" %%i in ('powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "[Environment]::GetEnvironmentVariable('PATH','User')"') do set "GO_USER_PATH=%%i"
-echo ;!GO_USER_PATH!; | find /I ";%GO_BIN%;" >nul
-if errorlevel 1 (
-    call :neosetx PATH "!GO_USER_PATH!;%GO_BIN%"
-    echo Added %GO_BIN% to PATH.
-) else (
-    echo %GO_BIN% is already in PATH.
-)
-
-call refreshenv >nul 2>&1
-
 where go >nul 2>&1
 if errorlevel 1 (
     echo error: go not resolvable on PATH 1>&2
     exit /b 1
 )
+
+REM Where `go install` puts the tools: GOBIN, else the first GOPATH entry's
+REM bin. Asked of go itself, since both come from Go's settings file
+REM (AppData/Roaming/go/env, which puts them on D:), not from this
+REM environment. Older Go prints an unset GOBIN as nothing, newer Go as its
+REM default; either way this gets the same directory.
+set "GO_BIN="
+for /f "delims=" %%i in ('go env GOBIN') do set "GO_BIN=%%i"
+if not defined GO_BIN for /f "delims=;" %%i in ('go env GOPATH') do set "GO_BIN=%%i\bin"
+if not defined GO_BIN (
+    echo error: go env reported neither GOBIN nor GOPATH 1>&2
+    exit /b 1
+)
+
+echo ;%PATH%; | find /I ";%GO_BIN%;" >nul
+if errorlevel 1 set "PATH=%PATH%;%GO_BIN%"
+
+REM The User-scope PATH specifically -- reusing %PATH% here would fold the
+REM Machine-scope entries into the user's own copy of it. It gets GO_BIN, and
+REM loses %USERPROFILE%\go\bin, Go's default, which earlier applies added
+REM before GOPATH moved to D:. PowerShell reads and writes it, as neosetx
+REM does, and prints what it changed, if anything. No double quote inside its
+REM command: cmd would end the quoting there and see the pipes.
+set "GO_PATH_CHANGE="
+for /f "delims=" %%i in ('powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$Want = $env:GO_BIN.TrimEnd('\'); $Old = Join-Path $env:USERPROFILE 'go\bin'; $Have = @([Environment]::GetEnvironmentVariable('PATH', 'User') -split ';' | Where-Object { $_ }); $New = @($Have | Where-Object { $_.TrimEnd('\') -ine $Old -or $Old -ieq $Want }); $Notes = @(); if ($New.Count -ne $Have.Count) { $Notes += 'took out ' + $Old }; if (-not ($New | Where-Object { $_.TrimEnd('\') -ieq $Want })) { $New += $Want; $Notes += 'added ' + $Want }; if ($Notes.Count) { [Environment]::SetEnvironmentVariable('PATH', ($New -join ';'), 'User'); $Notes -join ', ' }"') do set "GO_PATH_CHANGE=%%i"
+if defined GO_PATH_CHANGE (
+    echo notice: user PATH: !GO_PATH_CHANGE!
+) else (
+    echo debug: %GO_BIN% is already on the user PATH
+)
+
+call refreshenv >nul 2>&1
 
 REM auto lets Go fetch a newer toolchain on demand if a tool (like gopls) needs one
 set "GOTOOLCHAIN=auto"
@@ -53,5 +62,3 @@ echo error: go tooling install failed, aborting 1>&2
 exit /b 1
 
 {{ template "go-install.cmd" . }}
-
-{{ template "neosetx.cmd" . }}

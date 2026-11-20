@@ -1,0 +1,12 @@
+# Go's own settings file, the one `go env -w` writes, deployed on Windows
+# only. Go's workspace and build cache live on the D: Dev Drive beside the
+# other package caches (registry-system.reg, 060-dev-caches): modules in
+# D:\packages\go\pkg\mod, `go install`ed tools in D:\packages\go\bin, which
+# 560-go-tooling puts on the user PATH. A file here rather than machine
+# variables like the others' because Go reads it on every run: it holds from
+# the first apply on, for the hookscripts too, whose environment predates
+# any registry import, and it needs no elevation. A GOPATH or GOCACHE set in
+# the environment would still win over it. Go skips these comment lines, but
+# not a CR: a value would keep it, so this file stays LF (.gitattributes).
+GOPATH=D:\packages\go
+GOCACHE=D:\packages\go-build

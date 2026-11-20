@@ -9,3 +9,8 @@ dot_config/git/template/hooks/* text eol=lf
 # ~/.wslgconfig too: WSLg's parser stops reading at the first blank line of a
 # CRLF file, without an error (see the file's own comments).
 dot_wslgconfig text eol=lf
+
+# And Go's settings file: Go keeps a line's CR as part of its value, so a CRLF
+# copy makes GOPATH "D:\packages\go<CR>" and puts every tool in a directory
+# named "go<CR>".
+AppData/Roaming/go/env text eol=lf
