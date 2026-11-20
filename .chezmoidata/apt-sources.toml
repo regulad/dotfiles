@@ -16,7 +16,9 @@
 #               repository that answers 404 fails every `apt update` on the
 #               host, so one that has published nothing yet stays out until it
 #               has, and comes in at the next apply after. A host whose suite
-#               has no channel at all is an error, not a skip.
+#               has no channel at all is an error, not a skip; for pam-rssh,
+#               01-ubuntu/024-sudo-ws stops the apply there before anything is
+#               written.
 
 # pam_rssh's packages, from regulad/jobs' mirror of upstream's GitHub releases
 # (pipelines/z4yx/pam_rssh), for 00-linux/025-pam-sudo-rssh. Nexus serves one
@@ -25,8 +27,8 @@
 # fingerprint is the one the pipeline's README lists:
 # pam-rssh-ubuntu-resolute 78E0EADBD0F1DD795BC2545CB932890A70FA6DB9,
 # pam-rssh-ubuntu-resolute-testing 90E5F9EF825BC632F519E3E618D29F73C7FB26F1.
-# Ubuntu 26.04 is the only release here, as it is the oldest the preamble
-# accepts.
+# Ubuntu 26.04 is the only release here: it is the oldest the preamble
+# accepts, and upstream builds nothing for 26.10, which 024 therefore refuses.
 [aptSources.pam-rssh]
 components = ["main"]
 channels = [

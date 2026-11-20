@@ -278,6 +278,7 @@ Library
 {{- if ne .chezmoi.os "linux" }}
 .chezmoiscripts/00-linux/*
 .chezmoiscripts/01-fedora/*
+.chezmoiscripts/01-ubuntu/*
 .chezmoiscripts/02-bluefin/*
 .config/systemd/
 # systemd's environment.d, the desktop portal's backend choice and GTK's
@@ -330,6 +331,11 @@ Library
 .var/app/com.discordapp.Discord
 .config/systemd/user/vencord-discord-inject.path
 .config/systemd/user/vencord-discord-inject.service
+{{-     end }}
+{{-     if ne .chezmoi.osRelease.id "ubuntu" }}
+# The 01-ubuntu layer is Ubuntu's alone, not Debian's: 024-sudo-ws picks
+# between the two sudos Ubuntu ships, sudo-rs and sudo.ws.
+.chezmoiscripts/01-ubuntu/*
 {{-     end }}
 {{-     if ne .chezmoi.osRelease.id "bluefin" }}
 # Universal Blue rewrites ID=fedora to ID=bluefin in the image, which is what

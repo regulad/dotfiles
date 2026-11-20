@@ -1,0 +1,87 @@
+{{ template "posix-preamble.sh" . }}
+# sudo.ws, the original sudo (https://www.sudo.ws), as /usr/bin/sudo on Ubuntu
+# releases before 26.10, for the noninteractive_auth that sudo-rs lacks: with
+# it, 00-linux/025-pam-sudo-rssh has `sudo -n` over ssh ask the forwarded agent
+# through pam_rssh too, not only plain sudo.
+#
+# Ubuntu's sudo has been sudo-rs since 25.10, with sudo.ws beside it in the
+# `sudo` package as the other alternative for /usr/bin/sudo, which Ubuntu's
+# Server documentation supports through 26.04 LTS
+# (https://ubuntu.com/server/docs/reference/other-tools/sudo-rs/). 26.10 still
+# ships it, but nothing official supports it there, so from 26.10 on
+# /usr/bin/sudo is left as it is, with a notice saying what that means.
+#
+# And the guard for pam_rssh: 021-apt-packages installs it on every Ubuntu
+# host of its own, from the suites .chezmoidata/apt-sources.toml lists, and
+# fails on a release it lists none for. This stops the apply there first,
+# before chezmoi has written a file or run another script. 26.10 is such a
+# release for now (regulad/jobs mirrors upstream's packages, and upstream
+# builds none for it), so that notice waits for a suite of its own.
+#
+# A run_before_ script, unlike the rest of this repo's: chezmoi runs scripts in
+# the order of their paths, so a run_after_ one here would come after all of
+# 00-linux, and 025 would write its sudoers lines for sudo-rs, without
+# noninteractive_auth, an apply before it found sudo.ws. From here the switch is
+# made before 025 asks `sudo -V`. sudo.ws keeps timestamps of its own, so the
+# first sudo after the switch asks again, once.
+#
+# WSL and containers get neither, as 021 installs no pam-rssh and 025 adds no
+# pam_rssh there. A host whose sudo needs no password at all gets the guard,
+# as 021 installs pam-rssh there too, but keeps its sudo: 025 adds no pam_rssh
+# to it either.
+
+if [ "$IS_WSL" -eq 1 ] || [ "$CONTAINERIZED" -eq 1 ]; then
+	echo "debug: no sudo over ssh in WSL or a container; leaving sudo as it is" >&2
+	exit 0
+fi
+
+PAM_RSSH_SUITES="{{ range (index .aptSources "pam-rssh").channels }} {{ .suite }}{{ end }} "
+case "$PAM_RSSH_SUITES" in
+	*" $VERSION_CODENAME "*) ;;
+	*)
+		echo "error: .chezmoidata/apt-sources.toml has no pam-rssh suite for Ubuntu $VERSION_ID ($VERSION_CODENAME), which 021-apt-packages would install it from; stopping before anything is applied" >&2
+		exit 1
+		;;
+esac
+
+# As 025 tells: with no agent to ask and no cached timestamp, sudo -n passes
+# only on a NOPASSWD rule, and then there is no pam_rssh to serve.
+sudo -k
+if env -u SSH_AUTH_SOCK sudo -n true 2>/dev/null; then
+	echo "debug: sudo here needs no password at all (a NOPASSWD rule this repo doesn't own); leaving sudo as it is" >&2
+	exit 0
+fi
+
+# /usr/lib/cargo/bin/sudo (sudo-rs) or /usr/bin/sudo.ws.
+SUDO_NOW="$(update-alternatives --query sudo 2>/dev/null | awk '$1 == "Value:" { print $2 }')"
+
+if [ "$(printf '%s\n' 26.10 "$VERSION_ID" | sort -V | head -n 1)" = 26.10 ]; then
+	if [ "$SUDO_NOW" = /usr/bin/sudo.ws ]; then
+		# Switched here before an upgrade from 26.04: update-alternatives
+		# keeps a manual choice across it.
+		echo "notice: sudo is sudo.ws, which Ubuntu supports only through 26.04; leaving it as it is on $VERSION_ID (\`sudo update-alternatives --auto sudo\` goes back to sudo-rs)" >&2
+	else
+		echo "notice: Ubuntu supports only sudo-rs as sudo from 26.10 on, so sudo stays sudo-rs on $VERSION_ID: it has no noninteractive_auth, so over ssh plain sudo goes through the agent but \`sudo -n\` refuses" >&2
+	fi
+	exit 0
+fi
+
+if [ "$SUDO_NOW" = /usr/bin/sudo.ws ]; then
+	echo "debug: sudo is already sudo.ws" >&2
+	exit 0
+fi
+require_sudo "01-ubuntu/024-sudo-ws"
+# ubuntu-minimal pulls in the sudo package next to sudo-rs; this is a host
+# where it was taken out.
+if [ ! -x /usr/bin/sudo.ws ]; then
+	echo "debug: installing the sudo package, for sudo.ws" >&2
+	sudo apt-get update -qq
+	sudo apt-get install -qq -y sudo >/dev/null
+fi
+# What it says only if it fails: on a minimized image, one without man pages,
+# it warns about each sudo.ws page it has none to link to.
+if ! out="$(sudo update-alternatives --set sudo /usr/bin/sudo.ws 2>&1 >/dev/null)"; then
+	printf '%s\n' "$out" | sed 's/^/error: /' >&2
+	exit 1
+fi
+echo "notice: switched sudo from sudo-rs to sudo.ws, which Ubuntu supports through 26.04: with its noninteractive_auth, 025-pam-sudo-rssh has \`sudo -n\` over ssh go through the agent too" >&2

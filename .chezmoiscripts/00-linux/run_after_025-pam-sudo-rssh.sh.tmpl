@@ -29,7 +29,9 @@
 #
 # Ubuntu's sudo is sudo-rs (since 25.10), which has PAM and env_keep but no
 # noninteractive_auth: there `sudo -n` still refuses over ssh before PAM runs,
-# and plain `sudo` is the one that goes through the agent.
+# and plain `sudo` is the one that goes through the agent. Before 26.10,
+# 01-ubuntu/024-sudo-ws switches it to sudo.ws, ahead of this script in the
+# same apply (a run_before_), so that is 26.10 and later.
 #
 # Skipped, saying why: WSL and containers, which nobody sshes into to sudo; a
 # host without the module on disk (an atomic host until the next boot after
@@ -79,8 +81,9 @@ PAM_RSSH_WANTED_SUDOERS='Defaults env_keep += "SSH_AUTH_SOCK"'
 # `sudo -n` refuses before PAM runs at all, unless noninteractive_auth (sudo
 # 1.9.10 on) lets it authenticate through modules that need no typing, as
 # pam_rssh does. An older sudo's visudo would reject the line, and so would
-# sudo-rs's (`sudo-rs 0.2.13` on Ubuntu 26.04, which the version check below
-# never passes), so it is left out there.
+# sudo-rs's (`sudo-rs 0.2.14` on Ubuntu 26.10, which the version check below
+# never passes), so it is left out there. sudo-rs itself ignores the line, so
+# one left from sudo.ws does no harm until this script takes it out.
 if sudo -V 2>/dev/null | awk 'NR == 1 { split($3, v, "[.p]"); ok = $1 == "Sudo" && (v[1] > 1 || (v[1] == 1 && (v[2] > 9 || (v[2] == 9 && v[3] >= 10)))) } END { exit !ok }'; then
 	PAM_RSSH_WANTED_SUDOERS="$PAM_RSSH_WANTED_SUDOERS
 Defaults noninteractive_auth"
