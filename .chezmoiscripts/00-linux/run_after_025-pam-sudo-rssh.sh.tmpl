@@ -1,0 +1,153 @@
+{{ template "posix-preamble.sh" . }}
+# sudo over ssh on Linux, authenticated by the forwarded agent's key through
+# pam_rssh (https://github.com/z4yx/pam_rssh): the agent forwarded from the
+# client signs pam_rssh's challenge after asking there (Bitwarden's approval
+# prompt). The Linux counterpart of 00-macos/025-pam-sudo-touchid's pam_rssh.
+#
+# The module comes as a package, pam-rssh: .chezmoidata/fedora-packages.toml
+# has dnf install it on package-mode Fedora (020-dnf-packages) and rpm-ostree
+# layer it on an atomic one (02-bluefin/020-rpm-ostree-packages), from
+# regulad/jobs' mirror of upstream's release packages. Not
+# pam_ssh_agent_auth, which Debian and Ubuntu do package: it verifies RSA
+# signatures only as SHA-1 ssh-rsa, which Bitwarden's agent never makes, so it
+# would refuse id_rsa3072 every time.
+#
+# Root's each, and outside anything the user can write, as on macOS:
+# - /etc/security/pam_rssh/<user>.keys, the one key it accepts, id_rsa3072,
+#   the key ~/.ssh/authorized_keys holds, from this repo
+#   (dot_ssh/private_readonly_id_rsa3072.pub). pam_rssh's default key file,
+#   ~/.ssh/authorized_keys, would let anything running as the user add a key
+#   and so take root, as its README's Security Notice says.
+# - /etc/sudoers.d/pam_rssh: SSH_AUTH_SOCK kept for the module, and
+#   noninteractive_auth, so `sudo -n` over ssh asks the agent too.
+# - One line first in /etc/pam.d/sudo's auth stack, `sufficient`, so without
+#   an agent (at the machine, or ssh without ForwardAgent) sudo asks for the
+#   password as before.
+#
+# Skipped, saying why: WSL and containers, which nobody sshes into to sudo; a
+# host without the module on disk (an atomic host until the next boot after
+# layering it, or a distro this repo installs no pam-rssh on); and a host
+# whose sudo already needs no password at all -- a NOPASSWD rule this repo
+# doesn't own, such as homelab's base role on its hosts, aboriginal's among
+# them.
+#
+# Runs every apply, idempotently: each file is compared with what it should
+# be, and sudo is only asked for when one differs.
+
+if [ "$IS_WSL" -eq 1 ] || [ "$CONTAINERIZED" -eq 1 ]; then
+	echo "debug: no sudo over ssh in WSL or a container; skipping pam_rssh" >&2
+	exit 0
+fi
+
+PAM_RSSH_MODULE=""
+for dir in /usr/lib64/security /usr/lib/security "/usr/lib/$(uname -m)-linux-gnu/security" "/lib/$(uname -m)-linux-gnu/security"; do
+	if [ -f "$dir/libpam_rssh.so" ]; then
+		PAM_RSSH_MODULE="$dir/libpam_rssh.so"
+		break
+	fi
+done
+if [ -z "$PAM_RSSH_MODULE" ]; then
+	if [ "$IS_ATOMIC" -eq 1 ]; then
+		echo "notice: pam_rssh is not in this deployment yet (02-bluefin/020-rpm-ostree-packages layers it); sudo over ssh gets it at the first apply after the next boot" >&2
+	else
+		echo "debug: pam_rssh is not installed on this host; skipping" >&2
+	fi
+	exit 0
+fi
+
+# NOPASSWD: sudo -n passes with no agent to ask and no cached timestamp.
+sudo -k
+if env -u SSH_AUTH_SOCK sudo -n true 2>/dev/null; then
+	echo "debug: sudo here needs no password at all (a NOPASSWD rule this repo doesn't own), so pam_rssh is not added" >&2
+	exit 0
+fi
+
+PAM_RSSH_DIR=/etc/security/pam_rssh
+PAM_RSSH_KEYS="$PAM_RSSH_DIR/$(id -un).keys"
+PAM_RSSH_SUDOERS=/etc/sudoers.d/pam_rssh
+PAM_RSSH_WANTED_KEYS={{ include "dot_ssh/private_readonly_id_rsa3072.pub" | trim | quote }}
+# sudo resets the environment before PAM runs; this keeps the agent's socket
+# for the module, as pam_rssh's README says.
+PAM_RSSH_WANTED_SUDOERS='Defaults env_keep += "SSH_AUTH_SOCK"'
+# `sudo -n` refuses before PAM runs at all, unless noninteractive_auth (sudo
+# 1.9.10 on) lets it authenticate through modules that need no typing, as
+# pam_rssh does. An older sudo's visudo would reject the line, and so would
+# sudo-rs's (`sudo-rs 0.2.x`, which the version check below never passes), so
+# it is left out there.
+if sudo -V 2>/dev/null | awk 'NR == 1 { split($3, v, "[.p]"); ok = $1 == "Sudo" && (v[1] > 1 || (v[1] == 1 && (v[2] > 9 || (v[2] == 9 && v[3] >= 10)))) } END { exit !ok }'; then
+	PAM_RSSH_WANTED_SUDOERS="$PAM_RSSH_WANTED_SUDOERS
+Defaults noninteractive_auth"
+fi
+# ${user} is pam_rssh's own variable, PAM_USER: for sudo, whoever runs it.
+PAM_RSSH_LINE='auth       sufficient   libpam_rssh.so auth_key_file=/etc/security/pam_rssh/${user}.keys'
+PAM_SUDO=/etc/pam.d/sudo
+
+# The key file and the sudoers lines, root's each.
+if [ "$(cat "$PAM_RSSH_KEYS" 2>/dev/null)" = "$PAM_RSSH_WANTED_KEYS" ] &&
+	[ "$(cat "$PAM_RSSH_DIR/sudoers" 2>/dev/null)" = "$PAM_RSSH_WANTED_SUDOERS" ] &&
+	[ -e "$PAM_RSSH_SUDOERS" ]; then
+	echo "debug: pam_rssh's key file and sudoers lines are up to date" >&2
+else
+	require_sudo "025-pam-sudo-rssh"
+	sudo install -d -o root -g root -m 755 "$PAM_RSSH_DIR"
+	tmp="$(mktemp)"
+	printf '%s\n' "$PAM_RSSH_WANTED_KEYS" >"$tmp"
+	sudo install -o root -g root -m 444 "$tmp" "$PAM_RSSH_KEYS"
+	printf '%s\n' "$PAM_RSSH_WANTED_SUDOERS" >"$tmp"
+	if ! sudo visudo -cqf "$tmp"; then
+		rm -f "$tmp"
+		echo "error: visudo rejected the pam_rssh sudoers lines; not installing them" >&2
+		exit 1
+	fi
+	# Into place under a name sudo skips (one with a dot), then renamed, so
+	# sudo never reads half a file: a broken sudoers.d file breaks sudo.
+	sudo install -o root -g root -m 440 "$tmp" "$PAM_RSSH_SUDOERS.new"
+	sudo mv -f "$PAM_RSSH_SUDOERS.new" "$PAM_RSSH_SUDOERS"
+	# A world-readable copy, for the next apply to compare against: the
+	# sudoers.d file itself is root's alone to read.
+	sudo install -o root -g root -m 444 "$tmp" "$PAM_RSSH_DIR/sudoers"
+	rm -f "$tmp"
+	# SELinux: each takes its path's default label, whatever the copy had.
+	if command -v restorecon >/dev/null 2>&1; then
+		sudo restorecon -R "$PAM_RSSH_DIR" "$PAM_RSSH_SUDOERS"
+	fi
+	echo "notice: installed pam_rssh's key file ($PAM_RSSH_KEYS, trusting id_rsa3072) and $PAM_RSSH_SUDOERS" >&2
+fi
+
+# The PAM line, first in sudo's auth stack: before its first auth line, or
+# Debian's `@include common-auth`. Any earlier pam_rssh line goes, so a
+# changed one is replaced rather than added to.
+current="$(cat "$PAM_SUDO")"
+wanted="$(printf '%s\n' "$current" | awk -v line="$PAM_RSSH_LINE" '
+	/libpam_rssh\.so/ { next }
+	!done && ($1 == "auth" || ($1 == "@include" && $2 == "common-auth")) { print line; done = 1 }
+	{ print }
+	END { if (!done) print line }')"
+if [ "$wanted" = "$current" ]; then
+	echo "debug: $PAM_SUDO already asks pam_rssh first" >&2
+else
+	require_sudo "025-pam-sudo-rssh"
+	# Written whole beside it and renamed over it, never in place: a
+	# half-written PAM file would lock sudo out. There is no visudo for PAM;
+	# the module's existence, checked above, is the guard.
+	tmp="$(mktemp)"
+	printf '%s\n' "$wanted" >"$tmp"
+	sudo install -o root -g root -m 644 "$tmp" "$PAM_SUDO.chezmoi-new"
+	sudo mv -f "$PAM_SUDO.chezmoi-new" "$PAM_SUDO"
+	rm -f "$tmp"
+	if command -v restorecon >/dev/null 2>&1; then
+		sudo restorecon "$PAM_SUDO"
+	fi
+	echo "notice: put pam_rssh first in $PAM_SUDO's auth stack" >&2
+fi
+
+# Through the agent, if this session has one: sudo -k drops the cached
+# timestamp, so a pass here is pam_rssh's.
+if [ -S "${SSH_AUTH_SOCK:-}" ]; then
+	sudo -k
+	if sudo -n true 2>/dev/null; then
+		echo "debug: sudo -n passes through the agent" >&2
+	else
+		echo "warning: sudo -n did not pass through this session's agent; check /etc/security/pam_rssh and the agent's keys" >&2
+	fi
+fi
