@@ -33,12 +33,19 @@
 # 01-ubuntu/024-sudo-ws switches it to sudo.ws, ahead of this script in the
 # same apply (a run_before_), so that is 26.10 and later.
 #
-# Skipped, saying why: WSL and containers, which nobody sshes into to sudo; a
-# host without the module on disk (an atomic host until the next boot after
-# layering it, or a distro this repo installs no pam-rssh on); and a host
-# whose sudo already needs no password at all -- a NOPASSWD rule this repo
-# doesn't own, such as homelab's base role on its hosts, aboriginal's among
-# them.
+# NOPASSWD, where there is no pam_rssh to be had: a release upstream builds no
+# package for (Fedora 45 and Ubuntu 26.10, as of 2026-11-21), which
+# 020-dnf-packages, 02-bluefin/020-rpm-ostree-packages and 021-apt-packages
+# then go without, or a distro this repo installs no pam-rssh on. There sudo
+# needs no password at all, from /etc/sudoers.d/90-<user>-nopasswd, as on a
+# Mac before Sonoma (00-macos/025-pam-sudo-touchid). Once the module is on
+# disk and its line is first in /etc/pam.d/sudo, the same file is removed.
+#
+# Skipped, saying why: WSL and containers, which nobody sshes into to sudo; an
+# atomic host whose next deployment layers pam-rssh, until the next boot; and
+# a host whose sudo already needs no password at all -- a NOPASSWD rule this
+# repo doesn't own, such as homelab's base role on its hosts, aboriginal's
+# among them.
 #
 # Runs every apply, idempotently: each file is compared with what it should
 # be, and sudo is only asked for when one differs.
@@ -55,20 +62,63 @@ for dir in /usr/lib64/security /usr/lib/security "/usr/lib/$(uname -m)-linux-gnu
 		break
 	fi
 done
+# Dots in the user's name become underscores in the file's: sudo skips any
+# file in /etc/sudoers.d whose name has a dot (regulad.linux's would be).
+NOPASSWD="/etc/sudoers.d/90-$(id -un | tr . _)-nopasswd"
+# With no agent to ask and no cached timestamp, sudo -n passes only on a
+# NOPASSWD rule: $NOPASSWD, or one this repo doesn't own.
+sudo -k
+sudo_needs_no_password() {
+	env -u SSH_AUTH_SOCK sudo -n true 2>/dev/null
+}
+# Whether $NOPASSWD is there. Fedora's /etc/sudoers.d is root's alone to look
+# in, but where the file is, sudo -n passes and can look.
+nopasswd_present() {
+	env -u SSH_AUTH_SOCK sudo -n test -e "$NOPASSWD" 2>/dev/null
+}
+
 if [ -z "$PAM_RSSH_MODULE" ]; then
-	if [ "$IS_ATOMIC" -eq 1 ]; then
-		echo "notice: pam_rssh is not in this deployment yet (02-bluefin/020-rpm-ostree-packages layers it); sudo over ssh gets it at the first apply after the next boot" >&2
+	if [ "$IS_ATOMIC" -eq 1 ] &&
+		rpm-ostree status --json 2>/dev/null | jq -r '.deployments[0]["requested-packages"][]?' | grep -qxF pam-rssh; then
+		echo "notice: pam_rssh is not in this deployment yet (02-bluefin/020-rpm-ostree-packages layered it); sudo over ssh gets it at the first apply after the next boot" >&2
+		exit 0
+	fi
+	if sudo_needs_no_password; then
+		echo "debug: there is no pam_rssh here, and sudo needs no password already" >&2
+		exit 0
+	fi
+	require_sudo "025-pam-sudo-rssh"
+	tmp="$(mktemp)"
+	printf '%s ALL=(ALL) NOPASSWD: ALL\n' "$(id -un)" >"$tmp"
+	if ! sudo visudo -cqf "$tmp" >/dev/null; then
+		rm -f "$tmp"
+		echo "error: visudo rejected the NOPASSWD line; not installing it" >&2
+		exit 1
+	fi
+	# Into place under a name sudo skips (one with a dot), then renamed, so
+	# sudo never reads half a file.
+	sudo install -o root -g root -m 440 "$tmp" "$NOPASSWD.new"
+	sudo mv -f "$NOPASSWD.new" "$NOPASSWD"
+	rm -f "$tmp"
+	if command -v restorecon >/dev/null 2>&1; then
+		sudo restorecon "$NOPASSWD"
+	fi
+	sudo -k
+	if sudo_needs_no_password; then
+		echo "notice: there is no pam_rssh package for this release, so sudo needs no password here instead: wrote $NOPASSWD, which goes at the first apply that finds pam_rssh installed" >&2
 	else
-		echo "debug: pam_rssh is not installed on this host; skipping" >&2
+		echo "warning: wrote $NOPASSWD, but sudo still wants a password; does /etc/sudoers include /etc/sudoers.d?" >&2
 	fi
 	exit 0
 fi
 
-# NOPASSWD: sudo -n passes with no agent to ask and no cached timestamp.
-sudo -k
-if env -u SSH_AUTH_SOCK sudo -n true 2>/dev/null; then
-	echo "debug: sudo here needs no password at all (a NOPASSWD rule this repo doesn't own), so pam_rssh is not added" >&2
-	exit 0
+if sudo_needs_no_password; then
+	if nopasswd_present; then
+		echo "debug: $NOPASSWD, from when there was no pam_rssh here, goes once pam_rssh is first in sudo's auth stack" >&2
+	else
+		echo "debug: sudo here needs no password at all (a NOPASSWD rule this repo doesn't own), so pam_rssh is not added" >&2
+		exit 0
+	fi
 fi
 
 PAM_RSSH_DIR=/etc/security/pam_rssh
@@ -167,6 +217,13 @@ for pam_file in "$PAM_SUDO" "$PAM_SUDO-i"; do
 	fi
 	echo "notice: put pam_rssh first in $pam_file's auth stack" >&2
 done
+
+# The fallback goes, as on a Mac once pam_rssh is in sudo_local. Before the
+# check below, which $NOPASSWD would pass whatever pam_rssh did.
+if grep -qF libpam_rssh.so "$PAM_SUDO" && nopasswd_present; then
+	sudo rm -f "$NOPASSWD"
+	echo "notice: removed $NOPASSWD: with pam_rssh in $PAM_SUDO, sudo over ssh asks the forwarded agent instead, and wants the password without it" >&2
+fi
 
 # Through the agent, if this session has one. Plain sudo, as sudo-rs refuses
 # `sudo -n` before PAM runs, but in a session of its own with no terminal:

@@ -1,12 +1,15 @@
 # .chezmoidata/apt-sources.toml's repositories, for 00-linux/021-apt-packages:
 # enable_apt_source <name> writes one, before the `apt update` that reads it.
-# Needs sudo; call it after require_sudo.
+# Needs sudo; call it after require_sudo. An optional source with nothing
+# published for this host's suite goes into APT_UNPUBLISHED_SOURCES
+# (" <name> <name> ") instead, and its packages are to be left out.
 
+APT_UNPUBLISHED_SOURCES=" "
 enable_apt_source() {
 	case "$1" in
 {{- range $name, $src := .aptSources }}
 	{{ $name }})
-		write_apt_source {{ $name | quote }} {{ join " " $src.components | quote }} <<'CHEZMOI_APT_SOURCE_CHANNELS'
+		write_apt_source {{ $name | quote }} {{ join " " $src.components | quote }} {{ if get $src "optional" }}optional{{ else }}required{{ end }} <<'CHEZMOI_APT_SOURCE_CHANNELS'
 {{ range $src.channels }}{{ .suite }} {{ .uri }} {{ .key }}
 {{ end -}}
 CHEZMOI_APT_SOURCE_CHANNELS
@@ -42,16 +45,18 @@ CHEZMOI_APT_SOURCE_KEY
 	esac
 }
 
-# One source: $1 its name, $2 its components, and its channels on stdin, one
-# "<suite> <uri> <key>" per line. Writes /etc/apt/sources.list.d/<name>.sources
-# with a stanza for each channel of this host's suite (VERSION_CODENAME, from
-# the /etc/os-release the preamble reads) whose InRelease exists, and installs
-# the keys those name to /etc/apt/keyrings. A channel that answers 404 has
-# published nothing for the suite yet and is left out; any other answer, or
-# none, is an error, and changes nothing. So is a suite with no channel that
-# has published anything.
+# One source: $1 its name, $2 its components, $3 "optional" or "required", and
+# its channels on stdin, one "<suite> <uri> <key>" per line. Writes
+# /etc/apt/sources.list.d/<name>.sources with a stanza for each channel of
+# this host's suite (VERSION_CODENAME, from the /etc/os-release the preamble
+# reads) whose InRelease exists, and installs the keys those name to
+# /etc/apt/keyrings. A channel that answers 404 has published nothing for the
+# suite yet and is left out; any other answer, or none, is an error, and
+# changes nothing. So is a suite with no channel that has published anything,
+# unless the source is optional: then it goes into APT_UNPUBLISHED_SOURCES, and
+# a .sources file an earlier release had for it is removed.
 write_apt_source() {
-	local name=$1 components=$2
+	local name=$1 components=$2 optional=$3
 	local list_file="/etc/apt/sources.list.d/$name.sources"
 	local suite uri key status wanted="" keys="" key_file
 	while read -r suite uri key; do
@@ -79,8 +84,17 @@ Signed-By: /etc/apt/keyrings/$key
 		esac
 	done
 	if [ -z "$wanted" ]; then
-		echo "error: no channel of $name has published packages for Ubuntu ${VERSION_CODENAME:-(no codename)}; .chezmoidata/apt-sources.toml lists its suites" >&2
-		return 1
+		if [ "$optional" != optional ]; then
+			echo "error: no channel of $name has published packages for Ubuntu ${VERSION_CODENAME:-(no codename)}; .chezmoidata/apt-sources.toml lists its suites" >&2
+			return 1
+		fi
+		APT_UNPUBLISHED_SOURCES="$APT_UNPUBLISHED_SOURCES$name "
+		if [ -e "$list_file" ]; then
+			sudo rm -f "$list_file"
+			echo "notice: removed $list_file, as no channel of $name has published anything for Ubuntu ${VERSION_CODENAME:-(no codename)}" >&2
+		fi
+		echo "notice: no channel of $name has published packages for Ubuntu ${VERSION_CODENAME:-(no codename)}, so this host goes without them" >&2
+		return 0
 	fi
 	wanted="# Written by chezmoi from .chezmoidata/apt-sources.toml; edits here are lost.
 $wanted"

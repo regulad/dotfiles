@@ -183,10 +183,14 @@ fi
 # mirror of upstream's release packages in Nexus (.chezmoidata/apt-sources.toml):
 # neither Ubuntu nor Debian packages it. Only on a machine of its own, as
 # fedora-packages.toml's native = true: nothing sshes into WSL or a container
-# to sudo there.
+# to sudo there. A release upstream builds nothing for goes without (the
+# source is optional), and 025 gives its sudo no password instead.
 if [ "$IS_WSL" -ne 1 ] && [ "$CONTAINERIZED" -ne 1 ]; then
 	enable_apt_source pam-rssh
-	APT_PACKAGES+=(pam-rssh)
+	case "$APT_UNPUBLISHED_SOURCES" in
+	*" pam-rssh "*) ;;
+	*) APT_PACKAGES+=(pam-rssh) ;;
+	esac
 fi
 
 sudo apt update -qq

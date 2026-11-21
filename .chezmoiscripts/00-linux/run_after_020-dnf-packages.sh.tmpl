@@ -61,6 +61,22 @@ elif [ -f "$WSL_PERF_DROPIN" ]; then
 fi
 
 enable_fedora_sources "${FEDORA_DNF_PACKAGES[@]}" "${FEDORA_DNF_ERASING_PACKAGES[@]}"
+# Less what an optional source has published nothing for on this release
+# (pam-rssh's, where 025-pam-sudo-rssh gives sudo no password instead).
+published=()
+for pkg in "${FEDORA_DNF_PACKAGES[@]}"; do
+	if fedora_package_published "$pkg"; then
+		published+=("$pkg")
+	fi
+done
+FEDORA_DNF_PACKAGES=("${published[@]}")
+published=()
+for pkg in "${FEDORA_DNF_ERASING_PACKAGES[@]}"; do
+	if fedora_package_published "$pkg"; then
+		published+=("$pkg")
+	fi
+done
+FEDORA_DNF_ERASING_PACKAGES=("${published[@]}")
 sudo dnf group install -q -y "development-tools"
 sudo dnf install -q -y "${FEDORA_DNF_PACKAGES[@]}"
 # Each allowErasing entry in a transaction of its own, so --allowerasing

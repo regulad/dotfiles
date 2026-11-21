@@ -52,6 +52,19 @@ fi
 
 require_sudo "layering packages with rpm-ostree"
 enable_fedora_sources "${missing[@]}"
+# Less what an optional source has published nothing for on this release
+# (pam-rssh's, where 00-linux/025-pam-sudo-rssh gives sudo no password
+# instead).
+published=()
+for pkg in "${missing[@]}"; do
+	if fedora_package_published "$pkg"; then
+		published+=("$pkg")
+	fi
+done
+missing=("${published[@]}")
+if [ "${#missing[@]}" -eq 0 ]; then
+	exit 0
+fi
 echo "debug: layering ${missing[*]}" >&2
 # --allow-inactive: a name the image already provides under another package
 # is recorded instead of refused. --idempotent: one this deployment already

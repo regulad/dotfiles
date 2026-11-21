@@ -305,7 +305,9 @@ packages = [
     # packages only as files on its GitHub releases, and Fedora doesn't package
     # it, so regulad/jobs' z4yx/pam_rssh pipeline mirrors them hourly into
     # Nexus (its source below). Only on a machine of its own: nothing sshes into
-    # WSL or a container to sudo there.
+    # WSL or a container to sudo there. A release upstream builds nothing for
+    # goes without (the source is optional), and 025 gives its sudo no
+    # password instead.
     { name = "pam-rssh", layer = true, source = "pam-rssh", native = true },
 ]
 
@@ -331,6 +333,10 @@ packages = [
 #                comes in at the next apply after.
 #   replaces     .repo files in /etc/yum.repos.d an earlier apply wrote for the
 #                same repository, removed once this one is written.
+#   optional     true: a release none of its channels has published anything
+#                for gets none of its packages, with a notice, and loses the
+#                .repo file an earlier release had for it, rather than failing
+#                the apply. Without it, that is an error.
 
 # wihotspot's COPR, zinix01/linux-wifi-hotspot: the .repo file COPR serves for
 # it, less its skip_if_unavailable and priority. COPR signs each RPM, not the
@@ -351,11 +357,15 @@ replaces = ["_copr:copr.fedorainfracloud.org:zinix01:linux-wifi-hotspot.repo"]
 # pre-releases. Nexus signs the metadata; upstream and Nexus leave the RPMs
 # themselves unsigned. The key's fingerprint,
 # 0646556A5A5A02FF79995D0D10E199D27AFA1EED, is the one the pipeline's README
-# lists.
+# lists. Optional: upstream builds for a Fedora release some time after it is
+# out (as of 2026-11-21, `testing` has fc42 to fc44 and nothing for 45), and a
+# host on a release it has not built for gets passwordless sudo from
+# 00-linux/025-pam-sudo-rssh until it has.
 [fedoraPackages.sources.pam-rssh]
 description = "pam_rssh"
 key = "pam-rssh-rpm.asc"
 signed = "metadata"
+optional = true
 channels = [
     { id = "pam-rssh", url = "https://repo.regulad.xyz/repository/pam-rssh-rpm/stable/fc$releasever/$basearch/" },
     { id = "pam-rssh-testing", url = "https://repo.regulad.xyz/repository/pam-rssh-rpm/testing/fc$releasever/$basearch/" },

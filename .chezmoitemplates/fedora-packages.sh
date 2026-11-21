@@ -106,6 +106,10 @@ fedora_package_source() {
 
 # Enables every source (.chezmoidata/fedora-packages.toml's [sources]) the
 # given packages come from, each once. Needs sudo; call it after require_sudo.
+# An optional source that has published nothing for this release goes into
+# FEDORA_UNPUBLISHED_SOURCES instead (" <name> <name> "), and its packages are
+# to be left out: fedora_package_published says which.
+FEDORA_UNPUBLISHED_SOURCES=" "
 enable_fedora_sources() {
 	local pkg src seen=" "
 	for pkg in "$@"; do
@@ -117,6 +121,20 @@ enable_fedora_sources() {
 		seen="$seen$src "
 		enable_fedora_source "$src" || return 1
 	done
+}
+
+# Whether package $1 can be installed here: false only for one whose source
+# enable_fedora_sources found nothing in for this release.
+fedora_package_published() {
+	local src
+	src=$(fedora_package_source "$1")
+	if [ -z "$src" ]; then
+		return 0
+	fi
+	case "$FEDORA_UNPUBLISHED_SOURCES" in
+	*" $src "*) return 1 ;;
+	esac
+	return 0
 }
 
 enable_fedora_source() {
@@ -135,7 +153,7 @@ CHEZMOI_FEDORA_SOURCE_KEY
 {{ range $src.channels }}{{ .id }} {{ .url }}
 {{ end -}}
 CHEZMOI_FEDORA_SOURCE_CHANNELS
-		write_fedora_repo {{ $name | quote }} {{ $src.description | quote }} {{ $src.signed }} "$key" "$channels"{{ range (get $src "replaces" | default list) }} {{ . | quote }}{{ end }}
+		write_fedora_repo {{ $name | quote }} {{ $src.description | quote }} {{ $src.signed }} {{ if get $src "optional" }}optional{{ else }}required{{ end }} "$key" "$channels"{{ range (get $src "replaces" | default list) }} {{ . | quote }}{{ end }}
 		;;
 {{- end }}
 	*)
@@ -146,17 +164,20 @@ CHEZMOI_FEDORA_SOURCE_CHANNELS
 }
 
 # One source: $1 its name, $2 its description, $3 what its key signs
-# ("packages" or "metadata"), $4 the key, $5 its channels, one
-# "<id> <baseurl>" per line, then any .repo files it replaces. Installs the
-# key to /etc/pki/rpm-gpg/RPM-GPG-KEY-<name> and writes
+# ("packages" or "metadata"), $4 "optional" or "required", $5 the key, $6 its
+# channels, one "<id> <baseurl>" per line, then any .repo files it replaces.
+# Installs the key to /etc/pki/rpm-gpg/RPM-GPG-KEY-<name> and writes
 # /etc/yum.repos.d/<name>.repo with a section for each channel whose metadata
 # exists for this release ($releasever) and architecture ($basearch). A
 # channel that answers 404 has published nothing for them yet and is left out;
 # any other answer, or none, is an error, and changes nothing. The files it
-# replaces go once it is written.
+# replaces go once it is written. A source none of whose channels has
+# published anything is an error too, unless it is optional: then it goes into
+# FEDORA_UNPUBLISHED_SOURCES, and a .repo file an earlier release had for it is
+# removed, as its 404 would fail every dnf command.
 write_fedora_repo() {
-	local name=$1 description=$2 signed=$3 key=$4 channels=$5
-	shift 5
+	local name=$1 description=$2 signed=$3 optional=$4 key=$5 channels=$6
+	shift 6
 	local key_file="/etc/pki/rpm-gpg/RPM-GPG-KEY-$name" repo_file="/etc/yum.repos.d/$name.repo"
 	local arch wanted="" id url probe status checks old
 	if [ "$signed" = packages ]; then
@@ -197,8 +218,17 @@ gpgkey=file://$key_file
 $channels
 EOF
 	if [ -z "$wanted" ]; then
-		echo "error: no channel of $name has published packages for Fedora $VERSION_ID $arch" >&2
-		return 1
+		if [ "$optional" != optional ]; then
+			echo "error: no channel of $name has published packages for Fedora $VERSION_ID $arch" >&2
+			return 1
+		fi
+		FEDORA_UNPUBLISHED_SOURCES="$FEDORA_UNPUBLISHED_SOURCES$name "
+		if [ -e "$repo_file" ]; then
+			sudo rm -f "$repo_file"
+			echo "notice: removed $repo_file, as no channel of $name has published anything for Fedora $VERSION_ID $arch" >&2
+		fi
+		echo "notice: no channel of $name has published packages for Fedora $VERSION_ID $arch, so this host goes without them" >&2
+		return 0
 	fi
 	wanted="# Written by chezmoi from .chezmoidata/fedora-packages.toml; edits here are lost.
 $wanted"

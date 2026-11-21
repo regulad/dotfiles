@@ -11,12 +11,10 @@
 # ships it, but nothing official supports it there, so from 26.10 on
 # /usr/bin/sudo is left as it is, with a notice saying what that means.
 #
-# And the guard for pam_rssh: 021-apt-packages installs it on every Ubuntu
-# host of its own, from the suites .chezmoidata/apt-sources.toml lists, and
-# fails on a release it lists none for. This stops the apply there first,
-# before chezmoi has written a file or run another script. 26.10 is such a
-# release for now (regulad/jobs mirrors upstream's packages, and upstream
-# builds none for it), so that notice waits for a suite of its own.
+# Not on a release .chezmoidata/apt-sources.toml lists no pam-rssh suite for,
+# 26.10 for now (regulad/jobs mirrors upstream's packages, and upstream builds
+# none for it): 021-apt-packages installs no pam-rssh there, and 025 gives
+# sudo no password instead, so sudo is left as it is.
 #
 # A run_before_ script, unlike the rest of this repo's: chezmoi runs scripts in
 # the order of their paths, so a run_after_ one here would come after all of
@@ -25,10 +23,9 @@
 # made before 025 asks `sudo -V`. sudo.ws keeps timestamps of its own, so the
 # first sudo after the switch asks again, once.
 #
-# WSL and containers get neither, as 021 installs no pam-rssh and 025 adds no
-# pam_rssh there. A host whose sudo needs no password at all gets the guard,
-# as 021 installs pam-rssh there too, but keeps its sudo: 025 adds no pam_rssh
-# to it either.
+# WSL and containers are left alone, as 021 installs no pam-rssh and 025 adds
+# no pam_rssh there. So is a host whose sudo needs no password at all: 025
+# adds no pam_rssh to it either.
 
 if [ "$IS_WSL" -eq 1 ] || [ "$CONTAINERIZED" -eq 1 ]; then
 	echo "debug: no sudo over ssh in WSL or a container; leaving sudo as it is" >&2
@@ -39,8 +36,8 @@ PAM_RSSH_SUITES="{{ range (index .aptSources "pam-rssh").channels }} {{ .suite }
 case "$PAM_RSSH_SUITES" in
 	*" $VERSION_CODENAME "*) ;;
 	*)
-		echo "error: .chezmoidata/apt-sources.toml has no pam-rssh suite for Ubuntu $VERSION_ID ($VERSION_CODENAME), which 021-apt-packages would install it from; stopping before anything is applied" >&2
-		exit 1
+		echo "debug: .chezmoidata/apt-sources.toml has no pam-rssh suite for Ubuntu $VERSION_ID ($VERSION_CODENAME), so 025 gives sudo no password instead of pam_rssh; leaving sudo as it is" >&2
+		exit 0
 		;;
 esac
 
