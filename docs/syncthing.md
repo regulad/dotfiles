@@ -64,12 +64,22 @@ All of it comes from `.chezmoidata/syncthing.toml`.
 `155-syncthing` adds and updates and never removes, so devices, folders and
 ignore patterns added in the GUI stay. A folder that already exists at another path keeps it,
 with a warning. The script runs on every apply, so a node whose Syncthing was
-not running yet is set up on the next apply after it is. It does nothing in WSL
-or a container, where Syncthing is not started (`150-user-services`).
+not running yet is set up on the next apply after it is. A fresh machine joins
+on its first apply all the same: a first start writes Syncthing's
+configuration and keys before its REST API answers, and the script gives it
+30 s. On Linux it waits while the user service `150-user-services` has just
+started is active. On a Mac it waits after starting the launchd agent (below).
+On Windows, where Setup installed as winget runs it starts Syncthing only at the
+next logon, the script runs Setup's logon task itself, then waits. That first
+start can bring up Windows Firewall's prompt for `syncthing.exe`, as a logon
+would; the node dials the hub either way. It does nothing in WSL or a
+container, where Syncthing is not started (`150-user-services`).
 
 How Syncthing runs differs by platform. On Linux it is the distro's or brew's
 user service, which `150-user-services` starts. On Windows it is
-BillStewart.SyncthingWindowsSetup, started at logon. On a Mac it is brew's
+BillStewart.SyncthingWindowsSetup, started at logon by its scheduled task
+(`stctl.exe --start`), which `155-syncthing` runs when Syncthing is not
+running. On a Mac it is brew's
 formula, run by launchd as the user's agent (`brew services start syncthing`),
 which macOS's `155-syncthing` starts: it runs from then on and at every login,
 but not at boot, so a Mac with nobody logged in after a restart has no Syncthing

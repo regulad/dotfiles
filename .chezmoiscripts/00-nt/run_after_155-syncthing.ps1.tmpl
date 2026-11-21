@@ -10,7 +10,8 @@
 # run_after_, every apply, so a node whose Syncthing was not running yet, or
 # whose configuration was changed in the GUI, is set up again next time.
 # After 100-winget, which installs Syncthing (BillStewart.SyncthingWindowsSetup,
-# into %LOCALAPPDATA%\Programs\Syncthing, started at logon). Masked under
+# into %LOCALAPPDATA%\Programs\Syncthing, started at logon); one that isn't
+# running yet is started here by its logon task. Masked under
 # useDummySecrets in .chezmoiignore.tmpl: the hub's ID is age-encrypted, and
 # decrypted here at run time.
 #
@@ -31,9 +32,51 @@ if (-not (Test-Path -LiteralPath $Syncthing)) {
 }
 
 # The CLI finds Syncthing's configuration on its own and asks the running
-# instance, so failing here means Syncthing is not running.
-$ApiKey = (& $Syncthing cli config gui apikey get 2>$null | Out-String).Trim()
-if ($LASTEXITCODE -ne 0 -or -not $ApiKey) {
+# instance, so failing means Syncthing is not running, or not answering yet.
+function Get-SyncthingApiKey {
+    $Key = (& $Syncthing cli config gui apikey get 2>$null | Out-String).Trim()
+    if ($LASTEXITCODE -eq 0 -and $Key) { return $Key }
+    return ''
+}
+
+$ApiKey = Get-SyncthingApiKey
+if (-not $ApiKey) {
+    # Setup starts Syncthing at logon, by a scheduled task that runs its
+    # stctl.exe --start. A silent install, as winget's, starts it at once only
+    # where a firewall rule for it exists already, and creates none, so on a
+    # fresh machine nothing starts it before the next logon. The task is run
+    # here, as a logon would run it: in this user's session, without this
+    # apply's environment or elevation. Its first start can bring up Windows
+    # Firewall's prompt for syncthing.exe, as at logon; this node dials the
+    # hub either way. A Syncthing from this executable counts as this user's,
+    # since it is in their profile.
+    $Wait = [bool](Get-Process -Name syncthing -ErrorAction SilentlyContinue | Where-Object { $_.Path -eq $Syncthing })
+    if (-not $Wait) {
+        $Stctl = Join-Path (Split-Path -Parent $Syncthing) 'stctl.exe'
+        $Task = Get-ScheduledTask -TaskPath '\' -ErrorAction SilentlyContinue |
+            Where-Object { @($_.Actions | Where-Object { "$($_.Execute)".Trim('"') -eq $Stctl }).Count } |
+            Select-Object -First 1
+        if ($Task) {
+            Write-Host "notice: starting Syncthing by its logon task ($($Task.TaskName))"
+            try {
+                Start-ScheduledTask -TaskPath $Task.TaskPath -TaskName $Task.TaskName -ErrorAction Stop
+                $Wait = $true
+            } catch {
+                Write-Host "warning: Syncthing's logon task did not start ($($_.Exception.Message)); it runs at the next logon"
+            }
+        }
+    }
+    if ($Wait) {
+        # Its first start writes the configuration and keys before the REST
+        # API answers. 30 s, as macOS's 155-syncthing gives it.
+        Write-Host "debug: waiting for Syncthing's REST API, which a first start brings up last"
+        for ($i = 0; $i -lt 15 -and -not $ApiKey; $i++) {
+            Start-Sleep -Seconds 2
+            $ApiKey = Get-SyncthingApiKey
+        }
+    }
+}
+if (-not $ApiKey) {
     Write-Host "notice: Syncthing isn't running, so its configuration waits for an apply while it is"
     exit 0
 }
