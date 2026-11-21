@@ -1,0 +1,25 @@
+{{- /* Cargo's config. dot_cargo/config.toml.tmpl deploys it as
+       ~/.cargo/config.toml on macOS and Linux; 00-nt/065-tool-homes writes
+       it into %CARGO_HOME% on Windows. See docs/cargo-mirror.md.
+
+       Catalina and Big Sur keep crates.io. cargo on macOS downloads through
+       Apple's /usr/lib/libcurl, and on 10.15 and 11 that is the same LibreSSL
+       2.8.3 the brewed-curl switch in brew-era-env.sh works around for brew,
+       with no such switch for cargo. A gate on .macos.major, the same data
+       brew-era-env.sh's era list stands for. */ -}}
+{{ if and (eq .chezmoi.os "darwin") (lt (int .macos.major) 12) -}}
+# No crate mirror on macOS {{ .macos.series }}: cargo downloads through Apple's
+# libcurl, whose LibreSSL 2.8.3 is not known to reach repo.regulad.xyz.
+{{ else -}}
+# crates.io comes through the Nexus proxy at repo.regulad.xyz. Commands that
+# talk to crates.io itself -- publish, login, owner, yank, search -- need
+# `--registry crates-io` while it is replaced.
+[source.crates-io]
+replace-with = "{{ .cargoMirror.name }}"
+
+[registries.{{ .cargoMirror.name }}]
+index = "{{ .cargoMirror.index }}"
+# cargo refuses an authenticated alternative registry with no provider named;
+# cargo:token reads the token from credentials.toml.
+credential-provider = "cargo:token"
+{{ end -}}

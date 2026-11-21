@@ -47,7 +47,8 @@ Library/Application Support/Vencord
 !.ssh/id*.pub
 
 .secrets/
-.cargo/credentials.toml
+# Not .cargo/credentials.toml: without Bitwarden it still carries the crate
+# mirror's guest account (.chezmoitemplates/cargo-credentials.toml).
 .aws/
 
 # The Vercel CLI's auth.json, one per platform's data directory.

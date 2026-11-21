@@ -3,7 +3,8 @@
 # GRADLE_USER_HOME again per-user in registry-user.reg, replacing the one the
 # since-dropped scoop gradle set. ~/.cargo and ~/.gradle are not used here, so
 # .chezmoiignore keeps chezmoi from writing them on Windows, and this script
-# writes the two managed files into the D: homes instead. Same arrangement as
+# writes the managed files into the D: homes instead: Cargo's config.toml and
+# credentials.toml, Gradle's gradle.properties. Same arrangement as
 # 170-firefox-policies: the bodies live in .chezmoitemplates, and dot_cargo /
 # dot_gradle are thin wrappers that macOS and Linux deploy as usual.
 #
@@ -30,21 +31,22 @@ $Homes = @(
     @{
         Var    = 'CARGO_HOME'
         Legacy = (Join-Path $HOME '.cargo')
-        File   = 'credentials.toml'
-{{- if .useDummySecrets }}
-        # Masked under dummy secrets, as ~/.cargo/credentials.toml is elsewhere.
-        Text   = $null
-{{- else }}
-        Text   = @'
+        # Under dummy secrets credentials.toml still carries the crate mirror's
+        # guest account (cargo-credentials.toml), so both are always written.
+        Files  = [ordered]@{
+            'config.toml'      = @'
+{{ template "cargo-config.toml" . }}'@
+            'credentials.toml' = @'
 {{ template "cargo-credentials.toml" . }}'@
-{{- end }}
+        }
     }
     @{
         Var    = 'GRADLE_USER_HOME'
         Legacy = (Join-Path $HOME '.gradle')
-        File   = 'gradle.properties'
-        Text   = @'
+        Files  = [ordered]@{
+            'gradle.properties' = @'
 {{ template "gradle.properties" . }}'@
+        }
     }
 )
 
@@ -55,12 +57,12 @@ foreach ($H in $Homes) {
         exit 1
     }
     New-Item -ItemType Directory -Force -Path $Dir | Out-Null
-    $Dest = Join-Path $Dir $H.File
 
-    if ($null -ne $H.Text) {
+    foreach ($Name in $H.Files.Keys) {
+        $Dest = Join-Path $Dir $Name
         # A here-string drops the newline before its closing '@, which the
         # template body ends with; it is put back here.
-        $Want = (ConvertTo-Lf $H.Text) + "`n"
+        $Want = (ConvertTo-Lf $H.Files[$Name]) + "`n"
         $Have = if (Test-Path -LiteralPath $Dest) { [IO.File]::ReadAllText($Dest) } else { $null }
         if ($Have -ceq $Want) {
             Write-Host "debug: $Dest is up to date"
@@ -71,8 +73,8 @@ foreach ($H in $Homes) {
     }
 
     # ~/.cargo and ~/.gradle must not exist on Windows. One is removed only when
-    # it holds nothing, or nothing but a copy of the managed file identical to
-    # the one on D: -- what earlier applies of this repo left behind. Anything
+    # it holds nothing, or nothing but copies of managed files identical to the
+    # ones on D: -- what earlier applies of this repo left behind. Anything
     # else means some tool is not honouring the variable, and is reported, not
     # deleted. A link is never deleted through: it is reported too.
     if (Test-Path -LiteralPath $H.Legacy) {
@@ -82,10 +84,12 @@ foreach ($H in $Homes) {
             continue
         }
         $Entries = @(Get-ChildItem -LiteralPath $H.Legacy -Force)
-        $OnlyCopy = $Entries.Count -eq 1 -and -not $Entries[0].PSIsContainer -and
-            $Entries[0].Name -eq $H.File -and (Test-Path -LiteralPath $Dest) -and
-            ((ConvertTo-Lf ([IO.File]::ReadAllText($Entries[0].FullName))) -ceq (ConvertTo-Lf ([IO.File]::ReadAllText($Dest))))
-        if ($Entries.Count -eq 0 -or $OnlyCopy) {
+        $Copies = @($Entries | Where-Object {
+            $OnD = Join-Path $Dir $_.Name
+            -not $_.PSIsContainer -and $H.Files.Contains($_.Name) -and (Test-Path -LiteralPath $OnD) -and
+                ((ConvertTo-Lf ([IO.File]::ReadAllText($_.FullName))) -ceq (ConvertTo-Lf ([IO.File]::ReadAllText($OnD))))
+        })
+        if ($Copies.Count -eq $Entries.Count) {
             Remove-Item -LiteralPath $H.Legacy -Recurse -Force
             Write-Host "notice: removed $($H.Legacy); $($H.Var) is $Dir"
         } else {

@@ -1,0 +1,12 @@
+# Crate mirror for every cargo this repo configures (see docs/cargo-mirror.md).
+# A Sonatype Nexus cargo (proxy) repository in front of crates.io, set up like
+# the bottle mirror (brew-mirror.toml): it caches every crate a host
+# downloads, and repeat builds come off the cache.
+#
+# .chezmoitemplates/cargo-config.toml replaces the crates-io source with the
+# registry `name`; .chezmoitemplates/cargo-credentials.toml signs in to it
+# with the Maven repository's account, or, under dummy secrets, the read-only
+# guest account in brew-mirror.toml.
+[cargoMirror]
+name = "regulad-crates-io"
+index = "sparse+https://repo.regulad.xyz/repository/crates-io/"

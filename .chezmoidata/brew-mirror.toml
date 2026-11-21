@@ -11,11 +11,13 @@
 # fall back to ghcr.io when it is not answering; GitHub-hosted Actions runners
 # start on ghcr.io and fall back to the mirror (docs/brew-mirror.md).
 #
-# The account is read-only on the proxy (pull only, nothing else on the
-# server) and the only way in -- anonymous access is off -- created for
-# exactly this, and deliberately committed in the clear:
+# The account is read-only on the proxy (pull only) and the only way in --
+# anonymous access is off -- created for exactly this, and deliberately
+# committed in the clear:
 # the alternative is a first apply that cannot install a single bottle until
 # bitwarden is unlocked, on a machine whose bitwarden-cli comes from brew.
+# It also reads the crates.io proxy, where cargo falls back to it without
+# Bitwarden (cargo-mirror.toml, .chezmoitemplates/cargo-credentials.toml).
 [brewMirror]
 artifact_domain = "https://repo.regulad.xyz/repository/ghcr-io"
 user = "knownguest"

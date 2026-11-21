@@ -1,0 +1,3 @@
+{{- /* The body is shared with .chezmoiscripts/00-nt/065-tool-homes, which
+       writes it into %CARGO_HOME% on Windows, where ~/.cargo is not used. */ -}}
+{{ template "cargo-config.toml" . -}}
