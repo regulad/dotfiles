@@ -28,7 +28,11 @@
 # small one gets proportionally less (512 MiB on 64 GiB). NTFS only: the ReFS
 # Dev Drive from 050-dev-drive churns far less (19 MiB of records in four days
 # against its 70 MiB journal) and lives in a dynamic VHDX, which would grow on
-# C: to hold a bigger journal.
+# C: to hold a bigger journal. And not the RAM disk at E: (216-ram-disk): a
+# new, empty volume at every boot that nothing follows, so a journal there
+# would only hold RAM, up to 1/128 of the disk, and bring a UAC prompt to the
+# first apply after every boot. It is recognised by its MBR disk signature,
+# which RamDyn makes the CRC-32 of "E:".
 #
 # run_after_, because the check costs nothing and needs no elevation, while
 # deleting the journal, reformatting or resetting Windows puts the default
@@ -45,6 +49,9 @@
 $TargetMax = 1GB
 $TargetDelta = 128MB
 $VolumeShare = 128
+# The RAM disk's disk signature, from a string: 0xA827A96A as a PowerShell
+# literal is a negative Int32, never equal to the UInt32 Get-Disk reports.
+$RamDiskSignature = [Convert]::ToUInt32('A827A96A', 16)
 
 Add-Type -Namespace Dotfiles -Name UsnJournal -MemberDefinition @'
 [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -97,6 +104,11 @@ $Volumes = @(Get-Volume | Where-Object {
 
 $Plans = @(foreach ($Volume in $Volumes) {
         $Letter = ([string]$Volume.DriveLetter).ToUpperInvariant()
+        $Disk = Get-Partition -DriveLetter $Letter -ErrorAction SilentlyContinue | Get-Disk -ErrorAction SilentlyContinue
+        if ($Letter -eq 'E' -and $Disk -and ("$($Disk.PartitionStyle)" -eq 'MBR') -and ([uint32]$Disk.Signature -eq $RamDiskSignature)) {
+            Write-Host "debug: E: is the RAM disk (216-ram-disk); its journal is left as it is"
+            continue
+        }
         $Journal = Get-UsnJournal $Letter
         if ($null -eq $Journal) {
             Write-Host "debug: ${Letter}: has no USN journal; nothing to grow"

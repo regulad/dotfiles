@@ -136,6 +136,12 @@ REM "cmake  4.x", for make.
        25 that 100-winget installs. x64 only, the same gate as pyghidra-mcp in
        .chezmoidata/python-tools.toml. A template comment, as above, so the
        arm64 hash stays the same. */}}
+{{- /* aim-toolkit is the regulad bucket's AIM Toolkit: the Arsenal Image
+       Mounter driver and RamDyn, behind 216-ram-disk's RAM disk at E:. Its
+       manifest runs upstream's installer, which prompts for UAC itself, so it
+       stays a user package. Native x64 only: the driver has no ARM64 build and
+       cannot run translated, so .nativeArch too, the gate .chezmoiignore.tmpl
+       puts on 216. A template comment, as above. */}}
 set user_packages=^
 maven ^
 tesseract ^
@@ -209,6 +215,9 @@ rclone ^
 cloudflared ^
 {{- if eq .chezmoi.arch "amd64" }}
 ghidra ^
+{{- end }}
+{{- if and (eq .chezmoi.arch "amd64") .nativeArch }}
+aim-toolkit ^
 {{- end }}
 less ^
 imagemagick ^
