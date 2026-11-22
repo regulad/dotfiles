@@ -110,6 +110,33 @@ function Resolve-Ghidra {
     return $Dir
 }
 
+# The uv tool lives on the D: Dev Drive (212-scoop-dev-drive): its shim in
+# UV_TOOL_BIN_DIR, its environment and its Python beside it. That drive is a
+# VHDX the MountDevDrive task (050-dev-drive) mounts at boot, as SYSTEM, only
+# once it has compacted it, so at logon -- when this task starts -- D: can be
+# a minute or more away, longer after a lot was deleted from it. Without this
+# wait the launcher looked for the shim before D: existed, gave up, and left
+# Ghidra down for the whole session (every logon from 2026-11-13 to 11-22).
+# It waits for the volume only, not the shim itself: a volume that is there
+# without the shim is a missing install, which Resolve-Server reports.
+# Test-Path, which returns $false for a drive that does not exist, where
+# Windows PowerShell's Join-Path throws "Cannot find drive".
+function Wait-ToolVolume {
+    param([string]$BinDir, [TimeSpan]$Timeout = [TimeSpan]::FromMinutes(10))
+    if (-not $BinDir) { return }
+    $Root = [IO.Path]::GetPathRoot($BinDir)
+    if (-not $Root -or (Test-Path -LiteralPath $Root)) { return }
+    Write-Log "debug: waiting for $Root (UV_TOOL_BIN_DIR is $BinDir), which the MountDevDrive task mounts at boot"
+    $Started = Get-Date
+    while (-not (Test-Path -LiteralPath $Root)) {
+        if (((Get-Date) - $Started) -ge $Timeout) {
+            throw "$Root did not appear within $([int]$Timeout.TotalMinutes) minutes -- is the Dev Drive mounted (MountDevDrive, 050-dev-drive)?"
+        }
+        Start-Sleep -Seconds 5
+    }
+    Write-Log ('debug: {0} is there after {1:N0} s' -f $Root, ((Get-Date) - $Started).TotalSeconds)
+}
+
 # uv's tool shims live wherever UV_TOOL_BIN_DIR says (scoop persists them);
 # PATH is the fallback for a uv left at its defaults.
 function Resolve-Server {
@@ -124,6 +151,7 @@ function Resolve-Server {
 }
 
 try {
+    Wait-ToolVolume ([Environment]::GetEnvironmentVariable('UV_TOOL_BIN_DIR', 'User'))
     $Jdk = Resolve-Jdk
     $Ghidra = Resolve-Ghidra
     $Server = Resolve-Server
