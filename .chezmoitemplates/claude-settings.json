@@ -5,6 +5,34 @@
        Windows, and the empty list elsewhere is deliberate -- arrays replace
        wholesale on merge, so it scrubs a previously-applied Bash deny from
        non-Windows machines. */ -}}
+{{- /* ask is managed too, wholesale like deny: the actions that leave the
+       machine or touch another service's state, which open a permission
+       dialog even in auto mode, instead of the classifier refusing them and
+       Parker re-granting them in chat. git push is deliberately absent:
+       Parker approves pushes in chat, often ahead of time, and an ask rule
+       would prompt even then, since ask outranks allow. A deny or ask rule
+       matches any subcommand of a compound command, past leading variable
+       assignments, but only the shape written; an implicit POST (`gh api`
+       with -f fields and no method) is left to the classifier. The
+       rules are PowerShell's on Windows, where Bash is denied, and Bash's
+       elsewhere. Secrets, DSNs and provider resources belong to
+       regulad/homelab, so the gh secret/variable, wrangler and vercel
+       rules mostly catch an agent trying to do homelab's job. */ -}}
+{{- $shell := "Bash" -}}
+{{- if eq .chezmoi.os "windows" }}{{ $shell = "PowerShell" }}{{ end -}}
+{{- $ask := list -}}
+{{- range list
+      "gh pr create *" "gh pr edit *" "gh pr comment *" "gh pr review *"
+      "gh pr merge *" "gh pr close *" "gh pr reopen *"
+      "gh issue create *" "gh issue edit *" "gh issue comment *"
+      "gh issue close *" "gh issue reopen *" "gh issue delete *"
+      "gh release create *" "gh release edit *" "gh release upload *" "gh release delete *"
+      "gh repo create *" "gh repo edit *" "gh repo rename *" "gh repo archive *" "gh repo delete *"
+      "gh secret set *" "gh secret delete *" "gh variable set *" "gh variable delete *"
+      "gh api *POST*" "gh api *PATCH*" "gh api *PUT*" "gh api *DELETE*" "gh api graphql *mutation*"
+      "wrangler secret *" "vercel env add *" "vercel env rm *" -}}
+{{-   $ask = append $ask (printf "%s(%s)" $shell .) -}}
+{{- end }}
 {
   "permissions": {
     "deny": [
@@ -12,6 +40,7 @@
       "Bash"
 {{- end }}
     ],
+    "ask": {{ $ask | toJson }},
     "defaultMode": "auto"
   },
   "worktree": {
