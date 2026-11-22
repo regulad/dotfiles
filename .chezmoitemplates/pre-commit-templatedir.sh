@@ -1,7 +1,9 @@
-# Has pre-commit write its own hooks/pre-commit into git's template directory
-# (init.templateDir, dot_gitconfig.tmpl), which every `git init` and
-# `git clone` copies into the new repository. The hook runs pre-commit where
-# the repository has a .pre-commit-config.yaml and skips it elsewhere.
+# Has pre-commit write its own hooks/pre-commit and hooks/commit-msg into git's
+# template directory (init.templateDir, dot_gitconfig.tmpl), which every
+# `git init` and `git clone` copies into the new repository. Each hook runs
+# pre-commit where the repository has a .pre-commit-config.yaml and skips it
+# elsewhere: hooks/pre-commit runs the config's pre-commit-stage hooks, and
+# hooks/commit-msg its commit-msg-stage ones, such as conventional-commits.
 # 00-nt/502-pre-commit-templatedir is the Windows twin.
 #
 # Every apply, after 100-python-tooling has installed or upgraded the
@@ -30,7 +32,7 @@ relay() {
 # --hook-type, or pre-commit reads the hook types from a
 # .pre-commit-config.yaml in the current directory, wherever the apply was
 # started from.
-if ! out="$(pre-commit init-templatedir --color never --hook-type pre-commit "$TEMPLATE_DIR" 2>&1)"; then
+if ! out="$(pre-commit init-templatedir --color never --hook-type pre-commit --hook-type commit-msg "$TEMPLATE_DIR" 2>&1)"; then
 	relay "$out"
 	echo "error: pre-commit init-templatedir failed" >&2
 	exit 1

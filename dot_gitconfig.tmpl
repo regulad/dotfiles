@@ -50,9 +50,10 @@
 [init]
 	defaultBranch = master
 	# New repositories (init and clone) start from this instead of git's
-	# stock template. Its hooks/pre-commit, which `pre-commit init-templatedir`
-	# writes there (the pre-commit-templatedir hookscripts), runs pre-commit in
-	# a repository with a .pre-commit-config.yaml, and with real secrets its
+	# stock template. Its hooks/pre-commit and hooks/commit-msg, which
+	# `pre-commit init-templatedir` writes there (the pre-commit-templatedir
+	# hookscripts), run pre-commit in a repository with a
+	# .pre-commit-config.yaml, and with real secrets its
 	# hooks/sendemail-validate signs git send-email patches with patatt (see
 	# [patatt] below; .chezmoiignore.tmpl leaves that hook out otherwise).
 	# `git init` in an existing repository adds what it is missing.
