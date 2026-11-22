@@ -46,6 +46,16 @@
   "worktree": {
     "baseRef": "head"
   },
+{{- /* No "Generated with Claude Code" line in PR descriptions: the
+       regulad-llm-usage skill's footer stands in for it. attribution.commit
+       is left at its default, so commits keep the Co-Authored-By trailer.
+       sessionUrl is true on purpose, not by default: a commit or PR made
+       from a web or Remote Control session keeps its Claude-Session trailer
+       and session link, so it can be traced to the conversation. */}}
+  "attribution": {
+    "pr": "",
+    "sessionUrl": true
+  },
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/statusline-command.sh"
