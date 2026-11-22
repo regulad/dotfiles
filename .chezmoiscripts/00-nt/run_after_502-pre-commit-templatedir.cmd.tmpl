@@ -3,13 +3,13 @@ setlocal enabledelayedexpansion
 
 {{ template "uv-env.cmd" . }}
 
-REM Has pre-commit write its own hooks\pre-commit and hooks\commit-msg into
-REM git's template directory (init.templateDir, dot_gitconfig.tmpl), which
-REM every `git init` and `git clone` copies into the new repository. Each hook
-REM runs pre-commit where the repository has a .pre-commit-config.yaml and
-REM skips it elsewhere: hooks\pre-commit runs the config's pre-commit-stage
-REM hooks, and hooks\commit-msg its commit-msg-stage ones, such as
-REM conventional-commits.
+REM Has pre-commit write its own hooks\pre-commit, hooks\commit-msg and
+REM hooks\pre-push into git's template directory (init.templateDir,
+REM dot_gitconfig.tmpl), which every `git init` and `git clone` copies into
+REM the new repository. Each hook runs pre-commit where the repository has a
+REM .pre-commit-config.yaml and skips it elsewhere, running the config's hooks
+REM for its own stage: hooks\commit-msg runs the commit-msg ones, such as
+REM conventional-commits, and hooks\pre-push the pre-push ones.
 REM .chezmoitemplates/pre-commit-templatedir.sh is the unix twin; see it for
 REM why this runs every apply.
 REM
@@ -29,7 +29,7 @@ REM .pre-commit-config.yaml in the current directory, wherever the apply was
 REM started from. Its output goes through a file so its exit code survives,
 REM then out under this repo's prefixes.
 set "log=%TEMP%\chezmoi-pre-commit-templatedir-%RANDOM%.log"
-"%uv_bin%\pre-commit.exe" init-templatedir --color never --hook-type pre-commit --hook-type commit-msg "%template_dir%" > "%log%" 2>&1
+"%uv_bin%\pre-commit.exe" init-templatedir --color never --hook-type pre-commit --hook-type commit-msg --hook-type pre-push "%template_dir%" > "%log%" 2>&1
 set "rc=%errorlevel%"
 for /f "usebackq delims=" %%L in ("%log%") do (
     set "line=%%L"
