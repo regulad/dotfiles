@@ -68,5 +68,15 @@
 {{- $config = $config | setValueAtPath "mcp_servers.google-developer-knowledge" (dict
       "url" "https://developerknowledge.googleapis.com/mcp"
       "http_headers" (dict "X-Goog-Api-Key" $devknowledge.token.value)) -}}
+{{- /* The shared memory server: basic-memory behind regulad/homelab's
+       memory.regulad.xyz. Codex can't use the claude.ai connector, so it
+       sends the static client token, which homelab's ingress Caddy checks
+       before passing the request to basic-memory. The token is the
+       memory.regulad.xyz item's token field, copied there from homelab's
+       SOPS (memory_client_token); rotate both together. */ -}}
+{{- $memory := bitwardenFields "item" "memory.regulad.xyz" -}}
+{{- $config = $config | setValueAtPath "mcp_servers.memory" (dict
+      "url" "https://memory.regulad.xyz/mcp"
+      "http_headers" (dict "Authorization" (printf "Bearer %s" $memory.token.value))) -}}
 {{- end -}}
 {{- $config | toToml -}}
