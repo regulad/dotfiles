@@ -10,6 +10,8 @@ Operational conventions for any agent working in this chezmoi source directory. 
 
 - After changing a file in this source directory, if the current system is chezmoi-managed, you may run a scoped apply for just that file: `chezmoi apply <target-path>` (e.g. `chezmoi apply "$env:USERPROFILE\.config\vlc\vlcrc"`). This avoids rendering unrelated templates -- a full `chezmoi apply` requires the Bitwarden vault to be unlocked, which only the user can do.
 - Scripts can be scoped too, addressed by their *stripped* target name (no `run_*_` prefix, no `.tmpl` suffix), which lives under the destination dir: `chezmoi apply "$env:USERPROFILE\.chezmoiscripts\00-nt\230-projectm-presets.cmd"`. Run-once state is recorded normally. Do NOT pipe such a command through `Select-Object -First N`: pipeline stopping kills chezmoi before it records script state.
+- A scoped apply runs its targets in sorted path order (`.chezmoiscripts/…` before `.x509/…`), whatever `run_after_` says. Apply a file and the script that reads it separately, file first, then verify the result itself (e.g. the thumbprint in `Cert:\LocalMachine\Root`), not chezmoi's exit code. To re-run a `run_onchange_` script that was recorded wrongly: `chezmoi state delete --bucket=entryState --key=<target>`.
+- When writing `chezmoi execute-template` output to a file from PowerShell, use `[IO.File]::WriteAllText($p, ($out -join "`n") + "`n")`, never `Set-Content -NoNewline`, which makes a one-line render that `bash -n` passes vacuously. Check the line count before trusting `bash -n`.
 
 ## WSL instances
 
@@ -27,22 +29,30 @@ Operational conventions for any agent working in this chezmoi source directory. 
 
 - A new `.chezmoiscripts/00-{macos,linux}` script opens with `{{ template "posix-preamble-brew.sh" . }}` if its job needs brew (or `$HOMEBREW_PREFIX`), else `{{ template "posix-preamble.sh" . }}`. Never hardcode `/opt/homebrew`: hookscripts use `$HOMEBREW_PREFIX`, static config templates use `{{ .homebrewPrefix }}`. Use `brew_trust` rather than `brew trust`. See `docs/hookscripts.md` and `docs/homebrew-older-macos.md`. Longer documentation goes in `docs/` (chezmoi-ignored), linked from README.md; keep README.md to the overview and install steps.
 
+## PowerShell hookscripts
+
+- `.ps1` hookscripts run under both Windows PowerShell 5.1 and pwsh 7, and which one chezmoi uses isn't reliable. Render one with `chezmoi cat <target>` to a temp file, then run it with both `powershell -File` and `pwsh -File`. Prefer `Get-CimInstance Win32_Service` to ServiceController-only properties such as `BinaryPathName`.
+
+## Credentials
+
+- Credentials come from Bitwarden through `chezmoi apply`, into each tool's own credential file or `~/.secrets/`, not global environment variables. A per-machine login (`vercel login`, `wrangler login`, MCP OAuth) is the fallback only where a service offers nothing else.
+
 ## Commits
 
-- Every commit an LLM assisted with carries a well-formed `Co-Authored-By` trailer on its own line at the end of the message: the model's name exactly as its own system prompt states it, and its vendor's no-reply address. One trailer per assisting model. The two in use here:
-
-  ```
-  Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-  Co-authored-by: Codex <noreply@openai.com>
-  ```
-
-  Other Claude models follow the same shape with their own name (`Claude Opus 5`, `Claude Sonnet 5`, ...). `git commit --trailer '<the line>'` adds it without hand-editing the message. Commits are GPG-signed by the user's config; do not bypass that. A commit that went in without the trailer is rewritten with `git commit --amend --no-edit --trailer ...` (and cherry-pick plus amend for anything below the tip) and force-pushed with `--force-with-lease`, never a bare `--force`.
 - A commit that cannot change what CI checks (documentation, this file) starts its subject with `[no ci]`, which GitHub Actions skips: a push to `master` otherwise starts all three workflows, Docker's WSL packaging included.
+- Push a batch in one `git push`. If a `[no ci]` commit would be the tip, put a code commit on top. Never split a push to steer CI: each push is another Bitwarden approval.
 
 ## CI after a push
 
-- After pushing, attach to every workflow run the push started and wait for them: `gh run list --commit <sha>` finds them, and `gh run watch <id> --exit-status --compact` follows each in the background. They take from about 45 minutes (macOS) to well over an hour (Docker). Report each run to the user as it returns, not all of them at the end.
+- After pushing, attach to every workflow run the push started and wait for them: `gh run list --commit <sha>` finds them, and `gh run watch <id> --exit-status --compact --interval 60` follows each in the background. They take from about 45 minutes (macOS) to well over an hour (Docker). Report each run to the user as it returns, not all of them at the end.
+- Use `--interval 120` alongside other heavy `gh api` use, and stop a superseded run's watcher before attaching to the next one. The default 3 s watchers hit GitHub's 403 on 2026-10-20, 2026-10-27 and 2026-11-17; check `gh api rate_limit` before blaming a run.
 - When one fails, read the failing job's log (`gh run view <id> --job <job-id> --log-failed`) and find the cause before saying anything about it. Then tell the user what failed and whether the change caused it or something outside it did: an upstream outage, a flaky network, a runner image. Compare the previous run of the same workflow before calling a failure either way. Propose the fix, and commit and push it only once the user agrees, then attach to the runs that push starts. Keep going, one returning run at a time, until everything is green or the user calls it. Do not re-run a job or push a fix on your own: each push starts the whole matrix again.
+- Windows skips Linux- and macOS-only targets, so an apply there doesn't exercise them: before adding a source file, look for its `empty_`/`private_`/`modify_` siblings.
+
+## Test hosts
+
+- overture (Apple silicon, macOS 27) has been read-only since 2026-10-04, temp files included. Pull, apply or switch its source branch only when the user asks, and check `git branch --show-current` first.
+- Script it with `ssh -o BatchMode=yes -o RemoteCommand=none -o RequestTTY=no overture '…'` (from Windows, `C:\Windows\System32\OpenSSH\ssh.exe`). Its zsh aborts on an unmatched glob, so wrap loops in `bash -c`. brew (`/opt/homebrew`) isn't on that PATH, and `brew uses` writes its API cache.
 
 ## Hookscript messages
 
