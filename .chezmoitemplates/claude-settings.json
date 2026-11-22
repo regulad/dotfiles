@@ -67,6 +67,13 @@
        every other, so all of them must keep transcripts equally long. */}}
   "cleanupPeriodDays": 30,
   "autoCompactEnabled": true,
+{{- /* Claude Code's own auto memory is off. What a session learns goes to
+       Basic Memory (memory.regulad.xyz, shared with claude.ai, ChatGPT and
+       Codex), and standing rules go to regulad/skills, as those rules say.
+       The local memory folders were sorted into those two and deleted on
+       2026-11-22; with this on, sessions would start writing a second copy
+       again. */}}
+  "autoMemoryEnabled": false,
   "agentPushNotifEnabled": true,
 {{- /* Every interactive session connects Remote Control when it starts, so
        Parker can follow and steer it from another device. "true" means
