@@ -67,5 +67,10 @@
        every other, so all of them must keep transcripts equally long. */}}
   "cleanupPeriodDays": 30,
   "autoCompactEnabled": true,
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+{{- /* Every interactive session connects Remote Control when it starts, so
+       Parker can follow and steer it from another device. "true" means
+       always; unset would defer to an organization default. Needs Claude
+       Code 2.1.119 or later. */}}
+  "remoteControlAtStartup": true
 }
