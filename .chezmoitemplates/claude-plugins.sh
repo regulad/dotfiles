@@ -68,6 +68,13 @@ fi
 # first looks guides up at use time with `npx modern-web-guidance@latest`,
 # whose telemetry is turned off by DISABLE_TELEMETRY in .commonprofile.
 #
+# regulad (regulad/skills, its own marketplace) is Parker's: the always-on
+# rules for agents, which its SessionStart and SubagentStart hooks add to
+# every session and subagent, and the skills that go with them. It is the
+# only place those rules live; dotfiles carries none of their text. Like the
+# rest, it isn't pinned: every apply's update pass moves it to the latest
+# commit (its rules exempt plugin marketplaces from SHA pins).
+#
 # The rest come from their makers' own marketplaces, the ones their READMEs
 # name, and are in Codex too (codex-plugins.sh) unless said otherwise:
 # - microsoft-docs (MicrosoftDocs/mcp): skills plus Microsoft Learn's MCP
@@ -105,6 +112,7 @@ fi
 # without a shell, which can't run their .cmd/.bat wrappers
 # (https://github.com/anthropics/claude-code/issues/51191).
 MARKETPLACES=(
+	"regulad|regulad/skills"
 	"wakatime|wakatime/claude-code-wakatime"
 	"claude-plugins-official|anthropics/claude-plugins-official"
 	"openai-codex|openai/codex-plugin-cc"
@@ -120,6 +128,7 @@ MARKETPLACES=(
 	"android-skills|android/skills"
 )
 PLUGINS=(
+	"regulad|regulad"
 	"claude-code-wakatime|wakatime"
 	"ralph-loop|claude-plugins-official"
 	"codex|openai-codex"

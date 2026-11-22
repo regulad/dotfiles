@@ -20,6 +20,7 @@ if errorlevel 1 (
     exit /b 0
 )
 
+call :add_marketplace regulad regulad/skills
 call :add_marketplace wakatime wakatime/claude-code-wakatime
 call :add_marketplace claude-plugins-official anthropics/claude-plugins-official
 call :add_marketplace openai-codex openai/codex-plugin-cc
@@ -35,6 +36,7 @@ call :add_marketplace typescript-skills microsoft/typescript-skills
 call :add_marketplace android-skills android/skills
 call :add_marketplace dotnet-agent-skills dotnet/skills
 
+call :install_plugin regulad regulad
 call :install_plugin claude-code-wakatime wakatime
 call :install_plugin ralph-loop claude-plugins-official
 call :install_plugin codex openai-codex

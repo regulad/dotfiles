@@ -37,7 +37,7 @@ fi
 # an explicit plugin name (there is no update-all), and the guard skips any that
 # a given machine has not installed; it matches "plugin@", as the bootstrap's
 # does, so that sentry does not match sentry-cli.
-for plugin in claude-code-wakatime ralph-loop codex vercel cloudflare sentry sentry-cli supabase onesignal \
+for plugin in regulad claude-code-wakatime ralph-loop codex vercel cloudflare sentry sentry-cli supabase onesignal \
 	modern-web-guidance microsoft-docs chrome-devtools-mcp astral docker-skills typescript android-skills xcode \
 	c-review rust-review modern-cpp static-analysis sharp-edges insecure-defaults variant-analysis \
 	differential-review supply-chain-risk-auditor testing-handbook-skills property-based-testing dwarf-expert \
