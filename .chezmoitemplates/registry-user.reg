@@ -40,6 +40,19 @@ Windows Registry Editor Version 5.00
 "CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS"="1"
 "DOTNET_CLI_TELEMETRY_OPTOUT"="1"
 
+; Storage Sense on ("01"), with its temporary-files cleanup ("04"), run daily
+; ("2048": 1 daily, 7 weekly, 30 monthly, 0 only when disk space is low, the
+; default). Left at the default it waits until C: is nearly full, and Windows
+; empties %TEMP% at no other point, not even at boot. Turning it on also turns
+; on its defaults for the Recycle Bin (items older than 30 days) and for
+; cloud-backed folders (online-only after 30 days unopened); Settings > System >
+; Storage > Storage Sense shows both. Its temp cleanup takes only files not
+; opened for 7 days, so it bounds what %TEMP% accumulates rather than emptying it.
+[HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy]
+"01"=dword:00000001
+"04"=dword:00000001
+"2048"=dword:00000001
+
 ; uv's HTTP timeout, from its default 30 seconds to 300; .commonprofile says why.
 [HKEY_CURRENT_USER\Environment]
 "UV_HTTP_TIMEOUT"="300"
