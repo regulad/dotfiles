@@ -232,12 +232,14 @@ repositories  # symlink
 .local/bin/pyghidra-mcp-server.ps1
 .chezmoiscripts/00-nt/503-pyghidra-mcp.ps1
 {{- end }}
-# The RAM disk at E: (00-nt/216-ram-disk) runs on the Arsenal Image Mounter
-# driver, which has x64 builds only, and a driver cannot run translated: native
-# x64 Windows only, so .nativeArch as well, which is false for an x64 chezmoi
-# under Prism on ARM64. The same gate as aim-toolkit in 200-scoop-install.
+# The RAM disk at E: (00-nt/216-ram-disk), and TEMP and TMP on it
+# (00-nt/217-ram-disk-temp), run on the Arsenal Image Mounter driver, which has
+# x64 builds only, and a driver cannot run translated: native x64 Windows only,
+# so .nativeArch as well, which is false for an x64 chezmoi under Prism on
+# ARM64. The same gate as aim-toolkit in 200-scoop-install.
 {{- if not (and (eq .chezmoi.os "windows") (eq .chezmoi.arch "amd64") .nativeArch) }}
 .chezmoiscripts/00-nt/216-ram-disk.ps1
+.chezmoiscripts/00-nt/217-ram-disk-temp.ps1
 {{- end }}
 
 
