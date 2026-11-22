@@ -2,7 +2,15 @@
 if (-Not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')) {
   if ([int](Get-CimInstance -Class Win32_OperatingSystem | Select-Object -ExpandProperty BuildNumber) -ge 6000) {
     $CommandLine = "-NoExit -File `"" + $MyInvocation.MyCommand.Path + "`" " + $MyInvocation.UnboundArguments
-    Start-Process -Wait -FilePath powershell.exe -Verb Runas -ArgumentList $CommandLine
+    # A declined UAC prompt is an error, not a silent exit 0: chezmoi records a
+    # run_once_ script that exits 0 as done and never runs that version again,
+    # which on 2026-11-22 left MountDevDrive on its old settings.
+    try {
+      Start-Process -Wait -FilePath powershell.exe -Verb Runas -ArgumentList $CommandLine -ErrorAction Stop
+    } catch {
+      Write-Host "error: 050-dev-drive needs elevation, and the UAC prompt was declined or failed: $($_.Exception.Message)"
+      exit 1
+    }
     Exit
   }
 }
@@ -50,7 +58,14 @@ if ($letter -eq 'D' -and -not (Get-Volume -DriveLetter D).FileSystemLabel) {
 
 # The MountDevDrive task: at every boot, as SYSTEM, compact the VHDX, then
 # mount it at D:, moving any other volume that holds D: to the first free
-# letter from E: on.
+# letter from F: on. Not E:, which is the RAM disk's: 216-ram-disk's
+# MountRamDisk task runs at the same boot and moves whatever holds E: aside
+# the same way, so the two never take each other's letter.
+#
+# On battery too. A task's defaults are DisallowStartIfOnBatteries and
+# StopIfGoingOnBatteries, both true: a laptop booted unplugged would get no D:,
+# and one unplugged during the compaction would have it stopped short of the
+# mount.
 #
 # Why compact here. The VHDX is dynamic and only grows: ReFS inside sends TRIM
 # when files are deleted (fsutil behavior query DisableDeleteNotify), and the
@@ -99,7 +114,7 @@ catch {
 }
 Set-Content -LiteralPath $Log -Value $Line
 
-$Free = 69..90 | ForEach-Object { [char]$_ } | Where-Object { -not (Get-Volume -DriveLetter $_ -ErrorAction SilentlyContinue) } | Select-Object -First 1
+$Free = 70..90 | ForEach-Object { [char]$_ } | Where-Object { -not (Get-Volume -DriveLetter $_ -ErrorAction SilentlyContinue) } | Select-Object -First 1
 $Taken = Get-CimInstance Win32_Volume -Filter "DriveLetter='D:'"
 if ($Taken) { Set-CimInstance -InputObject $Taken -Property @{ DriveLetter = "${Free}:" } }
 $Partition = Mount-VHD -Path $Vhd -PassThru | Get-Disk | Get-Partition | Where-Object { $_.Type -ne 'Reserved' }
@@ -117,5 +132,6 @@ $Encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($BootScri
 $action = New-ScheduledTaskAction -Execute "powershell.exe" `
     -Argument "-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand $Encoded"
 $trigger = New-ScheduledTaskTrigger -AtStartup
+$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 Register-ScheduledTask -TaskName "MountDevDrive" -Action $action -Trigger $trigger `
-    -RunLevel Highest -User "SYSTEM" -Force | Out-Null
+    -Settings $settings -RunLevel Highest -User "SYSTEM" -Force | Out-Null
