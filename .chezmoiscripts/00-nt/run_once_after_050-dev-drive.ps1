@@ -91,28 +91,33 @@ if ($letter -eq 'D' -and -not (Get-Volume -DriveLetter D).FileSystemLabel) {
 #
 # The cost is boot time: D: appears once the compaction finishes, so the first
 # boot after a lot was deleted takes longer to mount it. A failed compaction
-# never keeps D: from mounting. Each boot's result goes to
-# C:\DevDrive.optimize.log, one line, replaced every boot.
+# never keeps D: from mounting. Each boot's result goes to the Application
+# event log, source MountDevDrive, which the task registers: event 1 the
+# compaction and its sizes, 2 a compaction that failed. No file: nothing a task
+# writes goes in C:\, where earlier versions kept C:\DevDrive.optimize.log;
+# this script deletes it. Windows PowerShell, which the task runs, has the
+# *-EventLog cmdlets PowerShell 7 dropped.
 #
 # Already attached (the task run by hand mid-session) means there is nothing to
 # compact and nothing to mount; the task leaves it as it is, rather than moving
 # the Dev Drive itself off D: as "the volume holding D:".
 $BootScript = @'
 $Vhd = 'C:\DevDrive.vhdx'
-$Log = 'C:\DevDrive.optimize.log'
+$Source = 'MountDevDrive'
 if ((Get-DiskImage -ImagePath $Vhd).Attached) { exit 0 }
+if (-not [Diagnostics.EventLog]::SourceExists($Source)) { New-EventLog -LogName Application -Source $Source }
 
 $Before = (Get-Item -LiteralPath $Vhd).Length
 $Started = Get-Date
 try {
     Optimize-VHD -Path $Vhd -Mode Pretrimmed -ErrorAction Stop
     $After = (Get-Item -LiteralPath $Vhd).Length
-    $Line = '{0:s} Optimize-VHD -Mode Pretrimmed: {1:N2} GiB -> {2:N2} GiB in {3:N0} s' -f $Started, ($Before / 1GB), ($After / 1GB), ((Get-Date) - $Started).TotalSeconds
+    $Line = 'Optimize-VHD -Mode Pretrimmed: {0:N2} GiB -> {1:N2} GiB in {2:N0} s' -f ($Before / 1GB), ($After / 1GB), ((Get-Date) - $Started).TotalSeconds
+    Write-EventLog -LogName Application -Source $Source -EventId 1 -EntryType Information -Message $Line
 }
 catch {
-    $Line = '{0:s} Optimize-VHD failed, mounting anyway: {1}' -f $Started, $_
+    Write-EventLog -LogName Application -Source $Source -EventId 2 -EntryType Warning -Message "Optimize-VHD failed, mounting anyway: $_"
 }
-Set-Content -LiteralPath $Log -Value $Line
 
 $Free = 70..90 | ForEach-Object { [char]$_ } | Where-Object { -not (Get-Volume -DriveLetter $_ -ErrorAction SilentlyContinue) } | Select-Object -First 1
 $Taken = Get-CimInstance Win32_Volume -Filter "DriveLetter='D:'"
@@ -135,3 +140,6 @@ $trigger = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 Register-ScheduledTask -TaskName "MountDevDrive" -Action $action -Trigger $trigger `
     -Settings $settings -RunLevel Highest -User "SYSTEM" -Force | Out-Null
+
+# The log file earlier versions of the task wrote, now the event log's job.
+Remove-Item -LiteralPath 'C:\DevDrive.optimize.log' -Force -ErrorAction SilentlyContinue

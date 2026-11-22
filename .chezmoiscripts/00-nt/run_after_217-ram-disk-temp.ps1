@@ -60,5 +60,6 @@ if ($Changes.Count -gt 0) {
 }
 
 if (-not $Usable) {
-    Write-Host "warning: $Wanted is not there, so TEMP and TMP are not on the RAM disk; C:\RamDisk.log says: $(Get-Content -LiteralPath 'C:\RamDisk.log' -ErrorAction SilentlyContinue)"
+    $Last = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'MountRamDisk' } -MaxEvents 1 -ErrorAction SilentlyContinue
+    Write-Host "warning: $Wanted is not there, so TEMP and TMP are not on the RAM disk; MountRamDisk's last event says: $($Last.Message)"
 }

@@ -51,8 +51,10 @@
 #   LocalSystem, defines the letter for every session. A fallback from an
 #   earlier run is removed before the next try, so the RAM disk gets the
 #   letter back.
-# - Each run's result goes to C:\RamDisk.log, one line, replaced every run,
-#   like C:\DevDrive.optimize.log.
+# - Each run's result goes to the Application event log, source MountRamDisk,
+#   which the task registers: event 1 the RAM disk is up, 2 the fallback is,
+#   3 neither. No file: nothing a task writes goes in C:\. The latest:
+#   Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'MountRamDisk' } -MaxEvents 1
 # - It starts on battery and keeps running when unplugged. A task's defaults
 #   are the opposite (DisallowStartIfOnBatteries and StopIfGoingOnBatteries
 #   are both true), and a laptop booted unplugged would get no RAM disk.
@@ -104,15 +106,22 @@ if (-not $RamDyn -or -not (Test-Path -LiteralPath $RamDyn)) {
     exit 1
 }
 
-# Run by the task as SYSTEM, under Windows PowerShell. @LETTER@, @LABEL@ and
-# @SID@ are filled in below, so each is written once, above.
+# Run by the task as SYSTEM, under Windows PowerShell, which has the
+# *-EventLog cmdlets PowerShell 7 dropped. @LETTER@, @LABEL@, @SID@ and @TASK@
+# are filled in below, so each is written once, above.
 $BootScript = @'
 $Letter = '@LETTER@'
 $Label = '@LABEL@'
 $Owner = '@SID@'
-$Log = 'C:\RamDisk.log'
+$Source = '@TASK@'
 $Fallback = 'C:\RamDisk.fallback'
-function Write-Log([string]$Line) { Set-Content -LiteralPath $Log -Value ('{0:s} {1}' -f (Get-Date), $Line) }
+# Each run's result, to the Application event log: 1 the RAM disk is up, 2 the
+# fallback is, 3 neither.
+if (-not [Diagnostics.EventLog]::SourceExists($Source)) { New-EventLog -LogName Application -Source $Source }
+function Write-Log([string]$Line, [int]$Id = 1) {
+    $Type = @{ 1 = 'Information'; 2 = 'Warning'; 3 = 'Error' }[$Id]
+    Write-EventLog -LogName Application -Source $Source -EventId $Id -EntryType $Type -Message $Line
+}
 
 Add-Type -Namespace RamDisk -Name Dos -MemberDefinition @"
 [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -133,15 +142,15 @@ function Set-TempFolder {
 
 # E: on C:\RamDisk.fallback instead, emptied, with the same E:\Temp.
 function Use-Fallback([string]$Why) {
-    if (Get-CimInstance Win32_Volume -Filter "DriveLetter='$($Letter):'") { Write-Log "no RAM disk: $Why; $($Letter): is another volume, so no fallback either"; exit 1 }
+    if (Get-CimInstance Win32_Volume -Filter "DriveLetter='$($Letter):'") { Write-Log "no RAM disk: $Why; $($Letter): is another volume, so no fallback either" 3; exit 1 }
     if (Test-Path -LiteralPath $Fallback) { Remove-Item -LiteralPath $Fallback -Recurse -Force -ErrorAction SilentlyContinue }
     New-Item -ItemType Directory -Force -Path $Fallback | Out-Null
     if (-not [RamDisk.Dos]::DefineDosDeviceW(0, "$($Letter):", $Fallback)) {
-        Write-Log ("no RAM disk: $Why; mapping $($Letter): to $Fallback failed too (Win32 error {0})" -f [Runtime.InteropServices.Marshal]::GetLastWin32Error())
+        Write-Log ("no RAM disk: $Why; mapping $($Letter): to $Fallback failed too (Win32 error {0})" -f [Runtime.InteropServices.Marshal]::GetLastWin32Error()) 3
         exit 1
     }
     Set-TempFolder
-    Write-Log "no RAM disk: $Why; $($Letter): is $Fallback instead, with $($Letter):\Temp"
+    Write-Log "no RAM disk: $Why; $($Letter): is $Fallback instead, with $($Letter):\Temp" 2
     exit 1
 }
 
@@ -170,7 +179,7 @@ $Moved = ''
 $Taken = Get-CimInstance Win32_Volume -Filter "DriveLetter='$($Letter):'"
 if ($Taken) {
     $Free = 70..90 | ForEach-Object { [char]$_ } | Where-Object { -not (Get-CimInstance Win32_Volume -Filter "DriveLetter='$($_):'") } | Select-Object -First 1
-    if (-not $Free) { Write-Log "no RAM disk: $($Letter): is taken and no letter from F: on is free"; exit 1 }
+    if (-not $Free) { Write-Log "no RAM disk: $($Letter): is taken and no letter from F: on is free" 3; exit 1 }
     Set-CimInstance -InputObject $Taken -Property @{ DriveLetter = "$($Free):" }
     $Moved = "; moved '$($Taken.Label)' from $($Letter): to $($Free):"
 }
@@ -191,7 +200,7 @@ if (-not ($Volume -and $Volume.FileSystemLabel -eq $Label)) {
 Set-TempFolder
 Write-Log ('RAM disk at {0}: of up to {1:N1} GiB, half of RAM, RamDyn PID {2}{3}; with {0}:\Temp' -f $Letter, ($Kb / 1MB), $Created.ProcessId, $Moved)
 '@
-$BootScript = $BootScript.Replace('@LETTER@', $Letter).Replace('@LABEL@', $Label).Replace('@SID@', $MySid)
+$BootScript = $BootScript.Replace('@LETTER@', $Letter).Replace('@LABEL@', $Label).Replace('@SID@', $MySid).Replace('@TASK@', $TaskName)
 
 # Run it now, unless another volume holds E:. A mapped network drive at E: is
 # per logon session, invisible to SYSTEM, and would hide the RAM disk from
@@ -214,8 +223,13 @@ Write-Host "debug: registering the $TaskName task$(if ($StartNow) { ' and runnin
 # own length, and the sudo command line would near Windows' 32,767 characters.
 # The boot script has no line starting with '@, so it cannot end the
 # here-string early.
+# No progress records: Windows PowerShell with its output redirected writes
+# them to stderr as CLIXML, the scheduled-task cmdlets emit some, and
+# PowerShell 7 upstream prints "Cannot process the XML from the 'Error'
+# stream" for each.
 $Elevated = @(
     "`$ErrorActionPreference = 'Stop'"
+    "`$ProgressPreference = 'SilentlyContinue'"
     "`$BootScript = @'"
     $BootScript.TrimEnd()
     "'@"
@@ -243,26 +257,29 @@ if (-not $StartNow) {
     exit 0
 }
 
-# Done once the task has written its log line since sudo was started, and
-# E:\Temp is as it should be, on the RAM disk or the fallback. E:\Temp being
-# there is not enough: an earlier run may have left it.
-function Test-Ran {
-    $Item = Get-Item -LiteralPath 'C:\RamDisk.log' -ErrorAction SilentlyContinue
-    return [bool]($Item -and ($Item.LastWriteTime -ge $Started))
+# Done once the task has logged its run since sudo was started, and E:\Temp
+# is as it should be, on the RAM disk or the fallback. E:\Temp being there is
+# not enough: an earlier run may have left it. The Application log is readable
+# unelevated.
+function Get-RunEvent {
+    param([Nullable[datetime]]$Since)
+    $Filter = @{ LogName = 'Application'; ProviderName = $TaskName }
+    if ($Since) { $Filter.StartTime = $Since }
+    Get-WinEvent -FilterHashtable $Filter -MaxEvents 1 -ErrorAction SilentlyContinue
 }
 $Deadline = (Get-Date).AddSeconds(150)
-while (-not ((Test-Ran) -and (Test-TempFolder)) -and ((Get-Date) -lt $Deadline)) { Start-Sleep -Seconds 1 }
-$Last = Get-Content -LiteralPath 'C:\RamDisk.log' -ErrorAction SilentlyContinue
-if (-not (Test-Ran)) {
-    Write-Host "error: $TaskName did not finish within 150 s; C:\RamDisk.log still says: $Last"
+while (-not ((Get-RunEvent $Started) -and (Test-TempFolder)) -and ((Get-Date) -lt $Deadline)) { Start-Sleep -Seconds 1 }
+$Run = Get-RunEvent $Started
+if (-not $Run) {
+    Write-Host "error: $TaskName did not finish within 150 s; its last event says: $((Get-RunEvent).Message)"
     exit 1
 }
 if (-not (Test-TempFolder)) {
-    Write-Host "error: $TaskName ran, but $TempDir is missing or open to other accounts; C:\RamDisk.log says: $Last"
+    Write-Host "error: $TaskName ran, but $TempDir is missing or open to other accounts; it says: $($Run.Message)"
     exit 1
 }
 if (-not (Test-RamDisk)) {
-    Write-Host "warning: no RAM disk; ${Letter}: is the fallback on C:. C:\RamDisk.log says: $Last"
+    Write-Host "warning: no RAM disk; ${Letter}: is the fallback on C:. $TaskName says: $($Run.Message)"
     exit 1
 }
 $Size = (Get-Volume -DriveLetter $Letter).Size
