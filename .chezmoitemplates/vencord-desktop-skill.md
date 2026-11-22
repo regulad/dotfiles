@@ -31,6 +31,7 @@ This file is local to this machine: the user's dotfiles write it and keep it out
 - `{{ $cmd }}` from PowerShell; `vencord-discord` from cmd
 - Discord lives in `%LOCALAPPDATA%\Discord\app-*`. Injecting closes it and starts it again. Vencord carries its stub to each new version as Discord updates
 - Vencord's settings are `%APPDATA%\Vencord\settings\settings.json`. The dotfiles merge their keys into it on every apply
+- Console access to desktop Discord needs the user's OK each time: it opens their logged-in client to local processes. Stop Discord, run `Update.exe --processStart Discord.exe --process-start-args "--remote-debugging-port=9222"` in `%LOCALAPPDATA%\Discord`, then use CDP `Runtime.evaluate` on the `discord.com/app` page target (bound to 127.0.0.1). `location.reload()` loads a renderer rebuild but drops calls. Close it with `{{ $cmd }} restart`, which starts Discord without the port
 {{- else if eq .chezmoi.os "darwin" -}}
 - Discord is `/Applications/Discord.app`. Its updates replace the app and drop the stub until the next inject, which `dev` does
 - Writing into the app needs App Management for the terminal (System Settings > Privacy & Security). The installer's output says when it was refused
