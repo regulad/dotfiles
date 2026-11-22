@@ -98,6 +98,23 @@
       "headers": {
         "X-Goog-Api-Key": {{ $devknowledge.token.value | toJson }}
       }
+    },
+{{- /* The shared memory server: basic-memory behind regulad/homelab's
+       memory.regulad.xyz, with the static client token that homelab's
+       ingress checks. claude.ai's custom connector of the same URL reaches
+       it through OAuth; this user-scope definition, at the same URL, stands
+       in for that connector in Claude Code, so no session signs in and one
+       without a claude.ai login gets it too. The token is the
+       memory.regulad.xyz item's token field, copied there from homelab's
+       SOPS (memory_client_token); rotate both together. Codex's entry is in
+       dot_codex/modify_private_config.toml. */}}
+{{- $memory := bitwardenFields "item" "memory.regulad.xyz" }}
+    "memory": {
+      "type": "http",
+      "url": "https://memory.regulad.xyz/mcp",
+      "headers": {
+        "Authorization": {{ printf "Bearer %s" $memory.token.value | toJson }}
+      }
     }
 {{- end }}
 {{- if and (eq .chezmoi.os "windows") (eq .chezmoi.arch "amd64") }},
