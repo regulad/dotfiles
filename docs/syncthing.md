@@ -72,11 +72,15 @@ started is active. On a Mac it waits after starting the launchd agent (below).
 On Windows, where Setup installed as winget runs it starts Syncthing only at the
 next logon, the script runs Setup's logon task itself, then waits. That first
 start can bring up Windows Firewall's prompt for `syncthing.exe`, as a logon
-would; the node dials the hub either way. It does nothing in WSL or a
-container, where Syncthing is not started (`150-user-services`).
+would; the node dials the hub either way. It does nothing in a container,
+where Syncthing is not started (`150-user-services`).
 
 How Syncthing runs differs by platform. On Linux it is the distro's or brew's
-user service, which `150-user-services` starts. On Windows it is
+user service, which `150-user-services` starts. A WSL instance runs it the same
+way, as a node separate from its Windows host, while the instance is up. Under
+WSL's NAT its connections leave through the host, so the hub's joining service
+sees the host's tailnet address and admits it by the owner rule like any other
+machine of the owner's. On Windows it is
 BillStewart.SyncthingWindowsSetup, started at logon by its scheduled task
 (`stctl.exe --start`), which `155-syncthing` runs when Syncthing is not
 running. On a Mac it is brew's
@@ -145,7 +149,10 @@ Two consequences of syncing transcripts:
 - **Transcripts are plaintext**, and hold whatever passed through a tool,
   secrets included. Every node in the mesh and aboriginal's backup get them.
 
-WSL keeps its own `~/.claude`, which is not in the mesh.
+A WSL instance's `~/.claude` is a node's copy of its own, separate from the
+Windows host's `~\.claude`: its project directories are named after Linux paths
+(`-home-...`), so the two share auto memory only through
+`autoMemoryDirectory`.
 
 ## Rotating the hub's ID
 

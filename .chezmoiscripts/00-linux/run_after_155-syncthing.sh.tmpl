@@ -6,9 +6,9 @@
 # service, the distro's syncthing.service or brew's homebrew.syncthing.service,
 # and a first start writes the configuration and keys before the REST API
 # answers. While the service is active, the API gets 30 s, as macOS's
-# 155-syncthing gives it after `brew services start`. The same gates as
-# 150-user-services': no Syncthing is started in a container or WSL.
-if [ "$CONTAINERIZED" -eq 0 ] && [ "$IS_WSL" -eq 0 ] \
+# 155-syncthing gives it after `brew services start`. The same gate as
+# 150-user-services': no Syncthing is started in a container. WSL starts one.
+if [ "$CONTAINERIZED" -eq 0 ] \
 	&& command -v syncthing >/dev/null 2>&1 \
 	&& systemctl --user is-active --quiet syncthing.service homebrew.syncthing.service 2>/dev/null \
 	&& ! syncthing cli config gui apikey get >/dev/null 2>&1; then

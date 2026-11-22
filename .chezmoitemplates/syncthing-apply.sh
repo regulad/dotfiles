@@ -23,10 +23,10 @@ fi
 {{-   end }}
 {{- end }}
 
-# Syncthing runs on native Linux and on macOS only: 150-user-services starts
-# it on neither WSL nor a container.
-if [ "${IS_WSL:-0}" -eq 1 ] || [ "${CONTAINERIZED:-0}" -eq 1 ]; then
-	echo "debug: no Syncthing runs here (WSL or a container); skipping" >&2
+# Syncthing runs on Linux, WSL included, and on macOS, but not in a
+# container, where 150-user-services does not start it.
+if [ "${CONTAINERIZED:-0}" -eq 1 ]; then
+	echo "debug: no Syncthing runs in a container; skipping" >&2
 	exit 0
 fi
 
