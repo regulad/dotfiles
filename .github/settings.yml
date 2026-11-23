@@ -13,7 +13,7 @@ repository:
   topics: linux, shell, dotfiles, bash, zsh, ubuntu, fedora, wsl, windows, macos, chezmoi
   default_branch: master
 
-  has_issues: false
+  has_issues: true
 
   # No merge methods here: GitHub rejects turning all three off, so the shared
   # ones apply.
