@@ -98,10 +98,11 @@ APT_PACKAGES=(
 
 	# =+= UTILS
 	systemd  # provides utils even when in docker
-	# Replaces the old 10-autowatch.zsh chpwd hook, which sourced and eval'd a
-	# .watchrc out of whatever directory you cd'd into. direnv does the same job
-	# behind an explicit per-directory `direnv allow`, so cloning a repo that
-	# ships an .envrc no longer runs its contents. Hooked up in
+	# Takes over the environment half of the old 10-autowatch.zsh chpwd hook,
+	# which sourced and eval'd a .watchrc out of whatever directory you cd'd
+	# into. direnv waits for an explicit per-directory `direnv allow`, so
+	# cloning a repo that ships an .envrc no longer runs its contents. Running
+	# a directory's scripts on cd waits on #7. Hooked up in
 	# dot_config/zsh/10-direnv.zsh.
 	direnv
 	jq

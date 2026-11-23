@@ -6,8 +6,9 @@
 
 # 10-autowatch.zsh hooked chpwd to `source` and then `eval` a .watchrc from
 # whatever directory had just been entered, giving any cloned repository under
-# ~/repositories arbitrary code execution on cd. Removed in favour of direnv,
-# which gates the same behaviour behind `direnv allow`. Leaving the orphaned
+# ~/repositories arbitrary code execution on cd. direnv took over only its
+# environment half, behind `direnv allow`; running a directory's scripts on cd
+# waits on a replacement gated the same way (#7). Leaving the orphaned
 # copy in place would keep it armed on every machine that ever applied it,
 # since ~/.config/zsh/*.zsh is glob-sourced by .zshrc and would still pick it
 # up. Safe to prune from this file once every machine has applied once.

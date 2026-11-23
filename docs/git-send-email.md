@@ -11,7 +11,7 @@ The server, port and Bitwarden item are in `.chezmoidata/smtp.toml`. `.gitconfig
 | Windows | Git Credential Manager (Windows Credential Manager) | `00-nt/240-git-smtp-credential.ps1`, every apply, from Bitwarden |
 | WSL | the Windows GCM, through `/mnt/c` | nothing: it reads the entry Windows stored |
 | macOS | `osxkeychain` (login keychain), Apple's git | `00-macos/146-git-smtp-credential.sh`, every apply, from Bitwarden |
-| Linux | none yet (README TODOs) | `send-email` asks for the password |
+| Linux | none yet ([#4](https://github.com/regulad/dotfiles/issues/4)) | `send-email` asks for the password |
 
 On macOS the login keychain is locked over SSH, so 146 warns and leaves it for an apply from the Mac's own session. A failed login makes git erase the stored password; the next apply puts it back.
 

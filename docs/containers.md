@@ -15,7 +15,7 @@ No host runs Docker Desktop. Each one gets the native engine it can run, and the
 
 - `wslc` is not on the PATH of a shell opened before the update. It lives in `C:\Program Files\WSL\`.
 - Its settings are `%LOCALAPPDATA%\wslc\settings.yaml` (`wslc settings`), not `.wslconfig`.
-- **Shortfall:** the dockerd stays inside wslc's VM. Windows gets no Docker Engine socket or pipe ([microsoft/WSL#40976](https://github.com/microsoft/WSL/issues/40976)), and wslc has no compose ([#40948](https://github.com/microsoft/WSL/issues/40948)). So `act` (dropped from scoop), testcontainers, `docker compose` and compose-based devcontainers have nothing to target on Windows. Single-container Dev Containers and the VS Code Containers extension support wslc directly. See the README TODOs.
+- **Shortfall:** the dockerd stays inside wslc's VM. Windows gets no Docker Engine socket or pipe ([microsoft/WSL#40976](https://github.com/microsoft/WSL/issues/40976)), and wslc has no compose ([#40948](https://github.com/microsoft/WSL/issues/40948)). So `act` (dropped from scoop), testcontainers, `docker compose` and compose-based devcontainers have nothing to target on Windows. Single-container Dev Containers and the VS Code Containers extension support wslc directly. [#5](https://github.com/regulad/dotfiles/issues/5) tracks a fix.
 
 ## macOS: apple/container or colima
 
