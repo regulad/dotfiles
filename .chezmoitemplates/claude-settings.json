@@ -43,6 +43,15 @@
     "ask": {{ $ask | toJson }},
     "defaultMode": "auto"
   },
+{{- /* The task tools (TaskCreate, TaskList, TaskUpdate) on every model.
+       Claude Code leaves them out on newer models by default (since
+       v2.1.268); regulad/skills' Tracking work rule uses them for a
+       session's own list, which an agent team shares. Settings env reaches
+       every session however claude starts. Needs Claude Code 2.1.233 or
+       later. */}}
+  "env": {
+    "CLAUDE_CODE_ENABLE_TODO_TOOLS": "1"
+  },
   "worktree": {
     "baseRef": "head"
   },
