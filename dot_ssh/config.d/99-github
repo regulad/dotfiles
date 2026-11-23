@@ -2,3 +2,13 @@ Host github.com
     HostName github.com
     User git
     Tag rsa3072
+
+# Gists are pushed and pulled over SSH at gist.github.com, which serves the
+# same host keys as github.com (checked against api.github.com/meta on
+# 2026-11-22). HostKeyAlias checks it against github.com's entry in
+# known_hosts, so the first connection never stops at a host-key prompt.
+Host gist.github.com
+    HostName gist.github.com
+    HostKeyAlias github.com
+    User git
+    Tag rsa3072
