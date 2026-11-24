@@ -6,7 +6,11 @@
 # updated when already present and installed otherwise. No remote is named on
 # install -- flatpak resolves each ID against whatever remotes the system has
 # configured (Fedora ships fedora + flathub, Bluefin ships flathub), so the
-# source belongs to the system, not this script.
+# source belongs to the system, not this script. The exception is an entry
+# written <remote>:<app>, for an app whose ID more than one configured remote
+# answers to: flatpak then refuses a --noninteractive install rather than
+# choose, as it did for Bitwarden on a desktop with a flatpark remote added
+# (2026-11-24), even though only flathub carried the app.
 
 # Flatpaks are session-scoped GUI apps; a container has no session to serve
 # and usually no flatpak/dbus/polkit stack to install through either.
@@ -37,17 +41,25 @@ FLATPAK_PACKAGES=(
 	# Bitwarden desktop, for its SSH agent: .commonprofile points SSH_AUTH_SOCK
 	# at the socket it makes under ~/.var/app/com.bitwarden.desktop once the
 	# agent is turned on in its settings, which is left to the user. Until
-	# then .commonprofile falls back to keychain.
-	com.bitwarden.desktop
+	# then .commonprofile falls back to keychain. Flathub's is the build
+	# Bitwarden publishes itself.
+	flathub:com.bitwarden.desktop
 )
 
-for app in "${FLATPAK_PACKAGES[@]}"; do
-	if flatpak info "$app" &>/dev/null; then
+for entry in "${FLATPAK_PACKAGES[@]}"; do
+	case "$entry" in
+		*:*) remote="${entry%%:*}" app="${entry#*:}" ;;
+		*) remote="" app="$entry" ;;
+	esac
+	# --system throughout, as the user list below says --user: the user
+	# installation has a flathub of its own, and flatpak won't pick between
+	# installations non-interactively either.
+	if flatpak info --system "$app" &>/dev/null; then
 		echo "debug: updating flatpak $app" >&2
-		flatpak update -y --noninteractive "$app"
+		flatpak update --system -y --noninteractive "$app"
 	else
-		echo "debug: installing flatpak $app" >&2
-		flatpak install -y --noninteractive "$app"
+		echo "debug: installing flatpak $app${remote:+ from $remote}" >&2
+		flatpak install --system -y --noninteractive ${remote:+"$remote"} "$app"
 	fi
 done
 
