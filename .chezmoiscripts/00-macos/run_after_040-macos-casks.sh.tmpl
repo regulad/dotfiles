@@ -79,6 +79,7 @@ BREW_CASKS_MACOS=(
 {{- end }}
 	"nextcloud"  # the -vfs cask is deprecated; File Provider ships in the main pkg since 33.0
 	"obs"
+	"parsec"  # proprietary freeware; opened at login below
 	"utm"
 {{- if not $pre2026 }}
 	"bartender" # proprietary trialware # i have a license # every pin before 2026 points at macbartender.com/B2/updates, which is gone (404); only the 2026 pins have the live downloads.macbartender.com URL (URL audit 2026-09-28)
@@ -187,11 +188,27 @@ if [ "$HAS_BREW" = "true" ]; then
 		TAILSCALE_PRESENT=0
 	fi
 
+	# The parsec cask is the same parsec-macos.pkg Parsec's site offers, and
+	# the app updates itself in place, so a host where it was installed by hand
+	# has the pkg's receipt but no brew record. As with tailscale above, skip
+	# the cask there rather than re-run the pkg installer under sudo.
+	if pkgutil --pkg-info tv.parsec.www &>/dev/null; then
+		PARSEC_PRESENT=1
+	else
+		PARSEC_PRESENT=0
+	fi
+
 	# tailscale-app is `tailscale` on the pre-2025 eras, hence the two spellings.
 	for cask in "${BREW_CASKS_MACOS[@]}"; do
 		case "$cask" in
 			tailscale-app | tailscale)
 				[ "$TAILSCALE_PRESENT" -eq 1 ] && continue
+				;;
+			parsec)
+				if [ "$PARSEC_PRESENT" -eq 1 ]; then
+					echo "debug: parsec pkg already installed; skipping the parsec cask" >&2
+					continue
+				fi
 				;;
 		esac
 		if ! brew list --cask "$cask" &>/dev/null; then
@@ -199,3 +216,45 @@ if [ "$HAS_BREW" = "true" ]; then
 		fi
 	done
 fi
+{{- if not .useHeadless }}
+
+# Parsec has no start-at-login setting on macOS (only its Windows build does),
+# so it becomes a login item here. That opens it once the user logs in, not at
+# boot: with FileVault on there is no automatic login, so after a restart
+# someone unlocks the Mac first (at the screen, or over Screen Sharing).
+#
+# Login items go through System Events, which takes Automation consent for
+# whatever runs osascript. macOS asks for it with a prompt on the Mac's
+# screen; an SSH session has nowhere to show it, and the AppleEvent sits until
+# it times out (two minutes by default, hence the shorter timeout). Either
+# failure is a warning, and the next apply from the Mac's own session adds the
+# item. Gated like the cask above, on useHeadless; the app itself is checked
+# at run time because a hand-installed or not-yet-installed Parsec is possible
+# either way.
+PARSEC_APP="/Applications/Parsec.app"
+
+# Prints true or false; fails when System Events can't be asked.
+parsec_is_login_item() {
+	osascript \
+		-e 'with timeout of 20 seconds' \
+		-e "tell application \"System Events\" to return (path of every login item) contains \"$PARSEC_APP\"" \
+		-e 'end timeout'
+}
+
+if [ ! -d "$PARSEC_APP" ]; then
+	echo "notice: $PARSEC_APP not found, skipping its login item" >&2
+elif ! PARSEC_LOGIN_ITEM="$(parsec_is_login_item 2>&1)"; then
+	echo "warning: could not read the login items to add Parsec ($PARSEC_LOGIN_ITEM); allow Automation of System Events, or apply from the Mac's own session" >&2
+elif [ "$PARSEC_LOGIN_ITEM" = "true" ]; then
+	echo "debug: Parsec is already a login item" >&2
+elif ! PARSEC_LOGIN_ITEM="$(osascript \
+		-e 'with timeout of 20 seconds' \
+		-e "tell application \"System Events\" to make login item at end with properties {path:\"$PARSEC_APP\", hidden:true}" \
+		-e 'end timeout' 2>&1)"; then
+	echo "warning: could not add Parsec as a login item ($PARSEC_LOGIN_ITEM)" >&2
+elif [ "$(parsec_is_login_item 2>&1)" = "true" ]; then
+	echo "notice: added Parsec as a login item; it opens the next time you log in" >&2
+else
+	echo "warning: added Parsec as a login item, but the login items read back without it" >&2
+fi
+{{- end }}
