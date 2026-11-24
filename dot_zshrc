@@ -1,3 +1,15 @@
+# VTE terminals (Ptyxis, GNOME Terminal) ignore OSC 52, so a copy from nvim,
+# tmux, Claude Code or an ssh session never reaches the clipboard. Re-run the
+# shell under osc52pty, which catches the sequence and hands the text to
+# wl-copy/xclip itself, as Terminal.app does on macOS via ~/.bootstrap.sh.
+# exec keeps the terminal's child pid, so Ptyxis still sees the same process.
+# OSC52PTY stops the inner shell (and anything it starts) from wrapping again.
+if [[ -o interactive && -t 0 && -n $VTE_VERSION && -z $OSC52PTY && -z $TMUX ]] \
+    && (( $+commands[osc52pty] )); then
+    export OSC52PTY=1
+    exec osc52pty zsh
+fi
+
 # run once: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 # ohmyzsh
 export ZSH="$HOME/.oh-my-zsh"

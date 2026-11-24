@@ -19,5 +19,8 @@ packages = [
     { module = "honnef.co/go/tools/cmd/staticcheck@latest", macosMin = 12 },
     { module = "github.com/twpayne/find-duplicates@latest", macosMin = 12 },
     { module = "github.com/swaggo/swag/cmd/swag@latest" },
-    { module = "github.com/roy2220/osc52pty@master", os = ["darwin"] },
+    # regulad's fork: upstream pipes every copy to pbcopy; the fork picks the
+    # platform's tool (wl-copy, xclip, ...). Wrapped around the shell by
+    # Terminal.app on macOS (~/.bootstrap.sh) and by ~/.zshrc under VTE.
+    { module = "github.com/regulad/osc52pty@master", os = ["darwin", "linux"] },
 ]

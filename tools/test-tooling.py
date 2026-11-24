@@ -200,7 +200,7 @@ def main():
                 assert attempted in text and 'no tools are installed through it' not in text
                 if name == "120-go-tooling":
                     assert 'export GOTOOLCHAIN=auto' in text
-                    assert ('go install github.com/roy2220/osc52pty@master' in text) == (platform == "darwin")
+                    assert 'go install github.com/regulad/osc52pty@master' in text
                 scripts.append(text)
             text = render(f".chezmoiscripts/00-{host}/run_after_101-pre-commit-templatedir.sh.tmpl", data)
             assert 'pre-commit init-templatedir --color never --hook-type pre-commit --hook-type commit-msg --hook-type pre-push "$TEMPLATE_DIR"' in text
