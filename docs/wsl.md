@@ -12,7 +12,8 @@ wsl-deploy.ps1 -SetDefault    # and make it what a bare `wsl` starts
 
 It finds the newest unexpired `wsl-<flavor>-<arch>` artifact, downloads it to `~\Downloads` with a progress readout, and imports it to `%LOCALAPPDATA%\wsl\regulad-<flavor>`. The `.wsl` is deleted afterwards unless `-KeepDownload` is passed. Notable behaviour:
 
-- **It is destructive.** If `regulad-<flavor>` already exists, continuing *unregisters* it — the VHD and everything in it is gone, with no undo. It prompts first; `-Force` skips the prompt. The unregister waits until the new image has fully downloaded, so a failed or interrupted download leaves the old instance intact.
+- **It is destructive.** If `regulad-<flavor>` already exists, continuing *unregisters* it — the VHD and everything in it is gone, with no undo. `~/repositories` is the exception: it lives on the [wslpersist](#wslpersist) volume. It prompts first; `-Force` skips the prompt. The unregister waits until the new image has fully downloaded, so a failed or interrupted download leaves the old instance intact.
+- After the import, before the first launch, it runs `wslpersist.ps1 -Fresh` on the new instance, so OOBE's apply finds the volume mounted and `~/repositories` already linked to it.
 - Every image carries the commit it was built from in `/etc/dotfiles-commit`, written by the overlay step of `.github/workflows/wsl-package.yml` and checked against the run's commit before upload. `wsl-deploy` reads it back from an installed instance (`wsl -d regulad-<flavor> -u root --exec cat /etc/dotfiles-commit`, no login shell, no OOBE) to say whether it is already the newest build or behind one; nothing in WSL tracks this on its own. Images built before the file existed report "unknown". (`wsl-deploy` used to keep this in a `deployed-from.json` beside the VHD; that is gone, and a leftover copy is inert.)
 - Afterwards it offers, y/N, to make the instance the default distribution — worth taking, since the default is otherwise whatever was installed first (on older setups, Docker Desktop's `docker-desktop` distro).
 - Images are published as Actions artifacts rather than release assets because they are ~5 GB against a 2 GB release-asset cap. Artifacts expire after 14 days, so if none is found, push to `master` or re-run the Docker workflow.
@@ -35,13 +36,24 @@ wsl-update.ps1 -DryRun        # show the patch and check it applies; change noth
 wsl-update.ps1 -NoApply       # patch and re-init now, apply later
 ```
 
-An instance's chezmoi source is a plain copy of the tree its image was built from (a git repository with no commits), and `/etc/dotfiles-commit` names that commit. `wsl-update` reads the file the way `wsl-deploy` does, builds the patch from that commit to HEAD with git on the Windows side (fetching first if the image's commit is not in the clone), checks it with `git apply --check` inside the instance and applies it. It then writes HEAD to `/etc/dotfiles-commit`, re-renders the chezmoi config with `chezmoi init`, keeping the instance's `useDummySecrets` as it is (`useHeadless` is always off in WSL), and runs the full `chezmoi apply`, interactively, since it may ask for the Bitwarden master password. Notable behaviour:
+An instance's chezmoi source is a plain copy of the tree its image was built from (a git repository with no commits), and `/etc/dotfiles-commit` names that commit. `wsl-update` reads the file the way `wsl-deploy` does, builds the patch from that commit to HEAD with git on the Windows side (fetching first if the image's commit is not in the clone), checks it with `git apply --check` inside the instance and applies it. It then writes HEAD to `/etc/dotfiles-commit`, re-renders the chezmoi config with `chezmoi init`, keeping the instance's `useDummySecrets` as it is (`useHeadless` is always off in WSL), runs `wslpersist.ps1` (below), and runs the full `chezmoi apply`, interactively, since it may ask for the Bitwarden master password. Notable behaviour:
 
 - **The commit is recorded before the apply**, as soon as the patch is in, because the file says what the source tree is. If the apply fails, running `wsl-update` again finds nothing to patch and retries the apply.
 - **Only HEAD travels.** Uncommitted changes on the Windows side are left out, with a note.
 - **A patch that does not apply changes nothing**: `git apply` is all or nothing, and the check runs first. That happens when the instance's source was edited where the patch touches it.
 - **HEAD behind or beside the instance's commit** (a rollback, a diverged branch) still works, since the patch makes the instance's tree HEAD's, but that undoes whatever the instance has that HEAD lacks, so it asks first; `-Force` skips the question.
 - The patch is written by git itself (`--output`), never through PowerShell's pipeline, so the binary hunks for the age-encrypted files survive, and it is built with CRLF conversion, textconv and external diff tools off and `a/`/`b/` prefixes fixed, whatever the local git config says.
+
+## wslpersist
+
+Instances are disposable; what should outlive them lives on one more VHDX per Windows host, `%LOCALAPPDATA%\wslpersist.vhdx`, mounted at `/mnt/wsl/wslpersist` in every distro. `~/repositories` in an instance is a symlink into it (`symlink_repositories.tmpl`), as on Windows it is a symlink to `D:\repositories`. Its name, filesystem and mount options are in `.chezmoidata/wslpersist.toml`.
+
+Linux tools working straight from `/mnt/d` are still far slower than on a Linux filesystem, even over virtiofs; `dot_wslconfig` has the measurements.
+
+- **`wslpersist.ps1 <distro>` sets it up**, and `wsl-deploy` and `wsl-update` run it. It creates the VHDX the way WSL creates a distro's disk, sparse and without elevation, and formats it as XFS, for reflinks, with the instance's own `mkfs.xfs`. It mounts it and moves the instance's `~/repositories` onto it, entry by entry, leaving the symlink in its place. Each step is skipped once done. An entry already on the volume stops the move, except with `-Fresh`, which `wsl-deploy` passes: there the new instance's copy is dropped, since it is only the image's Vencord clone.
+- **Space comes back to C: as files are deleted:** the VHDX is sparse and mounted with `discard`, as WSL's own disks are. It lives on C: and not on the D: Dev Drive, which is itself a VHDX that can't be sparse and returns space only at boot (`00-nt/050-dev-drive`).
+- **It is attached again at each start of the WSL VM** by `wslpersist.service`, a user unit running `~/.local/bin/wslpersist`. WSL keeps attached disks across the VM's idle shutdowns, but drops them at `wsl --shutdown` and at reboot, and has no setting to attach one at start ([microsoft/WSL#11187](https://github.com/microsoft/WSL/issues/11187)). The unit only attaches; it never formats.
+- **The guard.** chezmoi turns a directory into a symlink by deleting it, contents and all, without asking. `00-linux/000-wslpersist` runs before any file is written and stops the apply while `~/repositories` is still a directory with contents in it, or while the volume isn't mounted.
 
 ## `/tmp`
 

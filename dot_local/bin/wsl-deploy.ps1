@@ -45,7 +45,8 @@ param(
     [string]$Repo = 'regulad/dotfiles',
 
     # Replace an existing instance without asking. Destroys it -- there is no
-    # undo, and anything not committed inside that instance is gone.
+    # undo, and anything not committed inside that instance is gone, except
+    # ~/repositories, which lives on the wslpersist volume (wslpersist.ps1).
     [switch]$Force,
 
     # Import but do not launch. OOBE will instead run on your next
@@ -199,6 +200,7 @@ if ($installedAlready) {
     Write-Host "  '$distroName' is already installed." -ForegroundColor Yellow
     Write-Host "  Replacing it UNREGISTERS it: its disk, and anything in it that" -ForegroundColor Yellow
     Write-Host "  is not pushed somewhere, is destroyed. There is no undo." -ForegroundColor Yellow
+    Write-Host "  ~/repositories is on the wslpersist volume, and survives." -ForegroundColor Yellow
     Write-Host "  (It stays untouched until the new image has fully downloaded.)" -ForegroundColor Yellow
     Write-Host ""
 
@@ -420,6 +422,16 @@ finally {
         Remove-Item -LiteralPath $tarballPath -Force -ErrorAction SilentlyContinue
     }
 }
+
+# --- the persistent volume ----------------------------------------------------
+
+# Before the first launch, so OOBE's apply finds the volume mounted and
+# ~/repositories already the symlink onto it. The image ships a directory
+# there, the Vencord clone 080-vencord makes during the build, and
+# 00-linux/000-wslpersist refuses to apply over one. -Fresh: nothing in a
+# just-imported instance is anyone's work, so what the volume already has wins.
+Write-Step 'preparing the persistent volume (wslpersist)'
+& (Join-Path $PSScriptRoot 'wslpersist.ps1') -Distro $distroName -Fresh
 
 # --- default distribution --------------------------------------------------
 

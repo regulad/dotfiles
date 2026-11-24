@@ -190,6 +190,7 @@ autorun.cmd
 .local/bin/wsl-deploy.ps1  # drives wsl.exe from the Windows side
 .local/bin/wsl-enter.ps1   # ditto
 .local/bin/wsl-update.ps1  # ditto
+.local/bin/wslpersist.ps1  # ditto
 # The user-session sshd (see .chezmoiscripts/00-nt/102-sshd-user-session) is a
 # Windows-only answer to a Windows-only problem: sshd running as a service
 # there cannot see mapped drive letters. Everywhere else the system sshd is
@@ -205,7 +206,11 @@ autorun.cmd
 .local/bin/vencord-discord.ps1
 AppData
 Winaero Tweaker.ini
-repositories  # symlink
+# ~/repositories is a symlink on Windows and in WSL (symlink_repositories), and
+# a plain directory everywhere else.
+{{- if eq (env "WSL_DISTRO_NAME") "" }}
+repositories
+{{- end }}
 {{- else }}
 .profile
 .bash_profile
@@ -312,6 +317,7 @@ Library
 .local/bin/wsl-gpg-agent-relay
 .local/bin/wsl-color-scheme
 .local/bin/wslview
+.local/bin/wslpersist
 .local/bin/veracrypt-hc-mount
 {{- else }}
 # only one package manager's script applies per distro
@@ -451,6 +457,11 @@ Library
 .local/bin/wsl-color-scheme
 # BROWSER=wslview in .commonprofile; it hands URLs to Windows' default browser.
 .local/bin/wslview
+# The wslpersist volume (docs/wsl.md#wslpersist): its guard, and what attaches
+# it at boot.
+.chezmoiscripts/00-linux/000-wslpersist.sh
+.config/systemd/user/wslpersist.service
+.local/bin/wslpersist
 {{-     end }}
 {{- end }}
 

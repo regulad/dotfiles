@@ -1,0 +1,10 @@
+{{- /* ~/repositories. On Windows, the projects on the D: Dev Drive. In a WSL
+       instance, the wslpersist volume, which outlives the instance
+       (docs/wsl.md#wslpersist); wslpersist.ps1 makes the same link when it
+       moves an instance's directory onto it. A plain directory everywhere
+       else, through .chezmoiignore.tmpl. */ -}}
+{{- if eq .chezmoi.os "windows" -}}
+D:/repositories/
+{{- else -}}
+/mnt/wsl/{{ .wslpersist.name }}/repositories
+{{- end }}

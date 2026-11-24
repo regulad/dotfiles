@@ -18,6 +18,13 @@ if ! [ "$CONTAINERIZED" -eq 1 ]; then
 		if [ "$IS_WSL" -eq 0 ]; then
 			systemctl --user enable --now gpg-agent.socket
 		fi
+		# Attaches the wslpersist volume again at each start of the WSL VM
+		# (docs/wsl.md#wslpersist). During an apply it is already mounted,
+		# which 000-wslpersist made sure of, so --now only marks it started.
+		if [ "$IS_WSL" -eq 1 ]; then
+			systemctl --user daemon-reload
+			systemctl --user enable --now wslpersist.service
+		fi
 		# NOTE: tailscale-ephemeral.service is deliberately NOT enabled here.
 		# It is shipped inside WSL as an option, not as a default: joining a
 		# tailnet is a side effect nobody should get merely from running an

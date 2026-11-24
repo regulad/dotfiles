@@ -266,6 +266,12 @@ esac
         return
     }
 
+    # The volume ~/repositories lives on, first: the apply makes it a symlink
+    # there, and 00-linux/000-wslpersist refuses to run while it is still a
+    # directory, which chezmoi would delete. A no-op once that is done.
+    Write-Step 'preparing the persistent volume (wslpersist)'
+    & (Join-Path $PSScriptRoot 'wslpersist.ps1') -Distro $distroName
+
     Write-Step "running a full chezmoi apply in $distroName"
     Write-Note 'it may ask for the Bitwarden master password'
     Invoke-InInstance 'chezmoi apply' @('apply')

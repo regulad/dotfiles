@@ -1,0 +1,18 @@
+# The volume that outlives WSL instances: one sparse VHDX per Windows host,
+# mounted in every regulad-* distro. docs/wsl.md#wslpersist. Read by
+# .local/bin/wslpersist.ps1 (creates, formats and mounts it from Windows),
+# .local/bin/wslpersist (re-attaches it inside a distro at boot), the guard
+# 00-linux/000-wslpersist, and symlink_repositories.
+[wslpersist]
+# %LOCALAPPDATA%\<name>.vhdx, the filesystem's label, and /mnt/wsl/<name>.
+name = "wslpersist"
+# XFS for reflinks: `cp --reflink`, and the clone imports pnpm and uv use where
+# the filesystem has them. Built into WSL's kernel (CONFIG_XFS_FS=y in
+# 6.18.58.1), so `wsl --mount` needs no module. Formatted by the instance's own
+# mkfs.xfs (xfsprogs is in both images' package lists): WSL's system distro has
+# only the ext family's.
+type = "xfs"
+# Hands freed blocks to the sparse VHDX, which deallocates them in the host
+# file. Measured on 2026-11-24 with WSL 3.0.5: 1 GiB came back within 5 s, and
+# within 35 s for reflinked extents, which XFS frees at its next log checkpoint.
+options = "discard"

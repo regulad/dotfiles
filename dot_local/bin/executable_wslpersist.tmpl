@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Attaches this Windows host's wslpersist volume at /mnt/wsl/{{ .wslpersist.name }}, for
+# wslpersist.service at each start of the WSL VM. WSL keeps an attached disk
+# across the VM's idle shutdowns, but drops it at `wsl --shutdown` and at
+# reboot, and has no setting that attaches one at start (microsoft/WSL#11187).
+#
+# Only attaches. Creating and formatting the volume and moving ~/repositories
+# onto it is ~/.local/bin/wslpersist.ps1's work, on the Windows side, which
+# wsl-deploy and wsl-update run. docs/wsl.md#wslpersist.
+set -euo pipefail
+
+name='{{ .wslpersist.name }}'
+mnt="/mnt/wsl/$name"
+
+if mountpoint -q "$mnt"; then
+	echo "debug: $mnt is already mounted" >&2
+	exit 0
+fi
+
+# Found by glob, as wsl-npiperelay finds its binary and oobe.sh the host's
+# .bwrc: %LOCALAPPDATA% is per Windows user, and nothing on this side says which.
+vhds=()
+for candidate in /mnt/c/Users/*/AppData/Local/"$name".vhdx; do
+	if [ -f "$candidate" ]; then
+		vhds+=("$candidate")
+	fi
+done
+case "${#vhds[@]}" in
+0)
+	echo "error: there is no %LOCALAPPDATA%\\$name.vhdx on this host; run wsl-update from Windows to create it" >&2
+	exit 1
+	;;
+1) ;;
+*)
+	echo "error: several Windows profiles have a $name.vhdx: ${vhds[*]}" >&2
+	exit 1
+	;;
+esac
+vhd="$(wslpath -w "${vhds[0]}")"
+
+# By full path: systemd --user units get no Windows PATH, and
+# .github/wsl/wsl.conf keeps it out of the interactive one too.
+if ! WSL_UTF8=1 /mnt/c/Windows/System32/wsl.exe --mount --vhd "$vhd" --name "$name" \
+	--type '{{ .wslpersist.type }}' --options '{{ .wslpersist.options }}'; then
+	# Another distro starting at the same moment may have attached it first.
+	if mountpoint -q "$mnt"; then
+		echo "debug: $mnt was mounted meanwhile" >&2
+		exit 0
+	fi
+	echo "error: wsl --mount failed for $vhd; wslpersist.ps1 on the Windows side formats it if it is blank" >&2
+	exit 1
+fi
+if ! mountpoint -q "$mnt"; then
+	echo "error: wsl --mount returned, but $mnt is not mounted" >&2
+	exit 1
+fi
+echo "notice: mounted $vhd at $mnt" >&2

@@ -1,0 +1,11 @@
+[Unit]
+Description=Attach this Windows host's persistent WSL volume at /mnt/wsl
+Documentation=https://github.com/regulad/dotfiles/blob/master/docs/wsl.md#wslpersist
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=%h/.local/bin/wslpersist
+
+[Install]
+WantedBy=default.target

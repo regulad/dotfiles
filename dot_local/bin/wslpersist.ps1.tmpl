@@ -1,0 +1,273 @@
+<#
+.SYNOPSIS
+    Create, format and mount this host's wslpersist volume, and move a WSL
+    instance's ~/repositories onto it.
+
+.DESCRIPTION
+    regulad WSL instances are disposable: wsl-deploy replaces one, disk and
+    all. What has to outlive them lives on one more VHDX per Windows host,
+    %LOCALAPPDATA%\{{ .wslpersist.name }}.vhdx, mounted at /mnt/wsl/{{ .wslpersist.name }}, which every
+    distro sees. ~/repositories in each instance is a symlink into it
+    (symlink_repositories). docs/wsl.md#wslpersist has the whole picture.
+
+    wsl-deploy runs this right after the import and wsl-update before its
+    apply. Each step is skipped when its work is already done:
+
+      1. Create the VHDX the way WSL creates a distro's own disk
+         (wsl::core::filesystem::CreateVhd in microsoft/WSL's
+         src/windows/common/WslCoreFilesystem.cpp): CreateVirtualDisk with 1 MB
+         blocks, then marked sparse, as `wsl --manage --set-sparse` does. 1 TB,
+         WSL's default for a distro; sparse, so the host file holds only what
+         is in it. No elevation, which New-VHD would need, for Hyper-V's
+         management service.
+      2. Format it if it is blank, with the instance's own mkfs (WSL's system
+         distro has no mkfs.xfs).
+      3. Mount it with `wsl --mount`. WSL drops attached disks at
+         `wsl --shutdown` and at reboot; inside an instance,
+         wslpersist.service attaches it again at boot.
+      4. Move the instance's ~/repositories onto it, if it is still a
+         directory, and put the symlink chezmoi manages in its place, so the
+         instance works before its next apply. chezmoi would otherwise delete
+         the directory, contents and all, to place the symlink.
+
+.PARAMETER Distro
+    The WSL instance to format with and to move ~/repositories out of, for
+    example regulad-fedora.
+
+.PARAMETER Fresh
+    The instance was just imported, so nothing in its ~/repositories is anyone's
+    work: an entry the volume already has is dropped from the instance instead
+    of stopping the move. That is the image's own Vencord clone, which
+    080-vencord makes during the image build.
+
+.EXAMPLE
+    wslpersist.ps1 regulad-fedora
+#>
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory, Position = 0)]
+    [string]$Distro,
+
+    [switch]$Fresh
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+# As in wsl-deploy: wsl.exe writes UTF-16LE to anything but a console otherwise.
+$env:WSL_UTF8 = '1'
+
+function Write-Step { param([string]$Message) Write-Host "==> $Message" -ForegroundColor Cyan }
+function Write-Note { param([string]$Message) Write-Host "    $Message" -ForegroundColor DarkGray }
+
+function Assert-NativeSuccess {
+    param([string]$What)
+    if ($LASTEXITCODE -ne 0) { throw "$What failed with exit code $LASTEXITCODE" }
+}
+
+# As root over --exec: no login shell, so no dotfiles run, and no OOBE. sbin
+# tools by full path, since that PATH need not have /usr/sbin.
+function Invoke-Root { wsl.exe -d $Distro -u root --exec @args }
+
+# wsl.exe's own commands (--mount, --unmount), with their message kept for the
+# error. Redirected in a scope of its own: Windows PowerShell turns a native
+# command's redirected stderr into error records, which Stop makes fatal.
+function Invoke-WslHost {
+    param([string[]]$Arguments, [string]$What, [switch]$AllowFailure)
+    $ErrorActionPreference = 'Continue'
+    $out = (wsl.exe @Arguments 2>&1 | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -and -not $AllowFailure) { throw "$What failed with exit code ${LASTEXITCODE}: $out" }
+}
+
+$Name = '{{ .wslpersist.name }}'
+$Type = '{{ .wslpersist.type }}'
+$Options = '{{ .wslpersist.options }}'
+$Vhd = Join-Path $env:LOCALAPPDATA "$Name.vhdx"
+$MountPoint = "/mnt/wsl/$Name"
+$Size = 1TB
+
+if ((wsl.exe --list --quiet) -notcontains $Distro) {
+    throw "'$Distro' is not a registered WSL distribution"
+}
+
+# --- 1. create ----------------------------------------------------------------
+
+if (-not (Test-Path -LiteralPath $Vhd)) {
+    Write-Step "creating $Vhd ($($Size / 1TB) TB, sparse)"
+    if (-not ('WslPersist.VirtDisk' -as [type])) {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+namespace WslPersist {
+    public static class VirtDisk {
+        [StructLayout(LayoutKind.Sequential)]
+        public struct VirtualStorageType { public uint DeviceId; public Guid VendorId; }
+        // CREATE_VIRTUAL_DISK_PARAMETERS, version 2, on a 64-bit process: the
+        // union starts at 8, since it holds a ULONGLONG. Oversized, so the
+        // later versions in the union are never read past its end.
+        [StructLayout(LayoutKind.Explicit, Size = 1024)]
+        public struct CreateParameters {
+            [FieldOffset(0)]  public int Version;
+            [FieldOffset(8)]  public Guid UniqueId;
+            [FieldOffset(24)] public ulong MaximumSize;
+            [FieldOffset(32)] public uint BlockSizeInBytes;
+            [FieldOffset(36)] public uint SectorSizeInBytes;
+            [FieldOffset(40)] public uint PhysicalSectorSizeInBytes;
+        }
+        [DllImport("virtdisk.dll", CharSet = CharSet.Unicode)]
+        public static extern int CreateVirtualDisk(ref VirtualStorageType type, string path, int accessMask,
+            IntPtr securityDescriptor, int flags, uint providerFlags, ref CreateParameters parameters,
+            IntPtr overlapped, out IntPtr handle);
+        [DllImport("kernel32.dll")]
+        public static extern bool CloseHandle(IntPtr handle);
+    }
+}
+'@
+    }
+    if ([IntPtr]::Size -ne 8) { throw 'run this from a 64-bit PowerShell: the struct layout above is the 64-bit one' }
+    $storage = [WslPersist.VirtDisk+VirtualStorageType]::new()
+    $storage.DeviceId = 3                                              # VIRTUAL_STORAGE_TYPE_DEVICE_VHDX
+    $storage.VendorId = [Guid]'EC984AEC-A0F9-47E9-901F-71415A66345B'   # VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT
+    $create = [WslPersist.VirtDisk+CreateParameters]::new()
+    $create.Version = 2
+    $create.MaximumSize = $Size
+    $create.BlockSizeInBytes = 1MB  # WSL's, from Microsoft's advice for Linux guests on Hyper-V
+    $handle = [IntPtr]::Zero
+    # VIRTUAL_DISK_ACCESS_NONE, as version 2 requires; no flags; default
+    # security, so the file is the caller's, as WSL makes its own disks.
+    $rc = [WslPersist.VirtDisk]::CreateVirtualDisk([ref]$storage, $Vhd, 0, [IntPtr]::Zero, 0, 0, [ref]$create, [IntPtr]::Zero, [ref]$handle)
+    if ($rc -ne 0) { throw "CreateVirtualDisk($Vhd) failed: $([ComponentModel.Win32Exception]::new($rc).Message)" }
+    [void][WslPersist.VirtDisk]::CloseHandle($handle)
+}
+
+if (-not ((Get-Item -LiteralPath $Vhd).Attributes -band [IO.FileAttributes]::SparseFile)) {
+    fsutil sparse setflag $Vhd | Out-Null
+    Assert-NativeSuccess "fsutil sparse setflag $Vhd"
+    Write-Note "marked $Vhd sparse"
+}
+
+# --- 2 and 3. format and mount -------------------------------------------------
+
+Invoke-Root /usr/bin/mountpoint -q $MountPoint
+if ($LASTEXITCODE -eq 0) {
+    Write-Note "$MountPoint is mounted"
+} else {
+    # A bare attach left behind by an interrupted run would make the next
+    # attach fail. Detaching a disk that is not attached only fails, harmlessly.
+    Invoke-WslHost -Arguments @('--unmount', $Vhd) -AllowFailure
+
+    # Attached bare first, to see what is on it before anything mounts it. The
+    # device is the one disk the attach adds; blkid exits 2 when it finds no
+    # filesystem, and anything else is never formatted.
+    $before = @(Invoke-Root /usr/bin/lsblk -dn -o NAME)
+    Assert-NativeSuccess 'lsblk'
+    Invoke-WslHost -Arguments @('--mount', '--vhd', $Vhd, '--bare') -What "wsl --mount --vhd $Vhd --bare"
+    try {
+        $new = @(Invoke-Root /usr/bin/lsblk -dn -o NAME | Where-Object { $_ -notin $before })
+        if ($new.Count -ne 1) { throw "expected the attach to add one disk, found: $($new -join ', ')" }
+        $dev = "/dev/$($new[0])"
+        $found = "$(Invoke-Root /usr/sbin/blkid -o value -s TYPE $dev)".Trim()
+        $blkid = $LASTEXITCODE
+        if ($blkid -eq 2) {
+            $bytes = "$(Invoke-Root /usr/bin/lsblk -dnb -o SIZE $dev)".Trim()
+            if ($bytes -ne "$Size") { throw "$dev is $bytes bytes, not the $Size of $Vhd; refusing to format it" }
+            Write-Step "formatting $dev ($Vhd) as $Type, label $Name"
+            Invoke-Root "/usr/sbin/mkfs.$Type" -q -L $Name $dev
+            Assert-NativeSuccess "mkfs.$Type $dev"
+        } elseif ($blkid -ne 0 -or $found -ne $Type) {
+            throw "$Vhd holds '$found' (blkid exit $blkid), not $Type; refusing to touch it"
+        }
+    } finally {
+        # Never fatal here, so it cannot hide the error that brought this
+        # here; a disk it failed to detach makes the mount below fail instead.
+        Invoke-WslHost -Arguments @('--unmount', $Vhd) -AllowFailure
+    }
+
+    Write-Step "mounting $Vhd at $MountPoint"
+    Invoke-WslHost -Arguments @('--mount', '--vhd', $Vhd, '--name', $Name, '--type', $Type, '--options', $Options) `
+        -What "wsl --mount --vhd $Vhd --name $Name"
+}
+
+# --- 4. the volume's owner, and ~/repositories ----------------------------------
+
+$uid = "$(wsl.exe -d $Distro --exec id -u)".Trim()
+Assert-NativeSuccess 'id -u'
+$gid = "$(wsl.exe -d $Distro --exec id -g)".Trim()
+Assert-NativeSuccess 'id -g'
+
+# Runs inside the instance as root, as a file: the same reason wsl-update
+# writes its helper out rather than quote a script through wsl.exe's command
+# line. LF endings, since bash takes a CR as part of the line.
+$prepare = @'
+#!/bin/bash
+# Written and run by wslpersist.ps1 on the Windows side, as root; see there.
+#   <mount point> <uid> <gid> <fresh: 0 or 1>
+set -euo pipefail
+mnt=$1 uid=$2 gid=$3 fresh=$4
+home="$(getent passwd "$uid" | cut -d: -f6)"
+repos="$home/repositories"
+target="$mnt/repositories"
+
+# A new filesystem's root is root's; the volume is the user's.
+if [ "$(stat -c %u "$mnt")" = 0 ]; then
+	chown "$uid:$gid" "$mnt"
+fi
+if [ ! -d "$target" ]; then
+	install -d -o "$uid" -g "$gid" "$target"
+fi
+
+if [ -L "$repos" ]; then
+	if [ "$(readlink "$repos")" != "$target" ]; then
+		echo "warning: $repos points at $(readlink "$repos"), not $target; the next chezmoi apply repoints it" >&2
+	fi
+	exit 0
+fi
+
+if [ -d "$repos" ]; then
+	# Entry by entry: copied under a temporary name, renamed into place, and
+	# only then removed from the instance, so an interruption loses nothing and
+	# a re-run starts the interrupted entry over.
+	shopt -s dotglob nullglob
+	collisions=()
+	for src in "$repos"/*; do
+		entry="${src##*/}"
+		if [ -e "$target/$entry" ] || [ -L "$target/$entry" ]; then
+			if [ "$fresh" = 1 ]; then
+				echo "notice: $target/$entry already exists; dropping the new instance's copy" >&2
+				rm -rf -- "$src"
+			else
+				collisions+=("$entry")
+			fi
+			continue
+		fi
+		echo "debug: moving $entry ($(du -sh -- "$src" | cut -f1))" >&2
+		incoming="$target/.wslpersist-incoming.$entry"
+		rm -rf -- "$incoming"
+		cp -a -- "$src" "$incoming"
+		mv -- "$incoming" "$target/$entry"
+		rm -rf -- "$src"
+	done
+	if [ "${#collisions[@]}" -gt 0 ]; then
+		echo "error: in both $repos and $target; keep one copy of each, then run this again:" >&2
+		printf 'error:   %s\n' "${collisions[@]}" >&2
+		exit 1
+	fi
+	rmdir -- "$repos"
+fi
+
+ln -s "$target" "$repos"
+chown -h "$uid:$gid" "$repos"
+echo "notice: $repos is now a symlink to $target" >&2
+'@
+
+$work = New-TemporaryFile
+try {
+    [IO.File]::WriteAllText($work.FullName, ($prepare -replace "`r`n", "`n"), [Text.UTF8Encoding]::new($false))
+    $workWsl = "$(wsl.exe -d $Distro --exec wslpath -u $work.FullName)".Trim()
+    Assert-NativeSuccess 'wslpath'
+    Write-Step "~/repositories in $Distro"
+    Invoke-Root /bin/bash $workWsl $MountPoint $uid $gid $(if ($Fresh) { '1' } else { '0' })
+    Assert-NativeSuccess "preparing ~/repositories in $Distro"
+} finally {
+    Remove-Item -LiteralPath $work.FullName -Force -ErrorAction SilentlyContinue
+}

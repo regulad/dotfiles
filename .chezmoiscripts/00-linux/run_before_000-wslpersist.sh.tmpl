@@ -1,0 +1,34 @@
+{{ template "posix-preamble.sh" . }}
+# Guards ~/repositories, which this apply turns into a symlink onto the
+# wslpersist volume (symlink_repositories; docs/wsl.md#wslpersist). chezmoi
+# replaces a directory with a symlink by deleting it, contents and all, without
+# asking: tested with chezmoi 2.72.0 on 2026-11-24. So the apply stops here,
+# before any file is written, while ~/repositories is still a directory with
+# anything in it, and while the volume it would point at is not mounted.
+#
+# Moving it is wslpersist.ps1's work on the Windows side; wsl-deploy and
+# wsl-update run it before they apply.
+#
+# WSL-only through .chezmoiignore; checked again here, as 007 does.
+if [ "$IS_WSL" -ne 1 ]; then
+	echo "debug: not a WSL session; ~/repositories is a plain directory here" >&2
+	exit 0
+fi
+
+mnt='/mnt/wsl/{{ .wslpersist.name }}'
+repos="$HOME/repositories"
+
+if [ -d "$repos" ] && [ ! -L "$repos" ] && [ -n "$(ls -A "$repos")" ]; then
+	echo "error: $repos is a directory with contents, and this apply would delete it to put a symlink to $mnt/repositories in its place" >&2
+	echo "error: move it onto the volume from Windows first: wsl-update, or wslpersist.ps1 $WSL_DISTRO_NAME" >&2
+	exit 1
+fi
+
+if ! mountpoint -q "$mnt" && [ -x "$HOME/.local/bin/wslpersist" ]; then
+	"$HOME/.local/bin/wslpersist" || true
+fi
+if ! mountpoint -q "$mnt"; then
+	echo "error: $mnt is not mounted, so ~/repositories would point at nothing; run wsl-update from Windows" >&2
+	exit 1
+fi
+echo "debug: $mnt is mounted" >&2
