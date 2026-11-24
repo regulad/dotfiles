@@ -54,7 +54,7 @@
       "http_headers" (dict "Authorization" (printf "Bearer %s" $supabase.token.value))) -}}
 {{- /* GitHub's, read-only and down to two toolsets; see its Claude Code
        entry. */ -}}
-{{- $github := bitwardenFields "item" "github.com" -}}
+{{- $github := bitwardenFields "item" "b05e2c79-05ca-430c-9221-789ec9bc5564" -}}
 {{- $config = $config | setValueAtPath "mcp_servers.github" (dict
       "url" "https://api.githubcopilot.com/mcp/"
       "http_headers" (dict

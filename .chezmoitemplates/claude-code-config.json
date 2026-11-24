@@ -70,7 +70,7 @@
        docs, which `gh` has no command for. Everything else stays with `gh`.
        The configured Authorization header keeps Claude Code from an OAuth
        sign-in. Codex's entry is in dot_codex/modify_private_config.toml. */}}
-{{- $github := bitwardenFields "item" "github.com" }}
+{{- $github := bitwardenFields "item" "b05e2c79-05ca-430c-9221-789ec9bc5564" }}
     "github": {
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
