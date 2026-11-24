@@ -34,6 +34,11 @@ FLATPAK_PACKAGES=(
 	# the sandboxes by 021-flatpak-media-config.sh.
 	io.mpv.Mpv
 	org.videolan.VLC
+	# Bitwarden desktop, for its SSH agent: .commonprofile points SSH_AUTH_SOCK
+	# at the socket it makes under ~/.var/app/com.bitwarden.desktop once the
+	# agent is turned on in its settings, which is left to the user. Until
+	# then .commonprofile falls back to keychain.
+	com.bitwarden.desktop
 )
 
 for app in "${FLATPAK_PACKAGES[@]}"; do
