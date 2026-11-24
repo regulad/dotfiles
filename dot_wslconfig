@@ -32,6 +32,23 @@
 # out of band, which WSL undoes on every boot. Do not rely on the address.
 networkingMode=nat
 
+# Windows drives (/mnt/c, /mnt/d, ...) over virtiofs instead of WSL's default
+# Plan 9 server. Measured on 2026-11-24 against the D: Dev Drive (WSL 3.0.5,
+# kernel 6.18.58), through a wslc bind mount, which is always virtiofs: about
+# twice Plan 9's speed for clone, status, reads, stats and deletes (`git
+# status` on a 7,255-file tree went from 8.3 s to 4.9 s), and no faster at
+# creating files. Both stay one to two orders of magnitude behind a distro's
+# own ext4, where the same `git status` takes 0.03 s, so repositories worked
+# on from Linux still belong on ext4 rather than under /mnt.
+#
+# It needs wsl2.virtio and wsl2.hostFileSystemAccess, both on by default
+# (WslCoreConfig.h in microsoft/WSL). The Plan 9 share is still set up beside
+# it, and a drive virtiofs cannot share is mounted over Plan 9 instead. WSL
+# still calls it experimental: microsoft/WSL#41711 (open) reads drvfs's
+# umask and fmask as decimal under virtiofs, which .github/wsl/wsl.conf
+# sidesteps by setting only `metadata`.
+virtiofs=true
+
 [experimental]
 # Every new distro's ext4.vhdx is created as a sparse file, so space freed
 # inside it comes back to C: within seconds: ext4 mounts with discard, and a
