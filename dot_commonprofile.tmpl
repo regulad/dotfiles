@@ -291,6 +291,16 @@ case "$_agent_os" in
       # time anything connects to it. WSL_DISTRO_NAME rather than
       # /proc/version, which containers on a WSL-backed host share.
       export SSH_AUTH_SOCK="$HOME/.wsl-ssh-agent.sock"
+      _agent_pinned=1
+    elif [ -d /var/lib/flatpak/app/com.bitwarden.desktop ]; then
+      # Bitwarden's Flatpak (01-fedora/020-flatpak-packages): set
+      # unconditionally, not probed, as WSL's relay is. The desktop session
+      # takes its environment from this login shell, which runs before
+      # Bitwarden's autostart has made the socket; a probe there settled on
+      # keychain for the whole session. With Bitwarden closed, ssh fails to
+      # connect rather than falling back to keychain.
+      export SSH_AUTH_SOCK="$HOME/.var/app/com.bitwarden.desktop/data/.bitwarden-ssh-agent.sock"
+      _agent_pinned=1
     else
       for _agent_sock in \
         "$HOME/.bitwarden-ssh-agent.sock" \
@@ -336,16 +346,19 @@ export HOMEBREW_NO_ENV_HINTS=1
 # stalls. Mirrored for Windows in registry-user.reg.
 export UV_HTTP_TIMEOUT=300
 
-# keychain is the fallback for a host with no agent socket. Never on WSL: the
-# relay socket above is the agent there even before it exists, and the WSL
-# images ship without keychain (see .github/workflows/wsl-package.yml).
-if [ -z "${WSL_DISTRO_NAME:-}" ] && { [ -z "${SSH_AUTH_SOCK:-}" ] || [ ! -S "${SSH_AUTH_SOCK:-}" ]; }; then
+# keychain is the fallback for a host with no agent socket. Never where the
+# case above pinned the agent's path without probing (_agent_pinned): WSL's
+# relay and Bitwarden's Flatpak are the agent there even before their socket
+# exists, and the WSL images ship without keychain (see
+# .github/workflows/wsl-package.yml).
+if [ -z "${_agent_pinned:-}" ] && { [ -z "${SSH_AUTH_SOCK:-}" ] || [ ! -S "${SSH_AUTH_SOCK:-}" ]; }; then
   if command -v keychain >/dev/null 2>&1; then
     eval "$(keychain --eval --quiet --noask)"
   else
     echo "warning: no Bitwarden SSH agent socket found, and keychain is not installed; SSH_AUTH_SOCK not set" >&2
   fi
 fi
+unset _agent_pinned
 
 # AWS
 export AWS_ENDPOINT_URL=https://s3.regulad.xyz
