@@ -25,7 +25,12 @@
 # Linux: the --user Flatpak from 01-fedora/020-flatpak-packages. Discord runs
 # from the Flatpak's deployment, which every Flatpak update replaces. The
 # installer resolves the active deployment and lets the sandbox read the build
-# (flatpak --user override --filesystem).
+# (flatpak --user override --filesystem), but only while it injects. The
+# override can go without the stub going too (`flatpak uninstall
+# --delete-data` or `flatpak override --reset`, say), and Discord then dies at
+# startup on a patcher.js it cannot see, with no window and no error shown.
+# So inject grants the sandbox read access to dist/ itself, every time, stub
+# or no stub.
 set -e
 
 VENCORD_DIR="$HOME/repositories/Vencord"
@@ -50,12 +55,33 @@ injected() {
         grep -qF 'repositories/Vencord/dist/patcher.js' "$RESOURCES/app.asar" 2>/dev/null
 }
 
+# Lets the Discord Flatpak read the build the stub loads. The path is resolved
+# (on Fedora Atomic $HOME is under /var/home, behind the /home symlink), as
+# the installer writes it into the stub. A failure only warns: the installer
+# may yet grant it.
+grant_sandbox_access() {
+    dist="$(cd "$VENCORD_DIR/dist" 2>/dev/null && pwd -P)" || dist="$VENCORD_DIR/dist"
+    if flatpak override --user --show com.discordapp.Discord 2>/dev/null |
+        grep -E '^filesystems=' | tr ';' '\n' | sed 's/^filesystems=//' |
+        grep -qxF -e "$dist" -e "$dist:ro"; then
+        return 0
+    fi
+    if flatpak override --user --filesystem="$dist:ro" com.discordapp.Discord; then
+        echo "notice: let the Discord Flatpak read $dist" >&2
+    else
+        echo "warning: could not let the Discord Flatpak read $dist; Discord will not start with Vencord injected" >&2
+    fi
+}
+
 # Returns 0 when injected, 1 when it could not be, 2 when there is no Discord
 # to inject into.
 do_inject() {
     if [ ! -d "$RESOURCES" ]; then
         echo "notice: Discord is not installed at $DISCORD_LOCATION; not injecting Vencord" >&2
         return 2
+    fi
+    if [ "$PLATFORM" = Linux ]; then
+        grant_sandbox_access
     fi
     if injected; then
         echo "debug: Vencord is already injected into Discord" >&2
