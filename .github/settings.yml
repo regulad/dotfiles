@@ -21,3 +21,37 @@ repository:
 
   enable_automated_security_fixes: false
   enable_vulnerability_alerts: false
+
+  # workflows/dependabot-auto-merge.yml turns it on for Dependabot's minor and patch updates.
+  allow_auto_merge: true
+
+labels:
+  # Dependabot's, on its pull requests: its one ecosystem here is .github/dependabot.yml's GitHub Actions.
+  - name: github_actions
+    color: "000000"
+    description: Pull requests that update GitHub Actions code
+
+branches:
+  - name: master
+    # https://docs.github.com/en/rest/reference/repos#update-branch-protection
+    # Branch Protection settings. Set to null to disable
+    protection:
+      # Required. Require at least one approving review on a pull request, before merging. Set to null to disable.
+      # Off: Dependabot's minor and patch updates merge on the required checks alone.
+      required_pull_request_reviews: null
+      # Required. Require status checks to pass before merging. Set to null to disable
+      required_status_checks:
+        # Required. Require branches to be up to date before merging.
+        # Off: Dependabot doesn't rebase a PR just because master moved, so a stale PR would never merge.
+        strict: false
+        # Required. The list of status checks to require in order to merge into this branch
+        # The job in workflows/check.yml, by name.
+        contexts:
+          - actionlint
+      # Required. Enforce all configured restrictions for administrators. Set to true to enforce required status checks for repository administrators. Set to null to disable.
+      # Off: Parker still pushes to master directly.
+      enforce_admins: false
+      # Required. Restrict who can push to this branch. Team and user restrictions are only available for organization-owned repositories. Set to null to disable.
+      # Off: this is a personal repository, where GitHub rejects user and team restrictions, and with them the whole
+      # protection.
+      restrictions: null

@@ -1,0 +1,38 @@
+name: Check
+
+# The check every pull request must pass before it merges (.github/settings.yml's required checks), which Dependabot's
+# GitHub Actions updates need before dependabot-auto-merge.yml's auto-merge lets GitHub merge them. The pipelines
+# themselves deliberately don't run on pull requests, so this lints the workflows instead, with actionlint (and the
+# shellcheck it runs over each `run:` step). .github/actionlint.yaml lists the findings it ignores.
+on:
+  pull_request:
+    branches: ["master"]
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # actionlint's docs recommend its download script, scripts/download-actionlint.bash, but the script pipes curl
+      # straight into tar and checks nothing, and the release isn't marked immutable, so a checksums file fetched from
+      # it at run time would vouch only for itself. This step downloads the same release tarball the script would and
+      # checks it against its SHA-256, copied from that release's actionlint_1.7.12_checksums.txt (it matches GitHub's
+      # own digest of the asset). Dependabot doesn't update it: change the version and the hash together.
+      - name: Download actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          tarball="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl -fsSLO "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${tarball}"
+          echo "${ACTIONLINT_SHA256}  ${tarball}" | sha256sum -c -
+          tar -xzf "${tarball}" actionlint
+      # The runner image ships shellcheck, which actionlint runs over each `run:` step.
+      - name: Run actionlint
+        run: ./actionlint -color

@@ -1,0 +1,23 @@
+# Dependabot keeps the GitHub Actions the workflows use current. That is its only ecosystem here, by Parker's decision
+# of 2026-11-24.
+#
+# Minor and patch updates come in one PR a week, which workflows/dependabot-auto-merge.yml has GitHub merge once the
+# required check passes; a merge to master starts the pipelines, as any push does. Major updates come as PRs of their
+# own and wait for a person.
+#
+# The cooldown holds each release back until it is two weeks old, so nothing ships while it's days old.
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+      timezone: "America/New_York"
+    cooldown:
+      default-days: 14
+    groups:
+      actions:
+        update-types: ["minor", "patch"]

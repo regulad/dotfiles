@@ -1,0 +1,10 @@
+# actionlint's configuration, for workflows/check.yml. Each entry silences one finding that is known to be wrong.
+paths:
+  .github/workflows/docker-publish.yml:
+    ignore:
+      # GitHub's concurrency `queue` key, which actionlint 1.7.12 doesn't know yet.
+      - 'unexpected key "queue" for "concurrency" section'
+  .github/workflows/macos-apply.yml:
+    ignore:
+      # The single quotes are deliberate: the inner zsh expands those variables, not the step's bash.
+      - 'SC2016:'
