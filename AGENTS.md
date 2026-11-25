@@ -4,7 +4,7 @@ Operational conventions for any agent working in this chezmoi source directory. 
 
 ## Worktrees
 
-- Keep worktrees outside the chezmoi source directory, for example in sibling `../chezmoi-worktrees/`. Chezmoi loads `.chezmoitemplates` and `.chezmoidata` from nested worktrees too, even under `.claude/`, before applying `.chezmoiignore`; their older copies can silently override the main source's templates and data. Verify changes using the main source after moving any nested worktrees with `git worktree move`.
+- Put a worktree of this repository at `~/repositories/dotfiles_<name>`, `<name>` a short form of its branch (`git worktree add ~/repositories/dotfiles_exports homelab-exports`), next to `~/repositories/dotfiles`, the link to the main source that the repositories-dotfiles hookscript makes. Never inside the chezmoi source directory, `.claude/worktrees/` included: chezmoi loads `.chezmoitemplates` and `.chezmoidata` from nested worktrees too, even under `.claude/`, before applying `.chezmoiignore`; their older copies can silently override the main source's templates and data. Verify changes using the main source after moving any nested worktrees with `git worktree move`.
 
 ## Applying changes
 
