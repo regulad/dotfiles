@@ -104,7 +104,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    uses: docker/github-builder/.github/workflows/build.yml@v1
+    uses: docker/github-builder/.github/workflows/build.yml@bb1eb9fb69408ac52395fb21f49c6b52d564529a # v1.20.0
     with:
       output: image
       push: ${{ github.event_name != 'pull_request' }}
@@ -162,7 +162,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    uses: docker/github-builder/.github/workflows/build.yml@v1
+    uses: docker/github-builder/.github/workflows/build.yml@bb1eb9fb69408ac52395fb21f49c6b52d564529a # v1.20.0
     with:
       output: image
       push: ${{ github.event_name != 'pull_request' }}
@@ -205,7 +205,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    uses: docker/github-builder/.github/workflows/build.yml@v1
+    uses: docker/github-builder/.github/workflows/build.yml@bb1eb9fb69408ac52395fb21f49c6b52d564529a # v1.20.0
     with:
       output: image
       push: ${{ github.event_name != 'pull_request' }}
@@ -249,7 +249,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    uses: docker/github-builder/.github/workflows/build.yml@v1
+    uses: docker/github-builder/.github/workflows/build.yml@bb1eb9fb69408ac52395fb21f49c6b52d564529a # v1.20.0
     with:
       output: image
       push: ${{ github.event_name != 'pull_request' }}
