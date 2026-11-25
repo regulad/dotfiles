@@ -19,4 +19,9 @@ crates = [
     # ~/.bootstrap.sh, and VTE terminals through ~/.zshrc. Windows Terminal
     # handles both itself. Replaces osc52pty (2026-11-25).
     { name = "terminal_polyfill", git = "https://github.com/regulad/terminal_polyfill", rev = "1766187db0989a224326debc34540a13b08d38f6", os = ["darwin", "linux"] },
+    # Desktop notifications from Claude Code's hooks where no terminal carries
+    # OSC 777: the VS Code extension's native panel (claude-settings.json).
+    # Built on notify-rust, like terminal_polyfill. main rather than
+    # crates.io's 0.5.4 (2023): main is on notify-rust 4.18.
+    { name = "toastify", git = "https://github.com/hoodie/toastify", rev = "710440e950edd2c8006df8cd846fc9bbf2daaf48" },
 ]

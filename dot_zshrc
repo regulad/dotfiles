@@ -6,9 +6,25 @@
 # terminal's child pid, so Ptyxis still sees the same process.
 # terminal_polyfill sets TERM_POLYFILL=1, which stops the inner shell (and
 # anything it starts) from wrapping again.
-if [[ -o interactive && -t 0 && -n $VTE_VERSION && -z $TERM_POLYFILL && -z $TMUX ]] \
+# VS Code's integrated terminal ignores OSC 777 too (2026-11-25, 1.147), so it
+# is wrapped as well, but only on this machine: a remote window's terminal
+# (VSCODE_IPC_HOOK_CLI, set by VS Code's server for its `code` CLI) runs on a
+# host with no desktop to notify. VS Code's shell integration sources this
+# file from its own .zshrc and loads itself afterwards, which exec would skip,
+# so the inner zsh starts again from VS Code's ZDOTDIR and the integration
+# loads there. vscode-settings.json clears an inherited TERM_POLYFILL, as
+# when VS Code was started from a wrapped shell. A VS Code started from Ptyxis
+# also inherits VTE_VERSION, so VS Code is checked first.
+if [[ -o interactive && -t 0 && -z $TERM_POLYFILL && -z $TMUX ]] \
     && (( $+commands[terminal_polyfill] )); then
-    exec terminal_polyfill zsh
+    if [[ $TERM_PROGRAM == vscode ]]; then
+        if [[ -z $VSCODE_IPC_HOOK_CLI ]]; then
+            [[ -n $VSCODE_ZDOTDIR ]] && export ZDOTDIR=$VSCODE_ZDOTDIR
+            exec terminal_polyfill zsh
+        fi
+    elif [[ -n $VTE_VERSION ]]; then
+        exec terminal_polyfill zsh
+    fi
 fi
 
 # run once: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"

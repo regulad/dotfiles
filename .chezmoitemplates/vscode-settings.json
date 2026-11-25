@@ -49,6 +49,35 @@
 	},
 	"python.showStartPage": false,
 	"terminal.integrated.tabs.enabled": true,
+{{- /* The bell from Claude Code's Stop and Notification hooks
+       (claude-settings.json) marks the terminal's tab: the integrated
+       terminal shows no toast for their OSC 777 (2026-11-25, VS Code 1.147).
+       enableVisualBell is the toggle for the tab's bell icon, shown for
+       bellDuration (VS Code's default, set explicitly); enableBell is
+       deprecated, and VS Code migrates it into this file on its own. The
+       sound is its own signal, whose default "auto" plays only under a
+       screen reader; announcement keeps its default. */}}
+	"terminal.integrated.enableVisualBell": true,
+	"terminal.integrated.bellDuration": 1000,
+{{- /* dot_zshrc wraps the integrated terminal's shell in terminal_polyfill
+       for OSC 777; an inherited TERM_POLYFILL (VS Code started from a
+       wrapped shell) would stop it, so the terminal's environment drops it
+       (null removes a variable). */}}
+	"terminal.integrated.env.linux": {
+		"TERM_POLYFILL": null
+	},
+	"terminal.integrated.env.osx": {
+		"TERM_POLYFILL": null
+	},
+{{- /* The tab's title comes from the title the shell or program sets
+       (OSC 0/2: oh-my-zsh, Claude Code), which terminal_polyfill passes
+       through. The default "${process}" is the pty's foreground process,
+       always terminal_polyfill once dot_zshrc wraps the shell. */}}
+	"terminal.integrated.tabs.title": "${sequence}",
+	"accessibility.signals.terminalBell": {
+		"sound": "on",
+		"announcement": "auto"
+	},
 	"remote.extensionKind": {
 		"asvetliakov.vscode-neovim": ["workspace"]
 	},

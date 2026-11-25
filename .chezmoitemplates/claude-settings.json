@@ -74,10 +74,18 @@
        an escape sequence it reaches the terminal you are looking at over ssh
        too. tmux passes it on with allow-passthrough (dot_tmux.conf.tmpl).
        preferredNotifChannel is off so Claude Code's own channel, which also
-       sends Ghostty a notification, doesn't double every toast. The hooks
+       sends Ghostty a notification, doesn't double every toast. "auto" did
+       nothing in VS Code's panel or integrated terminal either (2026-11-25);
+       VS Code's notifications are to come from hooks of our own. The hooks
        print fixed JSON: the escapes stay \u text for Claude Code to decode, so
        no shell interprets them. Synchronous, since terminalSequence is
-       ignored from an async hook. */}}
+       ignored from an async hook.
+       The VS Code extension's native panel has no terminal, so the second
+       hook shows the same text as a desktop notification with toastify
+       (.chezmoidata/cargo-tools.toml), only when the extension started the
+       session (CLAUDE_CODE_ENTRYPOINT is claude-vscode, "cli" in a
+       terminal), so terminal sessions don't get it twice. The if keeps its
+       exit status 0 elsewhere. Async, as it hands Claude Code nothing. */}}
 {{- $toasts := dict "Stop" "Response ready" "Notification" "Needs your attention" }}
   "preferredNotifChannel": "notifications_disabled",
   "hooks": {
@@ -96,6 +104,17 @@
             "command": {{ printf "printf '%%s\\n' '%s'" $json | toJson }},
 {{-   end }}
             "timeout": 5
+          },
+          {
+            "type": "command",
+{{-   if eq $.chezmoi.os "windows" }}
+            "shell": "powershell",
+            "command": {{ printf "if ($env:CLAUDE_CODE_ENTRYPOINT -eq 'claude-vscode') { toastify send 'Claude Code' '%s' }" (index $toasts $event) | toJson }},
+{{-   else }}
+            "command": {{ printf "if [ \"$CLAUDE_CODE_ENTRYPOINT\" = claude-vscode ]; then toastify send 'Claude Code' '%s'; fi" (index $toasts $event) | toJson }},
+{{-   end }}
+            "async": true,
+            "timeout": 10
           }
         ]
       }
