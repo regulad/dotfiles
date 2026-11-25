@@ -1,3 +1,0 @@
-Host matrix
-     ProxyCommand cloudflared access ssh --hostname %h
-     HostName ssh-matrix.regulad.xyz

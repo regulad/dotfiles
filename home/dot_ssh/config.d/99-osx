@@ -1,5 +1,8 @@
 # macOS hosts.
 #
+# overture's block, with the same RemoteCommand, comes from regulad/homelab
+# (98-homelab; docs/homelab-exports.md).
+#
 # A plain ssh login on a Mac lands in a shell whose Mach bootstrap namespace is
 # the sshd's, not the console user's, so the pasteboard (pbcopy/pbpaste),
 # `open`, and anything else that talks to the user's WindowServer/launchd
@@ -14,16 +17,10 @@
 # account's login shell, and -l makes it a login shell so the usual profile
 # chain still runs.
 #
-# RemoteCommand applies to every connection, so `ssh overture <cmd>`, scp,
+# RemoteCommand applies to every connection, so `ssh minintosh <cmd>`, scp,
 # sftp and rsync fail with "Cannot execute command-line and remote command".
-# Escape hatch: `ssh -o RemoteCommand=none overture <cmd>` (and the same -o
+# Escape hatch: `ssh -o RemoteCommand=none minintosh <cmd>` (and the same -o
 # through scp/rsync's -e).
-
-Host overture
-    HostName overture.tail11540.ts.net
-    ForwardAgent yes
-    RequestTTY yes
-    RemoteCommand r=$(command -v reattach-to-user-namespace || echo /opt/homebrew/bin/reattach-to-user-namespace); [ -x "$r" ] && exec "$r" "$SHELL" -l; exec "$SHELL" -l
 
 Host minintosh
     HostName minintosh.tail11540.ts.net
