@@ -15,6 +15,15 @@ if [ "$IS_WSL" -ne 1 ]; then
 	exit 0
 fi
 
+# wsl-package.yml's apply in a chroot that stands in for WSL, on a GitHub
+# runner: there is no volume there, and .chezmoiignore.tmpl leaves
+# ~/repositories a plain directory, which the image ships for wslpersist.ps1
+# -Fresh to move onto the volume when wsl-deploy imports it.
+if [ "${RUNNER_ENVIRONMENT:-}" = "github-hosted" ]; then
+	echo "notice: packaging on a GitHub runner; ~/repositories stays a plain directory until wsl-deploy moves it onto the volume" >&2
+	exit 0
+fi
+
 mnt='/mnt/wsl/{{ .wslpersist.name }}'
 repos="$HOME/repositories"
 

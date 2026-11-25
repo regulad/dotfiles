@@ -207,8 +207,10 @@ autorun.cmd
 AppData
 Winaero Tweaker.ini
 # ~/repositories is a symlink on Windows and in WSL (symlink_repositories), and
-# a plain directory everywhere else.
-{{- if eq (env "WSL_DISTRO_NAME") "" }}
+# a plain directory everywhere else, the WSL tarballs' packaging included: on a
+# GitHub runner (RUNNER_ENVIRONMENT, as in brew-mirror-env.sh) there is no
+# wslpersist volume, and 00-linux/000-wslpersist steps aside there too.
+{{- if or (eq (env "WSL_DISTRO_NAME") "") (eq (env "RUNNER_ENVIRONMENT") "github-hosted") }}
 repositories
 {{- end }}
 {{- else }}
