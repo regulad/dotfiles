@@ -28,28 +28,43 @@ labels:
     color: "000000"
     description: Pull requests that update GitHub Actions code
 
-# master's protection: its required check is what a pull request, Dependabot's included, passes before it merges.
+# master's protection is a ruleset, not branch protection: branch protection's
+# required checks bind every user but an admin, and a personal repository's
+# collaborators can't be admins. regubot, a collaborator declared in homelab's
+# tofu/github, commits homelab's exports straight to master
+# (docs/homelab-exports.md). null removes the branch protection; leaving the
+# entry out would keep it.
 branches:
   - name: master
-    # https://docs.github.com/en/rest/reference/repos#update-branch-protection
-    # Branch Protection settings. Set to null to disable
-    protection:
-      # Required. Require at least one approving review on a pull request, before merging. Set to null to disable.
-      # Off: Parker merges Dependabot's updates himself.
-      required_pull_request_reviews: null
-      # Required. Require status checks to pass before merging. Set to null to disable
-      required_status_checks:
-        # Required. Require branches to be up to date before merging.
-        # Off: Dependabot doesn't rebase a PR just because master moved, so a stale PR would never merge.
-        strict: false
-        # Required. The list of status checks to require in order to merge into this branch
-        # The job in workflows/check.yml, by name.
-        contexts:
-          - actionlint
-      # Required. Enforce all configured restrictions for administrators. Set to true to enforce required status checks for repository administrators. Set to null to disable.
-      # Off: Parker still pushes to master directly.
-      enforce_admins: false
-      # Required. Restrict who can push to this branch. Team and user restrictions are only available for organization-owned repositories. Set to null to disable.
-      # Off: this is a personal repository, where GitHub rejects user and team restrictions, and with them the whole
-      # protection.
-      restrictions: null
+    protection: null
+
+# https://docs.github.com/en/rest/repos/rules#update-a-repository-ruleset
+rulesets:
+  - name: master requires actionlint
+    target: branch
+    enforcement: active
+    conditions:
+      ref_name:
+        include:
+          - "~DEFAULT_BRANCH"
+        exclude: []
+    rules:
+      # What a pull request, Dependabot's included, passes before it merges:
+      # the job in workflows/check.yml, by name.
+      - type: required_status_checks
+        parameters:
+          # Off: Dependabot doesn't rebase a PR just because master moved, so a
+          # stale PR would never merge.
+          strict_required_status_checks_policy: false
+          required_status_checks:
+            - context: actionlint
+    bypass_actors:
+      # The admin role: Parker still pushes to master directly.
+      - actor_id: 5
+        actor_type: RepositoryRole
+        bypass_mode: always
+      # The write role, which every collaborator of a personal repository has:
+      # regubot, the only one.
+      - actor_id: 4
+        actor_type: RepositoryRole
+        bypass_mode: always
