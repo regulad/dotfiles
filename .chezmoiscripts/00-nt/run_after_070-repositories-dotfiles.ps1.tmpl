@@ -1,0 +1,39 @@
+# ~/repositories\dotfiles: a symlink to this chezmoi source, so the clone sits
+# with the other repositories. The Windows counterpart of
+# 00-{linux,macos}/002-repositories-dotfiles; the reasons are in
+# .chezmoitemplates/repositories-dotfiles.sh. ~/repositories is the D: Dev
+# Drive here (symlink_repositories), and the link points back at C:.
+#
+# mklink rather than New-Item, which in Windows PowerShell needs elevation for
+# a symlink, as in 600-vencord.
+
+Write-Host 'debug: entering hookscript'
+$ReposDir = Join-Path $HOME 'repositories'
+$Link = Join-Path $ReposDir 'dotfiles'
+$Source = [IO.Path]::GetFullPath({{ .chezmoi.workingTree | squote }})
+
+if (-not (Test-Path -LiteralPath $ReposDir)) {
+    New-Item -ItemType Directory -Path $ReposDir | Out-Null
+}
+
+$Item = Get-Item -LiteralPath $Link -Force -ErrorAction SilentlyContinue
+if ($Item -and $Item.LinkType -eq 'SymbolicLink') {
+    $Target = [string]($Item.Target | Select-Object -First 1)
+    if ($Target -eq $Source) {
+        Write-Host "debug: $Link already points at $Source"
+        exit 0
+    }
+    Write-Host "notice: $Link pointed at $Target; repointing it at $Source"
+    cmd /c rmdir "$Link"
+} elseif ($Item) {
+    Write-Host "warning: $Link exists and is not a symlink; leaving it, so it does not point at $Source"
+    exit 0
+} else {
+    Write-Host "notice: linking $Link to $Source"
+}
+
+cmd /c mklink /D "$Link" "$Source" | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "error: mklink could not create $Link (exit $LASTEXITCODE); symlinks need Developer Mode or elevation"
+    exit 1
+}

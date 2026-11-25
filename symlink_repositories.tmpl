@@ -2,7 +2,9 @@
        instance, the wslpersist volume, which outlives the instance
        (docs/wsl.md#wslpersist); wslpersist.ps1 makes the same link when it
        moves an instance's directory onto it. A plain directory everywhere
-       else, through .chezmoiignore.tmpl. */ -}}
+       else, through .chezmoiignore.tmpl. On every platform the hookscript
+       repositories-dotfiles (.chezmoitemplates/repositories-dotfiles.sh)
+       adds ~/repositories/dotfiles, a link to the chezmoi source. */ -}}
 {{- if eq .chezmoi.os "windows" -}}
 D:/repositories/
 {{- else -}}
