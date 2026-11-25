@@ -65,6 +65,43 @@
     "pr": "",
     "sessionUrl": true
   },
+{{- /* Toasts and a bell: when Claude finishes (Stop) and when it waits on
+       you (Notification), a hook hands Claude Code BEL plus OSC 777;notify
+       in terminalSequence, which Claude Code writes to the terminal itself;
+       hooks have no controlling tty of their own. OSC 777 is the one
+       notification sequence both Ghostty and Windows Terminal (1.26 on, with
+       allowOSC777 in windows-terminal-settings.json) show as a toast, and as
+       an escape sequence it reaches the terminal you are looking at over ssh
+       too. tmux passes it on with allow-passthrough (dot_tmux.conf.tmpl).
+       preferredNotifChannel is off so Claude Code's own channel, which also
+       sends Ghostty a notification, doesn't double every toast. The hooks
+       print fixed JSON: the escapes stay \u text for Claude Code to decode, so
+       no shell interprets them. Synchronous, since terminalSequence is
+       ignored from an async hook. */}}
+{{- $toasts := dict "Stop" "Response ready" "Notification" "Needs your attention" }}
+  "preferredNotifChannel": "notifications_disabled",
+  "hooks": {
+{{- range $i, $event := list "Notification" "Stop" }}
+{{-   $json := printf `{"terminalSequence":"\u0007\u001b]777;notify;Claude Code;%s\u0007"}` (index $toasts $event) }}
+{{-   if $i }},{{ end }}
+    {{ $event | toJson }}: [
+      {
+        "hooks": [
+          {
+            "type": "command",
+{{-   if eq $.chezmoi.os "windows" }}
+            "shell": "powershell",
+            "command": {{ printf "Write-Output '%s'" $json | toJson }},
+{{-   else }}
+            "command": {{ printf "printf '%%s\\n' '%s'" $json | toJson }},
+{{-   end }}
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+{{- end }}
+  },
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/statusline-command.sh"

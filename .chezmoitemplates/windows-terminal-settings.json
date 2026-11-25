@@ -46,6 +46,10 @@
                 "taskbar"
             ],
             "colorScheme": "CGA",
+{{- /* OSC 777;notify as a toast, for Claude Code's hooks
+       (claude-settings.json). Windows Terminal 1.26 and later; 1.25 and
+       earlier don't know the key and ignore it. */}}
+            "compatibility.allowOSC777": true,
             "experimental.retroTerminalEffect": false,
             "showMarksOnScrollbar": true,
             "altGrAliasing": true,

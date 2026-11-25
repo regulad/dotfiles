@@ -11,3 +11,14 @@ set -g mouse on
 {{- if eq .chezmoi.os "darwin" }}
 set-option -g default-command "{{ .homebrewPrefix }}/bin/reattach-to-user-namespace -l {{ .homebrewPrefix }}/bin/zsh"
 {{- end }}
+
+# Lets a pane's escape sequences reach the outer terminal, wrapped as tmux's
+# DCS passthrough: Claude Code's OSC 777 toasts (claude-settings.json's hooks)
+# among them. `all` passes them from panes not on screen too, so a session in
+# another window still notifies; it needs tmux 3.4, and the Catalina and Big
+# Sur brew eras (.chezmoidata/brew-tiers.toml) pin 3.3a, which has only `on`.
+{{- $era := "" }}
+{{- if eq .chezmoi.os "darwin" }}
+{{-   $era = (index .brewTiers.legacy (printf "%s-%s" .macos.series .chezmoi.arch) | default dict).era | default "" }}
+{{- end }}
+set -g allow-passthrough {{ if has $era (list "catalina" "bigsur") }}on{{ else }}all{{ end }}
