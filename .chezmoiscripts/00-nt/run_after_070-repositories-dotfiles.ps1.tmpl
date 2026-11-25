@@ -12,13 +12,18 @@ $ReposDir = Join-Path $HOME 'repositories'
 $Link = Join-Path $ReposDir 'dotfiles'
 $Source = [IO.Path]::GetFullPath({{ .chezmoi.workingTree | squote }})
 
-# Test-Path follows the link, so a link to a D: that has no repositories
-# folder (no Dev Drive yet, or a CI runner) reads as missing, and New-Item
-# cannot create a directory through it.
+# ~/repositories is a link to D:\repositories, which a machine without the
+# Dev Drive, and a CI runner, lacks. Test-Path on the link itself only says the
+# link exists, so its target is tested instead: nothing can be created through
+# a link that points at nothing (mklink: "The system cannot find the path
+# specified").
 $ReposItem = Get-Item -LiteralPath $ReposDir -Force -ErrorAction SilentlyContinue
-if ($ReposItem -and $ReposItem.LinkType -and -not (Test-Path -LiteralPath $ReposDir)) {
-    Write-Host "warning: $ReposDir links to $($ReposItem.Target), which does not exist (050-dev-drive); no dotfiles link this time"
-    exit 0
+if ($ReposItem -and $ReposItem.LinkType) {
+    $ReposTarget = [string]($ReposItem.Target | Select-Object -First 1)
+    if (-not (Test-Path -LiteralPath $ReposTarget -PathType Container)) {
+        Write-Host "warning: $ReposDir links to $ReposTarget, which does not exist (050-dev-drive); no dotfiles link this time"
+        exit 0
+    }
 }
 if (-not $ReposItem) {
     New-Item -ItemType Directory -Path $ReposDir | Out-Null
