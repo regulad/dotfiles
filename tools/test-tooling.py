@@ -198,9 +198,10 @@ def main():
             for name, attempted in (("110-rust-tooling", "cargo install --locked"), ("120-go-tooling", "go install ")):
                 text = render(f".chezmoiscripts/00-{host}/run_after_{name}.sh.tmpl", data)
                 assert attempted in text and 'no tools are installed through it' not in text
+                if name == "110-rust-tooling":
+                    assert 'cargo install --locked --git https://github.com/regulad/terminal_polyfill --rev ' in text
                 if name == "120-go-tooling":
                     assert 'export GOTOOLCHAIN=auto' in text
-                    assert 'go install github.com/regulad/osc52pty@master' in text
                 scripts.append(text)
             text = render(f".chezmoiscripts/00-{host}/run_after_101-pre-commit-templatedir.sh.tmpl", data)
             assert 'pre-commit init-templatedir --color never --hook-type pre-commit --hook-type commit-msg --hook-type pre-push "$TEMPLATE_DIR"' in text

@@ -36,6 +36,14 @@
 # applied it. Safe to prune from this file once every Mac has applied once.
 Library/LaunchAgents/xyz.regulad.xmrig.plist
 
+# osc52pty, the Go OSC 52 shim that 120-go-tooling installed into ~/go/bin,
+# was replaced by terminal_polyfill (cargo-tools.toml) on 2026-11-25, and its
+# fork is archived. On a Mac, Terminal.app's profile runs it as its startup
+# command, set by hand (~/.bootstrap.sh): switch that to terminal_polyfill, or
+# new Terminal.app windows fail to start. Safe to prune from this file once
+# every machine has applied once.
+go/bin/osc52pty
+
 # Hook-only inputs moved to .chezmoidata/vim.toml and encrypted payloads in
 # .chezmoitemplates/secrets. Imports now use private temporary files.
 .coc-extensions.txt

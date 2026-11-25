@@ -7,7 +7,10 @@ The Python, JavaScript, Rust and Go tools are listed once, in
 `120-go-tooling` through the shared `js-tooling.sh`, `python-tooling.sh`,
 `rust-tooling.sh` and `go-tooling.sh` templates, and Windows' `500-python`,
 `550-cargo`, `560-go-tooling` and `570-pnpm-tooling`. Each file's header
-describes its fields; an `os` list keeps an entry to some platforms.
+describes its fields; an `os` list keeps an entry to some platforms. A Cargo
+entry with `git` and `rev` installs a crate that isn't on crates.io straight
+from its repository, pinned to a full commit SHA: terminal_polyfill, which
+`.zshrc` and Terminal.app's `~/.bootstrap.sh` wrap the shell in.
 
 On Windows, Go's workspace and build cache are on the D: Dev Drive with the
 other package caches: `GOPATH` is `D:\packages\go` (tools in its `bin`, which

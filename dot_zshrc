@@ -1,13 +1,14 @@
-# VTE terminals (Ptyxis, GNOME Terminal) ignore OSC 52, so a copy from nvim,
-# tmux, Claude Code or an ssh session never reaches the clipboard. Re-run the
-# shell under osc52pty, which catches the sequence and hands the text to
-# wl-copy/xclip itself, as Terminal.app does on macOS via ~/.bootstrap.sh.
-# exec keeps the terminal's child pid, so Ptyxis still sees the same process.
-# OSC52PTY stops the inner shell (and anything it starts) from wrapping again.
-if [[ -o interactive && -t 0 && -n $VTE_VERSION && -z $OSC52PTY && -z $TMUX ]] \
-    && (( $+commands[osc52pty] )); then
-    export OSC52PTY=1
-    exec osc52pty zsh
+# VTE terminals (Ptyxis, GNOME Terminal) ignore OSC 52 and OSC 777, so a copy
+# from nvim, tmux, Claude Code or an ssh session never reaches the clipboard,
+# and Claude Code's notifications never show. Re-run the shell under
+# terminal_polyfill (.chezmoidata/cargo-tools.toml), which carries out both
+# itself, as Terminal.app does on macOS via ~/.bootstrap.sh. exec keeps the
+# terminal's child pid, so Ptyxis still sees the same process.
+# terminal_polyfill sets TERM_POLYFILL=1, which stops the inner shell (and
+# anything it starts) from wrapping again.
+if [[ -o interactive && -t 0 && -n $VTE_VERSION && -z $TERM_POLYFILL && -z $TMUX ]] \
+    && (( $+commands[terminal_polyfill] )); then
+    exec terminal_polyfill zsh
 fi
 
 # run once: sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"

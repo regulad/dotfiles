@@ -43,16 +43,20 @@ echo debug: installing cargo tooling
 {{- range .cargoTools.crates }}
 {{-   $os := get . "os" }}
 {{-   if or (not $os) (has "windows" $os) }}
+{{-     if get . "git" }}
+call :cargoinstall --git {{ .git }} --rev {{ .rev }} {{ .name }} || goto :cargo_install_failed
+{{-     else }}
 call :cargoinstall {{ .name }} || goto :cargo_install_failed
+{{-     end }}
 {{-   end }}
 {{- end }}
 
 goto :eof
 
 :cargoinstall
-cargo install --locked %1
+cargo install --locked %*
 if errorlevel 1 (
-    echo error: cargo install %1 failed 1>&2
+    echo error: cargo install %* failed 1>&2
     exit /b 1
 )
 exit /b 0

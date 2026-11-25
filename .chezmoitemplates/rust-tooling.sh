@@ -3,6 +3,10 @@
 {{- range .cargoTools.crates }}
 {{-   $os := get . "os" }}
 {{-   if or (not $os) (has $.chezmoi.os $os) }}
+{{-     if get . "git" }}
+cargo install --locked --git {{ .git }} --rev {{ .rev }} {{ .name }}
+{{-     else }}
 cargo install --locked {{ .name }}
+{{-     end }}
 {{-   end }}
 {{- end }}

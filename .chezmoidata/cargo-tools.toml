@@ -2,7 +2,9 @@
 # (00-{linux,macos}/110-rust-tooling) and 00-nt/550-cargo. They build from
 # source, era-pinned Macs included, and a failure stops the apply. An entry
 # with `os` goes only to hosts whose .chezmoi.os is listed; one without goes
-# everywhere. See docs/tooling.md.
+# everywhere. An entry with `git` installs from that repository at `rev`, a
+# full commit SHA (never a branch or tag, which can move), rather than from
+# crates.io; bump `rev` to update it. See docs/tooling.md.
 
 [cargoTools]
 crates = [
@@ -12,4 +14,9 @@ crates = [
     # macOS and Linux get binwalk from their system package lists
     # (brew-packages-macos.sh, 020-dnf, 021-apt, 022-brew).
     { name = "binwalk", os = ["windows"] },
+    # Runs the shell under a pseudo-terminal that carries out the OSC 52
+    # copies and OSC 777 notifications a terminal lacks: Terminal.app through
+    # ~/.bootstrap.sh, and VTE terminals through ~/.zshrc. Windows Terminal
+    # handles both itself. Replaces osc52pty (2026-11-25).
+    { name = "terminal_polyfill", git = "https://github.com/regulad/terminal_polyfill", rev = "1766187db0989a224326debc34540a13b08d38f6", os = ["darwin", "linux"] },
 ]
