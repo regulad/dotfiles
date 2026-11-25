@@ -76,43 +76,34 @@
        preferredNotifChannel is off so Claude Code's own channel, which also
        sends Ghostty a notification, doesn't double every toast. "auto" did
        nothing in VS Code's panel or integrated terminal either (2026-11-25);
-       VS Code's notifications are to come from hooks of our own. The hooks
-       print fixed JSON: the escapes stay \u text for Claude Code to decode, so
-       no shell interprets them. Synchronous, since terminalSequence is
-       ignored from an async hook.
-       The VS Code extension's native panel has no terminal, so the second
-       hook shows the same text as a desktop notification with toastify
-       (.chezmoidata/cargo-tools.toml), only when the extension started the
-       session (CLAUDE_CODE_ENTRYPOINT is claude-vscode, "cli" in a
-       terminal), so terminal sessions don't get it twice. The if keeps its
-       exit status 0 elsewhere. Async, as it hands Claude Code nothing. */}}
-{{- $toasts := dict "Stop" "Response ready" "Notification" "Needs your attention" }}
+       VS Code's notifications are to come from hooks of our own.
+       Both hooks run notify-hook.sh (private_dot_claude), with bash on every
+       platform as the status line is, so the toast carries the event's own
+       text: a Notification's title and message, or the working directory and
+       the first line of Claude's reply. "osc" prints terminalSequence, BEL
+       plus OSC 777;notify, which Claude Code writes to the terminal itself;
+       hooks have no controlling tty of their own. Synchronous, since
+       terminalSequence is ignored from an async hook. "desktop" is for the
+       VS Code extension's native panel, which has no terminal: a desktop
+       notification through toastify (.chezmoidata/cargo-tools.toml), only
+       when CLAUDE_CODE_ENTRYPOINT is claude-vscode ("cli" in a terminal), so
+       terminal sessions don't get it twice. Async, as it hands Claude Code
+       nothing. */}}
   "preferredNotifChannel": "notifications_disabled",
   "hooks": {
 {{- range $i, $event := list "Notification" "Stop" }}
-{{-   $json := printf `{"terminalSequence":"\u0007\u001b]777;notify;Claude Code;%s\u0007"}` (index $toasts $event) }}
 {{-   if $i }},{{ end }}
     {{ $event | toJson }}: [
       {
         "hooks": [
           {
             "type": "command",
-{{-   if eq $.chezmoi.os "windows" }}
-            "shell": "powershell",
-            "command": {{ printf "Write-Output '%s'" $json | toJson }},
-{{-   else }}
-            "command": {{ printf "printf '%%s\\n' '%s'" $json | toJson }},
-{{-   end }}
+            "command": "bash ~/.claude/notify-hook.sh osc",
             "timeout": 5
           },
           {
             "type": "command",
-{{-   if eq $.chezmoi.os "windows" }}
-            "shell": "powershell",
-            "command": {{ printf "if ($env:CLAUDE_CODE_ENTRYPOINT -eq 'claude-vscode') { toastify send 'Claude Code' '%s' }" (index $toasts $event) | toJson }},
-{{-   else }}
-            "command": {{ printf "if [ \"$CLAUDE_CODE_ENTRYPOINT\" = claude-vscode ]; then toastify send 'Claude Code' '%s'; fi" (index $toasts $event) | toJson }},
-{{-   end }}
+            "command": "bash ~/.claude/notify-hook.sh desktop",
             "async": true,
             "timeout": 10
           }
