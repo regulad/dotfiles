@@ -1,7 +1,7 @@
 name: Check
 
-# The check every pull request must pass before it merges (.github/settings.yml's required checks), which Dependabot's
-# GitHub Actions updates need before dependabot-auto-merge.yml's auto-merge lets GitHub merge them. The pipelines
+# The check every pull request must pass before it merges (.github/settings.yml's required checks), Dependabot's
+# GitHub Actions updates included, which Parker merges by hand. The pipelines
 # themselves deliberately don't run on pull requests, so this lints the workflows instead, with actionlint (and the
 # shellcheck it runs over each `run:` step). .github/actionlint.yaml lists the findings it ignores.
 on:

@@ -22,23 +22,20 @@ repository:
   enable_automated_security_fixes: false
   enable_vulnerability_alerts: false
 
-  # workflows/dependabot-auto-merge.yml turns it on for Dependabot's minor and patch updates.
-  allow_auto_merge: true
-
 labels:
   # Dependabot's, on its pull requests: its one ecosystem here is .github/dependabot.yml's GitHub Actions.
   - name: github_actions
     color: "000000"
     description: Pull requests that update GitHub Actions code
 
-# master's protection: its required checks are what Dependabot's auto-merge waits for.
+# master's protection: its required check is what a pull request, Dependabot's included, passes before it merges.
 branches:
   - name: master
     # https://docs.github.com/en/rest/reference/repos#update-branch-protection
     # Branch Protection settings. Set to null to disable
     protection:
       # Required. Require at least one approving review on a pull request, before merging. Set to null to disable.
-      # Off: Dependabot's minor and patch updates merge on the required checks alone.
+      # Off: Parker merges Dependabot's updates himself.
       required_pull_request_reviews: null
       # Required. Require status checks to pass before merging. Set to null to disable
       required_status_checks:
