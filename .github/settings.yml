@@ -31,6 +31,7 @@ labels:
     color: "000000"
     description: Pull requests that update GitHub Actions code
 
+# master's protection: its required checks are what Dependabot's auto-merge waits for.
 branches:
   - name: master
     # https://docs.github.com/en/rest/reference/repos#update-branch-protection
