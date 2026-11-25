@@ -12,7 +12,15 @@ $ReposDir = Join-Path $HOME 'repositories'
 $Link = Join-Path $ReposDir 'dotfiles'
 $Source = [IO.Path]::GetFullPath({{ .chezmoi.workingTree | squote }})
 
-if (-not (Test-Path -LiteralPath $ReposDir)) {
+# Test-Path follows the link, so a link to a D: that has no repositories
+# folder (no Dev Drive yet, or a CI runner) reads as missing, and New-Item
+# cannot create a directory through it.
+$ReposItem = Get-Item -LiteralPath $ReposDir -Force -ErrorAction SilentlyContinue
+if ($ReposItem -and $ReposItem.LinkType -and -not (Test-Path -LiteralPath $ReposDir)) {
+    Write-Host "warning: $ReposDir links to $($ReposItem.Target), which does not exist (050-dev-drive); no dotfiles link this time"
+    exit 0
+}
+if (-not $ReposItem) {
     New-Item -ItemType Directory -Path $ReposDir | Out-Null
 }
 
@@ -34,6 +42,6 @@ if ($Item -and $Item.LinkType -eq 'SymbolicLink') {
 
 cmd /c mklink /D "$Link" "$Source" | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "error: mklink could not create $Link (exit $LASTEXITCODE); symlinks need Developer Mode or elevation"
+    Write-Host "error: mklink could not create $Link (exit $LASTEXITCODE)"
     exit 1
 }
