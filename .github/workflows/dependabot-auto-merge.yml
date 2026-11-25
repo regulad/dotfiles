@@ -32,6 +32,19 @@ jobs:
     steps:
       - id: metadata
         uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      # gh pr merge --auto merges at once when the branch requires no checks, so a lost branch protection would turn
+      # this into merging every update unchecked. Refuse instead. The branch endpoint shows the required checks to the
+      # workflow's own token.
+      - name: Refuse unless the branch requires checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          required=$(gh api "repos/${GITHUB_REPOSITORY}/branches/${BASE}" --jq '.protection.required_status_checks.contexts | length')
+          if [ "${required}" -eq 0 ]; then
+            echo "::error::${BASE} requires no status checks, so auto-merge would merge this pull request unchecked. Restore the protection .github/settings.yml declares."
+            exit 1
+          fi
       - name: Merge once the check passes
         if: steps.metadata.outputs.update-type != 'version-update:semver-major'
         run: gh pr merge --auto --squash "$PR_URL"
