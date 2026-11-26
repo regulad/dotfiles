@@ -17,9 +17,12 @@ Host *
     # whose user isn't regulad, as root on most of 98-homelab's, need no Tag
     # line of their own.
     Tag rsa3072
-    # homelab's host keys, under each host's inventory name, which 98-homelab
-    # sets as its HostKeyAlias. New keys are still written to the first file.
-    UserKnownHostsFile ~/.ssh/known_hosts ~/.ssh/known_hosts.d/homelab
+    # ~/.ssh/known_hosts is this machine's state, unmanaged, and ssh writes
+    # the keys accepted here to it, the first file. The known_hosts.d files
+    # are managed and only read: homelab's host keys, under each host's
+    # inventory name, which 98-homelab sets as its HostKeyAlias; and
+    # github.com's. Listed by name: UserKnownHostsFile takes no globs.
+    UserKnownHostsFile ~/.ssh/known_hosts ~/.ssh/known_hosts.d/homelab ~/.ssh/known_hosts.d/github
     PreferredAuthentications publickey
     EnableEscapeCommandline yes
     # Bitwarden's SSH agent signs RSA keys with SHA-512 no matter which

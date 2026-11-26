@@ -28,7 +28,8 @@ tags every host `rsa3072` by default, so the generated blocks carry no `Tag`.
 
 `~/.ssh/known_hosts` itself isn't managed: it is each machine's state, where
 ssh records the keys accepted there, and `.chezmoiignore.tmpl` keeps it out
-of this repository.
+of this repository. github.com's keys come from the managed
+`known_hosts.d/github` beside homelab's.
 
 To pick up a new export on a machine: `git pull` the source, then
 `chezmoi apply ~/.ssh/config.d/98-homelab ~/.ssh/known_hosts.d/homelab`.
