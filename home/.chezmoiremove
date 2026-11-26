@@ -50,3 +50,16 @@ go/bin/osc52pty
 .x509/client/dotfiles.p12
 .gnupg/public_regulad@regulad.xyz.asc
 .gnupg/secret_regulad@regulad.xyz.asc
+
+# The hand-written SSH entries for hosts regulad/homelab now defines
+# (docs/homelab-exports.md). 98-homelab sorts first, so its values win for the
+# hosts it covers, but the old files would keep the aliases homelab dropped
+# (the pct containers, the OCI instances, arawi) reachable with stale
+# settings on every machine that ever applied them. Safe to prune from this
+# file once every machine has applied once.
+.ssh/config.d/99-cisco
+.ssh/config.d/99-gonkputer-pve
+.ssh/config.d/99-hardware
+.ssh/config.d/99-matrix
+.ssh/config.d/99-oracle-old
+.ssh/config.d/99-oracle-vcn
