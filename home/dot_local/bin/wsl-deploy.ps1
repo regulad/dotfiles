@@ -116,8 +116,8 @@ Write-Step "looking up the newest $artifactName build"
 # request -- as opposed to walking `gh run list` and querying each run's
 # artifacts until one has the right name.
 #
-# Only master's builds count. docker-publish.yml also runs on the testing
-# branch and uploads tarballs under the same names, and a testing commit may
+# Only master's builds count. A manual run of docker-publish.yml on another
+# branch uploads tarballs under the same names, and that branch's commit may
 # never reach master -- leaving wsl-update nothing to patch forward from.
 $artifactsJson = gh api "repos/$Repo/actions/artifacts?name=$artifactName&per_page=20" 2>&1
 Assert-NativeSuccess "gh api artifacts?name=$artifactName"
