@@ -45,6 +45,14 @@ def fixture(path, platform, arch, series, *, secondary=False, headless=False, du
     path.write_text("\n".join(data) + "\n", encoding="utf-8", newline="\n")
 
 
+def cargo_install_line(entry):
+    """The line run_after_550-cargo writes for a crate: a git entry installs by
+    --git and --rev, the rest by name."""
+    if "git" in entry:
+        return f'call :cargoinstall --git {entry["git"]} --rev {entry["rev"]} {entry["name"]} ||'
+    return f'call :cargoinstall {entry["name"]} ||'
+
+
 def render(source, data):
     return run([
         "chezmoi", "--source", str(ROOT), "execute-template",
@@ -265,7 +273,7 @@ def main():
             "run_once_after_500-python", "run_after_550-cargo", "run_after_560-go-tooling", "run_after_570-pnpm-tooling")}
         for kind, script, line in (
                 ("python", "run_once_after_500-python", lambda e: f' "{e.get("spec", e["name"])}" || goto :uv_install_failed'),
-                ("cargo", "run_after_550-cargo", lambda e: f'call :cargoinstall {e["name"]} ||'),
+                ("cargo", "run_after_550-cargo", cargo_install_line),
                 ("go", "run_after_560-go-tooling", lambda e: f'call :goinstall {e["module"]} ||'),
                 ("pnpm", "run_after_570-pnpm-tooling", lambda e: "%GO_IOS_PACKAGE%" if e["pnpm"] == "go-ios" else f'! {e["pnpm"]}@latest"')):
             for entry in tools[kind]:
