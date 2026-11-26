@@ -26,6 +26,10 @@ past the required check.
 tags every host `rsa3072` by default, so the generated blocks carry no `Tag`.
 `98-` sorts before the hand-written `99-*` files, so its values win.
 
+`~/.ssh/known_hosts` itself isn't managed: it is each machine's state, where
+ssh records the keys accepted there, and `.chezmoiignore.tmpl` keeps it out
+of this repository.
+
 To pick up a new export on a machine: `git pull` the source, then
 `chezmoi apply ~/.ssh/config.d/98-homelab ~/.ssh/known_hosts.d/homelab`.
 

@@ -8,6 +8,13 @@
 # into this public repository through add or re-add.
 .claude/CLAUDE.md
 
+# ~/.ssh/known_hosts is each machine's state: the keys ssh has accepted
+# there, which it writes to the first UserKnownHostsFile (dot_ssh/config.tmpl).
+# homelab's hosts come from known_hosts.d/homelab instead
+# (docs/homelab-exports.md). Ignored, chezmoi neither writes it nor takes it
+# back into this public repository through add or re-add.
+.ssh/known_hosts
+
 # Credentialfiles
 {{- if .useDummySecrets }}
 key.txt
