@@ -88,11 +88,12 @@ if ((wsl.exe --list --quiet) -notcontains $distroName) {
     throw "'$distroName' is not installed. Deploy it first:  wsl-deploy $Flavor"
 }
 
-# The Windows side's chezmoi source, asked of chezmoi so a non-default
-# sourceDir is honoured.
+# The Windows side's chezmoi working tree, asked of chezmoi so a non-default
+# sourceDir is honoured. The working tree, not `chezmoi source-path`: that is
+# its home/ subdirectory (.chezmoiroot), and the patch spans the whole tree.
 $source = $null
 if (Get-Command chezmoi -ErrorAction SilentlyContinue) {
-    $source = "$(chezmoi source-path 2>$null)".Trim()
+    $source = "$(chezmoi execute-template '{{ .chezmoi.workingTree }}' 2>$null)".Trim()
 }
 if (-not $source) { $source = Join-Path $HOME '.local\share\chezmoi' }
 git -C $source rev-parse --git-dir 2>&1 | Out-Null
@@ -195,7 +196,11 @@ try {
 #   update.sh init                         chezmoi init, same dummy/headless flags
 #   update.sh apply                        chezmoi apply
 set -euo pipefail
-src="$(chezmoi source-path)"
+# The working tree, which holds .chezmoiroot, not `chezmoi source-path`
+# (its home/ subdirectory): the patch's paths start at the tree, and the
+# instance's copy has no .git for git apply to find its top from. Before the
+# patch that introduced home/, the two were the same directory.
+src="$(chezmoi execute-template '{{ .chezmoi.workingTree }}')"
 case "$1" in
 check)
     git -C "$src" apply --check --binary "$2"

@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Regenerate dot_config/fastfetch/logos/ from ublue's mascot PNGs.
+# Regenerate home/dot_config/fastfetch/logos/ from ublue's mascot PNGs.
 #
 # Run this by hand on a Bluefin host and commit the result; it is not a
 # .chezmoiscript, because /usr/share/ublue-os/bluefin-logos only exists on
@@ -45,7 +45,7 @@
 set -eu
 
 SRC_DIR="${SRC_DIR:-/usr/share/ublue-os/bluefin-logos}"
-OUT_DIR="${OUT_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)/dot_config/fastfetch/logos}"
+OUT_DIR="${OUT_DIR:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)/home/dot_config/fastfetch/logos}"
 HEIGHT="${HEIGHT:-11}"
 SYMBOLS="${SYMBOLS:-block+border+space}"
 

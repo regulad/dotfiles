@@ -118,7 +118,7 @@ Remember to define the package in the correct hookscript under `.chezmoiscripts/
 
 ## Docs
 
-Longer write-ups live in `docs/` (not deployed to `$HOME`):
+Longer write-ups live in `docs/`. chezmoi's source state is `home/`, which `.chezmoiroot` names, and nothing outside it is deployed to `$HOME`; source paths in the docs, like `.chezmoidata/vscode.toml` above, are relative to `home/`. The write-ups:
 
 - [Hookscripts](docs/hookscripts.md) -- the preambles, script order, the brew prefix, C/C++ language support.
 - [Tooling](docs/tooling.md) -- Homebrew versus uv/pnpm, explicit Python versions, pinned-era fallbacks and validation.

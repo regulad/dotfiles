@@ -14,6 +14,8 @@ import tomllib
 
 
 ROOT = Path(__file__).resolve().parents[1]
+# The source state, under the .chezmoiroot it names; chezmoi --source takes ROOT.
+SRC = ROOT / (ROOT / ".chezmoiroot").read_text().strip()
 
 
 def run(args, **kwargs):
@@ -46,7 +48,7 @@ def fixture(path, platform, arch, series, *, secondary=False, headless=False, du
 def render(source, data):
     return run([
         "chezmoi", "--source", str(ROOT), "execute-template",
-        "--override-data-file", str(data), "--file", str(ROOT / source),
+        "--override-data-file", str(data), "--file", str(SRC / source),
     ]).stdout.replace("\r", "")
 
 
@@ -144,13 +146,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--bash", default="bash")
     args = parser.parse_args()
-    tiers = tomllib.loads((ROOT / ".chezmoidata/brew-tiers.toml").read_text())["brewTiers"]
-    versions = tomllib.loads((ROOT / ".chezmoidata/tooling.toml").read_text())["tooling"]["pythonVersions"]
+    tiers = tomllib.loads((SRC / ".chezmoidata/brew-tiers.toml").read_text())["brewTiers"]
+    versions = tomllib.loads((SRC / ".chezmoidata/tooling.toml").read_text())["tooling"]["pythonVersions"]
     tools = {
-        "python": tomllib.loads((ROOT / ".chezmoidata/python-tools.toml").read_text())["pythonTools"]["packages"],
-        "pnpm": tomllib.loads((ROOT / ".chezmoidata/pnpm-tools.toml").read_text())["pnpmTools"]["packages"],
-        "go": tomllib.loads((ROOT / ".chezmoidata/go-tools.toml").read_text())["goTools"]["packages"],
-        "cargo": tomllib.loads((ROOT / ".chezmoidata/cargo-tools.toml").read_text())["cargoTools"]["crates"],
+        "python": tomllib.loads((SRC / ".chezmoidata/python-tools.toml").read_text())["pythonTools"]["packages"],
+        "pnpm": tomllib.loads((SRC / ".chezmoidata/pnpm-tools.toml").read_text())["pnpmTools"]["packages"],
+        "go": tomllib.loads((SRC / ".chezmoidata/go-tools.toml").read_text())["goTools"]["packages"],
+        "cargo": tomllib.loads((SRC / ".chezmoidata/cargo-tools.toml").read_text())["cargoTools"]["crates"],
     }
     cases = [("darwin", *key.rsplit("-", 1), value["era"]) for key, value in tiers["legacy"].items()]
     cases += [("darwin", version, "arm64", "mainline") for version in ("15", "26", "27")]

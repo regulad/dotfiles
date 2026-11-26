@@ -1,6 +1,6 @@
 # Containers
 
-No host runs Docker Desktop. Each one gets the native engine it can run, and the knobs live in [`.chezmoidata/containers.toml`](../.chezmoidata/containers.toml).
+No host runs Docker Desktop. Each one gets the native engine it can run, and the knobs live in [`.chezmoidata/containers.toml`](../home/.chezmoidata/containers.toml).
 
 | Host | Engine | Docker Engine API | Installed / started by |
 | --- | --- | --- | --- |

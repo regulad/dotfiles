@@ -13,7 +13,7 @@ export RUNNER_ENVIRONMENT=
 
 # Render the file directly so this check uses the requested source file.
 chezmoi --source "$repo" execute-template --file \
-    "$repo/.chezmoitemplates/brew-mirror-env.sh" \
+    "$repo/home/.chezmoitemplates/brew-mirror-env.sh" \
     --override-data '{"artifact_domain":"https://mirror.invalid","user":"test","password":"test"}' \
     | tr -d '\r' > "$work/mirror.sh"
 

@@ -1,6 +1,6 @@
 # Agent notes for this repo
 
-Operational conventions for any agent working in this chezmoi source directory. Not deployed to `$HOME` (see `.chezmoiignore.tmpl`).
+Operational conventions for any agent working in this repository. chezmoi's source state is `home/`, which `.chezmoiroot` names; nothing outside it is deployed to `$HOME`. Source paths here and in `docs/` are relative to `home/`, as chezmoi's own are; `docs/`, `tools/` and `.github/` are at the repository's top.
 
 ## Worktrees
 

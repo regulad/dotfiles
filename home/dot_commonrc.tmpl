@@ -102,8 +102,10 @@ if [ -n "$ZSH_VERSION" ]; then
   compdef '_files -/' reflink_duplicates
 fi
 
+# The repository's top, not `chezmoi source-path`, which is its home/
+# subdirectory (.chezmoiroot).
 chezmoi-cd() {
-    cd "$(chezmoi source-path)"
+    cd "$(chezmoi execute-template '{{ "{{" }} .chezmoi.workingTree {{ "}}" }}')"
 }
 
 bw-unlock() {
