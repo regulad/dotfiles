@@ -4,7 +4,7 @@ Operational conventions for any agent working in this repository. chezmoi's sour
 
 ## Worktrees
 
-- Put a worktree of this repository at `~/repositories/dotfiles_<name>`, `<name>` a short form of its branch (`git worktree add ~/repositories/dotfiles_exports homelab-exports`), next to `~/repositories/dotfiles`, the link to the main source that the repositories-dotfiles hookscript makes. Never inside the chezmoi source directory, `.claude/worktrees/` included: chezmoi loads `.chezmoitemplates` and `.chezmoidata` from nested worktrees too, even under `.claude/`, before applying `.chezmoiignore`; their older copies can silently override the main source's templates and data. Verify changes using the main source after moving any nested worktrees with `git worktree move`.
+- Worktrees go in `.claude/worktrees/`, where Claude Code makes them. chezmoi reads only `home/` (`.chezmoiroot`), so a nested worktree's copy of the source state is never loaded in place of the main one's; git and Docker ignore the directory.
 
 ## Applying changes
 

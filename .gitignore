@@ -7,3 +7,7 @@ id_ed25519
 # belong in .claude/settings.json; this one accumulates whatever the local
 # session happened to approve.
 .claude/settings.local.json
+
+# Claude Code's worktrees of this repository (AGENTS.md), each a checkout of
+# its own.
+.claude/worktrees/
