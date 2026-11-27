@@ -44,8 +44,7 @@
 # Skipped, saying why: WSL and containers, which nobody sshes into to sudo; an
 # atomic host whose next deployment layers pam-rssh, until the next boot; and
 # a host whose sudo already needs no password at all -- a NOPASSWD rule this
-# repo doesn't own, such as homelab's base role on its hosts, aboriginal's
-# among them.
+# repo doesn't own.
 #
 # Runs every apply, idempotently: each file is compared with what it should
 # be, and sudo is only asked for when one differs.
