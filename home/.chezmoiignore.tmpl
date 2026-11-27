@@ -93,14 +93,10 @@ AppData/Roaming/xdg.data/com.vercel.cli
 
 # The Syncthing mesh's hookscripts decrypt the hub's device ID at run time
 # (.chezmoidata/syncthing.toml). Without it a dummy-secrets host has no hub to
-# join, and so nothing for them to set up -- except the hub itself, aboriginal,
-# whose chezmoi runs with dummy secrets: it needs no ID, lists no introducer,
-# and creates the folders for its joining service to share.
-{{- if ne .chezmoi.hostname .syncthing.hub.name }}
+# join, and so nothing for them to set up.
 .chezmoiscripts/00-linux/155-syncthing.sh
 .chezmoiscripts/00-macos/155-syncthing.sh
 .chezmoiscripts/00-nt/155-syncthing.ps1
-{{- end }}
 
 # git send-email's SMTP password, from Bitwarden into the OS keychain. With
 # dummy secrets .gitconfig has no [sendemail] for it to serve anyway.

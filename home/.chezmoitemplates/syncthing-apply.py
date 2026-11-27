@@ -7,10 +7,7 @@ adds and updates, and never removes anything, so devices, folders and ignore
 patterns added in the GUI stay.
 
 argv: the REST base URL, the hub's device ID, the desired-state JSON
-(.chezmoitemplates/syncthing-desired.json). An empty hub ID means this is
-the hub: aboriginal's chezmoi runs with dummy secrets, so it never decrypts
-the ID, and the only dummy-secrets host that runs this is the hub (see
-.chezmoiignore.tmpl). The API key comes in ST_APIKEY,
+(.chezmoitemplates/syncthing-desired.json). The API key comes in ST_APIKEY,
 an environment variable rather than an argument, since a process's arguments
 are readable by every user.
 
@@ -81,26 +78,21 @@ def keep_ignores(folder_id, lines):
 
 
 hub = desired["hub"]
-is_hub = not hub_id or call("GET", "/rest/system/status")["myID"] == hub_id
-
-if is_hub:
-    say("debug", "this is the hub, {}: it lists no introducer, and its joining service shares the folders".format(hub["name"]))
+want = {"name": hub["name"], "addresses": hub["addresses"], "introducer": True}
+current = call("GET", "/rest/config/devices/" + hub_id)
+if current is None:
+    device = call("GET", "/rest/config/defaults/device")
+    device.update(want)
+    device["deviceID"] = hub_id
+    call("POST", "/rest/config/devices", device)
+    say("notice", "Syncthing: added {} as this node's introducer, at {}".format(hub["name"], ", ".join(hub["addresses"])))
 else:
-    want = {"name": hub["name"], "addresses": hub["addresses"], "introducer": True}
-    current = call("GET", "/rest/config/devices/" + hub_id)
-    if current is None:
-        device = call("GET", "/rest/config/defaults/device")
-        device.update(want)
-        device["deviceID"] = hub_id
-        call("POST", "/rest/config/devices", device)
-        say("notice", "Syncthing: added {} as this node's introducer, at {}".format(hub["name"], ", ".join(hub["addresses"])))
+    patch = {k: v for k, v in want.items() if current.get(k) != v}
+    if patch:
+        call("PATCH", "/rest/config/devices/" + hub_id, patch)
+        say("notice", "Syncthing: set {} of {}".format(", ".join(sorted(patch)), hub["name"]))
     else:
-        patch = {k: v for k, v in want.items() if current.get(k) != v}
-        if patch:
-            call("PATCH", "/rest/config/devices/" + hub_id, patch)
-            say("notice", "Syncthing: set {} of {}".format(", ".join(sorted(patch)), hub["name"]))
-        else:
-            say("debug", "Syncthing: {} already set up".format(hub["name"]))
+        say("debug", "Syncthing: {} already set up".format(hub["name"]))
 
 for folder in desired["folders"]:
     folder_id = folder["id"]
@@ -109,14 +101,13 @@ for folder in desired["folders"]:
         new = call("GET", "/rest/config/defaults/folder")
         new.update({"id": folder_id, "label": folder["label"], "path": folder["path"]})
         devices = [d for d in new.get("devices") or [] if d.get("deviceID")]
-        if not is_hub and hub_id not in [d["deviceID"] for d in devices]:
+        if hub_id not in [d["deviceID"] for d in devices]:
             devices.append({"deviceID": hub_id})
         new["devices"] = devices
         call("POST", "/rest/config/folders", new)
-        shared = "" if is_hub else ", shared with " + hub["name"]
         added = keep_ignores(folder_id, folder["ignores"])
         ignoring = ", ignoring " + ", ".join(added) if added else ""
-        say("notice", "Syncthing: added folder {} at {}{}{}".format(folder_id, folder["path"], shared, ignoring))
+        say("notice", "Syncthing: added folder {} at {}, shared with {}{}".format(folder_id, folder["path"], hub["name"], ignoring))
         continue
     if not same_path(current.get("path", ""), folder["path"]):
         say("warning", "Syncthing: folder {} is at {} here, not {}; its path is left as it is".format(folder_id, current.get("path"), folder["path"]))
@@ -124,7 +115,7 @@ for folder in desired["folders"]:
     if current.get("label") != folder["label"]:
         patch["label"] = folder["label"]
     devices = current.get("devices") or []
-    if not is_hub and hub_id not in [d.get("deviceID") for d in devices]:
+    if hub_id not in [d.get("deviceID") for d in devices]:
         patch["devices"] = devices + [{"deviceID": hub_id}]
     changes = []
     if patch:

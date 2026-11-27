@@ -36,8 +36,7 @@ All of it comes from `.chezmoidata/syncthing.toml`.
   `.chezmoitemplates/secrets/syncthing-hub-id.age`: with global discovery on, a
   device ID is enough to look up the device's address. `155-syncthing`
   decrypts it at run time, and hosts with dummy secrets skip the script
-  (`.chezmoiignore.tmpl`), so they have no hub and no peers -- all but the hub
-  itself, below.
+  (`.chezmoiignore.tmpl`), so they have no hub and no peers.
 - **The folders**:
 
   | Folder ID | Path (Linux / macOS / Windows) | Notes |
@@ -92,29 +91,36 @@ until someone logs in. The same holds on headless and headful Macs alike. The
 an older apply left it, since it starts a second Syncthing at login on the
 same configuration.
 
-On aboriginal itself the same script runs: chezmoi applies there too, with dummy
-secrets. `.chezmoiignore.tmpl` keeps the script for a dummy-secrets host whose
-hostname is the hub's name, and there the script skips the decryption: an empty
-hub ID means "this is the hub". (A hub with real secrets would recognise its own
-device ID instead.) The hub lists no introducer, and creates the folders shared
-with no one, since the joining service does the sharing.
-
 The REST calls are in `.chezmoitemplates/syncthing-apply.py` on Linux and macOS,
 and in `00-nt/155-syncthing.ps1` on Windows; both were tested against a
-throwaway Syncthing instance (adding, a second run that changes nothing,
-repairing a hub entry changed in the GUI, and the hub's own view). Syncthing 2
-is protocol compatible with 1.x, so Ubuntu's 1.29 and everyone else's 2.x share
-a mesh, and the CLI calls the scripts make exist in both.
+throwaway Syncthing instance (adding, a second run that changes nothing, and
+repairing a hub entry changed in the GUI). Syncthing 2 is protocol compatible
+with 1.x, so Ubuntu's 1.29 and everyone else's 2.x share a mesh, and the CLI
+calls the scripts make exist in both.
 
 ## What homelab sets on aboriginal
 
-aboriginal's Syncthing is regulad's systemd user unit (`syncthing.service`, from
-Ubuntu's package). homelab keeps only the hub's own pieces: its identity
-(`cert.pem` and `key.pem`, in SOPS, so a rebuild keeps the device ID), its API
-key (SOPS, given to Syncthing and the joining service), lingering for regulad,
-and the joining service. The tailnet policy already lets Parker's devices and
-aboriginal reach each other on port 22000. The synced folders on aboriginal are
-in regulad's home, and go into aboriginal's restic backup with it.
+aboriginal is not a dotfiles host: no chezmoi applies there, and homelab's
+`syncthing_hub` role owns the hub's Syncthing whole.
+
+- **The service**: the syncthing package's user unit (`syncthing.service`),
+  enabled for regulad alone, with lingering so it runs without a login.
+- **Its identity**: `cert.pem` and `key.pem`, from SOPS, so a rebuild keeps the
+  device ID; and its REST API key, from SOPS, given to Syncthing and the
+  joining service.
+- **The joining service**, `syncthing-join`, above.
+- **The folders**: the same four, with the same IDs and labels as every
+  node's, at their paths in regulad's home, with `claude` and
+  `local-config_rclone` at mode `700`. homelab writes each folder's whole
+  `.stignore`: `claude`'s is `!/projects`, `!/plans`, `!/file-history` and `*`,
+  and the others' are the four file-manager patterns of
+  `.chezmoidata/syncthing.toml`'s `ignores`.
+- **Its options**: usage reporting declined (`urAccepted` -1) and crash
+  reports off, as on every node.
+
+The tailnet policy lets Parker's devices and aboriginal reach each other on
+port 22000. The synced folders on aboriginal go into its restic backup with
+regulad's home.
 
 ## Claude Code's state
 

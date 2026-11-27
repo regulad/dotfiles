@@ -98,11 +98,6 @@ if ($UseTls) {
     }
 }
 
-{{ if .useDummySecrets -}}
-# Dummy secrets: of those hosts only the hub itself gets here
-# (.chezmoiignore.tmpl), and it needs no ID. An empty one means this is the hub.
-$HubId = ''
-{{- else -}}
 # The ciphertext goes to chezmoi as a file, not on stdin: Windows PowerShell
 # 5.1 put a UTF-8 BOM in front of everything it piped to a native program on
 # winlite, whatever $OutputEncoding said (ASCII included), and age refuses
@@ -122,7 +117,6 @@ if ($DecryptExit -ne 0 -or -not $HubId) {
     Write-Host "error: failed to decrypt the hub's device ID ({{ .syncthing.hub.idCiphertext }})"
     exit 1
 }
-{{- end }}
 
 $Desired = @'
 {{ template "syncthing-desired.json" . }}
@@ -173,31 +167,25 @@ function Set-Ignores([string]$Id, $Lines) {
 }
 
 $Hub = $Desired.hub
-$IsHub = (-not $HubId) -or ((Invoke-Syncthing Get '/rest/system/status').myID -eq $HubId)
-
-if ($IsHub) {
-    Write-Host "debug: this is the hub, $($Hub.name): it lists no introducer, and its joining service shares the folders"
+$Current = Invoke-Syncthing Get "/rest/config/devices/$HubId"
+if ($null -eq $Current) {
+    $Device = Invoke-Syncthing Get '/rest/config/defaults/device'
+    $Device.deviceID = $HubId
+    $Device.name = $Hub.name
+    $Device.addresses = @($Hub.addresses)
+    $Device.introducer = $true
+    Invoke-Syncthing Post '/rest/config/devices' $Device | Out-Null
+    Write-Host "notice: Syncthing: added $($Hub.name) as this node's introducer, at $(@($Hub.addresses) -join ', ')"
 } else {
-    $Current = Invoke-Syncthing Get "/rest/config/devices/$HubId"
-    if ($null -eq $Current) {
-        $Device = Invoke-Syncthing Get '/rest/config/defaults/device'
-        $Device.deviceID = $HubId
-        $Device.name = $Hub.name
-        $Device.addresses = @($Hub.addresses)
-        $Device.introducer = $true
-        Invoke-Syncthing Post '/rest/config/devices' $Device | Out-Null
-        Write-Host "notice: Syncthing: added $($Hub.name) as this node's introducer, at $(@($Hub.addresses) -join ', ')"
+    $Patch = [ordered]@{}
+    if ($Current.name -ne $Hub.name) { $Patch.name = $Hub.name }
+    if ((@($Current.addresses) -join "`n") -ne (@($Hub.addresses) -join "`n")) { $Patch.addresses = @($Hub.addresses) }
+    if (-not $Current.introducer) { $Patch.introducer = $true }
+    if ($Patch.Count) {
+        Invoke-Syncthing Patch "/rest/config/devices/$HubId" $Patch | Out-Null
+        Write-Host "notice: Syncthing: set $(@($Patch.Keys | Sort-Object) -join ', ') of $($Hub.name)"
     } else {
-        $Patch = [ordered]@{}
-        if ($Current.name -ne $Hub.name) { $Patch.name = $Hub.name }
-        if ((@($Current.addresses) -join "`n") -ne (@($Hub.addresses) -join "`n")) { $Patch.addresses = @($Hub.addresses) }
-        if (-not $Current.introducer) { $Patch.introducer = $true }
-        if ($Patch.Count) {
-            Invoke-Syncthing Patch "/rest/config/devices/$HubId" $Patch | Out-Null
-            Write-Host "notice: Syncthing: set $(@($Patch.Keys | Sort-Object) -join ', ') of $($Hub.name)"
-        } else {
-            Write-Host "debug: Syncthing: $($Hub.name) already set up"
-        }
+        Write-Host "debug: Syncthing: $($Hub.name) already set up"
     }
 }
 
@@ -209,15 +197,14 @@ foreach ($Folder in $Desired.folders) {
         $New.label = $Folder.label
         $New.path = $Folder.path
         $Devices = @(@($New.devices) | Where-Object { $_ -and $_.deviceID })
-        if (-not $IsHub -and -not ($Devices | Where-Object { $_.deviceID -eq $HubId })) {
+        if (-not ($Devices | Where-Object { $_.deviceID -eq $HubId })) {
             $Devices += [pscustomobject]@{ deviceID = $HubId }
         }
         $New.devices = $Devices
         Invoke-Syncthing Post '/rest/config/folders' $New | Out-Null
-        $Shared = $(if ($IsHub) { '' } else { ", shared with $($Hub.name)" })
         $Added = @(Set-Ignores $Folder.id $Folder.ignores)
         $Ignoring = $(if ($Added.Count) { ", ignoring $($Added -join ', ')" } else { '' })
-        Write-Host "notice: Syncthing: added folder $($Folder.id) at $($Folder.path)$Shared$Ignoring"
+        Write-Host "notice: Syncthing: added folder $($Folder.id) at $($Folder.path), shared with $($Hub.name)$Ignoring"
         continue
     }
     if (-not (Test-SamePath $Current.path $Folder.path)) {
@@ -226,7 +213,7 @@ foreach ($Folder in $Desired.folders) {
     $Patch = [ordered]@{}
     if ($Current.label -ne $Folder.label) { $Patch.label = $Folder.label }
     $Devices = @(@($Current.devices) | Where-Object { $_ })
-    if (-not $IsHub -and -not ($Devices | Where-Object { $_.deviceID -eq $HubId })) {
+    if (-not ($Devices | Where-Object { $_.deviceID -eq $HubId })) {
         $Patch.devices = $Devices + [pscustomobject]@{ deviceID = $HubId }
     }
     $Changes = @()

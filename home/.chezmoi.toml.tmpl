@@ -123,14 +123,13 @@
 {{- $headless := and (env "CHEZMOI_USE_HEADLESS" | not | not) (eq (env "WSL_DISTRO_NAME") "") }}
 
 encryption = "age"
-{{- if eq .chezmoi.os "linux" }}
-# chezmoi writes each script to a temporary file and runs it from there. On
-# Linux that is under ~/.cache rather than /tmp: homelab mounts /tmp noexec on
-# its hosts (its noexec role), and every script on aboriginal then failed with
-# "fork/exec /tmp/...: permission denied" (2026-11-18). chezmoi creates the
-# directory itself, mode 700.
-scriptTempDir = "~/.cache/chezmoi-scripts"
-{{- end }}
+# chezmoi writes each script, rendered, to a file in the system's temporary
+# directory and executes it from there, so a host whose /tmp is mounted
+# noexec fails every script with "fork/exec /tmp/...: permission denied". No
+# host here mounts it so. If one ever does, consider [interpreters] (for
+# example [interpreters.sh] command = "bash"), with which chezmoi runs the
+# interpreter on the script and needs only to read it, before scriptTempDir,
+# which moves the scripts to a directory that allows executing them.
 [age]
     identity = "{{ .chezmoi.homeDir }}/key.txt"
     recipient = "age14e7wj4lltcvva2jy9vzzul8y7yuj5xk9vtqfxt9erzz58xqwmpjqurdhep"
