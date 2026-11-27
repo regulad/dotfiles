@@ -61,7 +61,7 @@ Taking a package out of `00-nt/100-winget`'s or `00-nt/200-scoop-install`'s list
 
 ### Phi Silica
 
-On a Copilot+ PC, one with an NPU, Windows Update installs Phi Silica, Microsoft's on-device language model, and marks it not removable, so Settings → System → AI components offers no Uninstall for it. `00-nt/106-phi-silica` removes it through the same code that button would run, on every apply, because Windows Update can bring it back with any AI component update. With nothing to remove it does nothing and raises no UAC prompt; otherwise it takes one. Its header has the mechanism, which is internal to Windows and undocumented. Two policies in `registry-system.reg` keep apps and Click to Do off any copy that is back until the next apply removes it.
+On a Copilot+ PC, one with an NPU, Windows Update installs Phi Silica, Microsoft's on-device language model, and marks it not removable, so Settings → System → AI components offers no Uninstall for it. `00-nt/106-phi-silica` removes it through the same code that button would run, on every apply, because Windows Update can bring it back with any AI component update. With nothing to remove it does nothing and raises no UAC prompt; otherwise it takes one. While some of the model is in use, Windows defers the removal and finishes it once nothing uses it; the script reports that as deferred, not failed, and skips the product without a prompt until the next restart. Its header has the mechanism, which is internal to Windows and undocumented. Two policies in `registry-system.reg` keep apps and Click to Do off any copy that is back until the next apply removes it.
 
 ### Fedora packages
 

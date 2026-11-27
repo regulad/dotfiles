@@ -31,6 +31,21 @@
 # to remove there is no UAC prompt, and a machine without an NPU (GitHub's
 # runners) never has the key.
 #
+# A package that is in use doesn't come off at once. The flow removes with
+# DeferRemovalWhenPackagesAreInUse: AppX takes off the packages it can, logs
+# event 674 ("Removal of package ... is deferred because it is currently in
+# use") for each one in use and for the product, and finishes once they are
+# out of use, which Microsoft documents for that option (MSIX "Package
+# registration and lifetime"). The flow still exits 0 and the product's key
+# stays until then, also with IsRemovable "True", since nothing failed. So the
+# read-back counts a product with a 674 since its removal began as deferred,
+# not failed, and a product with one since the last boot is skipped before
+# elevating, so there's no prompt on every apply while it waits. If the log
+# has rolled past that event, the removal runs again and is deferred again.
+# On 2026-11-27 1.2610.1069.0's removal deferred three of its eight packages
+# (LanguageModel, LanguageModel.Data, TextContentModeration) on a machine up
+# five days.
+#
 # Matched by pattern, because the product's name carries the silicon:
 # Windows.Workload.PhiSilica.STX.amd64 is AMD Strix's. Aion Instruct, which
 # Microsoft says replaces Phi Silica on retail machines in January 2027, will
@@ -43,6 +58,7 @@
 $Installed = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Update\TargetingInfo\PersistentDynamicInstalled'
 $Products = @('Windows.Workload.PhiSilica.*')
 $AdminFlows = Join-Path $env:SystemRoot 'System32\SystemSettingsAdminFlows.exe'
+$AppxLog = 'Microsoft-Windows-AppXDeploymentServer/Operational'
 
 # The names of the matching products installed now.
 function Get-Present {
@@ -50,6 +66,20 @@ function Get-Present {
         foreach ($Pattern in $Products) {
             if ($Key.PSChildName -like $Pattern) { $Key.PSChildName; break }
         }
+    }
+}
+
+# Those of $Ids whose removal AppX has deferred since $Since (event 674, read
+# by its PackageName field rather than its localized message). AppX spells
+# the product Windows.Workload.PhiSilica.Stx.amd64 where its key says STX;
+# -contains compares case-insensitively.
+function Get-Deferred {
+    param([string[]]$Ids, [datetime]$Since)
+    $Names = @(Get-WinEvent -FilterHashtable @{ LogName = $AppxLog; Id = 674; StartTime = $Since } -ErrorAction SilentlyContinue | ForEach-Object {
+        ([xml]$_.ToXml()).Event.EventData.Data | Where-Object { $_.Name -eq 'PackageName' } | ForEach-Object { $_.'#text' }
+    })
+    foreach ($Id in $Ids) {
+        if ($Names -contains $Id) { $Id }
     }
 }
 
@@ -64,6 +94,12 @@ if ($Present.Count -eq 0) {
     Write-Host 'debug: Phi Silica is not installed'
     exit 0
 }
+$Pending = @(Get-Deferred $Present (Get-CimInstance Win32_OperatingSystem).LastBootUpTime)
+foreach ($Id in $Pending) {
+    Write-Host "notice: skipping $Id, whose removal is already underway: Windows deferred it while its packages are in use, and finishes it once they aren't"
+}
+$Present = @($Present | Where-Object { $Pending -notcontains $_ })
+if ($Present.Count -eq 0) { exit 0 }
 foreach ($Id in $Present) {
     $Version = (Get-ItemProperty -LiteralPath (Join-Path $Installed $Id) -ErrorAction SilentlyContinue).Version
     Write-Host "notice: removing $Id $Version, which Windows Update installed with no Uninstall in Settings"
@@ -102,16 +138,25 @@ $Elevated = @(
 ) -join "`r`n"
 $Encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Elevated))
 
+$Start = Get-Date
 & sudo powershell -NoProfile -NonInteractive -OutputFormat Text -EncodedCommand $Encoded
 $Code = $LASTEXITCODE
 
-$Left = @(Get-Present)
-if ($Left.Count -gt 0) {
-    Write-Host "error: still installed: $($Left -join ', ') (sudo exited $Code) -- was the elevation prompt declined?"
+$Left = @(Get-Present | Where-Object { $Present -contains $_ })
+$Deferred = @(Get-Deferred $Left $Start)
+foreach ($Id in $Deferred) {
+    Write-Host "notice: removal of $Id deferred: some of its packages are in use, and Windows finishes it once they aren't"
+}
+$Failed = @($Left | Where-Object { $Deferred -notcontains $_ })
+if ($Failed.Count -gt 0) {
+    Write-Host "error: still installed: $($Failed -join ', ') (sudo exited $Code) -- was the elevation prompt declined?"
     exit 1
 }
 if ($Code -ne 0) {
-    Write-Host "error: every product is gone, but $Code removal(s) reported failure; see above"
+    Write-Host "error: no product is left undeferred, but $Code removal(s) reported failure; see above"
     exit 1
 }
-Write-Host "notice: removed $($Present -join ', ')"
+$Removed = @($Present | Where-Object { $Deferred -notcontains $_ })
+if ($Removed.Count -gt 0) {
+    Write-Host "notice: removed $($Removed -join ', ')"
+}
