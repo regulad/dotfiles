@@ -99,6 +99,33 @@
         "X-Goog-Api-Key": {{ $devknowledge.token.value | toJson }}
       }
     },
+{{- /* Google's Analytics MCP server (googleanalytics/google-analytics-mcp,
+       Apache-2.0): read-only Admin and Data API reports on the properties
+       the service account can see. Google offers no hosted endpoint, so it
+       runs locally through uvx, as ddg-search does. It signs in with
+       Application Default Credentials: the analytics-mcp@regulad key file,
+       age-encrypted in private_dot_secrets/
+       encrypted_private_google-analytics-mcp.json.age, which gives the quota
+       project too, so GOOGLE_CLOUD_PROJECT is unset. The account has no
+       Google Cloud role, only Viewer in Analytics. Its key (ID 46e252a0...)
+       comes from homelab's tofu/gcp (google_service_account_key, homelab
+       cc40b55): a pair generated on 2026-11-27 with OpenSSL 4.1.0's
+       `openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048`, with
+       a certificate from `openssl req -x509 -new -subj /CN=analytics-mcp
+       -days 365 -sha256` uploaded, so it expires 2027-11-27T00:41:40Z.
+       Renewing it is a new pair and certificate in tofu/gcp and a new key
+       file encrypted here. The entry sits in the Bitwarden block only
+       because .chezmoiignore.tmpl leaves .secrets/ out with dummy secrets.
+       The write tools stay off (no --allow-write). Codex's entry is in
+       dot_codex/modify_private_config.toml. */}}
+    "google-analytics": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["analytics-mcp"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": {{ joinPath .chezmoi.homeDir ".secrets" "google-analytics-mcp.json" | toJson }}
+      }
+    },
 {{- /* The shared memory server: basic-memory behind regulad/homelab's
        memory.regulad.xyz, with the static client token that homelab's
        ingress checks. claude.ai's custom connector of the same URL reaches

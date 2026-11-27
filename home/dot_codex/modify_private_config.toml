@@ -68,6 +68,15 @@
 {{- $config = $config | setValueAtPath "mcp_servers.google-developer-knowledge" (dict
       "url" "https://developerknowledge.googleapis.com/mcp"
       "http_headers" (dict "X-Goog-Api-Key" $devknowledge.token.value)) -}}
+{{- /* Google's Analytics server, local through uvx with the service
+       account key; see its Claude Code entry. Codex hands a stdio server
+       only a short list of the environment, so the key's path is set here,
+       and a first start downloads the package, past Codex's default 10
+       seconds, as Chrome DevTools' does. */ -}}
+{{- $config = $config | setValueAtPath "mcp_servers.google-analytics" (dict
+      "command" "uvx" "args" (list "analytics-mcp")
+      "env" (dict "GOOGLE_APPLICATION_CREDENTIALS" (joinPath .chezmoi.homeDir ".secrets" "google-analytics-mcp.json"))
+      "startup_timeout_sec" 60) -}}
 {{- /* The shared memory server: basic-memory behind regulad/homelab's
        memory.regulad.xyz. Codex can't use the claude.ai connector, so it
        sends the static client token, which homelab's ingress Caddy checks
