@@ -1,6 +1,9 @@
 {{- $launcherSrc := joinPath .chezmoi.sourceDir "dot_local" "bin" "pyghidra-mcp-server.ps1" -}}
 {{- $selfSrc := joinPath .chezmoi.sourceDir ".chezmoiscripts" "00-nt" "run_after_503-pyghidra-mcp.ps1.tmpl" -}}
 {{- $fingerprint := printf "%s|%s|%d" (include $launcherSrc | sha256sum) (include $selfSrc | sha256sum) (int .pyghidraMcp.port) | sha256sum -}}
+{{- $tool := dict -}}
+{{- range .pythonTools.packages }}{{ if eq .name "pyghidra-mcp" }}{{ $tool = . }}{{ end }}{{ end -}}
+{{- if not $tool }}{{ fail "python-tools.toml has no pyghidra-mcp entry for 503-pyghidra-mcp to upgrade" }}{{ end -}}
 # Keeps Claude Code's own headless Ghidra running: a logon task that runs
 # ~/.local/bin/pyghidra-mcp-server.ps1, which serves pyghidra-mcp over
 # streamable HTTP on 127.0.0.1:{{ .pyghidraMcp.port }} (.chezmoidata/pyghidra-mcp.toml)
@@ -19,9 +22,21 @@
 # source, the launcher and the port, and is recorded in the task's
 # description. An unchanged apply only
 # starts the task if it is not running -- a restart would throw away any
-# analysis in flight. 501's `uv tool upgrade --all` needs no stop either: uv
-# swaps a package out from under a process that has its DLLs loaded (tested
-# 2026-11-12), and the server picks the new one up at its next start.
+# analysis in flight.
+#
+# This script upgrades pyghidra-mcp too, not 501's `uv tool upgrade`
+# (upgradedBy in .chezmoidata/python-tools.toml). uv replaces an environment's
+# files in place, and Windows refuses to delete a DLL a process has loaded:
+# on 2026-11-27 501 stopped at grpcio's cygrpc .pyd under the running server,
+# having already removed pydantic, httpx, packaging and more, which left an
+# environment the server could not have started from again. So the server
+# has to be stopped for an upgrade, and to stop it only when there is one,
+# the tool's requirements are resolved first with `uv pip compile`, which
+# installs nothing (`uv tool upgrade` has no dry run), and compared with
+# `uv pip freeze` of its environment. A difference stops the server, upgrades
+# the tool, and the start at the end brings the server back; no difference,
+# or no network to resolve with, leaves it running. The same difference is
+# what an environment left half replaced shows, so this also repairs one.
 
 $TaskName = 'chezmoi-pyghidra-mcp'
 $Port = {{ int .pyghidraMcp.port }}
@@ -32,9 +47,61 @@ $LogDir = Join-Path $HOME '.local\state\pyghidra-mcp'
 $PowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 $Conhost = Join-Path $env:SystemRoot 'System32\conhost.exe'
 $Description = "Claude Code's headless Ghidra: pyghidra-mcp on 127.0.0.1:$Port. Managed by chezmoi (503-pyghidra-mcp), fingerprint $Fingerprint."
+$Tool = '{{ $tool.name }}'
+# What 500-python installs, from the same entry.
+$Requirements = @('{{ get $tool "spec" | default $tool.name }}'{{ range (get $tool "with" | default list) }}, '{{ . }}'{{ end }})
 
 function Test-Listening {
     [bool](Get-NetTCPConnection -State Listen -LocalAddress 127.0.0.1 -LocalPort $Port -ErrorAction SilentlyContinue)
+}
+
+# Stops the task and whatever it left running. Stopping the task does not
+# reliably take the grandchildren with it (conhost -> powershell ->
+# pyghidra-mcp.exe -> python.exe; observed with sshd in 102), and a leftover
+# server holds the port, the project lock and its environment's files. The
+# old launcher goes first, or its supervisor loop would start the server
+# reaped below again a minute later. Only processes whose command line names
+# the launcher or this project are touched.
+function Stop-Server {
+    Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    $Reaped = @()
+    foreach ($Stale in @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -and $_.CommandLine -like '*pyghidra-mcp-server.ps1*' })) {
+        Write-Host "debug: reaping stale launcher (pid $($Stale.ProcessId))"
+        Stop-Process -Id $Stale.ProcessId -Force -ErrorAction SilentlyContinue
+        $Reaped += $Stale.ProcessId
+    }
+    foreach ($Stale in @(Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pyghidra-mcp.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -and $_.CommandLine -like "*$DataDir*" })) {
+        Write-Host "debug: reaping stale server (pid $($Stale.ProcessId))"
+        Stop-Process -Id $Stale.ProcessId -Force -ErrorAction SilentlyContinue
+        $Reaped += $Stale.ProcessId
+    }
+    # A killed process lets go of its files only once it is gone.
+    if ($Reaped.Count) { Wait-Process -Id $Reaped -Timeout 15 -ErrorAction SilentlyContinue }
+}
+
+# name==version lines, the name normalized as PEP 503 does, sorted.
+function ConvertTo-Pins {
+    param([string[]]$Lines)
+    $Pins = foreach ($Line in $Lines) {
+        if ($Line -match '^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*==\s*(\S+)') {
+            ($Matches[1] -replace '[-_.]+', '-').ToLowerInvariant() + '==' + $Matches[2]
+        }
+    }
+    (@($Pins) | Sort-Object) -join "`n"
+}
+
+# Whether the environment differs from a fresh resolution of the tool's
+# requirements for its own interpreter; $null when either side can't be had
+# (no network, say).
+function Test-Outdated {
+    param([string]$Python)
+    $Want = @($Requirements | & uv pip compile - --python $Python --no-header --no-annotate --quiet 2>$null)
+    if ($LASTEXITCODE -ne 0) { return $null }
+    $Have = @(& uv pip freeze --python $Python 2>$null)
+    if ($LASTEXITCODE -ne 0) { return $null }
+    return (ConvertTo-Pins $Want) -ne (ConvertTo-Pins $Have)
 }
 
 # The launcher is a plain managed file, so a scoped apply of this script alone
@@ -44,31 +111,60 @@ if (-not (Test-Path -LiteralPath $Launcher)) {
     exit 1
 }
 
+# uv's directories, which chezmoi's own environment can lack (uv-env.ps1, as
+# the .cmd scripts import them).
+foreach ($Pair in @(& { {{ includeTemplate "uv-env.ps1" . | trim }} })) {
+    $VarName, $VarValue = $Pair -split '=', 2
+    Set-Item -LiteralPath "env:$VarName" -Value $VarValue
+}
+
+$ToolDir = if (Get-Command uv -ErrorAction SilentlyContinue) { "$(& uv tool dir 2>$null)".Trim() }
+$ToolEnv = if ($ToolDir) { Join-Path $ToolDir $Tool }
+$ToolPython = if ($ToolEnv) { Join-Path $ToolEnv 'Scripts\python.exe' }
+if (-not $ToolPython -or -not (Test-Path -LiteralPath $ToolPython)) {
+    Write-Host "debug: no $Tool environment to upgrade (500-python installs it)"
+} else {
+    $Outdated = Test-Outdated $ToolPython
+    if ($null -eq $Outdated) {
+        Write-Host "warning: could not resolve $Tool's requirements (offline?); not upgrading it this time"
+    } elseif (-not $Outdated) {
+        Write-Host "debug: $Tool is up to date"
+    } else {
+        if ((Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue).State -eq 'Running') {
+            Write-Host "notice: stopping '$TaskName' to upgrade $Tool, whose files the server has loaded; it starts again below"
+        }
+        Stop-Server
+        $Holders = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+                ($_.ExecutablePath -and $_.ExecutablePath.StartsWith($ToolEnv + '\', [StringComparison]::OrdinalIgnoreCase)) -or
+                ($_.CommandLine -and $_.CommandLine.IndexOf($ToolEnv + '\', [StringComparison]::OrdinalIgnoreCase) -ge 0) })
+        if ($Holders.Count) {
+            $Names = ($Holders | ForEach-Object { "$($_.Name) (PID $($_.ProcessId))" }) -join ', '
+            Write-Host "warning: not upgrading $Tool while $Names runs from its environment; the next apply tries again"
+        } else {
+            Write-Host "debug: upgrading $Tool"
+            & uv tool upgrade --quiet $Tool
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "error: uv tool upgrade $Tool failed (exit $LASTEXITCODE); '$TaskName' stays stopped, its environment may be incomplete"
+                exit 1
+            }
+            if (Test-Outdated $ToolPython) {
+                Write-Host "warning: $Tool still differs from a fresh resolution of its requirements after upgrading, so each apply restarts the server until it matches; see ``uv pip check --python $ToolPython``"
+            }
+            Write-Host "notice: upgraded $Tool"
+        }
+    }
+}
+
 $Existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 if ($Existing -and $Existing.Description -eq $Description) {
     Write-Host "debug: task '$TaskName' is up to date"
 } else {
     if ($Existing) {
         Write-Host "debug: stopping and unregistering the outdated task '$TaskName'"
-        Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+    }
+    Stop-Server
+    if ($Existing) {
         Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
-    }
-
-    # Stopping the task does not reliably take the grandchildren with it
-    # (conhost -> powershell -> pyghidra-mcp.exe -> python.exe; observed with
-    # sshd in 102), and a leftover server holds the port and the project lock.
-    # The old launcher goes first, or its supervisor loop would start the
-    # server reaped below again a minute later. Only processes whose command
-    # line names the launcher or this project are touched.
-    foreach ($Stale in @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-            Where-Object { $_.ProcessId -ne $PID -and $_.CommandLine -and $_.CommandLine -like '*pyghidra-mcp-server.ps1*' })) {
-        Write-Host "debug: reaping stale launcher (pid $($Stale.ProcessId))"
-        Stop-Process -Id $Stale.ProcessId -Force -ErrorAction SilentlyContinue
-    }
-    foreach ($Stale in @(Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pyghidra-mcp.exe'" -ErrorAction SilentlyContinue |
-            Where-Object { $_.CommandLine -and $_.CommandLine -like "*$DataDir*" })) {
-        Write-Host "debug: reaping stale server (pid $($Stale.ProcessId))"
-        Stop-Process -Id $Stale.ProcessId -Force -ErrorAction SilentlyContinue
     }
 
     Write-Host "debug: registering scheduled task '$TaskName'"

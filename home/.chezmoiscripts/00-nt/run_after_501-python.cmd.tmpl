@@ -4,5 +4,39 @@ setlocal enabledelayedexpansion
 {{ template "uv-env.cmd" . }}
 
 echo debug: upgrading python tooling
+{{- /* The tools another script upgrades (upgradedBy in
+       .chezmoidata/python-tools.toml), where this host gets them at all. */}}
+{{- $held := list }}
+{{- range .pythonTools.packages }}
+{{-   $os := get . "os" }}
+{{-   $arch := get . "arch" }}
+{{-   if and (get . "upgradedBy") (or (not $os) (has "windows" $os)) (or (not $arch) (has $.chezmoi.arch $arch)) }}
+{{-     $held = append $held . }}
+{{-   end }}
+{{- end }}
+{{- if not $held }}
 
 uv tool upgrade --quiet --all
+{{- else }}
+
+REM Every installed tool, as `uv tool list` names them (entry points are the
+REM lines starting with "-"), but those another script upgrades: uv replaces
+REM a tool's files in place, and a tool a running process has loaded makes it
+REM fail partway, with the environment half replaced (upgradedBy in
+REM .chezmoidata/python-tools.toml).
+set "UPGRADE="
+for /f "tokens=1" %%T in ('uv tool list 2^>nul') do (
+    set "TOOL=%%T"
+    set "SKIP="
+    if "!TOOL:~0,1!"=="-" set "SKIP=1"
+{{-   range $held }}
+    if /i "%%T"=="{{ .name }}" set "SKIP=1"
+{{-   end }}
+    if not defined SKIP set "UPGRADE=!UPGRADE! %%T"
+)
+{{-   range $held }}
+echo debug: leaving {{ .name }} to {{ .upgradedBy }}
+{{-   end }}
+if not defined UPGRADE exit /b 0
+uv tool upgrade --quiet!UPGRADE!
+{{- end }}

@@ -298,6 +298,14 @@ def main():
             if platform == "windows":
                 python = render(".chezmoiscripts/00-nt/run_once_after_500-python.cmd.tmpl", data)
                 assert ('-q "pyghidra-mcp" ||' in python) == on, arch
+                # 503 upgrades it, so 501 leaves it out where it is installed.
+                upgrade = render(".chezmoiscripts/00-nt/run_after_501-python.cmd.tmpl", data)
+                assert ('if /i "%%T"=="pyghidra-mcp" set "SKIP=1"' in upgrade) == on, arch
+                assert ("uv tool upgrade --quiet --all" in upgrade) != on, arch
+                if on:
+                    ghidra = render(".chezmoiscripts/00-nt/run_after_503-pyghidra-mcp.ps1.tmpl", data)
+                    assert "$Requirements = @('pyghidra-mcp')" in ghidra and "$Tool = 'pyghidra-mcp'" in ghidra
+                    assert "'UV_CACHE_DIR','UV_PYTHON_BIN_DIR'" in ghidra
                 scoop = render(".chezmoiscripts/00-nt/run_once_after_200-scoop-install.cmd.tmpl", data)
                 assert ('\nghidra ^\n' in scoop) == on, arch
         fixture(data, "linux", "arm64", "26")

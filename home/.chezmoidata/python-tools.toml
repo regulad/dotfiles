@@ -24,6 +24,11 @@
 #                  era on uv.
 #   os             only hosts with one of these .chezmoi.os values get it.
 #   arch           only hosts with one of these .chezmoi.arch values get it.
+#   upgradedBy     Windows: the hookscript that upgrades it, where 501 must
+#                  leave it out of its upgrade because a task of this repo's
+#                  keeps it running. uv replaces a tool's files in place, and
+#                  Windows refuses to delete a DLL a process has loaded: uv
+#                  stops at the first one, with the environment half replaced.
 #
 # Wherever brew supplies a tool, python-tooling.sh removes a uv copy left
 # from before, so it cannot shadow brew's on PATH. 00-nt/500 is run_once, so
@@ -177,8 +182,10 @@ python = "3.14"
 # Windows only, the same gate as those two and scoop's ghidra
 # (00-nt/200-scoop-install): JPype1 and chromadb have no win_arm64 wheels, and
 # an emulated x64 Python could not load the native arm64 JDK's jvm.dll anyway.
-# macOS and Linux get Ghidra from brew, but not this server yet.
+# macOS and Linux get Ghidra from brew, but not this server yet. 503 upgrades
+# it, stopping the server only when there is something to upgrade.
 name = "pyghidra-mcp"
 python = "3.14"
 os = ["windows"]
 arch = ["amd64"]
+upgradedBy = "00-nt/503-pyghidra-mcp"
